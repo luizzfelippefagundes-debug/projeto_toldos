@@ -131,7 +131,14 @@ export interface ProdutoRapido {
   variantes: VarianteProdutoRapido[]
 }
 
-export type StatusPedidoRapido = "aguardando" | "aprovado"
+export type StatusPedidoRapido =
+  | "aguardando"
+  | "aprovado"
+  | "arte"
+  | "impressao"
+  | "acabamento"
+  | "pronto"
+  | "entregue"
 
 export interface PedidoRapido {
   id: string

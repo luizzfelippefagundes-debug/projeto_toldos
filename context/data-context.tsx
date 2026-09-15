@@ -18,6 +18,7 @@ import type {
   PedidoRapido,
   ProdutoRapido,
   Servico,
+  StatusPedidoRapido,
 } from "@/lib/types"
 import {
   clientesSeed,
@@ -65,6 +66,7 @@ interface DataContextValue {
   addPedidoRapido: (
     dados: Omit<PedidoRapido, "id" | "numero" | "criadoEm">
   ) => PedidoRapido
+  moverPedidoRapido: (id: string, status: StatusPedidoRapido) => void
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
@@ -294,6 +296,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return novo
   }
 
+  const moverPedidoRapido: DataContextValue["moverPedidoRapido"] = (
+    id,
+    status
+  ) => {
+    setPedidosRapidos((atual) =>
+      atual.map((p) => (p.id === id ? { ...p, status } : p))
+    )
+  }
+
   const value = useMemo<DataContextValue>(
     () => ({
       materiais,
@@ -316,6 +327,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       consumirRascunho,
       addProdutoRapido,
       addPedidoRapido,
+      moverPedidoRapido,
     }),
     // fecharOrcamento e duplicarOrcamento leem `materiais`/`orcamentos` por
     // closure (os únicos dois entre as ações que não usam só updates

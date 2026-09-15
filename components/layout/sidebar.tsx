@@ -35,6 +35,7 @@ const grupos: NavGroup[] = [
       { label: "Gráfica Rápida", href: "/grafica-rapida", icon: Zap },
       { label: "Novo Orçamento", href: "/orcamentos/novo", icon: FilePlus2 },
       { label: "Histórico de Orçamentos", href: "/orcamentos", icon: History },
+      { label: "Produção", href: "/producao", icon: Factory },
     ],
   },
   {
@@ -50,10 +51,7 @@ const grupos: NavGroup[] = [
   },
 ]
 
-const emBreve = [
-  { label: "Produção", icon: Factory },
-  { label: "Financeiro", icon: Wallet },
-]
+const emBreve = [{ label: "Financeiro", icon: Wallet }]
 
 export function Sidebar() {
   const pathname = usePathname()

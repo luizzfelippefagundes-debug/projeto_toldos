@@ -103,7 +103,53 @@ export const produtosRapidosSeed: ProdutoRapido[] = [
   },
 ]
 
-export const pedidosRapidosSeed: PedidoRapido[] = []
+export const pedidosRapidosSeed: PedidoRapido[] = [
+  {
+    id: "ped-1", numero: 5001, produtoId: "prod-1", varianteId: "prod-1-a4",
+    acabamento: "Brilho", clienteNome: "Maria Souza", clienteTelefone: "(11) 94444-1111",
+    observacao: "", total: 18, status: "aguardando", criadoEm: "2026-09-15T09:00:00.000Z",
+  },
+  {
+    id: "ped-2", numero: 5002, produtoId: "prod-3", varianteId: "prod-3-2x1",
+    acabamento: null, clienteNome: "João Pedro", clienteTelefone: "(11) 93333-2222",
+    observacao: "Frente e verso", total: 65, status: "aprovado", criadoEm: "2026-09-14T14:20:00.000Z",
+  },
+  {
+    id: "ped-3", numero: 5003, produtoId: "prod-5", varianteId: "prod-5-250",
+    acabamento: "Fosco", clienteNome: "Ana Paula", clienteTelefone: "(11) 92222-3333",
+    observacao: "", total: 70, status: "arte", criadoEm: "2026-09-13T10:15:00.000Z",
+  },
+  {
+    id: "ped-4", numero: 5004, produtoId: "prod-6", varianteId: "prod-6-500",
+    acabamento: null, clienteNome: "Carlos Eduardo", clienteTelefone: "(11) 91111-4444",
+    observacao: "Urgente", total: 180, status: "impressao", criadoEm: "2026-09-12T11:30:00.000Z",
+  },
+  {
+    id: "ped-5", numero: 5005, produtoId: "prod-4", varianteId: "prod-4-pmg",
+    acabamento: null, clienteNome: "Studio Beleza Rara", clienteTelefone: "(11) 95555-8765",
+    observacao: "", total: 28, status: "acabamento", criadoEm: "2026-09-11T08:45:00.000Z",
+  },
+  {
+    id: "ped-6", numero: 5006, produtoId: "prod-2", varianteId: "prod-2-m",
+    acabamento: "Brilho", clienteNome: "Padaria Pão Dourado", clienteTelefone: "(11) 98888-1234",
+    observacao: "", total: 95, status: "pronto", criadoEm: "2026-09-10T16:00:00.000Z",
+  },
+  {
+    id: "ped-7", numero: 5007, produtoId: "prod-1", varianteId: "prod-1-60x90",
+    acabamento: "Fosco", clienteNome: "Auto Peças Silva", clienteTelefone: "(11) 97777-5678",
+    observacao: "", total: 85, status: "entregue", criadoEm: "2026-09-08T13:00:00.000Z",
+  },
+  {
+    id: "ped-8", numero: 5008, produtoId: "prod-3", varianteId: "prod-3-3x1",
+    acabamento: null, clienteNome: "Mercado Boa Compra", clienteTelefone: "(11) 96666-4321",
+    observacao: "", total: 95, status: "aguardando", criadoEm: "2026-09-15T07:30:00.000Z",
+  },
+  {
+    id: "ped-9", numero: 5009, produtoId: "prod-5", varianteId: "prod-5-100",
+    acabamento: "Brilho", clienteNome: "Estúdio X", clienteTelefone: "(11) 90000-5555",
+    observacao: "Cliente aguardando retorno", total: 35, status: "arte", criadoEm: "2026-09-09T09:00:00.000Z",
+  },
+]
 
 export const materiaisSeed: Material[] = [
   { id: "mat-1", nome: "Lona 440g Fosca", tipo: "Lona", unidade: "m2", precoUnitario: 28, estoqueMinimo: 30, quantidadeEstoque: 85 },
