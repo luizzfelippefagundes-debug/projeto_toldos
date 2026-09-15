@@ -1,0 +1,7 @@
+.superpowers/
+node_modules/
+.next/
+out/
+.env
+.env.local
+*.log
