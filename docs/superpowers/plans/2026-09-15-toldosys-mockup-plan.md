@@ -444,6 +444,8 @@ EOF
 **Files:**
 - Create: `context/data-context.tsx`
 
+**Important — avoiding a hydration mismatch:** don't initialize `useState` directly from `lerArmazenamento(...)` (e.g. `useState(() => lerArmazenamento(...))`). Next.js server-renders this component with `window` undefined, so that would render the seed data on the server; then on the client, the very first render (before any effect runs) would already read `localStorage` and could produce different markup than the server sent, which React flags as a hydration mismatch as soon as a user has ever saved non-seed data. Instead: initialize every piece of state with the seed value directly (same on server and first client render), and only read from `localStorage` inside a `useEffect` that runs once after mount (client-only, so it can never disagree with the server-rendered markup). Guard the "save to storage" effects with a `hidratado` flag so they don't fire (and overwrite `localStorage` with the seed) before that initial read has happened.
+
 - [ ] **Step 1: Write `context/data-context.tsx`**
 
 ```typescript
@@ -512,38 +514,51 @@ function gerarId(prefixo: string) {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [materiais, setMateriais] = useState<Material[]>(() =>
-    lerArmazenamento("toldosys.materiais", materiaisSeed)
-  )
-  const [servicos, setServicos] = useState<Servico[]>(() =>
-    lerArmazenamento("toldosys.servicos", servicosSeed)
-  )
-  const [clientes, setClientes] = useState<Cliente[]>(() =>
-    lerArmazenamento("toldosys.clientes", clientesSeed)
-  )
-  const [orcamentos, setOrcamentos] = useState<Orcamento[]>(() =>
-    lerArmazenamento("toldosys.orcamentos", orcamentosSeed)
-  )
+  // Estado inicial é SEMPRE o seed — igual no servidor e no primeiro render
+  // do cliente — para não causar hydration mismatch. Os dados salvos no
+  // localStorage só são lidos depois da montagem, no efeito abaixo (ver nota
+  // de hidratação no Passo 1 desta task).
+  const [materiais, setMateriais] = useState<Material[]>(materiaisSeed)
+  const [servicos, setServicos] = useState<Servico[]>(servicosSeed)
+  const [clientes, setClientes] = useState<Cliente[]>(clientesSeed)
+  const [orcamentos, setOrcamentos] = useState<Orcamento[]>(orcamentosSeed)
   const [entradasEstoque, setEntradasEstoque] = useState<EntradaEstoque[]>(
-    () => lerArmazenamento("toldosys.entradasEstoque", entradasEstoqueSeed)
+    entradasEstoqueSeed
   )
   const [rascunho, setRascunho] = useState<RascunhoOrcamento | null>(null)
+  const [hidratado, setHidratado] = useState(false)
 
   useEffect(() => {
+    setMateriais(lerArmazenamento("toldosys.materiais", materiaisSeed))
+    setServicos(lerArmazenamento("toldosys.servicos", servicosSeed))
+    setClientes(lerArmazenamento("toldosys.clientes", clientesSeed))
+    setOrcamentos(lerArmazenamento("toldosys.orcamentos", orcamentosSeed))
+    setEntradasEstoque(
+      lerArmazenamento("toldosys.entradasEstoque", entradasEstoqueSeed)
+    )
+    setHidratado(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hidratado) return
     salvarArmazenamento("toldosys.materiais", materiais)
-  }, [materiais])
+  }, [hidratado, materiais])
   useEffect(() => {
+    if (!hidratado) return
     salvarArmazenamento("toldosys.servicos", servicos)
-  }, [servicos])
+  }, [hidratado, servicos])
   useEffect(() => {
+    if (!hidratado) return
     salvarArmazenamento("toldosys.clientes", clientes)
-  }, [clientes])
+  }, [hidratado, clientes])
   useEffect(() => {
+    if (!hidratado) return
     salvarArmazenamento("toldosys.orcamentos", orcamentos)
-  }, [orcamentos])
+  }, [hidratado, orcamentos])
   useEffect(() => {
+    if (!hidratado) return
     salvarArmazenamento("toldosys.entradasEstoque", entradasEstoque)
-  }, [entradasEstoque])
+  }, [hidratado, entradasEstoque])
 
   const addMaterial: DataContextValue["addMaterial"] = (dados) => {
     const novo: Material = { id: gerarId("mat"), ...dados }
@@ -911,7 +926,7 @@ export default function Home() {
 Run: `npx tsc --noEmit`
 Expected: no errors (there will be import errors for `@/app/dashboard` etc. until later tasks create those routes — that's expected; `next.config` won't complain because Next.js resolves routes at request time, not at type-check time, and `redirect("/dashboard")` is just a string).
 
-Run: `npm run dev`, open `http://localhost:3000`. Expected: redirects toward `/dashboard`, which will 404 until Task 8 — that's fine for now, but confirm the sidebar does NOT render on the 404 (since `app/page.tsx` no longer renders anything, and there's no `/dashboard` route yet, Next.js shows its default 404 inside `AppShell`). Confirm no console errors related to fonts or the `dark` class.
+Run: `npm run dev`, open `http://localhost:3000`. Expected: redirects toward `/dashboard`, which will 404 until Task 8 — that's fine for now, but confirm the sidebar does NOT render on the 404 (since `app/page.tsx` no longer renders anything, and there's no `/dashboard` route yet, Next.js shows its default 404 inside `AppShell`). Confirm no console errors related to fonts or the `dark` class, and specifically confirm there is no React hydration-mismatch warning — this is the first point in the app where `DataProvider` actually mounts, so it's the earliest place that bug (see the hydration note in Task 6) would show up, even though there's nothing to see on screen yet.
 
 - [ ] **Step 6: Commit**
 
@@ -2672,7 +2687,7 @@ Run: `npm run dev` and, starting from a completely fresh browser profile or an i
 4. `/estoque` → register a nova entrada, confirm the quantity and the "Últimas entradas" table update.
 5. `/orcamentos/novo` → full flow: cliente → produto/medidas → cálculo ao vivo → upload → Gerar PDF (print preview) → Fechar Orçamento.
 6. `/orcamentos` → confirm the just-closed orçamento appears, filter by client and by date range, reabrir one orçamento, duplicar another.
-7. Refresh the browser tab on any screen — confirm all data (including anything added in this walkthrough) survives the refresh, since it's persisted to `localStorage`.
+7. Refresh the browser tab on any screen — confirm all data (including anything added in this walkthrough) survives the refresh, since it's persisted to `localStorage`. This is the exact scenario the hydration-safety note in Task 6 exists for (localStorage now differs from the seed) — open the browser devtools console during this refresh and confirm there is no React hydration-mismatch warning. If one appears, the `hidratado`-guarded effect pattern from Task 6 was not implemented correctly and needs to be fixed before this task is considered done.
 
 - [ ] **Step 3: Confirm known limitations are intentional (no code changes needed, just verify)**
 
