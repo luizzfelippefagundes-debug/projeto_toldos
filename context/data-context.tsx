@@ -12,17 +12,22 @@ import {
 import type {
   Cliente,
   EntradaEstoque,
+  LancamentoFinanceiro,
   Material,
   Orcamento,
   OrcamentoItem,
   PedidoRapido,
   ProdutoRapido,
   Servico,
+  StatusLancamento,
   StatusPedidoRapido,
 } from "@/lib/types"
 import {
+  acabamentosSeed,
   clientesSeed,
   entradasEstoqueSeed,
+  equipamentosAcessoSeed,
+  lancamentosFinanceirosSeed,
   materiaisSeed,
   orcamentosSeed,
   pedidosRapidosSeed,
@@ -30,7 +35,9 @@ import {
   servicosSeed,
 } from "@/lib/seed-data"
 import { lerArmazenamento, salvarArmazenamento } from "@/lib/storage"
-import { quantidadeMaterialConsumida } from "@/lib/calculo"
+import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
+
+const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000
 
 interface RascunhoOrcamento {
   clienteId: string
@@ -46,6 +53,7 @@ interface DataContextValue {
   entradasEstoque: EntradaEstoque[]
   produtosRapidos: ProdutoRapido[]
   pedidosRapidos: PedidoRapido[]
+  lancamentos: LancamentoFinanceiro[]
   rascunho: RascunhoOrcamento | null
   addMaterial: (dados: Omit<Material, "id">) => Material
   updateMaterial: (id: string, dados: Omit<Material, "id">) => void
@@ -67,6 +75,10 @@ interface DataContextValue {
     dados: Omit<PedidoRapido, "id" | "numero" | "criadoEm">
   ) => PedidoRapido
   moverPedidoRapido: (id: string, status: StatusPedidoRapido) => void
+  addLancamento: (
+    dados: Omit<LancamentoFinanceiro, "id" | "criadoEm">
+  ) => LancamentoFinanceiro
+  marcarLancamentoStatus: (id: string, status: StatusLancamento) => void
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
@@ -91,6 +103,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   )
   const [pedidosRapidos, setPedidosRapidos] = useState<PedidoRapido[]>(
     pedidosRapidosSeed
+  )
+  const [lancamentos, setLancamentos] = useState<LancamentoFinanceiro[]>(
+    lancamentosFinanceirosSeed
   )
   const [rascunho, setRascunho] = useState<RascunhoOrcamento | null>(null)
   const [hidratado, setHidratado] = useState(false)
@@ -141,6 +156,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         (max, p) => Math.max(max, p.numero),
         5000
       ) + 1
+    setLancamentos(
+      lerArmazenamento("toldosys.lancamentos", lancamentosFinanceirosSeed)
+    )
     setHidratado(true)
   }, [])
 
@@ -172,6 +190,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!hidratado) return
     salvarArmazenamento("toldosys.pedidosRapidos", pedidosRapidos)
   }, [hidratado, pedidosRapidos])
+  useEffect(() => {
+    if (!hidratado) return
+    salvarArmazenamento("toldosys.lancamentos", lancamentos)
+  }, [hidratado, lancamentos])
 
   const addMaterial: DataContextValue["addMaterial"] = (dados) => {
     const novo: Material = { id: gerarId("mat"), ...dados }
@@ -223,6 +245,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fecharOrcamento: DataContextValue["fecharOrcamento"] = (dados) => {
     const material = materiais.find((m) => m.id === dados.item.materialId)
+    const servico = servicos.find((s) => s.id === dados.item.servicoId)
+    const cliente = clientes.find((c) => c.id === dados.clienteId)
     const numero = proximoNumeroRef.current
     proximoNumeroRef.current += 1
 
@@ -254,6 +278,34 @@ export function DataProvider({ children }: { children: ReactNode }) {
       )
     }
 
+    // Fechar um orçamento gera automaticamente uma receita "a receber" no
+    // Financeiro — igual ao que acontece com um pedido da Gráfica Rápida
+    // aprovado (ver addPedidoRapido/moverPedidoRapido). Sem isso o módulo
+    // financeiro ficaria desconectado do resto do sistema.
+    if (material && servico) {
+      const resultado = calcularOrcamentoCompleto(
+        dados.item,
+        material,
+        servico,
+        dados.ajusteManual,
+        acabamentosSeed,
+        equipamentosAcessoSeed
+      )
+      const lancamento: LancamentoFinanceiro = {
+        id: gerarId("lan"),
+        descricao: `Orçamento #${numero} — ${cliente?.nome ?? "Cliente"}`,
+        tipo: "receita",
+        categoria: "Orçamento",
+        valor: resultado.total,
+        vencimento: new Date(Date.now() + SETE_DIAS_MS).toISOString(),
+        status: "pendente",
+        origem: "orcamento",
+        origemId: novo.id,
+        criadoEm: new Date().toISOString(),
+      }
+      setLancamentos((atual) => [lancamento, ...atual])
+    }
+
     return novo
   }
 
@@ -283,6 +335,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return novo
   }
 
+  // Cria a receita "a receber" de um pedido da Gráfica Rápida assim que ele
+  // sai de "aguardando" (ou já nasce assim, no caso de "Virar Pedido") — o
+  // mesmo gatilho de fecharOrcamento, adaptado pra esse fluxo mais simples.
+  function adicionarReceitaPedido(pedido: PedidoRapido) {
+    const lancamento: LancamentoFinanceiro = {
+      id: gerarId("lan"),
+      descricao: `Pedido #${pedido.numero} — ${pedido.clienteNome || "Sem cliente"}`,
+      tipo: "receita",
+      categoria: "Gráfica Rápida",
+      valor: pedido.total,
+      vencimento: new Date(Date.now() + SETE_DIAS_MS).toISOString(),
+      status: "pendente",
+      origem: "pedido-rapido",
+      origemId: pedido.id,
+      criadoEm: new Date().toISOString(),
+    }
+    setLancamentos((atual) => [lancamento, ...atual])
+  }
+
   const addPedidoRapido: DataContextValue["addPedidoRapido"] = (dados) => {
     const numero = proximoNumeroPedidoRef.current
     proximoNumeroPedidoRef.current += 1
@@ -293,6 +364,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ...dados,
     }
     setPedidosRapidos((atual) => [novo, ...atual])
+    if (novo.status !== "aguardando") {
+      adicionarReceitaPedido(novo)
+    }
     return novo
   }
 
@@ -300,8 +374,31 @@ export function DataProvider({ children }: { children: ReactNode }) {
     id,
     status
   ) => {
+    const pedido = pedidosRapidos.find((p) => p.id === id)
     setPedidosRapidos((atual) =>
       atual.map((p) => (p.id === id ? { ...p, status } : p))
+    )
+    if (pedido && pedido.status === "aguardando" && status !== "aguardando") {
+      adicionarReceitaPedido(pedido)
+    }
+  }
+
+  const addLancamento: DataContextValue["addLancamento"] = (dados) => {
+    const novo: LancamentoFinanceiro = {
+      id: gerarId("lan"),
+      criadoEm: new Date().toISOString(),
+      ...dados,
+    }
+    setLancamentos((atual) => [novo, ...atual])
+    return novo
+  }
+
+  const marcarLancamentoStatus: DataContextValue["marcarLancamentoStatus"] = (
+    id,
+    status
+  ) => {
+    setLancamentos((atual) =>
+      atual.map((l) => (l.id === id ? { ...l, status } : l))
     )
   }
 
@@ -314,6 +411,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       entradasEstoque,
       produtosRapidos,
       pedidosRapidos,
+      lancamentos,
       rascunho,
       addMaterial,
       updateMaterial,
@@ -328,13 +426,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addProdutoRapido,
       addPedidoRapido,
       moverPedidoRapido,
+      addLancamento,
+      marcarLancamentoStatus,
     }),
-    // fecharOrcamento e duplicarOrcamento leem `materiais`/`orcamentos` por
-    // closure (os únicos dois entre as ações que não usam só updates
-    // funcionais) — como esses dois states já estão nas deps abaixo, o memo
-    // já recalcula sempre que essas closures precisariam ficar atualizadas;
-    // adicionar as próprias funções às deps as tornaria "instáveis" (são
-    // recriadas a cada render) e faria o memo recalcular sempre, sem ganho.
+    // Algumas ações (fecharOrcamento, duplicarOrcamento, addPedidoRapido,
+    // moverPedidoRapido) leem outros states por closure em vez de usar só
+    // updates funcionais — mas todo state que elas leem já está nas deps
+    // abaixo, então o memo já recalcula sempre que essas closures
+    // precisariam ficar atualizadas; adicionar as próprias funções às deps
+    // as tornaria "instáveis" (são recriadas a cada render) e faria o memo
+    // recalcular sempre, sem ganho.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       materiais,
@@ -344,6 +445,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       entradasEstoque,
       produtosRapidos,
       pedidosRapidos,
+      lancamentos,
       rascunho,
     ]
   )

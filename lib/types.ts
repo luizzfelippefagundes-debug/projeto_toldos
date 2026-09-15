@@ -153,3 +153,20 @@ export interface PedidoRapido {
   status: StatusPedidoRapido
   criadoEm: string
 }
+
+export type TipoLancamento = "receita" | "despesa"
+export type StatusLancamento = "pendente" | "pago"
+export type OrigemLancamento = "orcamento" | "pedido-rapido" | "manual"
+
+export interface LancamentoFinanceiro {
+  id: string
+  descricao: string
+  tipo: TipoLancamento
+  categoria: string
+  valor: number
+  vencimento: string
+  status: StatusLancamento
+  origem: OrigemLancamento
+  origemId: string | null
+  criadoEm: string
+}

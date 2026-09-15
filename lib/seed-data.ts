@@ -3,6 +3,7 @@ import type {
   Cliente,
   EntradaEstoque,
   EquipamentoAcesso,
+  LancamentoFinanceiro,
   Material,
   Orcamento,
   PedidoRapido,
@@ -218,4 +219,20 @@ export const entradasEstoqueSeed: EntradaEstoque[] = [
   { id: "ent-1", materialId: "mat-1", quantidade: 50, fornecedor: "Distribuidora Lonax", comNotaFiscal: true, numeroNota: "45892", data: "2026-08-15T09:00:00.000Z" },
   { id: "ent-2", materialId: "mat-2", quantidade: 20, fornecedor: "ACM Brasil", comNotaFiscal: true, numeroNota: "12034", data: "2026-08-18T10:30:00.000Z" },
   { id: "ent-3", materialId: "mat-5", quantidade: 15, comNotaFiscal: false, data: "2026-09-01T11:00:00.000Z" },
+]
+
+export const lancamentosFinanceirosSeed: LancamentoFinanceiro[] = [
+  { id: "lan-1", descricao: "Orçamento #1001 — Padaria Pão Dourado", tipo: "receita", categoria: "Orçamento", valor: 418, vencimento: "2026-08-25T00:00:00.000Z", status: "pago", origem: "orcamento", origemId: "orc-1", criadoEm: "2026-08-20T14:00:00.000Z" },
+  { id: "lan-2", descricao: "Orçamento #1002 — Auto Peças Silva", tipo: "receita", categoria: "Orçamento", valor: 730, vencimento: "2026-08-27T00:00:00.000Z", status: "pago", origem: "orcamento", origemId: "orc-2", criadoEm: "2026-08-22T11:00:00.000Z" },
+  { id: "lan-3", descricao: "Orçamento #1006 — Auto Peças Silva", tipo: "receita", categoria: "Orçamento", valor: 390, vencimento: "2026-09-02T00:00:00.000Z", status: "pago", origem: "orcamento", origemId: "orc-6", criadoEm: "2026-08-28T17:00:00.000Z" },
+  { id: "lan-4", descricao: "Pedido #5007 — Auto Peças Silva", tipo: "receita", categoria: "Gráfica Rápida", valor: 85, vencimento: "2026-09-10T00:00:00.000Z", status: "pago", origem: "pedido-rapido", origemId: "ped-7", criadoEm: "2026-09-08T13:00:00.000Z" },
+  { id: "lan-5", descricao: "Pedido #5006 — Padaria Pão Dourado", tipo: "receita", categoria: "Gráfica Rápida", valor: 95, vencimento: "2026-09-17T00:00:00.000Z", status: "pendente", origem: "pedido-rapido", origemId: "ped-6", criadoEm: "2026-09-10T16:00:00.000Z" },
+  { id: "lan-6", descricao: "Pedido #5005 — Studio Beleza Rara", tipo: "receita", categoria: "Gráfica Rápida", valor: 28, vencimento: "2026-09-18T00:00:00.000Z", status: "pendente", origem: "pedido-rapido", origemId: "ped-5", criadoEm: "2026-09-11T08:45:00.000Z" },
+  { id: "lan-7", descricao: "Pedido #5004 — Carlos Eduardo", tipo: "receita", categoria: "Gráfica Rápida", valor: 180, vencimento: "2026-09-19T00:00:00.000Z", status: "pendente", origem: "pedido-rapido", origemId: "ped-4", criadoEm: "2026-09-12T11:30:00.000Z" },
+  { id: "lan-8", descricao: "Pedido #5003 — Ana Paula", tipo: "receita", categoria: "Gráfica Rápida", valor: 70, vencimento: "2026-09-20T00:00:00.000Z", status: "pendente", origem: "pedido-rapido", origemId: "ped-3", criadoEm: "2026-09-13T10:15:00.000Z" },
+  { id: "lan-9", descricao: "Pedido #5002 — João Pedro", tipo: "receita", categoria: "Gráfica Rápida", valor: 65, vencimento: "2026-09-21T00:00:00.000Z", status: "pendente", origem: "pedido-rapido", origemId: "ped-2", criadoEm: "2026-09-14T14:20:00.000Z" },
+  { id: "lan-10", descricao: "Aluguel do galpão — setembro", tipo: "despesa", categoria: "Aluguel", valor: 1800, vencimento: "2026-09-05T00:00:00.000Z", status: "pago", origem: "manual", origemId: null, criadoEm: "2026-09-01T09:00:00.000Z" },
+  { id: "lan-11", descricao: "Distribuidora Lonax — nota 45892", tipo: "despesa", categoria: "Fornecedor", valor: 1400, vencimento: "2026-08-30T00:00:00.000Z", status: "pago", origem: "manual", origemId: null, criadoEm: "2026-08-15T09:00:00.000Z" },
+  { id: "lan-12", descricao: "Conta de luz — setembro", tipo: "despesa", categoria: "Contas fixas", valor: 340, vencimento: "2026-09-20T00:00:00.000Z", status: "pendente", origem: "manual", origemId: null, criadoEm: "2026-09-05T09:00:00.000Z" },
+  { id: "lan-13", descricao: "Manutenção da impressora", tipo: "despesa", categoria: "Manutenção", valor: 260, vencimento: "2026-09-22T00:00:00.000Z", status: "pendente", origem: "manual", origemId: null, criadoEm: "2026-09-10T15:00:00.000Z" },
 ]

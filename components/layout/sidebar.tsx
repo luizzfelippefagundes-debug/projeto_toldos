@@ -12,7 +12,6 @@ import {
   Warehouse,
   Factory,
   Wallet,
-  Lock,
   Zap,
 } from "lucide-react"
 
@@ -49,9 +48,11 @@ const grupos: NavGroup[] = [
     title: "Estoque",
     items: [{ label: "Estoque", href: "/estoque", icon: Warehouse }],
   },
+  {
+    title: "Financeiro",
+    items: [{ label: "Financeiro", href: "/financeiro", icon: Wallet }],
+  },
 ]
-
-const emBreve = [{ label: "Financeiro", icon: Wallet }]
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -94,27 +95,6 @@ export function Sidebar() {
             </div>
           </div>
         ))}
-
-        <div>
-          <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Em breve
-          </p>
-          <div className="flex flex-col gap-1">
-            {emBreve.map((item) => {
-              const Icon = item.icon
-              return (
-                <div
-                  key={item.label}
-                  className="flex items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground/50"
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                  <Lock className="ml-auto h-3 w-3" />
-                </div>
-              )
-            })}
-          </div>
-        </div>
       </nav>
     </aside>
   )
