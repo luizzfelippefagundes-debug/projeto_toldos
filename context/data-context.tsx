@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
@@ -76,11 +77,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [rascunho, setRascunho] = useState<RascunhoOrcamento | null>(null)
   const [hidratado, setHidratado] = useState(false)
 
+  // Contador de número de orçamento em um ref (não em state): fecharOrcamento
+  // lê e incrementa isso de forma síncrona, então dois fechamentos disparados
+  // em sequência rápida (ex.: duplo clique antes do botão desabilitar) nunca
+  // recebem o mesmo número — o que aconteceria se o número fosse derivado do
+  // state `orcamentos`, que só reflete a última renderização.
+  const proximoNumeroRef = useRef(
+    orcamentosSeed.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
+  )
+
   useEffect(() => {
     setMateriais(lerArmazenamento("toldosys.materiais", materiaisSeed))
     setServicos(lerArmazenamento("toldosys.servicos", servicosSeed))
     setClientes(lerArmazenamento("toldosys.clientes", clientesSeed))
-    setOrcamentos(lerArmazenamento("toldosys.orcamentos", orcamentosSeed))
+    const orcamentosCarregados = lerArmazenamento(
+      "toldosys.orcamentos",
+      orcamentosSeed
+    )
+    setOrcamentos(orcamentosCarregados)
+    proximoNumeroRef.current =
+      orcamentosCarregados.reduce((max, o) => Math.max(max, o.numero), 1000) +
+      1
     setEntradasEstoque(
       lerArmazenamento("toldosys.entradasEstoque", entradasEstoqueSeed)
     )
@@ -158,12 +175,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const fecharOrcamento: DataContextValue["fecharOrcamento"] = (dados) => {
     const material = materiais.find((m) => m.id === dados.item.materialId)
-    const proximoNumero =
-      orcamentos.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
+    const numero = proximoNumeroRef.current
+    proximoNumeroRef.current += 1
 
     const novo: Orcamento = {
       id: gerarId("orc"),
-      numero: proximoNumero,
+      numero,
       clienteId: dados.clienteId,
       item: dados.item,
       ajusteManual: dados.ajusteManual,
