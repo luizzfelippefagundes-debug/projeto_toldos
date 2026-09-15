@@ -1022,11 +1022,9 @@ export default function DashboardPage() {
 
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Bom dia 👋</h1>
-        <Button asChild size="lg">
-          <Link href="/orcamentos/novo">
-            <FilePlus2 className="mr-2 h-4 w-4" />
-            Novo Orçamento
-          </Link>
+        <Button size="lg" render={<Link href="/orcamentos/novo" />}>
+          <FilePlus2 className="mr-2 h-4 w-4" />
+          Novo Orçamento
         </Button>
       </div>
 
@@ -1085,6 +1083,8 @@ EOF
 ---
 
 ### Task 9: Materiais screen
+
+**Important — `render` prop, not `asChild`:** the installed shadcn CLI generated this project's `components/ui/*` on top of **Base UI** instead of Radix UI (see Task 2's notes). Base UI's composition convention is a `render` prop that takes a single JSX element, not Radix's `asChild` + nested-child pattern. Task 8 already hit this (`<Button asChild><Link .../></Button>` doesn't compile — it became `<Button render={<Link href="..." />}>...</Button>`, with the Button's own children now passed as the *children of `<Button>`*, not nested inside the `render` element). Every `<DialogTrigger>`/`<DropdownMenuTrigger>` wrapping a `<Button>` in the tasks below follows the same pattern: `<DialogTrigger render={<Button .../>}>{iconOrLabel}</DialogTrigger>` — the `render` element carries the Button's own props (`variant`, `size`, etc., no children), and whatever you'd have put inside that `<Button>` becomes the trigger's children instead.
 
 **Files:**
 - Create: `components/materiais/material-form-dialog.tsx`
@@ -1185,18 +1185,16 @@ export function MaterialFormDialog({ material }: Props) {
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
-      <DialogTrigger asChild>
-        {modoEdicao ? (
-          <Button variant="ghost" size="icon">
-            <Pencil className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Material
-          </Button>
-        )}
-      </DialogTrigger>
+      {modoEdicao ? (
+        <DialogTrigger render={<Button variant="ghost" size="icon" />}>
+          <Pencil className="h-4 w-4" />
+        </DialogTrigger>
+      ) : (
+        <DialogTrigger render={<Button />}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Material
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -1482,18 +1480,16 @@ export function ServicoFormDialog({ servico }: Props) {
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
-      <DialogTrigger asChild>
-        {modoEdicao ? (
-          <Button variant="ghost" size="icon">
-            <Pencil className="h-4 w-4" />
-          </Button>
-        ) : (
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Serviço
-          </Button>
-        )}
-      </DialogTrigger>
+      {modoEdicao ? (
+        <DialogTrigger render={<Button variant="ghost" size="icon" />}>
+          <Pencil className="h-4 w-4" />
+        </DialogTrigger>
+      ) : (
+        <DialogTrigger render={<Button />}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo Serviço
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -1732,11 +1728,9 @@ export function NovaEntradaDialog() {
         if (!v) limpar()
       }}
     >
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Entrada
-        </Button>
+      <DialogTrigger render={<Button />}>
+        <Plus className="mr-2 h-4 w-4" />
+        Nova Entrada
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -2127,10 +2121,10 @@ export default function HistoricoOrcamentosPage() {
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
+                    <DropdownMenuTrigger
+                      render={<Button variant="ghost" size="icon" />}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
@@ -2233,11 +2227,9 @@ export function ClienteQuickAddDialog({ onCriado }: Props) {
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <UserPlus className="mr-2 h-4 w-4" />
-          Novo cliente
-        </Button>
+      <DialogTrigger render={<Button variant="outline" size="sm" />}>
+        <UserPlus className="mr-2 h-4 w-4" />
+        Novo cliente
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
