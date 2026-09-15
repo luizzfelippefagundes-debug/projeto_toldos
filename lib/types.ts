@@ -106,3 +106,43 @@ export interface EntradaEstoque {
   numeroNota?: string
   data: string
 }
+
+export type CategoriaProdutoRapido =
+  | "Adesivo"
+  | "Banner"
+  | "Camiseta"
+  | "Cartão de Visita"
+  | "Lona / Faixa"
+  | "Panfleto / Flyer"
+  | "Outro"
+
+export interface VarianteProdutoRapido {
+  id: string
+  nome: string
+  preco: number
+}
+
+export interface ProdutoRapido {
+  id: string
+  nome: string
+  categoria: CategoriaProdutoRapido
+  prazoDias: number
+  temAcabamento: boolean
+  variantes: VarianteProdutoRapido[]
+}
+
+export type StatusPedidoRapido = "aguardando" | "aprovado"
+
+export interface PedidoRapido {
+  id: string
+  numero: number
+  produtoId: string
+  varianteId: string
+  acabamento: string | null
+  clienteNome: string
+  clienteTelefone: string
+  observacao: string
+  total: number
+  status: StatusPedidoRapido
+  criadoEm: string
+}

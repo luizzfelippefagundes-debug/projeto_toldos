@@ -5,6 +5,8 @@ import type {
   EquipamentoAcesso,
   Material,
   Orcamento,
+  PedidoRapido,
+  ProdutoRapido,
   Servico,
 } from "./types"
 
@@ -25,6 +27,83 @@ export const equipamentosAcessoSeed: EquipamentoAcesso[] = [
   { id: "equ-6", nome: "Plataforma elevatória 20m", precoDiaria: 1200 },
   { id: "equ-7", nome: "Muck / Balancim", precoDiaria: 950 },
 ]
+
+export const produtosRapidosSeed: ProdutoRapido[] = [
+  {
+    id: "prod-1",
+    nome: "Adesivo em Chapa (impressão)",
+    categoria: "Adesivo",
+    prazoDias: 1,
+    temAcabamento: true,
+    variantes: [
+      { id: "prod-1-a4", nome: "A4", preco: 18 },
+      { id: "prod-1-a3", nome: "A3", preco: 32 },
+      { id: "prod-1-30x60", nome: "30x60cm", preco: 45 },
+      { id: "prod-1-60x90", nome: "60x90cm", preco: 85 },
+    ],
+  },
+  {
+    id: "prod-2",
+    nome: "Adesivo Vinil — por m²",
+    categoria: "Adesivo",
+    prazoDias: 1,
+    temAcabamento: true,
+    variantes: [
+      { id: "prod-2-p", nome: "Até 1m²", preco: 35 },
+      { id: "prod-2-m", nome: "Até 3m²", preco: 95 },
+      { id: "prod-2-g", nome: "Até 6m²", preco: 180 },
+    ],
+  },
+  {
+    id: "prod-3",
+    nome: "Banner Lona 440g",
+    categoria: "Banner",
+    prazoDias: 1,
+    temAcabamento: false,
+    variantes: [
+      { id: "prod-3-1x1", nome: "1x1m", preco: 35 },
+      { id: "prod-3-2x1", nome: "2x1m", preco: 65 },
+      { id: "prod-3-3x1", nome: "3x1m", preco: 95 },
+    ],
+  },
+  {
+    id: "prod-4",
+    nome: "Camiseta Sublimação 100% Poliéster",
+    categoria: "Camiseta",
+    prazoDias: 3,
+    temAcabamento: false,
+    variantes: [
+      { id: "prod-4-pmg", nome: "P / M / G", preco: 28 },
+      { id: "prod-4-gg", nome: "GG", preco: 32 },
+    ],
+  },
+  {
+    id: "prod-5",
+    nome: "Cartão Visita Couchê 300g",
+    categoria: "Cartão de Visita",
+    prazoDias: 2,
+    temAcabamento: true,
+    variantes: [
+      { id: "prod-5-100", nome: "100 un", preco: 35 },
+      { id: "prod-5-250", nome: "250 un", preco: 70 },
+      { id: "prod-5-500", nome: "500 un", preco: 120 },
+    ],
+  },
+  {
+    id: "prod-6",
+    nome: "Panfleto A4 Couchê 90g",
+    categoria: "Panfleto / Flyer",
+    prazoDias: 2,
+    temAcabamento: false,
+    variantes: [
+      { id: "prod-6-100", nome: "100 un", preco: 45 },
+      { id: "prod-6-500", nome: "500 un", preco: 180 },
+      { id: "prod-6-1000", nome: "1000 un", preco: 320 },
+    ],
+  },
+]
+
+export const pedidosRapidosSeed: PedidoRapido[] = []
 
 export const materiaisSeed: Material[] = [
   { id: "mat-1", nome: "Lona 440g Fosca", tipo: "Lona", unidade: "m2", precoUnitario: 28, estoqueMinimo: 30, quantidadeEstoque: 85 },

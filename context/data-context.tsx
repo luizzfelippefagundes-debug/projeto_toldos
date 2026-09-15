@@ -15,6 +15,8 @@ import type {
   Material,
   Orcamento,
   OrcamentoItem,
+  PedidoRapido,
+  ProdutoRapido,
   Servico,
 } from "@/lib/types"
 import {
@@ -22,6 +24,8 @@ import {
   entradasEstoqueSeed,
   materiaisSeed,
   orcamentosSeed,
+  pedidosRapidosSeed,
+  produtosRapidosSeed,
   servicosSeed,
 } from "@/lib/seed-data"
 import { lerArmazenamento, salvarArmazenamento } from "@/lib/storage"
@@ -39,6 +43,8 @@ interface DataContextValue {
   clientes: Cliente[]
   orcamentos: Orcamento[]
   entradasEstoque: EntradaEstoque[]
+  produtosRapidos: ProdutoRapido[]
+  pedidosRapidos: PedidoRapido[]
   rascunho: RascunhoOrcamento | null
   addMaterial: (dados: Omit<Material, "id">) => Material
   updateMaterial: (id: string, dados: Omit<Material, "id">) => void
@@ -55,6 +61,10 @@ interface DataContextValue {
   reabrirOrcamento: (id: string) => void
   duplicarOrcamento: (id: string) => void
   consumirRascunho: () => void
+  addProdutoRapido: (dados: Omit<ProdutoRapido, "id">) => ProdutoRapido
+  addPedidoRapido: (
+    dados: Omit<PedidoRapido, "id" | "numero" | "criadoEm">
+  ) => PedidoRapido
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
@@ -74,6 +84,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [entradasEstoque, setEntradasEstoque] = useState<EntradaEstoque[]>(
     entradasEstoqueSeed
   )
+  const [produtosRapidos, setProdutosRapidos] = useState<ProdutoRapido[]>(
+    produtosRapidosSeed
+  )
+  const [pedidosRapidos, setPedidosRapidos] = useState<PedidoRapido[]>(
+    pedidosRapidosSeed
+  )
   const [rascunho, setRascunho] = useState<RascunhoOrcamento | null>(null)
   const [hidratado, setHidratado] = useState(false)
 
@@ -84,6 +100,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // state `orcamentos`, que só reflete a última renderização.
   const proximoNumeroRef = useRef(
     orcamentosSeed.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
+  )
+  const proximoNumeroPedidoRef = useRef(
+    pedidosRapidosSeed.reduce((max, p) => Math.max(max, p.numero), 5000) + 1
   )
 
   // localStorage só existe no cliente, então sincronizar com ele (ler uma vez
@@ -107,6 +126,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setEntradasEstoque(
       lerArmazenamento("toldosys.entradasEstoque", entradasEstoqueSeed)
     )
+    setProdutosRapidos(
+      lerArmazenamento("toldosys.produtosRapidos", produtosRapidosSeed)
+    )
+    const pedidosRapidosCarregados = lerArmazenamento(
+      "toldosys.pedidosRapidos",
+      pedidosRapidosSeed
+    )
+    setPedidosRapidos(pedidosRapidosCarregados)
+    proximoNumeroPedidoRef.current =
+      pedidosRapidosCarregados.reduce(
+        (max, p) => Math.max(max, p.numero),
+        5000
+      ) + 1
     setHidratado(true)
   }, [])
 
@@ -130,6 +162,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!hidratado) return
     salvarArmazenamento("toldosys.entradasEstoque", entradasEstoque)
   }, [hidratado, entradasEstoque])
+  useEffect(() => {
+    if (!hidratado) return
+    salvarArmazenamento("toldosys.produtosRapidos", produtosRapidos)
+  }, [hidratado, produtosRapidos])
+  useEffect(() => {
+    if (!hidratado) return
+    salvarArmazenamento("toldosys.pedidosRapidos", pedidosRapidos)
+  }, [hidratado, pedidosRapidos])
 
   const addMaterial: DataContextValue["addMaterial"] = (dados) => {
     const novo: Material = { id: gerarId("mat"), ...dados }
@@ -235,6 +275,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const consumirRascunho = () => setRascunho(null)
 
+  const addProdutoRapido: DataContextValue["addProdutoRapido"] = (dados) => {
+    const novo: ProdutoRapido = { id: gerarId("prod"), ...dados }
+    setProdutosRapidos((atual) => [...atual, novo])
+    return novo
+  }
+
+  const addPedidoRapido: DataContextValue["addPedidoRapido"] = (dados) => {
+    const numero = proximoNumeroPedidoRef.current
+    proximoNumeroPedidoRef.current += 1
+    const novo: PedidoRapido = {
+      id: gerarId("ped"),
+      numero,
+      criadoEm: new Date().toISOString(),
+      ...dados,
+    }
+    setPedidosRapidos((atual) => [novo, ...atual])
+    return novo
+  }
+
   const value = useMemo<DataContextValue>(
     () => ({
       materiais,
@@ -242,6 +301,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       clientes,
       orcamentos,
       entradasEstoque,
+      produtosRapidos,
+      pedidosRapidos,
       rascunho,
       addMaterial,
       updateMaterial,
@@ -253,6 +314,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       reabrirOrcamento,
       duplicarOrcamento,
       consumirRascunho,
+      addProdutoRapido,
+      addPedidoRapido,
     }),
     // fecharOrcamento e duplicarOrcamento leem `materiais`/`orcamentos` por
     // closure (os únicos dois entre as ações que não usam só updates
@@ -261,7 +324,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // adicionar as próprias funções às deps as tornaria "instáveis" (são
     // recriadas a cada render) e faria o memo recalcular sempre, sem ganho.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [materiais, servicos, clientes, orcamentos, entradasEstoque, rascunho]
+    [
+      materiais,
+      servicos,
+      clientes,
+      orcamentos,
+      entradasEstoque,
+      produtosRapidos,
+      pedidosRapidos,
+      rascunho,
+    ]
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

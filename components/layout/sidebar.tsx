@@ -13,6 +13,7 @@ import {
   Factory,
   Wallet,
   Lock,
+  Zap,
 } from "lucide-react"
 
 interface NavItem {
@@ -31,6 +32,7 @@ const grupos: NavGroup[] = [
     title: "Principal",
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Gráfica Rápida", href: "/grafica-rapida", icon: Zap },
       { label: "Novo Orçamento", href: "/orcamentos/novo", icon: FilePlus2 },
       { label: "Histórico de Orçamentos", href: "/orcamentos", icon: History },
     ],
