@@ -1,10 +1,30 @@
 import type {
+  Acabamento,
   Cliente,
   EntradaEstoque,
+  EquipamentoAcesso,
   Material,
   Orcamento,
   Servico,
 } from "./types"
+
+export const acabamentosSeed: Acabamento[] = [
+  { id: "acb-1", nome: "Ilhós", precoUnitario: 0.5, unidade: "un" },
+  { id: "acb-2", nome: "Bastão", precoUnitario: 3, unidade: "m" },
+  { id: "acb-3", nome: "Laminação", precoUnitario: 8, unidade: "m²" },
+  { id: "acb-4", nome: "Corte", precoUnitario: 5, unidade: "m²" },
+  { id: "acb-5", nome: "Estrutura", precoUnitario: 120, unidade: "peça" },
+]
+
+export const equipamentosAcessoSeed: EquipamentoAcesso[] = [
+  { id: "equ-1", nome: "Sem equipamento", precoDiaria: 0 },
+  { id: "equ-2", nome: "Andaime até 8m", precoDiaria: 180 },
+  { id: "equ-3", nome: "Andaime até 15m", precoDiaria: 280 },
+  { id: "equ-4", nome: "Plataforma elevatória 12m", precoDiaria: 650 },
+  { id: "equ-5", nome: "Plataforma elevatória 15m", precoDiaria: 850 },
+  { id: "equ-6", nome: "Plataforma elevatória 20m", precoDiaria: 1200 },
+  { id: "equ-7", nome: "Muck / Balancim", precoDiaria: 950 },
+]
 
 export const materiaisSeed: Material[] = [
   { id: "mat-1", nome: "Lona 440g Fosca", tipo: "Lona", unidade: "m2", precoUnitario: 28, estoqueMinimo: 30, quantidadeEstoque: 85 },

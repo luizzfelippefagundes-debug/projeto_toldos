@@ -34,7 +34,42 @@ export interface Cliente {
   email?: string
 }
 
+export interface Acabamento {
+  id: string
+  nome: string
+  precoUnitario: number
+  unidade: string
+}
+
+export interface EquipamentoAcesso {
+  id: string
+  nome: string
+  precoDiaria: number
+}
+
 export type StatusOrcamento = "aberto" | "fechado" | "cancelado"
+
+export interface AcabamentoSelecionado {
+  acabamentoId: string
+  quantidade: number
+}
+
+export interface InstalacaoOrcamento {
+  incluida: boolean
+  horas: number
+  custoHora: number
+  numAjudantes: number
+  diariaAjudante: number
+  equipamentoId: string
+}
+
+export interface DeslocamentoOrcamento {
+  incluido: boolean
+  distanciaKm: number
+  custoPorKm: number
+  pedagio: number
+  alimentacao: number
+}
 
 export interface OrcamentoItem {
   materialId: string
@@ -43,6 +78,11 @@ export interface OrcamentoItem {
   altura: number
   quantidadeUnidades: number
   horasEstimadas: number
+  acabamentos?: AcabamentoSelecionado[]
+  instalacao?: InstalacaoOrcamento
+  deslocamento?: DeslocamentoOrcamento
+  margemPercent?: number
+  descontoPercent?: number
 }
 
 export interface Orcamento {

@@ -28,7 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { formatarData, formatarMoeda } from "@/lib/format"
-import { calcularOrcamento } from "@/lib/calculo"
+import { calcularOrcamentoCompleto } from "@/lib/calculo"
+import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import type { StatusOrcamento } from "@/lib/types"
 import { MoreHorizontal } from "lucide-react"
 import { toast } from "sonner"
@@ -84,8 +85,14 @@ export default function HistoricoOrcamentosPage() {
     const material = materiais.find((m) => m.id === orcamento.item.materialId)
     const servico = servicos.find((s) => s.id === orcamento.item.servicoId)
     if (!material || !servico) return 0
-    return calcularOrcamento(orcamento.item, material, servico, orcamento.ajusteManual)
-      .total
+    return calcularOrcamentoCompleto(
+      orcamento.item,
+      material,
+      servico,
+      orcamento.ajusteManual,
+      acabamentosSeed,
+      equipamentosAcessoSeed
+    ).total
   }
 
   function handleReabrir(id: string) {
