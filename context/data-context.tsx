@@ -86,7 +86,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     orcamentosSeed.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
   )
 
+  // localStorage só existe no cliente, então sincronizar com ele (ler uma vez
+  // após montar e refletir no state) só pode acontecer aqui; é exatamente o
+  // caso de "sincronizar com um sistema externo" que a regra abaixo descreve
+  // como legítimo, e é o ponto central do design anti-hydration-mismatch
+  // explicado no comentário do estado inicial, acima.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMateriais(lerArmazenamento("toldosys.materiais", materiaisSeed))
     setServicos(lerArmazenamento("toldosys.servicos", servicosSeed))
     setClientes(lerArmazenamento("toldosys.clientes", clientesSeed))
@@ -248,6 +254,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       duplicarOrcamento,
       consumirRascunho,
     }),
+    // fecharOrcamento e duplicarOrcamento leem `materiais`/`orcamentos` por
+    // closure (os únicos dois entre as ações que não usam só updates
+    // funcionais) — como esses dois states já estão nas deps abaixo, o memo
+    // já recalcula sempre que essas closures precisariam ficar atualizadas;
+    // adicionar as próprias funções às deps as tornaria "instáveis" (são
+    // recriadas a cada render) e faria o memo recalcular sempre, sem ganho.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [materiais, servicos, clientes, orcamentos, entradasEstoque, rascunho]
   )
 
