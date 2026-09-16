@@ -19,7 +19,7 @@ import { Separator } from "@/components/ui/separator"
 import { ClienteQuickAddDialog } from "@/components/orcamento/cliente-quick-add-dialog"
 import { Stepper, type StepperStep } from "@/components/orcamento/stepper"
 import { calcularOrcamentoCompleto } from "@/lib/calculo"
-import { formatarMoeda } from "@/lib/format"
+import { formatarData, formatarMoeda } from "@/lib/format"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import { toast } from "sonner"
 import { Upload, FileCheck2, Printer, ArrowLeft, ArrowRight } from "lucide-react"
@@ -78,6 +78,20 @@ export default function NovoOrcamentoPage() {
 
   const [margemPercent, setMargemPercent] = useState("0")
   const [descontoPercent, setDescontoPercent] = useState("0")
+  const [impostoPercent, setImpostoPercent] = useState("6")
+  const [validadeDias, setValidadeDias] = useState("7")
+
+  // "Válido até" depende de "hoje" (new Date()) — mesmo cuidado do Dashboard
+  // e da Produção: calcular isso direto no render travaria a data numa
+  // pré-renderização estática. Começa nulo e só calcula depois de montar.
+  const [agora, setAgora] = useState<Date | null>(null)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAgora(new Date())
+  }, [])
+  const validoAte = agora
+    ? new Date(agora.getTime() + (Number(validadeDias) || 7) * 24 * 60 * 60 * 1000)
+    : null
 
   // `rascunho` vem da tela de Histórico (Duplicar) e só existe uma vez, no
   // momento em que esta página monta — mesmo caso já aceito para o
@@ -134,6 +148,7 @@ export default function NovoOrcamentoPage() {
       },
       margemPercent: Number(margemPercent) || 0,
       descontoPercent: Number(descontoPercent) || 0,
+      impostoPercent: Number(impostoPercent) || 0,
     }),
     [
       materialId,
@@ -157,6 +172,7 @@ export default function NovoOrcamentoPage() {
       alimentacao,
       margemPercent,
       descontoPercent,
+      impostoPercent,
     ]
   )
 
@@ -204,6 +220,7 @@ export default function NovoOrcamentoPage() {
       item,
       ajusteManual: Number(ajusteManual) || 0,
       anexoNome: arquivo.name,
+      validadeDias: Number(validadeDias) || 7,
     })
     toast.success(`Orçamento fechado para ${cliente.nome}`)
     router.push("/orcamentos")
@@ -642,10 +659,42 @@ export default function NovoOrcamentoPage() {
                     />
                   </div>
                 </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-2">
+                    <Label>Imposto</Label>
+                    <Select
+                      value={impostoPercent}
+                      onValueChange={(v) => setImpostoPercent(v ?? impostoPercent)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="6">6%</SelectItem>
+                        <SelectItem value="7">7%</SelectItem>
+                        <SelectItem value="8">8%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="validade">Validade do orçamento (dias)</Label>
+                    <Input
+                      id="validade"
+                      type="number"
+                      min="1"
+                      value={validadeDias}
+                      onChange={(e) => setValidadeDias(e.target.value)}
+                    />
+                  </div>
+                </div>
+
                 <p className="text-xs text-muted-foreground">
                   Margem e desconto são aplicados sobre o custo total (material
-                  + mão de obra + acabamentos + instalação + logística). O
-                  ajuste manual em R$ entra por cima, no final.
+                  + mão de obra + acabamentos + instalação + logística), o
+                  imposto sobre esse valor já com desconto, e o ajuste manual
+                  em R$ entra por cima, no final. Depois de {validadeDias || 7}{" "}
+                  dias esse orçamento é considerado vencido.
                 </p>
 
                 {resultado && (
@@ -667,6 +716,12 @@ export default function NovoOrcamentoPage() {
                         Com desconto ({descontoPercent || 0}%)
                       </span>
                       <span>{formatarMoeda(resultado.comDesconto)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Imposto ({impostoPercent || 0}%)
+                      </span>
+                      <span>{formatarMoeda(resultado.valorImposto)}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between text-base font-semibold">
@@ -749,6 +804,10 @@ export default function NovoOrcamentoPage() {
                 <p>Material: {material?.nome ?? "—"}</p>
                 <p>Serviço: {servico?.nome ?? "—"}</p>
                 <p>Equipamento de acesso: {equipamento?.nome ?? "—"}</p>
+                <p>
+                  Válido até:{" "}
+                  {validoAte ? formatarData(validoAte.toISOString()) : "—"}
+                </p>
               </div>
 
               <div className="flex justify-between">
@@ -795,6 +854,14 @@ export default function NovoOrcamentoPage() {
                     : "—"}
                 </span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Imposto ({impostoPercent || 0}%)
+                </span>
+                <span>
+                  {resultado ? formatarMoeda(resultado.valorImposto) : "—"}
+                </span>
+              </div>
 
               <Separator />
 
@@ -802,6 +869,12 @@ export default function NovoOrcamentoPage() {
                 <span>Total</span>
                 <span>
                   {resultado ? formatarMoeda(resultado.total) : formatarMoeda(0)}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground print:hidden">
+                <span>Válido até</span>
+                <span>
+                  {validoAte ? formatarData(validoAte.toISOString()) : "—"}
                 </span>
               </div>
 

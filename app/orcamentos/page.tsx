@@ -79,6 +79,13 @@ export default function HistoricoOrcamentosPage() {
     return clientes.find((c) => c.id === id)?.nome ?? "Cliente removido"
   }
 
+  function validoAte(orcamento: (typeof orcamentos)[number]) {
+    const dias = orcamento.validadeDias ?? 7
+    const data = new Date(orcamento.criadoEm)
+    data.setDate(data.getDate() + dias)
+    return data.toISOString()
+  }
+
   function totalOrcamento(orcamentoId: string) {
     const orcamento = orcamentos.find((o) => o.id === orcamentoId)
     if (!orcamento) return 0
@@ -161,6 +168,7 @@ export default function HistoricoOrcamentosPage() {
               <TableHead>Nº</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Data</TableHead>
+              <TableHead>Válido até</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-12" />
@@ -174,6 +182,7 @@ export default function HistoricoOrcamentosPage() {
                 </TableCell>
                 <TableCell>{nomeCliente(orcamento.clienteId)}</TableCell>
                 <TableCell>{formatarData(orcamento.criadoEm)}</TableCell>
+                <TableCell>{formatarData(validoAte(orcamento))}</TableCell>
                 <TableCell>
                   {formatarMoeda(totalOrcamento(orcamento.id))}
                 </TableCell>
@@ -209,7 +218,7 @@ export default function HistoricoOrcamentosPage() {
             ))}
             {orcamentosFiltrados.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   Nenhum orçamento encontrado para esse filtro.
                 </TableCell>
               </TableRow>

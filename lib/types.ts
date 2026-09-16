@@ -83,6 +83,7 @@ export interface OrcamentoItem {
   deslocamento?: DeslocamentoOrcamento
   margemPercent?: number
   descontoPercent?: number
+  impostoPercent?: number
 }
 
 export interface Orcamento {
@@ -95,6 +96,7 @@ export interface Orcamento {
   status: StatusOrcamento
   criadoEm: string
   fechadoEm: string | null
+  validadeDias?: number
 }
 
 export interface EntradaEstoque {

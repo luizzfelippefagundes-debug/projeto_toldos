@@ -20,6 +20,7 @@ export interface ResultadoCalculoCompleto extends ResultadoCalculo {
   custoBase: number
   comMargem: number
   comDesconto: number
+  valorImposto: number
 }
 
 export function quantidadeMaterialConsumida(
@@ -116,10 +117,12 @@ export function calcularOrcamentoCompleto(
 
   const margemPercent = item.margemPercent ?? 0
   const descontoPercent = item.descontoPercent ?? 0
+  const impostoPercent = item.impostoPercent ?? 0
 
   const comMargem = custoBase * (1 + margemPercent / 100)
   const comDesconto = comMargem * (1 - descontoPercent / 100)
-  const total = comDesconto + ajusteManual
+  const valorImposto = comDesconto * (impostoPercent / 100)
+  const total = comDesconto + valorImposto + ajusteManual
 
   return {
     areaM2: base.areaM2,
@@ -131,6 +134,7 @@ export function calcularOrcamentoCompleto(
     custoBase,
     comMargem,
     comDesconto,
+    valorImposto,
     total,
   }
 }

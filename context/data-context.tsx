@@ -37,7 +37,8 @@ import {
 import { lerArmazenamento, salvarArmazenamento } from "@/lib/storage"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
 
-const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000
+const UM_DIA_MS = 24 * 60 * 60 * 1000
+const SETE_DIAS_MS = 7 * UM_DIA_MS
 
 interface RascunhoOrcamento {
   clienteId: string
@@ -66,6 +67,7 @@ interface DataContextValue {
     item: OrcamentoItem
     ajusteManual: number
     anexoNome: string
+    validadeDias?: number
   }) => Orcamento
   reabrirOrcamento: (id: string) => void
   duplicarOrcamento: (id: string) => void
@@ -260,6 +262,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       status: "fechado",
       criadoEm: new Date().toISOString(),
       fechadoEm: new Date().toISOString(),
+      validadeDias: dados.validadeDias ?? 7,
     }
 
     setOrcamentos((atual) => [novo, ...atual])
@@ -297,7 +300,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         tipo: "receita",
         categoria: "Orçamento",
         valor: resultado.total,
-        vencimento: new Date(Date.now() + SETE_DIAS_MS).toISOString(),
+        vencimento: new Date(
+          Date.now() + (dados.validadeDias ?? 7) * UM_DIA_MS
+        ).toISOString(),
         status: "pendente",
         origem: "orcamento",
         origemId: novo.id,
