@@ -799,7 +799,7 @@ export default function NovoOrcamentoPage() {
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
               <div className="hidden print:block">
-                <p className="font-semibold">Orçamento — ToldoSys</p>
+                <p className="font-semibold">Orçamento — Toldos Print</p>
                 <p>Cliente: {cliente?.nome ?? "—"}</p>
                 <p>Material: {material?.nome ?? "—"}</p>
                 <p>Serviço: {servico?.nome ?? "—"}</p>

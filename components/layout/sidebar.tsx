@@ -63,7 +63,7 @@ export function Sidebar() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
           T
         </div>
-        <span className="text-sm font-semibold">ToldoSys</span>
+        <span className="text-sm font-semibold">Toldos Print</span>
       </div>
 
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">

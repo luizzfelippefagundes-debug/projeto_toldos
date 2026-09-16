@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "ToldoSys — Sistema interno",
+  title: "Toldos Print — Sistema interno",
   description: "Central operacional para toldos e comunicação visual",
 }
 
