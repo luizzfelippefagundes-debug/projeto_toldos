@@ -3,56 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import {
-  LayoutDashboard,
-  FilePlus2,
-  History,
-  Boxes,
-  Wrench,
-  Warehouse,
-  Factory,
-  Wallet,
-  Zap,
-} from "lucide-react"
-
-interface NavItem {
-  label: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-}
-
-interface NavGroup {
-  title: string
-  items: NavItem[]
-}
-
-const grupos: NavGroup[] = [
-  {
-    title: "Principal",
-    items: [
-      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { label: "Gráfica Rápida", href: "/grafica-rapida", icon: Zap },
-      { label: "Novo Orçamento", href: "/orcamentos/novo", icon: FilePlus2 },
-      { label: "Histórico de Orçamentos", href: "/orcamentos", icon: History },
-      { label: "Produção", href: "/producao", icon: Factory },
-    ],
-  },
-  {
-    title: "Cadastros",
-    items: [
-      { label: "Materiais", href: "/materiais", icon: Boxes },
-      { label: "Mão de Obra", href: "/mao-de-obra", icon: Wrench },
-    ],
-  },
-  {
-    title: "Estoque",
-    items: [{ label: "Estoque", href: "/estoque", icon: Warehouse }],
-  },
-  {
-    title: "Financeiro",
-    items: [{ label: "Financeiro", href: "/financeiro", icon: Wallet }],
-  },
-]
+import { gruposNavegacao } from "./nav-groups"
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -67,7 +18,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">
-        {grupos.map((grupo) => (
+        {gruposNavegacao.map((grupo) => (
           <div key={grupo.title}>
             <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               {grupo.title}
