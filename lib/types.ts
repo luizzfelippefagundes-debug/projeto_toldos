@@ -154,6 +154,14 @@ export interface PedidoRapido {
   total: number
   status: StatusPedidoRapido
   criadoEm: string
+  vendedorId?: string
+}
+
+export interface Vendedor {
+  id: string
+  nome: string
+  telefone: string
+  comissaoPercent: number
 }
 
 export type TipoLancamento = "receita" | "despesa"

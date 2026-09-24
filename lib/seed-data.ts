@@ -9,7 +9,13 @@ import type {
   PedidoRapido,
   ProdutoRapido,
   Servico,
+  Vendedor,
 } from "./types"
+
+export const vendedoresSeed: Vendedor[] = [
+  { id: "vnd-1", nome: "Kaio", telefone: "(11) 98123-4567", comissaoPercent: 5 },
+  { id: "vnd-2", nome: "Renata", telefone: "(11) 97654-3210", comissaoPercent: 5 },
+]
 
 export const acabamentosSeed: Acabamento[] = [
   { id: "acb-1", nome: "Ilhós", precoUnitario: 0.5, unidade: "un" },
@@ -109,21 +115,25 @@ export const pedidosRapidosSeed: PedidoRapido[] = [
     id: "ped-1", numero: 5001, produtoId: "prod-1", varianteId: "prod-1-a4",
     acabamento: "Brilho", clienteNome: "Maria Souza", clienteTelefone: "(11) 94444-1111",
     observacao: "", total: 18, status: "aguardando", criadoEm: "2026-09-15T09:00:00.000Z",
+    vendedorId: "vnd-1",
   },
   {
     id: "ped-2", numero: 5002, produtoId: "prod-3", varianteId: "prod-3-2x1",
     acabamento: null, clienteNome: "João Pedro", clienteTelefone: "(11) 93333-2222",
     observacao: "Frente e verso", total: 65, status: "aprovado", criadoEm: "2026-09-14T14:20:00.000Z",
+    vendedorId: "vnd-1",
   },
   {
     id: "ped-3", numero: 5003, produtoId: "prod-5", varianteId: "prod-5-250",
     acabamento: "Fosco", clienteNome: "Ana Paula", clienteTelefone: "(11) 92222-3333",
     observacao: "", total: 70, status: "arte", criadoEm: "2026-09-13T10:15:00.000Z",
+    vendedorId: "vnd-2",
   },
   {
     id: "ped-4", numero: 5004, produtoId: "prod-6", varianteId: "prod-6-500",
     acabamento: null, clienteNome: "Carlos Eduardo", clienteTelefone: "(11) 91111-4444",
     observacao: "Urgente", total: 180, status: "impressao", criadoEm: "2026-09-12T11:30:00.000Z",
+    vendedorId: "vnd-1",
   },
   {
     id: "ped-5", numero: 5005, produtoId: "prod-4", varianteId: "prod-4-pmg",
@@ -134,11 +144,13 @@ export const pedidosRapidosSeed: PedidoRapido[] = [
     id: "ped-6", numero: 5006, produtoId: "prod-2", varianteId: "prod-2-m",
     acabamento: "Brilho", clienteNome: "Padaria Pão Dourado", clienteTelefone: "(11) 98888-1234",
     observacao: "", total: 95, status: "pronto", criadoEm: "2026-09-10T16:00:00.000Z",
+    vendedorId: "vnd-2",
   },
   {
     id: "ped-7", numero: 5007, produtoId: "prod-1", varianteId: "prod-1-60x90",
     acabamento: "Fosco", clienteNome: "Auto Peças Silva", clienteTelefone: "(11) 97777-5678",
     observacao: "", total: 85, status: "entregue", criadoEm: "2026-09-08T13:00:00.000Z",
+    vendedorId: "vnd-1",
   },
   {
     id: "ped-8", numero: 5008, produtoId: "prod-3", varianteId: "prod-3-3x1",
