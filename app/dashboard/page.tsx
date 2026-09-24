@@ -92,7 +92,7 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Bom dia 👋</h1>
         <Button size="lg" render={<Link href="/orcamentos/novo" />}>
           <FilePlus2 className="mr-2 h-4 w-4" />
