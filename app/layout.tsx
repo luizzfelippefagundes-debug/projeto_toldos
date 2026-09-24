@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { DataProvider } from "@/context/data-context"
@@ -18,6 +18,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Toldos Print — Sistema interno",
   description: "Central operacional para toldos e comunicação visual",
+  appleWebApp: {
+    title: "Toldos Print",
+    statusBarStyle: "black-translucent",
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: "#2b7fff",
+  colorScheme: "dark",
 }
 
 export default function RootLayout({
