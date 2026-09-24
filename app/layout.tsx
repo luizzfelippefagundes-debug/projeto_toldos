@@ -4,6 +4,7 @@ import "./globals.css"
 import { DataProvider } from "@/context/data-context"
 import { AppShell } from "@/components/layout/app-shell"
 import { Toaster } from "@/components/ui/sonner"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#2b7fff",
-  colorScheme: "dark",
+  colorScheme: "dark light",
 }
 
 export default function RootLayout({
@@ -37,13 +38,16 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`dark ${geistSans.variable} ${geistMono.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable}`}
+      suppressHydrationWarning
     >
       <body className="antialiased">
-        <DataProvider>
-          <AppShell>{children}</AppShell>
-          <Toaster richColors position="top-right" />
-        </DataProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <DataProvider>
+            <AppShell>{children}</AppShell>
+            <Toaster richColors position="top-right" />
+          </DataProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

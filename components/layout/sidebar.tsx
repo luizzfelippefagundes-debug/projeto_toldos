@@ -4,17 +4,21 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { gruposNavegacao } from "./nav-groups"
+import { ThemeToggle } from "./theme-toggle"
 
 export function Sidebar() {
   const pathname = usePathname()
 
   return (
     <aside className="hidden w-64 shrink-0 border-r border-border bg-card p-4 md:flex md:flex-col print:hidden">
-      <div className="mb-6 flex items-center gap-2 px-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
-          T
+      <div className="mb-6 flex items-center justify-between gap-2 px-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
+            T
+          </div>
+          <span className="text-sm font-semibold">Toldos Print</span>
         </div>
-        <span className="text-sm font-semibold">Toldos Print</span>
+        <ThemeToggle />
       </div>
 
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">

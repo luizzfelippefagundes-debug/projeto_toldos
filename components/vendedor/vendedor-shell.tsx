@@ -9,6 +9,7 @@ import { vendedoresSeed } from "@/lib/seed-data"
 import { useVendedorAtivo } from "@/context/vendedor-ativo-context"
 import { gruposNavegacao } from "@/components/layout/nav-groups"
 import { NavSheet } from "@/components/layout/nav-sheet"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -67,6 +68,7 @@ export function VendedorShell({ children }: { children: ReactNode }) {
             ))}
           </SelectContent>
         </Select>
+        <ThemeToggle />
       </header>
 
       <NavSheet

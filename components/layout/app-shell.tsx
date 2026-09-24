@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { Sidebar } from "./sidebar"
 import { NavSheet } from "./nav-sheet"
 import { gruposNavegacao } from "./nav-groups"
+import { ThemeToggle } from "./theme-toggle"
 import { Button } from "@/components/ui/button"
 
 // Abas rápidas da barra inferior mobile — as mesmas 4 páginas mais usadas no
@@ -44,12 +45,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-1 items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
               T
             </div>
             <span className="text-sm font-semibold">Toldos Print</span>
           </div>
+          <ThemeToggle />
         </header>
 
         <NavSheet
