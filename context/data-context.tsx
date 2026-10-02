@@ -14,6 +14,7 @@ import type {
   EntradaEstoque,
   LancamentoFinanceiro,
   Material,
+  MensagemBot,
   Orcamento,
   OrcamentoItem,
   PedidoRapido,
@@ -29,6 +30,7 @@ import {
   equipamentosAcessoSeed,
   lancamentosFinanceirosSeed,
   materiaisSeed,
+  mensagensBotSeed,
   orcamentosSeed,
   pedidosRapidosSeed,
   produtosRapidosSeed,
@@ -36,6 +38,7 @@ import {
 } from "@/lib/seed-data"
 import { lerArmazenamento, salvarArmazenamento } from "@/lib/storage"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
+import { formatarMoeda } from "@/lib/format"
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000
 const SETE_DIAS_MS = 7 * UM_DIA_MS
@@ -55,6 +58,7 @@ interface DataContextValue {
   produtosRapidos: ProdutoRapido[]
   pedidosRapidos: PedidoRapido[]
   lancamentos: LancamentoFinanceiro[]
+  mensagensBot: MensagemBot[]
   rascunho: RascunhoOrcamento | null
   addMaterial: (dados: Omit<Material, "id">) => Material
   updateMaterial: (id: string, dados: Omit<Material, "id">) => void
@@ -81,12 +85,27 @@ interface DataContextValue {
     dados: Omit<LancamentoFinanceiro, "id" | "criadoEm">
   ) => LancamentoFinanceiro
   marcarLancamentoStatus: (id: string, status: StatusLancamento) => void
+  addMensagemBot: (dados: Omit<MensagemBot, "id" | "criadoEm">) => void
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
 
 function gerarId(prefixo: string) {
   return `${prefixo}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+// Mensagens automáticas por status do pedido — a base do bot de atendimento
+// (ver context/papel-ativo-context.tsx para o padrão de papéis, análogo).
+// Sem WhatsApp conectado ainda, essas mensagens só ficam registradas na
+// Central do Bot (app/bot/page.tsx); quando o canal entrar, é só trocar o
+// destino de "salvar" pra "enviar".
+const mensagemStatusPedido: Partial<Record<StatusPedidoRapido, string>> = {
+  aprovado: "Seu pedido #{numero} foi aprovado e já entrou pra produção!",
+  arte: "Estamos finalizando a arte do seu pedido #{numero}.",
+  impressao: "Seu pedido #{numero} está sendo impresso.",
+  acabamento: "Seu pedido #{numero} está no acabamento, já é a última etapa!",
+  pronto: "Seu pedido #{numero} ficou pronto! Já pode vir buscar.",
+  entregue: "Seu pedido #{numero} foi entregue. Obrigado pela confiança!",
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
@@ -108,6 +127,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   )
   const [lancamentos, setLancamentos] = useState<LancamentoFinanceiro[]>(
     lancamentosFinanceirosSeed
+  )
+  const [mensagensBot, setMensagensBot] = useState<MensagemBot[]>(
+    mensagensBotSeed
   )
   const [rascunho, setRascunho] = useState<RascunhoOrcamento | null>(null)
   const [hidratado, setHidratado] = useState(false)
@@ -161,6 +183,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setLancamentos(
       lerArmazenamento("toldosys.lancamentos", lancamentosFinanceirosSeed)
     )
+    setMensagensBot(
+      lerArmazenamento("toldosys.mensagensBot", mensagensBotSeed)
+    )
     setHidratado(true)
   }, [])
 
@@ -196,6 +221,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!hidratado) return
     salvarArmazenamento("toldosys.lancamentos", lancamentos)
   }, [hidratado, lancamentos])
+  useEffect(() => {
+    if (!hidratado) return
+    salvarArmazenamento("toldosys.mensagensBot", mensagensBot)
+  }, [hidratado, mensagensBot])
 
   const addMaterial: DataContextValue["addMaterial"] = (dados) => {
     const novo: Material = { id: gerarId("mat"), ...dados }
@@ -310,6 +339,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
         clienteId: dados.clienteId,
       }
       setLancamentos((atual) => [lancamento, ...atual])
+
+      if (cliente) {
+        registrarMensagemBot({
+          clienteId: cliente.id,
+          clienteNome: cliente.nome,
+          telefone: cliente.telefone,
+          texto: `Olá! Seu orçamento #${numero} foi fechado no valor de ${formatarMoeda(resultado.total)}, válido por ${dados.validadeDias ?? 7} dias. Qualquer dúvida é só chamar por aqui.`,
+          origem: "automatica",
+          autor: "bot",
+        })
+      }
     }
 
     return novo
@@ -339,6 +379,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const novo: ProdutoRapido = { id: gerarId("prod"), ...dados }
     setProdutosRapidos((atual) => [...atual, novo])
     return novo
+  }
+
+  // Registra uma mensagem na Central do Bot (automática, lembrete ou
+  // resposta de pergunta) — usado por fecharOrcamento/addPedidoRapido/
+  // moverPedidoRapido abaixo, e exposto como addMensagemBot pra quem for
+  // disparar manualmente (lembrete de boleto, "Testar bot").
+  function registrarMensagemBot(dados: Omit<MensagemBot, "id" | "criadoEm">) {
+    const nova: MensagemBot = {
+      id: gerarId("msg"),
+      criadoEm: new Date().toISOString(),
+      ...dados,
+    }
+    setMensagensBot((atual) => [nova, ...atual])
   }
 
   // Cria a receita "a receber" de um pedido da Gráfica Rápida assim que ele
@@ -373,6 +426,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (novo.status !== "aguardando") {
       adicionarReceitaPedido(novo)
     }
+    const mensagem = mensagemStatusPedido[novo.status]
+    if (mensagem && novo.clienteTelefone) {
+      registrarMensagemBot({
+        clienteNome: novo.clienteNome || "Cliente",
+        telefone: novo.clienteTelefone,
+        texto: mensagem.replace("{numero}", String(novo.numero)),
+        origem: "automatica",
+        autor: "bot",
+      })
+    }
     return novo
   }
 
@@ -386,6 +449,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     )
     if (pedido && pedido.status === "aguardando" && status !== "aguardando") {
       adicionarReceitaPedido(pedido)
+    }
+    const mensagem = pedido && mensagemStatusPedido[status]
+    if (pedido && mensagem && status !== pedido.status && pedido.clienteTelefone) {
+      registrarMensagemBot({
+        clienteNome: pedido.clienteNome || "Cliente",
+        telefone: pedido.clienteTelefone,
+        texto: mensagem.replace("{numero}", String(pedido.numero)),
+        origem: "automatica",
+        autor: "bot",
+      })
     }
   }
 
@@ -408,6 +481,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  const addMensagemBot: DataContextValue["addMensagemBot"] = (dados) => {
+    registrarMensagemBot(dados)
+  }
+
   const value = useMemo<DataContextValue>(
     () => ({
       materiais,
@@ -418,6 +495,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       produtosRapidos,
       pedidosRapidos,
       lancamentos,
+      mensagensBot,
       rascunho,
       addMaterial,
       updateMaterial,
@@ -434,6 +512,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       moverPedidoRapido,
       addLancamento,
       marcarLancamentoStatus,
+      addMensagemBot,
     }),
     // Algumas ações (fecharOrcamento, duplicarOrcamento, addPedidoRapido,
     // moverPedidoRapido) leem outros states por closure em vez de usar só
@@ -452,6 +531,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       produtosRapidos,
       pedidosRapidos,
       lancamentos,
+      mensagensBot,
       rascunho,
     ]
   )

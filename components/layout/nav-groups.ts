@@ -9,6 +9,7 @@ import {
   Wallet,
   Zap,
   BarChart3,
+  Bot,
   type LucideIcon,
 } from "lucide-react"
 import type { Papel } from "@/lib/types"
@@ -51,6 +52,7 @@ export const gruposNavegacao: NavGroup[] = [
         icon: Factory,
         papeis: ["producao"],
       },
+      { label: "Central do Bot", href: "/bot", icon: Bot },
     ],
   },
   {

@@ -24,6 +24,8 @@ import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-di
 import { formatarData, formatarMoeda } from "@/lib/format"
 import type { StatusLancamento, TipoLancamento } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { MessageCircle } from "lucide-react"
+import { toast } from "sonner"
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000
 
@@ -36,7 +38,8 @@ const rotuloFormaPagamento: Record<string, string> = {
 }
 
 export default function FinanceiroPage() {
-  const { lancamentos, clientes, marcarLancamentoStatus } = useData()
+  const { lancamentos, clientes, marcarLancamentoStatus, addMensagemBot } =
+    useData()
   const [filtroTipo, setFiltroTipo] = useState<
     TipoLancamento | "todos" | "boleto"
   >("todos")
@@ -98,6 +101,20 @@ export default function FinanceiroPage() {
 
   function alternarStatus(id: string, statusAtual: StatusLancamento) {
     marcarLancamentoStatus(id, statusAtual === "pago" ? "pendente" : "pago")
+  }
+
+  function mandarLembrete(lancamento: (typeof lancamentos)[number]) {
+    const cliente = clientes.find((c) => c.id === lancamento.clienteId)
+    if (!cliente) return
+    addMensagemBot({
+      clienteId: cliente.id,
+      clienteNome: cliente.nome,
+      telefone: cliente.telefone,
+      texto: `Lembrete: "${lancamento.descricao}" no valor de ${formatarMoeda(lancamento.valor)} vence em ${formatarData(lancamento.vencimento)}.`,
+      origem: "lembrete",
+      autor: "bot",
+    })
+    toast.success(`Lembrete registrado pra ${cliente.nome}`)
   }
 
   return (
@@ -220,7 +237,7 @@ export default function FinanceiroPage() {
               <TableHead>Vencimento</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-32" />
+              <TableHead className="w-48" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -264,17 +281,30 @@ export default function FinanceiroPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      alternarStatus(lancamento.id, lancamento.status)
-                    }
-                  >
-                    {lancamento.status === "pago"
-                      ? "Marcar pendente"
-                      : "Marcar pago"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    {lancamento.status === "pendente" &&
+                      lancamento.clienteId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => mandarLembrete(lancamento)}
+                        >
+                          <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+                          Lembrete
+                        </Button>
+                      )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        alternarStatus(lancamento.id, lancamento.status)
+                      }
+                    >
+                      {lancamento.status === "pago"
+                        ? "Marcar pendente"
+                        : "Marcar pago"}
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

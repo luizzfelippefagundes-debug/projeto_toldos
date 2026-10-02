@@ -5,6 +5,7 @@ import type {
   EquipamentoAcesso,
   LancamentoFinanceiro,
   Material,
+  MensagemBot,
   Orcamento,
   PedidoRapido,
   ProdutoRapido,
@@ -210,6 +211,10 @@ export const clientesSeed: Cliente[] = [
   { id: "cli-2", nome: "Auto Peças Silva", telefone: "(11) 97777-5678" },
   { id: "cli-3", nome: "Mercado Boa Compra", telefone: "(11) 96666-4321", email: "contato@boacompra.com" },
   { id: "cli-4", nome: "Studio Beleza Rara", telefone: "(11) 95555-8765" },
+  // Cliente de teste pra simular o bot de atendimento — número real avisado
+  // pra esse fim, usado como exemplo de pra onde as mensagens iriam quando o
+  // canal do WhatsApp entrar.
+  { id: "cli-5", nome: "Cliente Teste — Bot", telefone: "(27) 99750-6203" },
 ]
 
 export const orcamentosSeed: Orcamento[] = [
@@ -273,4 +278,39 @@ export const lancamentosFinanceirosSeed: LancamentoFinanceiro[] = [
   { id: "lan-13", descricao: "Manutenção da impressora", tipo: "despesa", categoria: "Manutenção", valor: 260, vencimento: "2026-09-22T00:00:00.000Z", status: "pendente", origem: "manual", origemId: null, criadoEm: "2026-09-10T15:00:00.000Z", formaPagamento: "pix" },
   { id: "lan-14", descricao: "Aluguel do galpão — outubro", tipo: "despesa", categoria: "Aluguel", valor: 1800, vencimento: "2026-10-05T00:00:00.000Z", status: "pendente", origem: "manual", origemId: null, criadoEm: "2026-09-28T09:00:00.000Z", formaPagamento: "boleto", numeroBoleto: "23793.38128 60007.527133 35000.063305 1 98760000180000" },
   { id: "lan-15", descricao: "Distribuidora Lonax — nota 46110", tipo: "despesa", categoria: "Fornecedor", valor: 980, vencimento: "2026-10-08T00:00:00.000Z", status: "pendente", origem: "manual", origemId: null, criadoEm: "2026-09-29T09:00:00.000Z", formaPagamento: "boleto", numeroBoleto: "00190.00009 03456.789012 34567.890123 4 98760000098000" },
+]
+
+export const mensagensBotSeed: MensagemBot[] = [
+  {
+    id: "msg-1",
+    clienteId: "cli-5",
+    clienteNome: "Cliente Teste — Bot",
+    telefone: "(27) 99750-6203",
+    texto:
+      "Olá! Seu orçamento #1001 foi fechado no valor de R$ 418,00, válido por 7 dias. Qualquer dúvida é só chamar por aqui.",
+    origem: "automatica",
+    autor: "bot",
+    criadoEm: "2026-09-29T10:00:00.000Z",
+  },
+  {
+    id: "msg-2",
+    clienteId: "cli-5",
+    clienteNome: "Cliente Teste — Bot",
+    telefone: "(27) 99750-6203",
+    texto: "Quando fica pronto meu pedido?",
+    origem: "pergunta",
+    autor: "cliente",
+    criadoEm: "2026-09-29T10:05:00.000Z",
+  },
+  {
+    id: "msg-3",
+    clienteId: "cli-5",
+    clienteNome: "Cliente Teste — Bot",
+    telefone: "(27) 99750-6203",
+    texto:
+      "Seu pedido está na etapa de produção. O prazo combinado foi de 3 dias úteis a partir da aprovação — te aviso assim que ficar pronto!",
+    origem: "pergunta",
+    autor: "bot",
+    criadoEm: "2026-09-29T10:05:20.000Z",
+  },
 ]

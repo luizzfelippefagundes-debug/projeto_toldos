@@ -167,6 +167,19 @@ export interface Vendedor {
 
 export type Papel = "dono" | "producao" | "financeiro"
 
+export type OrigemMensagemBot = "automatica" | "lembrete" | "pergunta"
+
+export interface MensagemBot {
+  id: string
+  clienteId?: string
+  clienteNome: string
+  telefone: string
+  texto: string
+  origem: OrigemMensagemBot
+  autor: "bot" | "cliente"
+  criadoEm: string
+}
+
 export type TipoLancamento = "receita" | "despesa"
 export type StatusLancamento = "pendente" | "pago"
 export type OrigemLancamento = "orcamento" | "pedido-rapido" | "manual"
