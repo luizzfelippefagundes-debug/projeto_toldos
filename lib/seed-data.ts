@@ -174,11 +174,35 @@ export const materiaisSeed: Material[] = [
 ]
 
 export const servicosSeed: Servico[] = [
-  { id: "srv-1", nome: "Instalação de Toldo", formaCobranca: "fixo", valor: 250 },
-  { id: "srv-2", nome: "Instalação de Fachada", formaCobranca: "m2", valor: 35 },
-  { id: "srv-3", nome: "Instalação de Letreiro", formaCobranca: "hora", valor: 60 },
-  { id: "srv-4", nome: "Acabamento e Solda", formaCobranca: "percentual", valor: 15 },
-  { id: "srv-5", nome: "Aplicação de Adesivo", formaCobranca: "m2", valor: 18 },
+  {
+    id: "srv-1",
+    nome: "Instalação de Toldo",
+    formaCobranca: "fixo",
+    valor: 250,
+    ferramentas: "Furadeira, parafusadeira, nível a laser, escada/andaime",
+  },
+  {
+    id: "srv-2",
+    nome: "Instalação de Fachada",
+    formaCobranca: "m2",
+    valor: 35,
+    ferramentas: "Furadeira de impacto, trena, nível, buchas e parafusos",
+  },
+  {
+    id: "srv-3",
+    nome: "Instalação de Letreiro",
+    formaCobranca: "hora",
+    valor: 60,
+    ferramentas: "Furadeira, multímetro, fita isolante, escada/andaime",
+  },
+  {
+    id: "srv-4",
+    nome: "Acabamento e Solda",
+    formaCobranca: "percentual",
+    valor: 15,
+    ferramentas: "Máquina de solda, esmerilhadeira, óculos e luvas de proteção",
+  },
+  { id: "srv-5", nome: "Aplicação de Adesivo", formaCobranca: "m2", valor: 18, ferramentas: "Esquadro, espátula de aplicação, estilete, soprador térmico" },
 ]
 
 export const clientesSeed: Cliente[] = [

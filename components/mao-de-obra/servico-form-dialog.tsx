@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -79,12 +80,18 @@ function ServicoFormFields({ servico, modoEdicao, onFechar }: FieldsProps) {
     servico?.formaCobranca ?? "fixo"
   )
   const [valor, setValor] = useState(servico?.valor?.toString() ?? "")
+  const [ferramentas, setFerramentas] = useState(servico?.ferramentas ?? "")
 
   const sufixo = formasCobranca.find((f) => f.value === formaCobranca)?.sufixo ?? ""
   const valido = nome.trim().length > 0 && Number(valor) > 0
 
   function salvar() {
-    const dados = { nome: nome.trim(), formaCobranca, valor: Number(valor) }
+    const dados = {
+      nome: nome.trim(),
+      formaCobranca,
+      valor: Number(valor),
+      ferramentas: ferramentas.trim() || undefined,
+    }
     if (modoEdicao && servico) {
       updateServico(servico.id, dados)
     } else {
@@ -140,6 +147,18 @@ function ServicoFormFields({ servico, modoEdicao, onFechar }: FieldsProps) {
             step="0.01"
             value={valor}
             onChange={(e) => setValor(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="ferramentasServico">
+            Ferramentas necessárias (opcional)
+          </Label>
+          <Textarea
+            id="ferramentasServico"
+            value={ferramentas}
+            onChange={(e) => setFerramentas(e.target.value)}
+            placeholder="Ex: Furadeira, esquadro, cola de contato"
           />
         </div>
       </div>

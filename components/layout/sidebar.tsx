@@ -3,15 +3,31 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { gruposNavegacao } from "./nav-groups"
+import { usePapelAtivo } from "@/context/papel-ativo-context"
+import { filtrarGruposPorPapel, gruposNavegacao } from "./nav-groups"
 import { ThemeToggle } from "./theme-toggle"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+const rotuloPapel = {
+  dono: "Dono (vê tudo)",
+  producao: "Visão Produção",
+  financeiro: "Visão Financeiro",
+} as const
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { papel, setPapel } = usePapelAtivo()
+  const grupos = filtrarGruposPorPapel(gruposNavegacao, papel)
 
   return (
     <aside className="hidden w-64 shrink-0 border-r border-border bg-card p-4 md:flex md:flex-col print:hidden">
-      <div className="mb-6 flex items-center justify-between gap-2 px-2">
+      <div className="mb-4 flex items-center justify-between gap-2 px-2">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
             T
@@ -21,8 +37,26 @@ export function Sidebar() {
         <ThemeToggle />
       </div>
 
+      <Select
+        value={papel}
+        onValueChange={(v) => setPapel((v ?? papel) as typeof papel)}
+      >
+        <SelectTrigger className="mb-6 w-full text-xs">
+          <SelectValue>
+            {(valor: string) =>
+              rotuloPapel[valor as keyof typeof rotuloPapel] ?? valor
+            }
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="dono">{rotuloPapel.dono}</SelectItem>
+          <SelectItem value="producao">{rotuloPapel.producao}</SelectItem>
+          <SelectItem value="financeiro">{rotuloPapel.financeiro}</SelectItem>
+        </SelectContent>
+      </Select>
+
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">
-        {gruposNavegacao.map((grupo) => (
+        {grupos.map((grupo) => (
           <div key={grupo.title}>
             <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               {grupo.title}

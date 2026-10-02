@@ -25,6 +25,7 @@ export interface Servico {
   nome: string
   formaCobranca: FormaCobranca
   valor: number
+  ferramentas?: string
 }
 
 export interface Cliente {
@@ -163,6 +164,8 @@ export interface Vendedor {
   telefone: string
   comissaoPercent: number
 }
+
+export type Papel = "dono" | "producao" | "financeiro"
 
 export type TipoLancamento = "receita" | "despesa"
 export type StatusLancamento = "pendente" | "pago"

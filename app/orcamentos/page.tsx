@@ -32,6 +32,7 @@ import { calcularOrcamentoCompleto } from "@/lib/calculo"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import type { StatusOrcamento } from "@/lib/types"
 import { MoreHorizontal } from "lucide-react"
+import Link from "next/link"
 import { toast } from "sonner"
 
 const statusLabel: Record<StatusOrcamento, string> = {
@@ -199,6 +200,11 @@ export default function HistoricoOrcamentosPage() {
                       <MoreHorizontal className="h-4 w-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        render={<Link href={`/orcamentos/${orcamento.id}/os`} />}
+                      >
+                        Emitir OS
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDuplicar(orcamento.id)}
                       >

@@ -50,6 +50,7 @@ export default function MaoDeObraPage() {
               <TableHead>Serviço</TableHead>
               <TableHead>Forma de cobrança</TableHead>
               <TableHead>Valor</TableHead>
+              <TableHead>Ferramentas necessárias</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -60,6 +61,9 @@ export default function MaoDeObraPage() {
                 <TableCell>{rotulos[servico.formaCobranca]}</TableCell>
                 <TableCell>
                   {formatarValor(servico.formaCobranca, servico.valor)}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {servico.ferramentas || "—"}
                 </TableCell>
                 <TableCell>
                   <ServicoFormDialog servico={servico} />

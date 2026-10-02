@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import type { NavGroup } from "./nav-groups"
 import {
@@ -17,6 +18,7 @@ interface NavSheetProps {
   grupos: NavGroup[]
   titulo: string
   subtitulo?: string
+  extra?: ReactNode
 }
 
 // Menu deslizante (Sheet) com os mesmos grupos de navegação usados na
@@ -30,6 +32,7 @@ export function NavSheet({
   grupos,
   titulo,
   subtitulo,
+  extra,
 }: NavSheetProps) {
   const pathname = usePathname()
 
@@ -42,6 +45,8 @@ export function NavSheet({
             <p className="text-xs text-muted-foreground">{subtitulo}</p>
           )}
         </SheetHeader>
+
+        {extra && <div className="px-4">{extra}</div>}
 
         <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
           {grupos.map((grupo) => (

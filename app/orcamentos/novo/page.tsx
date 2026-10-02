@@ -18,7 +18,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { ClienteQuickAddDialog } from "@/components/orcamento/cliente-quick-add-dialog"
 import { Stepper, type StepperStep } from "@/components/orcamento/stepper"
-import { calcularOrcamentoCompleto } from "@/lib/calculo"
+import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import { toast } from "sonner"
@@ -822,6 +822,16 @@ export default function NovoOrcamentoPage() {
                   {resultado ? formatarMoeda(resultado.subtotalMaterial) : "—"}
                 </span>
               </div>
+              {material && (
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Consumo de material</span>
+                  <span>
+                    {quantidadeMaterialConsumida(item, material).toFixed(2)}{" "}
+                    {material.unidade === "m2" ? "m²" : "un"} de{" "}
+                    {material.nome}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Mão de obra</span>
                 <span>

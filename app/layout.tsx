@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { DataProvider } from "@/context/data-context"
+import { PapelAtivoProvider } from "@/context/papel-ativo-context"
 import { AppShell } from "@/components/layout/app-shell"
 import { Toaster } from "@/components/ui/sonner"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -44,8 +45,10 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <DataProvider>
-            <AppShell>{children}</AppShell>
-            <Toaster richColors position="top-right" />
+            <PapelAtivoProvider>
+              <AppShell>{children}</AppShell>
+              <Toaster richColors position="top-right" />
+            </PapelAtivoProvider>
           </DataProvider>
         </ThemeProvider>
       </body>
