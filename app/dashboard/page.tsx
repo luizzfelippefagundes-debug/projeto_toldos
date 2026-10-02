@@ -80,7 +80,9 @@ export default function DashboardPage() {
       (l) => l.status === "pendente" && new Date(l.vencimento) <= limite
     )
   }, [lancamentos, hoje])
-  const boletosVencendo = lancamentosVencendo.filter((l) => l.tipo === "despesa")
+  const boletosVencendo = lancamentosVencendo.filter(
+    (l) => l.formaPagamento === "boleto"
+  )
 
   const orcamentosValidadeVencendo = useMemo(() => {
     if (!hoje) return 0

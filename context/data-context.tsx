@@ -307,6 +307,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         origem: "orcamento",
         origemId: novo.id,
         criadoEm: new Date().toISOString(),
+        clienteId: dados.clienteId,
       }
       setLancamentos((atual) => [lancamento, ...atual])
     }

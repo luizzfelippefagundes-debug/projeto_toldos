@@ -66,7 +66,9 @@ export default function RelatoriosPage() {
     })
   }, [lancamentos, hoje])
 
-  const boletosAVencer = aVencerEm7Dias.filter((l) => l.tipo === "despesa")
+  const boletosAVencer = aVencerEm7Dias.filter(
+    (l) => l.formaPagamento === "boleto"
+  )
   const receberAVencer = aVencerEm7Dias.filter((l) => l.tipo === "receita")
 
   const orcamentosFechadosPeriodo = useMemo(

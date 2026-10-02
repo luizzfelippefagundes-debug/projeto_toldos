@@ -20,12 +20,20 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useData } from "@/context/data-context"
-import type { TipoLancamento } from "@/lib/types"
+import type { FormaPagamento, TipoLancamento } from "@/lib/types"
 import { Plus } from "lucide-react"
 
 function hojeISO() {
   return new Date().toISOString().slice(0, 10)
 }
+
+const formasPagamento: { value: FormaPagamento; label: string }[] = [
+  { value: "boleto", label: "Boleto" },
+  { value: "pix", label: "Pix" },
+  { value: "dinheiro", label: "Dinheiro" },
+  { value: "cartao", label: "Cartão" },
+  { value: "transferencia", label: "Transferência" },
+]
 
 export function LancamentoFormDialog() {
   const [aberto, setAberto] = useState(false)
@@ -49,13 +57,18 @@ export function LancamentoFormDialog() {
 }
 
 function LancamentoFormFields({ onFechar }: { onFechar: () => void }) {
-  const { addLancamento } = useData()
+  const { addLancamento, clientes } = useData()
 
   const [tipo, setTipo] = useState<TipoLancamento>("despesa")
   const [descricao, setDescricao] = useState("")
   const [categoria, setCategoria] = useState("")
   const [valor, setValor] = useState("")
   const [vencimento, setVencimento] = useState(hojeISO())
+  const [clienteId, setClienteId] = useState<string>("nenhum")
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | "nenhuma">(
+    "nenhuma"
+  )
+  const [numeroBoleto, setNumeroBoleto] = useState("")
 
   const valido =
     descricao.trim().length > 0 &&
@@ -72,6 +85,12 @@ function LancamentoFormFields({ onFechar }: { onFechar: () => void }) {
       status: "pendente",
       origem: "manual",
       origemId: null,
+      clienteId: clienteId !== "nenhum" ? clienteId : undefined,
+      formaPagamento: formaPagamento !== "nenhuma" ? formaPagamento : undefined,
+      numeroBoleto:
+        formaPagamento === "boleto" && numeroBoleto.trim()
+          ? numeroBoleto.trim()
+          : undefined,
     })
     onFechar()
   }
@@ -141,6 +160,72 @@ function LancamentoFormFields({ onFechar }: { onFechar: () => void }) {
             onChange={(e) => setVencimento(e.target.value)}
           />
         </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
+            <Label>Cliente (opcional)</Label>
+            <Select
+              value={clienteId}
+              onValueChange={(v) => setClienteId(v ?? "nenhum")}
+            >
+              <SelectTrigger>
+                <SelectValue>
+                  {(v: string) =>
+                    v === "nenhum"
+                      ? "Nenhum"
+                      : (clientes.find((c) => c.id === v)?.nome ?? "Nenhum")
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nenhum">Nenhum</SelectItem>
+                {clientes.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>Forma de pagamento (opcional)</Label>
+            <Select
+              value={formaPagamento}
+              onValueChange={(v) =>
+                setFormaPagamento((v as FormaPagamento) ?? "nenhuma")
+              }
+            >
+              <SelectTrigger>
+                <SelectValue>
+                  {(v: string) =>
+                    formasPagamento.find((f) => f.value === v)?.label ??
+                    "Nenhuma"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nenhuma">Nenhuma</SelectItem>
+                {formasPagamento.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>
+                    {f.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {formaPagamento === "boleto" && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="numeroBoleto">Número do boleto</Label>
+            <Input
+              id="numeroBoleto"
+              value={numeroBoleto}
+              onChange={(e) => setNumeroBoleto(e.target.value)}
+              placeholder="Ex: 00190.00009 03..."
+            />
+          </div>
+        )}
       </div>
 
       <DialogFooter>

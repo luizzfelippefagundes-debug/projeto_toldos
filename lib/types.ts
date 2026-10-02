@@ -170,6 +170,12 @@ export type Papel = "dono" | "producao" | "financeiro"
 export type TipoLancamento = "receita" | "despesa"
 export type StatusLancamento = "pendente" | "pago"
 export type OrigemLancamento = "orcamento" | "pedido-rapido" | "manual"
+export type FormaPagamento =
+  | "boleto"
+  | "pix"
+  | "dinheiro"
+  | "cartao"
+  | "transferencia"
 
 export interface LancamentoFinanceiro {
   id: string
@@ -182,4 +188,7 @@ export interface LancamentoFinanceiro {
   origem: OrigemLancamento
   origemId: string | null
   criadoEm: string
+  clienteId?: string
+  formaPagamento?: FormaPagamento
+  numeroBoleto?: string
 }
