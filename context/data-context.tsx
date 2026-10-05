@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react"
+import { toast } from "sonner"
 import type {
   Cliente,
   EntradaEstoque,
@@ -36,7 +37,6 @@ import {
   produtosRapidosSeed,
   servicosSeed,
 } from "@/lib/seed-data"
-import { lerArmazenamento, salvarArmazenamento } from "@/lib/storage"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarMoeda } from "@/lib/format"
 import { criarPrazoEntregaPedido } from "@/lib/pedidos-rapidos"
@@ -71,7 +71,8 @@ interface DataContextValue {
     clienteId: string
     item: OrcamentoItem
     ajusteManual: number
-    anexoNome: string
+    anexoNome: string | null
+    anexoUrl?: string
     validadeDias?: number
   }) => Orcamento
   reabrirOrcamento: (id: string) => boolean
@@ -95,6 +96,34 @@ function gerarId(prefixo: string) {
   return `${prefixo}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+// Dispara chamada à API em background — erros mostram toast mas não revertem
+// o estado otimista, pois o dado já está na memória para o usuário.
+function apiPost(url: string, body: unknown) {
+  fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).catch(() =>
+    toast.error("Erro ao salvar no banco. Recarregue se o problema persistir.")
+  )
+}
+
+function apiPut(url: string, body: unknown) {
+  fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).catch(() =>
+    toast.error("Erro ao salvar no banco. Recarregue se o problema persistir.")
+  )
+}
+
+function apiDelete(url: string) {
+  fetch(url, { method: "DELETE" }).catch(() =>
+    toast.error("Erro ao salvar no banco. Recarregue se o problema persistir.")
+  )
+}
+
 // Mensagens automáticas por status do pedido — a base do bot de atendimento
 // (ver context/papel-ativo-context.tsx para o padrão de papéis, análogo).
 // Sem WhatsApp conectado ainda, essas mensagens só ficam registradas na
@@ -110,9 +139,6 @@ const mensagemStatusPedido: Partial<Record<StatusPedidoRapido, string>> = {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  // Estado inicial é SEMPRE o seed — igual no servidor e no primeiro render
-  // do cliente — para não causar hydration mismatch. Os dados salvos no
-  // localStorage só são lidos depois da montagem, no efeito abaixo.
   const [materiais, setMateriais] = useState<Material[]>(materiaisSeed)
   const [servicos, setServicos] = useState<Servico[]>(servicosSeed)
   const [clientes, setClientes] = useState<Cliente[]>(clientesSeed)
@@ -133,13 +159,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     mensagensBotSeed
   )
   const [rascunho, setRascunho] = useState<RascunhoOrcamento | null>(null)
-  const [hidratado, setHidratado] = useState(false)
 
-  // Contador de número de orçamento em um ref (não em state): fecharOrcamento
-  // lê e incrementa isso de forma síncrona, então dois fechamentos disparados
-  // em sequência rápida (ex.: duplo clique antes do botão desabilitar) nunca
-  // recebem o mesmo número — o que aconteceria se o número fosse derivado do
-  // state `orcamentos`, que só reflete a última renderização.
   const proximoNumeroRef = useRef(
     orcamentosSeed.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
   )
@@ -147,101 +167,97 @@ export function DataProvider({ children }: { children: ReactNode }) {
     pedidosRapidosSeed.reduce((max, p) => Math.max(max, p.numero), 5000) + 1
   )
 
-  // localStorage só existe no cliente, então sincronizar com ele (ler uma vez
-  // após montar e refletir no state) só pode acontecer aqui; é exatamente o
-  // caso de "sincronizar com um sistema externo" que a regra abaixo descreve
-  // como legítimo, e é o ponto central do design anti-hydration-mismatch
-  // explicado no comentário do estado inicial, acima.
+  // Busca dados do banco na montagem do componente
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMateriais(lerArmazenamento("toldosys.materiais", materiaisSeed))
-    setServicos(lerArmazenamento("toldosys.servicos", servicosSeed))
-    setClientes(lerArmazenamento("toldosys.clientes", clientesSeed))
-    const orcamentosCarregados = lerArmazenamento(
-      "toldosys.orcamentos",
-      orcamentosSeed
-    )
-    setOrcamentos(orcamentosCarregados)
-    proximoNumeroRef.current =
-      orcamentosCarregados.reduce((max, o) => Math.max(max, o.numero), 1000) +
-      1
-    setEntradasEstoque(
-      lerArmazenamento("toldosys.entradasEstoque", entradasEstoqueSeed)
-    )
-    setProdutosRapidos(
-      lerArmazenamento("toldosys.produtosRapidos", produtosRapidosSeed)
-    )
-    const pedidosRapidosCarregados = lerArmazenamento(
-      "toldosys.pedidosRapidos",
-      pedidosRapidosSeed
-    )
-    setPedidosRapidos(pedidosRapidosCarregados)
-    proximoNumeroPedidoRef.current =
-      pedidosRapidosCarregados.reduce(
-        (max, p) => Math.max(max, p.numero),
-        5000
-      ) + 1
-    setLancamentos(
-      lerArmazenamento("toldosys.lancamentos", lancamentosFinanceirosSeed)
-    )
-    setMensagensBot(
-      lerArmazenamento("toldosys.mensagensBot", mensagensBotSeed)
-    )
-    setHidratado(true)
-  }, [])
+    async function carregar() {
+      try {
+        const [
+          resMateriais,
+          resServicos,
+          resClientes,
+          resOrcamentos,
+          resEntradas,
+          resProdutos,
+          resPedidos,
+          resLancamentos,
+          resMensagens,
+        ] = await Promise.all([
+          fetch("/api/materiais"),
+          fetch("/api/servicos"),
+          fetch("/api/clientes"),
+          fetch("/api/orcamentos"),
+          fetch("/api/entradas-estoque"),
+          fetch("/api/produtos-rapidos"),
+          fetch("/api/pedidos-rapidos"),
+          fetch("/api/lancamentos"),
+          fetch("/api/mensagens-bot"),
+        ])
 
-  useEffect(() => {
-    if (!hidratado) return
-    salvarArmazenamento("toldosys.materiais", materiais)
-  }, [hidratado, materiais])
-  useEffect(() => {
-    if (!hidratado) return
-    salvarArmazenamento("toldosys.servicos", servicos)
-  }, [hidratado, servicos])
-  useEffect(() => {
-    if (!hidratado) return
-    salvarArmazenamento("toldosys.clientes", clientes)
-  }, [hidratado, clientes])
-  useEffect(() => {
-    if (!hidratado) return
-    salvarArmazenamento("toldosys.orcamentos", orcamentos)
-  }, [hidratado, orcamentos])
-  useEffect(() => {
-    if (!hidratado) return
-    salvarArmazenamento("toldosys.entradasEstoque", entradasEstoque)
-  }, [hidratado, entradasEstoque])
-  useEffect(() => {
-    if (!hidratado) return
-    salvarArmazenamento("toldosys.produtosRapidos", produtosRapidos)
-  }, [hidratado, produtosRapidos])
-  useEffect(() => {
-    if (!hidratado) return
-    salvarArmazenamento("toldosys.pedidosRapidos", pedidosRapidos)
-  }, [hidratado, pedidosRapidos])
-  useEffect(() => {
-    if (!hidratado) return
-    salvarArmazenamento("toldosys.lancamentos", lancamentos)
-  }, [hidratado, lancamentos])
-  useEffect(() => {
-    if (!hidratado) return
-    salvarArmazenamento("toldosys.mensagensBot", mensagensBot)
-  }, [hidratado, mensagensBot])
+        const [
+          mat,
+          srv,
+          cli,
+          orc,
+          ent,
+          prod,
+          ped,
+          lan,
+          msg,
+        ] = await Promise.all([
+          resMateriais.json() as Promise<Material[]>,
+          resServicos.json() as Promise<Servico[]>,
+          resClientes.json() as Promise<Cliente[]>,
+          resOrcamentos.json() as Promise<Orcamento[]>,
+          resEntradas.json() as Promise<EntradaEstoque[]>,
+          resProdutos.json() as Promise<ProdutoRapido[]>,
+          resPedidos.json() as Promise<PedidoRapido[]>,
+          resLancamentos.json() as Promise<LancamentoFinanceiro[]>,
+          resMensagens.json() as Promise<MensagemBot[]>,
+        ])
+
+        if (mat.length) setMateriais(mat)
+        if (srv.length) setServicos(srv)
+        if (cli.length) setClientes(cli)
+        if (orc.length) {
+          setOrcamentos(orc)
+          proximoNumeroRef.current =
+            orc.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
+        }
+        if (ent.length) setEntradasEstoque(ent)
+        if (prod.length) setProdutosRapidos(prod)
+        if (ped.length) {
+          setPedidosRapidos(ped)
+          proximoNumeroPedidoRef.current =
+            ped.reduce((max, p) => Math.max(max, p.numero), 5000) + 1
+        }
+        if (lan.length) setLancamentos(lan)
+        if (msg.length) setMensagensBot(msg)
+      } catch {
+        toast.error("Não foi possível carregar os dados do servidor.")
+      }
+    }
+    carregar()
+  }, [])
 
   const addMaterial: DataContextValue["addMaterial"] = (dados) => {
     const novo: Material = { id: gerarId("mat"), ...dados }
     setMateriais((atual) => [...atual, novo])
+    apiPost("/api/materiais", novo)
     return novo
   }
 
   const updateMaterial: DataContextValue["updateMaterial"] = (id, dados) => {
+    const atualizado = { id, ...dados }
     setMateriais((atual) =>
-      atual.map((m) => (m.id === id ? { id, ...dados } : m))
+      atual.map((m) => (m.id === id ? atualizado : m))
     )
+    apiPut(`/api/materiais/${id}`, dados)
   }
 
   const addServico: DataContextValue["addServico"] = (dados) => {
     const novo: Servico = { id: gerarId("srv"), ...dados }
     setServicos((atual) => [...atual, novo])
+    apiPost("/api/servicos", novo)
     return novo
   }
 
@@ -249,29 +265,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setServicos((atual) =>
       atual.map((s) => (s.id === id ? { id, ...dados } : s))
     )
+    apiPut(`/api/servicos/${id}`, dados)
   }
 
   const addCliente: DataContextValue["addCliente"] = (dados) => {
     const novo: Cliente = { id: gerarId("cli"), ...dados }
     setClientes((atual) => [...atual, novo])
+    apiPost("/api/clientes", novo)
     return novo
   }
 
-  const addEntradaEstoque: DataContextValue["addEntradaEstoque"] = (
-    dados
-  ) => {
+  const addEntradaEstoque: DataContextValue["addEntradaEstoque"] = (dados) => {
     const nova: EntradaEstoque = {
       id: gerarId("ent"),
       data: new Date().toISOString(),
       ...dados,
     }
     setEntradasEstoque((atual) => [nova, ...atual])
+    apiPost("/api/entradas-estoque", nova)
+
     setMateriais((atual) =>
-      atual.map((m) =>
-        m.id === dados.materialId
-          ? { ...m, quantidadeEstoque: m.quantidadeEstoque + dados.quantidade }
-          : m
-      )
+      atual.map((m) => {
+        if (m.id !== dados.materialId) return m
+        const atualizado = {
+          ...m,
+          quantidadeEstoque: m.quantidadeEstoque + dados.quantidade,
+        }
+        apiPut(`/api/materiais/${m.id}`, { ...atualizado, id: undefined })
+        return atualizado
+      })
     )
   }
 
@@ -320,6 +342,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       totalFechado: resultado?.total,
       ajusteManual: dados.ajusteManual,
       anexoNome: dados.anexoNome,
+      anexoUrl: dados.anexoUrl,
       status: "fechado",
       criadoEm: new Date().toISOString(),
       fechadoEm: new Date().toISOString(),
@@ -327,27 +350,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
 
     setOrcamentos((atual) => [novo, ...atual])
+    apiPost("/api/orcamentos", novo)
 
     if (material) {
       setMateriais((atual) =>
-        atual.map((m) =>
-          m.id === material.id
-            ? {
-                ...m,
-                quantidadeEstoque: Math.max(
-                  0,
-                  m.quantidadeEstoque - quantidadeConsumidaSolicitada
-                ),
-              }
-            : m
-        )
+        atual.map((m) => {
+          if (m.id !== material.id) return m
+          const atualizado = {
+            ...m,
+            quantidadeEstoque: Math.max(
+              0,
+              m.quantidadeEstoque - quantidadeConsumidaSolicitada
+            ),
+          }
+          apiPut(`/api/materiais/${m.id}`, { ...atualizado, id: undefined })
+          return atualizado
+        })
       )
     }
 
-    // Fechar um orçamento gera automaticamente uma receita "a receber" no
-    // Financeiro — igual ao que acontece com um pedido da Gráfica Rápida
-    // aprovado (ver addPedidoRapido/moverPedidoRapido). Sem isso o módulo
-    // financeiro ficaria desconectado do resto do sistema.
     if (resultado) {
       const lancamento: LancamentoFinanceiro = {
         id: gerarId("lan"),
@@ -365,6 +386,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         clienteId: dados.clienteId,
       }
       setLancamentos((atual) => [lancamento, ...atual])
+      apiPost("/api/lancamentos", lancamento)
 
       if (cliente) {
         registrarMensagemBot({
@@ -399,14 +421,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
           orcamento.quantidadeMaterialDebitada ??
           quantidadeMaterialConsumida(orcamento.item, material)
         setMateriais((atual) =>
-          atual.map((m) =>
-            m.id === material.id
-              ? { ...m, quantidadeEstoque: m.quantidadeEstoque + consumido }
-              : m
-          )
+          atual.map((m) => {
+            if (m.id !== material.id) return m
+            const atualizado = { ...m, quantidadeEstoque: m.quantidadeEstoque + consumido }
+            apiPut(`/api/materiais/${m.id}`, { ...atualizado, id: undefined })
+            return atualizado
+          })
         )
       }
 
+      lancamentosRelacionados.forEach((l) => apiDelete(`/api/lancamentos/${l.id}`))
       setLancamentos((atual) =>
         atual.filter(
           (l) => !(l.origem === "orcamento" && l.origemId === id)
@@ -414,11 +438,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       )
     }
 
+    const reaberto = { ...orcamento, status: "aberto" as const, fechadoEm: null }
     setOrcamentos((atual) =>
-      atual.map((o) =>
-        o.id === id ? { ...o, status: "aberto", fechadoEm: null } : o
-      )
+      atual.map((o) => (o.id === id ? reaberto : o))
     )
+    apiPut(`/api/orcamentos/${id}`, reaberto)
     return true
   }
 
@@ -437,13 +461,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const addProdutoRapido: DataContextValue["addProdutoRapido"] = (dados) => {
     const novo: ProdutoRapido = { id: gerarId("prod"), ...dados }
     setProdutosRapidos((atual) => [...atual, novo])
+    apiPost("/api/produtos-rapidos", novo)
     return novo
   }
 
-  // Registra uma mensagem na Central do Bot (automática, lembrete ou
-  // resposta de pergunta) — usado por fecharOrcamento/addPedidoRapido/
-  // moverPedidoRapido abaixo, e exposto como addMensagemBot pra quem for
-  // disparar manualmente (lembrete de boleto, "Testar bot").
   function registrarMensagemBot(dados: Omit<MensagemBot, "id" | "criadoEm">) {
     const nova: MensagemBot = {
       id: gerarId("msg"),
@@ -451,11 +472,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ...dados,
     }
     setMensagensBot((atual) => [nova, ...atual])
+    apiPost("/api/mensagens-bot", nova)
   }
 
-  // Cria a receita "a receber" de um pedido da Gráfica Rápida assim que ele
-  // sai de "aguardando" (ou já nasce assim, no caso de "Virar Pedido") — o
-  // mesmo gatilho de fecharOrcamento, adaptado pra esse fluxo mais simples.
   function adicionarReceitaPedido(pedido: PedidoRapido) {
     const lancamento: LancamentoFinanceiro = {
       id: gerarId("lan"),
@@ -470,6 +489,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       criadoEm: new Date().toISOString(),
     }
     setLancamentos((atual) => [lancamento, ...atual])
+    apiPost("/api/lancamentos", lancamento)
   }
 
   const addPedidoRapido: DataContextValue["addPedidoRapido"] = (dados) => {
@@ -492,6 +512,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ...dados,
     }
     setPedidosRapidos((atual) => [novo, ...atual])
+    apiPost("/api/pedidos-rapidos", novo)
     if (novo.status !== "aguardando") {
       adicionarReceitaPedido(novo)
     }
@@ -513,9 +534,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     status
   ) => {
     const pedido = pedidosRapidos.find((p) => p.id === id)
+    const atualizado = pedido ? { ...pedido, status } : null
     setPedidosRapidos((atual) =>
       atual.map((p) => (p.id === id ? { ...p, status } : p))
     )
+    if (atualizado) apiPut(`/api/pedidos-rapidos/${id}`, atualizado)
     if (pedido && pedido.status === "aguardando" && status !== "aguardando") {
       adicionarReceitaPedido(pedido)
     }
@@ -541,6 +564,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ...dados,
     }
     setLancamentos((atual) => [novo, ...atual])
+    apiPost("/api/lancamentos", novo)
     return novo
   }
 
@@ -550,15 +574,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
   ) => {
     const pagoEm = status === "pago" ? new Date().toISOString() : undefined
     setLancamentos((atual) =>
-      atual.map((l) =>
-        l.id === id
-          ? {
-              ...l,
-              status,
-              ...(pagoEm ? { pagoEm } : { pagoEm: undefined }),
-            }
-          : l
-      )
+      atual.map((l) => {
+        if (l.id !== id) return l
+        const atualizado = {
+          ...l,
+          status,
+          ...(pagoEm ? { pagoEm } : { pagoEm: undefined }),
+        }
+        apiPut(`/api/lancamentos/${id}`, atualizado)
+        return atualizado
+      })
     )
   }
 
@@ -595,13 +620,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       marcarLancamentoStatus,
       addMensagemBot,
     }),
-    // Algumas ações (fecharOrcamento, duplicarOrcamento, addPedidoRapido,
-    // moverPedidoRapido) leem outros states por closure em vez de usar só
-    // updates funcionais — mas todo state que elas leem já está nas deps
-    // abaixo, então o memo já recalcula sempre que essas closures
-    // precisariam ficar atualizadas; adicionar as próprias funções às deps
-    // as tornaria "instáveis" (são recriadas a cada render) e faria o memo
-    // recalcular sempre, sem ganho.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       materiais,

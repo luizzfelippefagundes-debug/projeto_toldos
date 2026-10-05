@@ -107,6 +107,7 @@ export interface Orcamento {
   totalFechado?: number
   ajusteManual: number
   anexoNome: string | null
+  anexoUrl?: string
   status: StatusOrcamento
   criadoEm: string
   fechadoEm: string | null
