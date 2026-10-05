@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useData } from "@/context/data-context"
+import { isPositiveNumberInput } from "@/lib/number"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
 
@@ -33,7 +34,7 @@ export function NovaEntradaDialog() {
   const [comNotaFiscal, setComNotaFiscal] = useState(false)
   const [numeroNota, setNumeroNota] = useState("")
 
-  const valido = materialId !== "" && Number(quantidade) > 0
+  const valido = materialId !== "" && isPositiveNumberInput(quantidade)
 
   function limpar() {
     setMaterialId("")
@@ -100,6 +101,12 @@ export function NovaEntradaDialog() {
               id="quantidadeEntrada"
               type="number"
               min="0"
+              step={
+                materiais.find((material) => material.id === materialId)
+                  ?.unidade === "m2"
+                  ? "0.01"
+                  : "1"
+              }
               value={quantidade}
               onChange={(e) => setQuantidade(e.target.value)}
             />

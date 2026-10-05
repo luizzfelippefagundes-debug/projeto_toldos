@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select"
 import { useData } from "@/context/data-context"
 import type { CategoriaProdutoRapido } from "@/lib/types"
+import { isPositiveNumberInput } from "@/lib/number"
 import { Plus, X } from "lucide-react"
 
 const categorias: CategoriaProdutoRapido[] = [
@@ -77,9 +78,20 @@ function ProdutoFormFields({ onFechar }: { onFechar: () => void }) {
   ])
 
   const variantesValidas = variantes.filter(
-    (v) => v.nome.trim().length > 0 && Number(v.preco) > 0
+    (v) => v.nome.trim().length > 0 && isPositiveNumberInput(v.preco)
   )
-  const valido = nome.trim().length > 0 && variantesValidas.length > 0
+  const varianteIncompleta = variantes.some(
+    (v) =>
+      (v.nome.trim().length > 0 || v.preco.trim().length > 0) &&
+      (v.nome.trim().length === 0 || !isPositiveNumberInput(v.preco))
+  )
+  const prazoValido =
+    isPositiveNumberInput(prazoDias) && Number.isInteger(Number(prazoDias))
+  const valido =
+    nome.trim().length > 0 &&
+    prazoValido &&
+    variantesValidas.length > 0 &&
+    !varianteIncompleta
 
   function atualizarVariante(chave: string, campo: "nome" | "preco", valor: string) {
     setVariantes((atual) =>

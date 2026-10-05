@@ -21,10 +21,12 @@ import {
 } from "@/components/ui/select"
 import { useData } from "@/context/data-context"
 import type { FormaPagamento, TipoLancamento } from "@/lib/types"
+import { isPositiveNumberInput } from "@/lib/number"
+import { formatarDataInput } from "@/lib/date"
 import { Plus } from "lucide-react"
 
 function hojeISO() {
-  return new Date().toISOString().slice(0, 10)
+  return formatarDataInput(new Date())
 }
 
 const formasPagamento: { value: FormaPagamento; label: string }[] = [
@@ -73,7 +75,9 @@ function LancamentoFormFields({ onFechar }: { onFechar: () => void }) {
   const valido =
     descricao.trim().length > 0 &&
     categoria.trim().length > 0 &&
-    Number(valor) > 0
+    isPositiveNumberInput(valor) &&
+    Boolean(vencimento) &&
+    Number.isFinite(new Date(`${vencimento}T00:00:00`).getTime())
 
   function salvar() {
     addLancamento({

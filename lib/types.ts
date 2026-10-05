@@ -92,6 +92,19 @@ export interface Orcamento {
   numero: number
   clienteId: string
   item: OrcamentoItem
+  quantidadeMaterialDebitada?: number
+  materialFechado?: {
+    id: string
+    nome: string
+    unidade: UnidadeMedida
+    quantidade: number
+    custo: number
+  }
+  servicoFechado?: {
+    nome: string
+    ferramentas?: string
+  }
+  totalFechado?: number
   ajusteManual: number
   anexoNome: string | null
   status: StatusOrcamento
@@ -156,6 +169,9 @@ export interface PedidoRapido {
   status: StatusPedidoRapido
   criadoEm: string
   vendedorId?: string
+  produtoNome?: string
+  varianteNome?: string
+  prazoEntregaEm?: string
 }
 
 export interface Vendedor {
@@ -198,6 +214,7 @@ export interface LancamentoFinanceiro {
   valor: number
   vencimento: string
   status: StatusLancamento
+  pagoEm?: string
   origem: OrigemLancamento
   origemId: string | null
   criadoEm: string

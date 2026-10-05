@@ -17,12 +17,19 @@ import {
   Wallet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-const UM_DIA_MS = 24 * 60 * 60 * 1000
+import { estaNosProximosDias } from "@/lib/date-window"
+import {
+  estaLancamentoVencido,
+  resumirFinanceiro,
+} from "@/lib/financeiro"
+import { pedidoRapidoEstaAtrasado } from "@/lib/pedidos-rapidos"
+import { usePapelAtivo } from "@/context/papel-ativo-context"
+import { formatarMoeda } from "@/lib/format"
 
 export default function DashboardPage() {
   const { materiais, servicos, orcamentos, pedidosRapidos, produtosRapidos, lancamentos } =
     useData()
+  const { papel } = usePapelAtivo()
 
   const passos = [
     { label: "Cadastrar materiais", feito: materiais.length > 0 },
@@ -64,42 +71,55 @@ export default function DashboardPage() {
   const pedidosAtrasados = useMemo(() => {
     if (!hoje) return 0
     return pedidosRapidos.filter((p) => {
-      if (p.status === "entregue") return false
       const produto = produtosRapidos.find((prod) => prod.id === p.produtoId)
-      if (!produto) return false
-      const diasCorridos =
-        (hoje.getTime() - new Date(p.criadoEm).getTime()) / UM_DIA_MS
-      return diasCorridos > produto.prazoDias
+      return pedidoRapidoEstaAtrasado(p, produto?.prazoDias, hoje)
     }).length
   }, [pedidosRapidos, produtosRapidos, hoje])
 
   const lancamentosVencendo = useMemo(() => {
     if (!hoje) return []
-    const limite = new Date(hoje.getTime() + 3 * UM_DIA_MS)
     return lancamentos.filter(
-      (l) => l.status === "pendente" && new Date(l.vencimento) <= limite
+      (l) =>
+        l.status === "pendente" &&
+        estaNosProximosDias(l.vencimento, hoje, 3)
     )
   }, [lancamentos, hoje])
   const boletosVencendo = lancamentosVencendo.filter(
     (l) => l.formaPagamento === "boleto"
   )
+  const lancamentosVencidos = useMemo(
+    () =>
+      hoje
+        ? lancamentos.filter((l) => estaLancamentoVencido(l, hoje))
+        : [],
+    [lancamentos, hoje]
+  )
+  const resumoFinanceiro = useMemo(
+    () => resumirFinanceiro(lancamentos, hoje ?? new Date(0)),
+    [lancamentos, hoje]
+  )
+
+  const pedidosEmProducao = pedidosRapidos.filter((p) =>
+    ["aprovado", "arte", "impressao", "acabamento"].includes(p.status)
+  ).length
+  const pedidosProntos = pedidosRapidos.filter(
+    (p) => p.status === "pronto"
+  ).length
 
   const orcamentosValidadeVencendo = useMemo(() => {
     if (!hoje) return 0
-    const limite = new Date(hoje.getTime() + 3 * UM_DIA_MS)
     return orcamentos.filter((o) => {
       if (o.status !== "fechado") return false
-      const validoAte = new Date(
-        new Date(o.criadoEm).getTime() + (o.validadeDias ?? 7) * UM_DIA_MS
-      )
-      return validoAte <= limite
+      const validoAte = new Date(o.criadoEm)
+      validoAte.setDate(validoAte.getDate() + (o.validadeDias ?? 7))
+      return estaNosProximosDias(validoAte, hoje, 3)
     }).length
   }, [orcamentos, hoje])
 
   const alertas = [
     {
       id: "estoque",
-      texto: `${estoqueBaixo} material${estoqueBaixo === 1 ? "" : "is"} com estoque baixo`,
+      texto: `${estoqueBaixo} ${estoqueBaixo === 1 ? "material" : "materiais"} com estoque baixo`,
       href: "/estoque",
       quantidade: estoqueBaixo,
       Icon: Warehouse,
@@ -119,17 +139,45 @@ export default function DashboardPage() {
       Icon: Wallet,
     },
     {
+      id: "financeiro-vencido",
+      texto: `${lancamentosVencidos.length} conta${lancamentosVencidos.length === 1 ? "" : "s"} financeira${lancamentosVencidos.length === 1 ? " vencida" : "s vencidas"}`,
+      href: "/financeiro",
+      quantidade: lancamentosVencidos.length,
+      Icon: Wallet,
+    },
+    {
       id: "validade",
       texto: `${orcamentosValidadeVencendo} orçamento${orcamentosValidadeVencendo === 1 ? "" : "s"} com validade vencendo em 3 dias`,
       href: "/orcamentos",
       quantidade: orcamentosValidadeVencendo,
       Icon: FileClock,
     },
-  ].filter((a) => a.quantidade > 0)
+  ]
+    .filter((a) => a.quantidade > 0)
+    .filter((a) => {
+      if (papel === "dono") return true
+      if (papel === "financeiro") {
+        return a.id === "boletos" || a.id === "financeiro-vencido"
+      }
+      return a.id === "estoque" || a.id === "producao"
+    })
+
+  const tituloDashboard =
+    papel === "producao"
+      ? "Painel da produção"
+      : papel === "financeiro"
+        ? "Painel financeiro"
+        : "Bom dia 👋"
+  const destinoAcao =
+    papel === "producao"
+      ? { href: "/producao", label: "Acompanhar produção", Icon: Factory }
+      : papel === "financeiro"
+        ? { href: "/financeiro", label: "Abrir financeiro", Icon: Wallet }
+        : { href: "/orcamentos/novo", label: "Novo Orçamento", Icon: FilePlus2 }
 
   return (
     <div className="flex flex-col gap-6">
-      {progresso < 100 && (
+      {papel === "dono" && progresso < 100 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Configure seu sistema</CardTitle>
@@ -173,10 +221,14 @@ export default function DashboardPage() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Bom dia 👋</h1>
-        <Button size="lg" render={<Link href="/orcamentos/novo" />}>
-          <FilePlus2 className="mr-2 h-4 w-4" />
-          Novo Orçamento
+        <h1 className="text-2xl font-semibold">{tituloDashboard}</h1>
+        <Button
+          size="lg"
+          nativeButton={false}
+          render={<Link href={destinoAcao.href} />}
+        >
+          <destinoAcao.Icon className="mr-2 h-4 w-4" />
+          {destinoAcao.label}
         </Button>
       </div>
 
@@ -212,36 +264,58 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Orçamentos abertos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold">{abertos}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Fechados no mês
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold">
-            {fechadosNoMes ?? "—"}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Estoque com alerta baixo
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold">
-            {estoqueBaixo}
-          </CardContent>
-        </Card>
-      </div>
+      <p className="text-xs text-muted-foreground">
+        Perfil de demonstração: os papéis organizam a navegação e os indicadores,
+        mas não são autenticação nem controle real de acesso.
+      </p>
+
+      {papel === "dono" && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Indicador titulo="Orçamentos abertos" valor={String(abertos)} />
+          <Indicador
+            titulo="Fechados no mês"
+            valor={String(fechadosNoMes ?? "—")}
+          />
+          <Indicador titulo="Estoque com alerta baixo" valor={String(estoqueBaixo)} />
+        </div>
+      )}
+
+      {papel === "producao" && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Indicador titulo="Pedidos em produção" valor={String(pedidosEmProducao)} />
+          <Indicador titulo="Pedidos atrasados" valor={hoje ? String(pedidosAtrasados) : "—"} />
+          <Indicador titulo="Pedidos prontos" valor={String(pedidosProntos)} />
+          <Indicador titulo="Materiais com estoque baixo" valor={String(estoqueBaixo)} />
+        </div>
+      )}
+
+      {papel === "financeiro" && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Indicador titulo="A receber" valor={formatarMoeda(resumoFinanceiro.aReceber)} />
+          <Indicador titulo="A pagar" valor={formatarMoeda(resumoFinanceiro.aPagar)} />
+          <Indicador
+            titulo="Vencido"
+            valor={hoje ? formatarMoeda(resumoFinanceiro.vencidoAReceber + resumoFinanceiro.vencidoAPagar) : "—"}
+          />
+          <Indicador
+            titulo="Saldo recebido − pago"
+            valor={formatarMoeda(resumoFinanceiro.recebido - resumoFinanceiro.pago)}
+          />
+        </div>
+      )}
     </div>
+  )
+}
+
+function Indicador({ titulo, valor }: { titulo: string; valor: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {titulo}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-3xl font-bold">{valor}</CardContent>
+    </Card>
   )
 }

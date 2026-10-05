@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Toldos Print
 
-## Getting Started
+Protótipo local de um sistema interno para orçamentos, materiais, mão de obra,
+estoque, produção, financeiro e pedidos rápidos de uma gráfica de comunicação
+visual.
 
-First, run the development server:
+## Requisitos
+
+- Node.js 20.9 ou superior
+- npm
+
+## Executar localmente
 
 ```bash
+npm ci
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000). Os dados de exemplo são
+carregados automaticamente na primeira execução.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+A chave `GOOGLE_GENERATIVE_AI_API_KEY` é opcional e só habilita o teste de
+perguntas livres ao Gemini na Central do Bot. Sem ela, os fluxos locais e as
+mensagens automáticas continuam disponíveis.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Verificações
 
-## Learn More
+```bash
+npm test
+npm run lint
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Limites desta versão
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Este projeto é um protótipo para uso local e demonstração, não um ERP pronto
+para operação compartilhada ou produção comercial:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Cadastros e movimentações ficam no `localStorage` do navegador. Cada
+  navegador/dispositivo tem seus próprios dados; limpar os dados do navegador
+  pode apagá-los. Não há banco de dados, sincronização, autenticação ou backup
+  automático.
+- Os papéis de dono, produção e financeiro e a área de vendedor são somente
+  modos de demonstração, não controles de acesso.
+- O orçamento exige selecionar um arquivo, mas nesta versão só o nome do
+  arquivo é registrado; a foto ou o vídeo não é enviado nem armazenado.
+- O PDF é gerado pelo diálogo de impressão do navegador. O WhatsApp não está
+  conectado; mensagens automáticas ficam apenas registradas na tela.
+- Os dados iniciais são exemplos, não dados comerciais reais.
+- Relatórios distinguem dinheiro recebido/pago de contas ainda em aberto. Para
+  lançamentos antigos sem data de baixa, a data de criação é usada como
+  referência e isso é identificado na tela.
+- A produção da Gráfica Rápida guarda o prazo do pedido no momento do cadastro;
+  pedidos antigos sem esse campo continuam usando o prazo atual do produto.
+- A integração com Mercado Pago e o envio automático pelo WhatsApp não fazem
+  parte desta versão.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Antes de usar com dados reais, será necessário definir e implementar persistência
+centralizada, autenticação/permissões, backup e armazenamento de anexos.

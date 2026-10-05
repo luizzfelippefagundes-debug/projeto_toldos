@@ -24,9 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { formatarMoeda } from "@/lib/format"
+import { formatarData, formatarMoeda } from "@/lib/format"
 import type { PedidoRapido, ProdutoRapido, StatusPedidoRapido } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import {
+  obterPrazoEntregaPedido,
+  pedidoRapidoEstaAtrasado,
+} from "@/lib/pedidos-rapidos"
 import { RefreshCw, Search } from "lucide-react"
 
 const colunas: { status: StatusPedidoRapido; titulo: string }[] = [
@@ -44,8 +48,6 @@ const statusValidos = new Set<string>(colunas.map((c) => c.status))
 const statusLabel: Record<StatusPedidoRapido, string> = Object.fromEntries(
   colunas.map((c) => [c.status, c.titulo])
 ) as Record<StatusPedidoRapido, string>
-
-const MS_POR_DIA = 1000 * 60 * 60 * 24
 
 export default function ProducaoPage() {
   const { pedidosRapidos, produtosRapidos, moverPedidoRapido } = useData()
@@ -77,12 +79,9 @@ export default function ProducaoPage() {
   }
 
   function estaAtrasado(pedido: PedidoRapido) {
-    if (!hoje || pedido.status === "entregue") return false
+    if (!hoje) return false
     const produto = produtoDoPedido(pedido)
-    if (!produto) return false
-    const diasCorridos =
-      (hoje.getTime() - new Date(pedido.criadoEm).getTime()) / MS_POR_DIA
-    return diasCorridos > produto.prazoDias
+    return pedidoRapidoEstaAtrasado(pedido, produto?.prazoDias, hoje)
   }
 
   const pedidosFiltrados = useMemo(() => {
@@ -345,6 +344,8 @@ function PedidoCardConteudo({
   atrasado: boolean
   onMudarStatus: (status: StatusPedidoRapido) => void
 }) {
+  const prazo = obterPrazoEntregaPedido(pedido, produto?.prazoDias)
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-2 text-sm">
@@ -352,9 +353,15 @@ function PedidoCardConteudo({
           <span className="font-medium">#{pedido.numero}</span>
           {atrasado && <Badge variant="destructive">Atrasado</Badge>}
         </div>
-        <p className="font-medium">{produto?.nome ?? "Produto removido"}</p>
+        <p className="font-medium">
+          {pedido.produtoNome ?? produto?.nome ?? "Produto removido"}
+          {pedido.varianteNome ? ` · ${pedido.varianteNome}` : ""}
+        </p>
         <p className="text-xs text-muted-foreground">
           {pedido.clienteNome || "Sem cliente"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Prazo: {prazo ? formatarData(prazo.toISOString()) : "não informado"}
         </p>
         <p className="text-sm font-semibold text-primary">
           {formatarMoeda(pedido.total)}

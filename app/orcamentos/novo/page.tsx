@@ -21,8 +21,18 @@ import { Stepper, type StepperStep } from "@/components/orcamento/stepper"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import {
+  isFiniteNumberInput,
+  isNonNegativeNumberInput,
+  isPositiveNumberInput,
+} from "@/lib/number"
 import { toast } from "sonner"
 import { Upload, FileCheck2, Printer, ArrowLeft, ArrowRight } from "lucide-react"
+
+function numeroOuZero(valor: string): number {
+  const numero = Number(valor)
+  return Number.isFinite(numero) ? numero : 0
+}
 
 const passos: StepperStep[] = [
   { numero: 1, titulo: "Cliente" },
@@ -89,8 +99,11 @@ export default function NovoOrcamentoPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAgora(new Date())
   }, [])
-  const validoAte = agora
-    ? new Date(agora.getTime() + (Number(validadeDias) || 7) * 24 * 60 * 60 * 1000)
+  const validadeTimestamp = agora
+    ? agora.getTime() + Number(validadeDias) * 24 * 60 * 60 * 1000
+    : Number.NaN
+  const validoAte = Number.isFinite(validadeTimestamp)
+    ? new Date(validadeTimestamp)
     : null
 
   // `rascunho` vem da tela de Histórico (Duplicar) e só existe uma vez, no
@@ -109,6 +122,36 @@ export default function NovoOrcamentoPage() {
       rascunho.item.horasEstimadas ? String(rascunho.item.horasEstimadas) : ""
     )
     setAjusteManual(String(rascunho.ajusteManual))
+    const acabamentos = rascunho.item.acabamentos ?? []
+    setAcabamentosAtivos(
+      Object.fromEntries(acabamentos.map(({ acabamentoId }) => [acabamentoId, true]))
+    )
+    setAcabamentosQtd(
+      Object.fromEntries(
+        acabamentos.map(({ acabamentoId, quantidade }) => [
+          acabamentoId,
+          String(quantidade),
+        ])
+      )
+    )
+
+    const instalacao = rascunho.item.instalacao
+    setInstalacaoIncluida(instalacao?.incluida ?? false)
+    setHorasInstalacao(instalacao ? String(instalacao.horas) : "")
+    setCustoHoraInstalacao(instalacao ? String(instalacao.custoHora) : "")
+    setNumAjudantes(instalacao ? String(instalacao.numAjudantes) : "0")
+    setDiariaAjudante(instalacao ? String(instalacao.diariaAjudante) : "")
+    setEquipamentoId(instalacao?.equipamentoId ?? equipamentosAcessoSeed[0].id)
+
+    const deslocamento = rascunho.item.deslocamento
+    setDeslocamentoIncluido(deslocamento?.incluido ?? false)
+    setDistanciaKm(deslocamento ? String(deslocamento.distanciaKm) : "")
+    setCustoPorKm(deslocamento ? String(deslocamento.custoPorKm) : "")
+    setPedagio(deslocamento ? String(deslocamento.pedagio) : "")
+    setAlimentacao(deslocamento ? String(deslocamento.alimentacao) : "")
+    setMargemPercent(String(rascunho.item.margemPercent ?? 0))
+    setDescontoPercent(String(rascunho.item.descontoPercent ?? 0))
+    setImpostoPercent(String(rascunho.item.impostoPercent ?? 0))
     consumirRascunho()
   }, [rascunho, consumirRascunho])
 
@@ -121,34 +164,38 @@ export default function NovoOrcamentoPage() {
     () => ({
       materialId,
       servicoId,
-      largura: Number(largura) || 0,
-      altura: Number(altura) || 0,
-      quantidadeUnidades: Number(quantidadeUnidades) || 0,
-      horasEstimadas: Number(horasEstimadas) || 0,
+      largura: numeroOuZero(largura),
+      altura: numeroOuZero(altura),
+      quantidadeUnidades: numeroOuZero(quantidadeUnidades),
+      horasEstimadas: numeroOuZero(horasEstimadas),
       acabamentos: acabamentosSeed
-        .filter((a) => acabamentosAtivos[a.id] && Number(acabamentosQtd[a.id]) > 0)
+        .filter(
+          (a) =>
+            acabamentosAtivos[a.id] &&
+            isPositiveNumberInput(acabamentosQtd[a.id] ?? "")
+        )
         .map((a) => ({
           acabamentoId: a.id,
-          quantidade: Number(acabamentosQtd[a.id]) || 0,
+          quantidade: numeroOuZero(acabamentosQtd[a.id] ?? ""),
         })),
       instalacao: {
         incluida: instalacaoIncluida,
-        horas: Number(horasInstalacao) || 0,
-        custoHora: Number(custoHoraInstalacao) || 0,
-        numAjudantes: Number(numAjudantes) || 0,
-        diariaAjudante: Number(diariaAjudante) || 0,
+        horas: numeroOuZero(horasInstalacao),
+        custoHora: numeroOuZero(custoHoraInstalacao),
+        numAjudantes: numeroOuZero(numAjudantes),
+        diariaAjudante: numeroOuZero(diariaAjudante),
         equipamentoId,
       },
       deslocamento: {
         incluido: deslocamentoIncluido,
-        distanciaKm: Number(distanciaKm) || 0,
-        custoPorKm: Number(custoPorKm) || 0,
-        pedagio: Number(pedagio) || 0,
-        alimentacao: Number(alimentacao) || 0,
+        distanciaKm: numeroOuZero(distanciaKm),
+        custoPorKm: numeroOuZero(custoPorKm),
+        pedagio: numeroOuZero(pedagio),
+        alimentacao: numeroOuZero(alimentacao),
       },
-      margemPercent: Number(margemPercent) || 0,
-      descontoPercent: Number(descontoPercent) || 0,
-      impostoPercent: Number(impostoPercent) || 0,
+      margemPercent: numeroOuZero(margemPercent),
+      descontoPercent: numeroOuZero(descontoPercent),
+      impostoPercent: numeroOuZero(impostoPercent),
     }),
     [
       materialId,
@@ -188,26 +235,73 @@ export default function NovoOrcamentoPage() {
         )
       : null
 
-  const medidasValidas = material
-    ? material.unidade === "m2"
-      ? item.largura > 0 && item.altura > 0
-      : item.quantidadeUnidades > 0
-    : false
+  const dimensoesValidas =
+    isPositiveNumberInput(largura) && isPositiveNumberInput(altura)
+  const quantidadeValida =
+    isPositiveNumberInput(quantidadeUnidades) &&
+    Number.isInteger(Number(quantidadeUnidades))
+  const medidasValidas =
+    Boolean(material) &&
+    (material?.unidade !== "m2" || dimensoesValidas) &&
+    (material?.unidade !== "unidade" || quantidadeValida) &&
+    (servico?.formaCobranca !== "m2" || dimensoesValidas)
 
-  const podeFechar =
+  const camposNaoNegativos = [
+    horasEstimadas,
+    margemPercent,
+    descontoPercent,
+    impostoPercent,
+    horasInstalacao,
+    custoHoraInstalacao,
+    numAjudantes,
+    diariaAjudante,
+    distanciaKm,
+    custoPorKm,
+    pedagio,
+    alimentacao,
+  ]
+  const camposOpcionaisValidos = camposNaoNegativos.every(
+    (valor) =>
+      valor.trim() === "" || isNonNegativeNumberInput(valor)
+  )
+  const acabamentosValidos = acabamentosSeed.every(
+    (acabamento) =>
+      !acabamentosAtivos[acabamento.id] ||
+      isPositiveNumberInput(acabamentosQtd[acabamento.id] ?? "")
+  )
+  const validadeValida =
+    isPositiveNumberInput(validadeDias) &&
+    Number.isInteger(Number(validadeDias)) &&
+    Number.isFinite(validadeTimestamp)
+  const horasEstimadasValidas =
+    servico?.formaCobranca !== "hora" ||
+    isPositiveNumberInput(horasEstimadas)
+  const descontoValido =
+    Number(descontoPercent) >= 0 && Number(descontoPercent) <= 100
+  const dadosValidos =
     Boolean(cliente) &&
     Boolean(material) &&
     Boolean(servico) &&
     medidasValidas &&
-    Boolean(arquivo)
+    camposOpcionaisValidos &&
+    acabamentosValidos &&
+    validadeValida &&
+    descontoValido &&
+    horasEstimadasValidas &&
+    Number.isInteger(Number(numAjudantes)) &&
+    isFiniteNumberInput(ajusteManual) &&
+    Boolean(resultado) &&
+    Number.isFinite(resultado?.total) &&
+    (resultado?.total ?? -1) >= 0
+  const podeFechar = dadosValidos && Boolean(arquivo)
 
   function irPara(passo: number) {
     setPassoAtual(Math.min(Math.max(passo, 1), passos.length))
   }
 
   function handleGerarPdf() {
-    if (!cliente || !material || !servico) {
-      toast.error("Selecione cliente, material e serviço antes de gerar o PDF")
+    if (!dadosValidos) {
+      toast.error("Revise os dados e valores do orçamento antes de gerar o PDF")
       return
     }
     window.print()
@@ -218,9 +312,9 @@ export default function NovoOrcamentoPage() {
     fecharOrcamento({
       clienteId: cliente.id,
       item,
-      ajusteManual: Number(ajusteManual) || 0,
+      ajusteManual: numeroOuZero(ajusteManual),
       anexoNome: arquivo.name,
-      validadeDias: Number(validadeDias) || 7,
+      validadeDias: numeroOuZero(validadeDias),
     })
     toast.success(`Orçamento fechado para ${cliente.nome}`)
     router.push("/orcamentos")
@@ -329,7 +423,8 @@ export default function NovoOrcamentoPage() {
                   </div>
                 </div>
 
-                {material?.unidade === "m2" ? (
+                {(material?.unidade === "m2" ||
+                  servico?.formaCobranca === "m2") && (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="flex flex-col gap-2">
                       <Label htmlFor="largura">Largura (m)</Label>
@@ -354,7 +449,9 @@ export default function NovoOrcamentoPage() {
                       />
                     </div>
                   </div>
-                ) : material ? (
+                )}
+
+                {material?.unidade === "unidade" && (
                   <div className="flex flex-col gap-2 sm:w-48">
                     <Label htmlFor="quantidade">Quantidade</Label>
                     <Input
@@ -365,7 +462,7 @@ export default function NovoOrcamentoPage() {
                       onChange={(e) => setQuantidadeUnidades(e.target.value)}
                     />
                   </div>
-                ) : null}
+                )}
 
                 {servico?.formaCobranca === "hora" && (
                   <div className="flex flex-col gap-2 sm:w-48">

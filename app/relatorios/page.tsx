@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useData } from "@/context/data-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -16,8 +16,7 @@ import {
 import { quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarMoeda } from "@/lib/format"
 import { cn } from "@/lib/utils"
-
-const UM_DIA_MS = 24 * 60 * 60 * 1000
+import { resumirFinanceiro } from "@/lib/financeiro"
 
 export default function RelatoriosPage() {
   const { orcamentos, materiais, lancamentos } = useData()
@@ -33,50 +32,26 @@ export default function RelatoriosPage() {
     setHoje(new Date())
   }, [])
 
-  const dentroPeriodo = useCallback(
-    (dataIso: string | null) => {
-      if (!dataIso) return false
-      const data = new Date(dataIso)
-      if (dataDe && data < new Date(dataDe)) return false
-      if (dataAte && data > new Date(`${dataAte}T23:59:59`)) return false
-      return true
-    },
-    [dataDe, dataAte]
+  const resumo = useMemo(
+    () =>
+      resumirFinanceiro(lancamentos, hoje ?? new Date(0), dataDe, dataAte),
+    [lancamentos, hoje, dataDe, dataAte]
   )
-
-  const lancamentosPeriodo = useMemo(
-    () => lancamentos.filter((l) => dentroPeriodo(l.criadoEm)),
-    [lancamentos, dentroPeriodo]
-  )
-
-  const entradas = lancamentosPeriodo
-    .filter((l) => l.tipo === "receita")
-    .reduce((soma, l) => soma + l.valor, 0)
-  const custos = lancamentosPeriodo
-    .filter((l) => l.tipo === "despesa")
-    .reduce((soma, l) => soma + l.valor, 0)
-
-  const aVencerEm7Dias = useMemo(() => {
-    if (!hoje) return []
-    const limite = new Date(hoje.getTime() + 7 * UM_DIA_MS)
-    return lancamentos.filter((l) => {
-      if (l.status !== "pendente") return false
-      const venc = new Date(l.vencimento)
-      return venc <= limite
-    })
-  }, [lancamentos, hoje])
-
-  const boletosAVencer = aVencerEm7Dias.filter(
-    (l) => l.formaPagamento === "boleto"
-  )
-  const receberAVencer = aVencerEm7Dias.filter((l) => l.tipo === "receita")
 
   const orcamentosFechadosPeriodo = useMemo(
     () =>
       orcamentos.filter(
-        (o) => o.status === "fechado" && dentroPeriodo(o.fechadoEm)
+        (o) => {
+          if (o.status !== "fechado" || !o.fechadoEm) return false
+          const data = new Date(o.fechadoEm)
+          if (!Number.isFinite(data.getTime())) return false
+          if (dataDe && data < new Date(`${dataDe}T00:00:00`)) return false
+          if (dataAte && data > new Date(`${dataAte}T23:59:59.999`))
+            return false
+          return true
+        }
       ),
-    [orcamentos, dentroPeriodo]
+    [orcamentos, dataDe, dataAte]
   )
 
   const usoMaterial = useMemo(() => {
@@ -88,17 +63,24 @@ export default function RelatoriosPage() {
       const material = materiais.find(
         (m) => m.id === orcamento.item.materialId
       )
-      if (!material) continue
-      const quantidade = quantidadeMaterialConsumida(orcamento.item, material)
-      const custo = quantidade * material.precoUnitario
-      const atual = porMaterial.get(material.id)
+      const snapshot = orcamento.materialFechado
+      if (!snapshot && !material) continue
+      const id = snapshot?.id ?? material!.id
+      const nome = snapshot?.nome ?? material!.nome
+      const unidade =
+        snapshot?.unidade ?? material!.unidade
+      const quantidade =
+        snapshot?.quantidade ??
+        quantidadeMaterialConsumida(orcamento.item, material!)
+      const custo = snapshot?.custo ?? quantidade * material!.precoUnitario
+      const atual = porMaterial.get(id)
       if (atual) {
         atual.quantidade += quantidade
         atual.custo += custo
       } else {
-        porMaterial.set(material.id, {
-          nome: material.nome,
-          unidade: material.unidade === "m2" ? "m²" : "un",
+        porMaterial.set(id, {
+          nome,
+          unidade: unidade === "m2" ? "m²" : "un",
           quantidade,
           custo,
         })
@@ -138,50 +120,93 @@ export default function RelatoriosPage() {
         </div>
       </div>
 
+      <p className="text-xs text-muted-foreground">
+        O período considera a data de recebimento/pagamento para lançamentos
+        baixados e o vencimento para contas ainda em aberto. Baixas antigas sem
+        data registrada usam a data de criação.
+      </p>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Entrando no período
+              Recebido no período
             </CardTitle>
           </CardHeader>
           <CardContent className="text-3xl font-bold text-primary">
-            {formatarMoeda(entradas)}
+            {formatarMoeda(resumo.recebido)}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Custos no período
+              Pago no período
             </CardTitle>
           </CardHeader>
           <CardContent className="text-3xl font-bold text-destructive">
-            {formatarMoeda(custos)}
+            {formatarMoeda(resumo.pago)}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              A receber em 7 dias
+              Em aberto a receber
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-bold">
-            {hoje ? receberAVencer.length : "—"}
+          <CardContent className="text-3xl font-bold text-primary">
+            {formatarMoeda(resumo.aReceber)}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Boletos a vencer em 7 dias
+              Em aberto a pagar
             </CardTitle>
           </CardHeader>
           <CardContent
-            className={cn(
-              "text-3xl font-bold",
-              boletosAVencer.length > 0 && "text-destructive"
-            )}
+            className="text-3xl font-bold text-destructive"
           >
-            {hoje ? boletosAVencer.length : "—"}
+            {formatarMoeda(resumo.aPagar)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Vencido a receber
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-bold text-destructive">
+            {formatarMoeda(resumo.vencidoAReceber)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Vencido a pagar
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-bold text-destructive">
+            {formatarMoeda(resumo.vencidoAPagar)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Recebimentos em 7 dias
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-bold">
+            {hoje ? resumo.recebiveisVencendo7Dias : "—"}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Boletos em 7 dias
+            </CardTitle>
+          </CardHeader>
+          <CardContent className={cn("text-3xl font-bold", resumo.boletosVencendo7Dias > 0 && "text-destructive")}>
+            {hoje ? resumo.boletosVencendo7Dias : "—"}
           </CardContent>
         </Card>
       </div>

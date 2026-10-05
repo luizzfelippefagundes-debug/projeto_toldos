@@ -90,6 +90,7 @@ export default function HistoricoOrcamentosPage() {
   function totalOrcamento(orcamentoId: string) {
     const orcamento = orcamentos.find((o) => o.id === orcamentoId)
     if (!orcamento) return 0
+    if (orcamento.totalFechado !== undefined) return orcamento.totalFechado
     const material = materiais.find((m) => m.id === orcamento.item.materialId)
     const servico = servicos.find((s) => s.id === orcamento.item.servicoId)
     if (!material || !servico) return 0
@@ -104,8 +105,13 @@ export default function HistoricoOrcamentosPage() {
   }
 
   function handleReabrir(id: string) {
-    reabrirOrcamento(id)
-    toast.success("Orçamento reaberto")
+    if (!reabrirOrcamento(id)) {
+      toast.error(
+        "Não é possível reabrir: o orçamento já foi pago ou não foi encontrado."
+      )
+      return
+    }
+    toast.success("Orçamento reaberto; estoque e financeiro foram estornados.")
   }
 
   function handleDuplicar(id: string) {
@@ -201,6 +207,7 @@ export default function HistoricoOrcamentosPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
+                        nativeButton={false}
                         render={<Link href={`/orcamentos/${orcamento.id}/os`} />}
                       >
                         Emitir OS

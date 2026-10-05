@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select"
 import { useData } from "@/context/data-context"
 import type { FormaCobranca, Servico } from "@/lib/types"
+import { isPositiveNumberInput } from "@/lib/number"
 import { Pencil, Plus } from "lucide-react"
 
 const formasCobranca: { value: FormaCobranca; label: string; sufixo: string }[] = [
@@ -83,7 +84,7 @@ function ServicoFormFields({ servico, modoEdicao, onFechar }: FieldsProps) {
   const [ferramentas, setFerramentas] = useState(servico?.ferramentas ?? "")
 
   const sufixo = formasCobranca.find((f) => f.value === formaCobranca)?.sufixo ?? ""
-  const valido = nome.trim().length > 0 && Number(valor) > 0
+  const valido = nome.trim().length > 0 && isPositiveNumberInput(valor)
 
   function salvar() {
     const dados = {

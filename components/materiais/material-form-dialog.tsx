@@ -21,6 +21,10 @@ import {
 } from "@/components/ui/select"
 import { useData } from "@/context/data-context"
 import type { Material, TipoMaterial, UnidadeMedida } from "@/lib/types"
+import {
+  isNonNegativeNumberInput,
+  isPositiveNumberInput,
+} from "@/lib/number"
 import { Pencil, Plus } from "lucide-react"
 
 const tipos: TipoMaterial[] = [
@@ -104,7 +108,12 @@ function MaterialFormFields({ material, modoEdicao, onFechar }: FieldsProps) {
     material?.quantidadeEstoque?.toString() ?? "0"
   )
 
-  const valido = nome.trim().length > 0 && Number(precoUnitario) > 0
+  const valido =
+    nome.trim().length > 0 &&
+    isPositiveNumberInput(precoUnitario) &&
+    (estoqueMinimo.trim() === "" || isNonNegativeNumberInput(estoqueMinimo)) &&
+    (quantidadeEstoque.trim() === "" ||
+      isNonNegativeNumberInput(quantidadeEstoque))
 
   function salvar() {
     const dados = {

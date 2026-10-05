@@ -22,12 +22,14 @@ import {
 } from "@/components/ui/table"
 import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-dialog"
 import { formatarData, formatarMoeda } from "@/lib/format"
+import {
+  estaLancamentoVencido,
+  resumirFinanceiro,
+} from "@/lib/financeiro"
 import type { StatusLancamento, TipoLancamento } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { MessageCircle } from "lucide-react"
 import { toast } from "sonner"
-
-const UM_DIA_MS = 24 * 60 * 60 * 1000
 
 const rotuloFormaPagamento: Record<string, string> = {
   boleto: "Boleto",
@@ -53,32 +55,12 @@ export default function FinanceiroPage() {
     setHoje(new Date())
   }, [])
 
-  const resumo = useMemo(() => {
-    const aReceber = lancamentos
-      .filter((l) => l.tipo === "receita" && l.status === "pendente")
-      .reduce((soma, l) => soma + l.valor, 0)
-    const aPagar = lancamentos
-      .filter((l) => l.tipo === "despesa" && l.status === "pendente")
-      .reduce((soma, l) => soma + l.valor, 0)
-    const recebido = lancamentos
-      .filter((l) => l.tipo === "receita" && l.status === "pago")
-      .reduce((soma, l) => soma + l.valor, 0)
-    const pago = lancamentos
-      .filter((l) => l.tipo === "despesa" && l.status === "pago")
-      .reduce((soma, l) => soma + l.valor, 0)
-    return { aReceber, aPagar, saldo: recebido - pago }
-  }, [lancamentos])
+  const resumo = useMemo(
+    () => resumirFinanceiro(lancamentos, hoje ?? new Date(0)),
+    [lancamentos, hoje]
+  )
 
-  const boletosAVencer = useMemo(() => {
-    if (!hoje) return []
-    const limite = new Date(hoje.getTime() + 7 * UM_DIA_MS)
-    return lancamentos.filter(
-      (l) =>
-        l.formaPagamento === "boleto" &&
-        l.status === "pendente" &&
-        new Date(l.vencimento) <= limite
-    )
-  }, [lancamentos, hoje])
+  const saldo = resumo.recebido - resumo.pago
 
   const lancamentosFiltrados = lancamentos
     .filter((l) =>
@@ -110,7 +92,7 @@ export default function FinanceiroPage() {
       clienteId: cliente.id,
       clienteNome: cliente.nome,
       telefone: cliente.telefone,
-      texto: `Lembrete: "${lancamento.descricao}" no valor de ${formatarMoeda(lancamento.valor)} vence em ${formatarData(lancamento.vencimento)}.`,
+      texto: `Lembrete: "${lancamento.descricao}" no valor de ${formatarMoeda(lancamento.valor)} ${estaLancamentoVencido(lancamento, hoje ?? new Date()) ? "venceu em" : "vence em"} ${formatarData(lancamento.vencimento)}.`,
       origem: "lembrete",
       autor: "bot",
     })
@@ -154,34 +136,98 @@ export default function FinanceiroPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Saldo (recebido − pago)
+              Recebido no total
             </CardTitle>
           </CardHeader>
-          <CardContent
-            className={cn(
-              "text-3xl font-bold",
-              resumo.saldo < 0 && "text-destructive"
-            )}
-          >
-            {formatarMoeda(resumo.saldo)}
+          <CardContent className="text-3xl font-bold text-primary">
+            {formatarMoeda(resumo.recebido)}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Boletos a vencer (7 dias)
+              Pago no total
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-bold text-destructive">
+            {formatarMoeda(resumo.pago)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Saldo recebido − pago
             </CardTitle>
           </CardHeader>
           <CardContent
             className={cn(
               "text-3xl font-bold",
-              boletosAVencer.length > 0 && "text-destructive"
+              saldo < 0 && "text-destructive"
             )}
           >
-            {hoje ? boletosAVencer.length : "—"}
+            {formatarMoeda(saldo)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Vencido a receber
+            </CardTitle>
+          </CardHeader>
+          <CardContent
+            className={cn(
+              "text-3xl font-bold",
+              resumo.vencidoAReceber > 0 && "text-destructive"
+            )}
+          >
+            {hoje ? formatarMoeda(resumo.vencidoAReceber) : "—"}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Vencido a pagar
+            </CardTitle>
+          </CardHeader>
+          <CardContent
+            className={cn(
+              "text-3xl font-bold",
+              resumo.vencidoAPagar > 0 && "text-destructive"
+            )}
+          >
+            {hoje ? formatarMoeda(resumo.vencidoAPagar) : "—"}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Recebimentos nos próximos 7 dias
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-bold">
+            {hoje ? resumo.recebiveisVencendo7Dias : "—"}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Boletos nos próximos 7 dias
+            </CardTitle>
+          </CardHeader>
+          <CardContent
+            className={cn(
+              "text-3xl font-bold",
+              resumo.boletosVencendo7Dias > 0 && "text-destructive"
+            )}
+          >
+            {hoje ? resumo.boletosVencendo7Dias : "—"}
           </CardContent>
         </Card>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Valores recebidos e pagos consideram a data da baixa. Registros antigos
+        sem data de baixa usam a data de criação do lançamento.
+      </p>
 
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex flex-wrap gap-2">
@@ -260,7 +306,14 @@ export default function FinanceiroPage() {
                     </span>
                   )}
                 </TableCell>
-                <TableCell>{formatarData(lancamento.vencimento)}</TableCell>
+                <TableCell>
+                  <span>{formatarData(lancamento.vencimento)}</span>
+                  {hoje && estaLancamentoVencido(lancamento, hoje) && (
+                    <Badge variant="destructive" className="mt-1 block w-fit">
+                      Vencido
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell
                   className={
                     lancamento.tipo === "receita"
@@ -279,6 +332,13 @@ export default function FinanceiroPage() {
                   >
                     {lancamento.status === "pago" ? "Pago" : "Pendente"}
                   </Badge>
+                  {lancamento.status === "pago" && (
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {lancamento.pagoEm
+                        ? `Baixado em ${formatarData(lancamento.pagoEm)}`
+                        : "Baixa antiga sem data"}
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-2">

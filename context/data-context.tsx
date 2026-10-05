@@ -39,6 +39,7 @@ import {
 import { lerArmazenamento, salvarArmazenamento } from "@/lib/storage"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarMoeda } from "@/lib/format"
+import { criarPrazoEntregaPedido } from "@/lib/pedidos-rapidos"
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000
 const SETE_DIAS_MS = 7 * UM_DIA_MS
@@ -73,7 +74,7 @@ interface DataContextValue {
     anexoNome: string
     validadeDias?: number
   }) => Orcamento
-  reabrirOrcamento: (id: string) => void
+  reabrirOrcamento: (id: string) => boolean
   duplicarOrcamento: (id: string) => void
   consumirRascunho: () => void
   addProdutoRapido: (dados: Omit<ProdutoRapido, "id">) => ProdutoRapido
@@ -280,12 +281,43 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const cliente = clientes.find((c) => c.id === dados.clienteId)
     const numero = proximoNumeroRef.current
     proximoNumeroRef.current += 1
+    const quantidadeConsumidaSolicitada = material
+      ? quantidadeMaterialConsumida(dados.item, material)
+      : 0
+    const quantidadeMaterialDebitada = material
+      ? Math.min(material.quantidadeEstoque, quantidadeConsumidaSolicitada)
+      : undefined
+    const resultado =
+      material && servico
+        ? calcularOrcamentoCompleto(
+            dados.item,
+            material,
+            servico,
+            dados.ajusteManual,
+            acabamentosSeed,
+            equipamentosAcessoSeed
+          )
+        : null
 
     const novo: Orcamento = {
       id: gerarId("orc"),
       numero,
       clienteId: dados.clienteId,
       item: dados.item,
+      quantidadeMaterialDebitada,
+      materialFechado: material
+        ? {
+            id: material.id,
+            nome: material.nome,
+            unidade: material.unidade,
+            quantidade: quantidadeConsumidaSolicitada,
+            custo: quantidadeConsumidaSolicitada * material.precoUnitario,
+          }
+        : undefined,
+      servicoFechado: servico
+        ? { nome: servico.nome, ferramentas: servico.ferramentas }
+        : undefined,
+      totalFechado: resultado?.total,
       ajusteManual: dados.ajusteManual,
       anexoNome: dados.anexoNome,
       status: "fechado",
@@ -297,13 +329,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setOrcamentos((atual) => [novo, ...atual])
 
     if (material) {
-      const consumido = quantidadeMaterialConsumida(dados.item, material)
       setMateriais((atual) =>
         atual.map((m) =>
           m.id === material.id
             ? {
                 ...m,
-                quantidadeEstoque: Math.max(0, m.quantidadeEstoque - consumido),
+                quantidadeEstoque: Math.max(
+                  0,
+                  m.quantidadeEstoque - quantidadeConsumidaSolicitada
+                ),
               }
             : m
         )
@@ -314,15 +348,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // Financeiro — igual ao que acontece com um pedido da Gráfica Rápida
     // aprovado (ver addPedidoRapido/moverPedidoRapido). Sem isso o módulo
     // financeiro ficaria desconectado do resto do sistema.
-    if (material && servico) {
-      const resultado = calcularOrcamentoCompleto(
-        dados.item,
-        material,
-        servico,
-        dados.ajusteManual,
-        acabamentosSeed,
-        equipamentosAcessoSeed
-      )
+    if (resultado) {
       const lancamento: LancamentoFinanceiro = {
         id: gerarId("lan"),
         descricao: `Orçamento #${numero} — ${cliente?.nome ?? "Cliente"}`,
@@ -356,11 +382,44 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }
 
   const reabrirOrcamento: DataContextValue["reabrirOrcamento"] = (id) => {
+    const orcamento = orcamentos.find((o) => o.id === id)
+    if (!orcamento || orcamento.status === "aberto") return false
+
+    if (orcamento.status === "fechado") {
+      const lancamentosRelacionados = lancamentos.filter(
+        (l) => l.origem === "orcamento" && l.origemId === id
+      )
+      if (lancamentosRelacionados.some((l) => l.status === "pago")) return false
+
+      const material = materiais.find(
+        (m) => m.id === orcamento.item.materialId
+      )
+      if (material) {
+        const consumido =
+          orcamento.quantidadeMaterialDebitada ??
+          quantidadeMaterialConsumida(orcamento.item, material)
+        setMateriais((atual) =>
+          atual.map((m) =>
+            m.id === material.id
+              ? { ...m, quantidadeEstoque: m.quantidadeEstoque + consumido }
+              : m
+          )
+        )
+      }
+
+      setLancamentos((atual) =>
+        atual.filter(
+          (l) => !(l.origem === "orcamento" && l.origemId === id)
+        )
+      )
+    }
+
     setOrcamentos((atual) =>
       atual.map((o) =>
         o.id === id ? { ...o, status: "aberto", fechadoEm: null } : o
       )
     )
+    return true
   }
 
   const duplicarOrcamento: DataContextValue["duplicarOrcamento"] = (id) => {
@@ -416,10 +475,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const addPedidoRapido: DataContextValue["addPedidoRapido"] = (dados) => {
     const numero = proximoNumeroPedidoRef.current
     proximoNumeroPedidoRef.current += 1
+    const criadoEm = new Date().toISOString()
+    const produto = produtosRapidos.find((p) => p.id === dados.produtoId)
     const novo: PedidoRapido = {
       id: gerarId("ped"),
       numero,
-      criadoEm: new Date().toISOString(),
+      criadoEm,
+      produtoNome: produto?.nome,
+      varianteNome: produto?.variantes.find((v) => v.id === dados.varianteId)
+        ?.nome,
+      prazoEntregaEm:
+        dados.prazoEntregaEm ??
+        (produto
+          ? criarPrazoEntregaPedido(criadoEm, produto.prazoDias)
+          : undefined),
       ...dados,
     }
     setPedidosRapidos((atual) => [novo, ...atual])
@@ -466,6 +535,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const novo: LancamentoFinanceiro = {
       id: gerarId("lan"),
       criadoEm: new Date().toISOString(),
+      ...(dados.status === "pago" && !dados.pagoEm
+        ? { pagoEm: new Date().toISOString() }
+        : {}),
       ...dados,
     }
     setLancamentos((atual) => [novo, ...atual])
@@ -476,8 +548,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     id,
     status
   ) => {
+    const pagoEm = status === "pago" ? new Date().toISOString() : undefined
     setLancamentos((atual) =>
-      atual.map((l) => (l.id === id ? { ...l, status } : l))
+      atual.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              status,
+              ...(pagoEm ? { pagoEm } : { pagoEm: undefined }),
+            }
+          : l
+      )
     )
   }
 
