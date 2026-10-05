@@ -1,10 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
-import { DataProvider } from "@/context/data-context"
-import { PapelAtivoProvider } from "@/context/papel-ativo-context"
-import { AppShell } from "@/components/layout/app-shell"
-import { Toaster } from "@/components/ui/sonner"
+import { ClerkProvider } from "@clerk/nextjs"
 import { ThemeProvider } from "@/components/theme-provider"
 
 const geistSans = Geist({
@@ -43,14 +40,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="antialiased">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          <DataProvider>
-            <PapelAtivoProvider>
-              <AppShell>{children}</AppShell>
-              <Toaster richColors position="top-right" />
-            </PapelAtivoProvider>
-          </DataProvider>
-        </ThemeProvider>
+        <ClerkProvider>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+            {children}
+          </ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   )

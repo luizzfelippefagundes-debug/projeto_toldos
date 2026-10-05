@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { UserButton } from "@clerk/nextjs"
 
 // Abas rápidas da barra inferior mobile — as mesmas 4 páginas mais usadas no
 // dia a dia da loja, cada uma marcada com quem pode vê-la (igual aos grupos
@@ -79,6 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="text-sm font-semibold">Toldos Print</span>
           </div>
           <ThemeToggle />
+          <UserButton />
         </header>
 
         <NavSheet

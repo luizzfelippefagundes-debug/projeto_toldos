@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { filtrarGruposPorPapel, gruposNavegacao } from "./nav-groups"
 import { ThemeToggle } from "./theme-toggle"
+import { UserButton } from "@clerk/nextjs"
 import {
   Select,
   SelectContent,
@@ -85,6 +86,11 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
+
+      <div className="mt-4 flex items-center gap-2 border-t border-border pt-4">
+        <UserButton />
+        <span className="text-xs text-muted-foreground">Minha conta</span>
+      </div>
     </aside>
   )
 }
