@@ -7,6 +7,8 @@ import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { filtrarGruposPorPapel, gruposNavegacao } from "./nav-groups"
 import { ThemeToggle } from "./theme-toggle"
 import { UserButton } from "@clerk/nextjs"
+import { Bell } from "lucide-react"
+import { useData } from "@/context/data-context"
 import {
   Select,
   SelectContent,
@@ -24,6 +26,7 @@ const rotuloPapel = {
 export function Sidebar() {
   const pathname = usePathname()
   const { papel, setPapel } = usePapelAtivo()
+  const { totalAlertas } = useData()
   const grupos = filtrarGruposPorPapel(gruposNavegacao, papel)
 
   return (
@@ -87,9 +90,19 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="mt-4 flex items-center gap-2 border-t border-border pt-4">
-        <UserButton />
-        <span className="text-xs text-muted-foreground">Minha conta</span>
+      <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+        <div className="flex items-center gap-2">
+          <UserButton />
+          <span className="text-xs text-muted-foreground">Minha conta</span>
+        </div>
+        {totalAlertas > 0 && (
+          <Link href="/dashboard" className="relative">
+            <Bell className="h-5 w-5 text-muted-foreground" />
+            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
+              {totalAlertas > 9 ? "9+" : totalAlertas}
+            </span>
+          </Link>
+        )}
       </div>
     </aside>
   )

@@ -88,6 +88,7 @@ interface DataContextValue {
   ) => LancamentoFinanceiro
   marcarLancamentoStatus: (id: string, status: StatusLancamento) => void
   addMensagemBot: (dados: Omit<MensagemBot, "id" | "criadoEm">) => void
+  totalAlertas: number
 }
 
 const DataContext = createContext<DataContextValue | null>(null)
@@ -591,6 +592,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
     registrarMensagemBot(dados)
   }
 
+  const totalAlertas = useMemo(() => {
+    const agora = new Date()
+    const tresDs = 3 * UM_DIA_MS
+    const estoqueBaixo = materiais.filter(m => m.quantidadeEstoque < m.estoqueMinimo).length
+    const pedidosAtrasados = pedidosRapidos.filter(p =>
+      p.status !== "entregue" && p.prazoEntregaEm && new Date(p.prazoEntregaEm) < agora
+    ).length
+    const boletosVencendo = lancamentos.filter(l =>
+      l.status === "pendente" && l.formaPagamento === "boleto" &&
+      new Date(l.vencimento).getTime() - agora.getTime() <= tresDs &&
+      new Date(l.vencimento) >= agora
+    ).length
+    const lancamentosVencidos = lancamentos.filter(l =>
+      l.status === "pendente" && new Date(l.vencimento) < agora
+    ).length
+    const orcamentosVencendo = orcamentos.filter(o => {
+      if (o.status !== "aberto" || !o.validadeDias) return false
+      const criado = new Date(o.criadoEm)
+      const validoAte = new Date(criado.getTime() + o.validadeDias * UM_DIA_MS)
+      return validoAte.getTime() - agora.getTime() <= tresDs && validoAte >= agora
+    }).length
+    return estoqueBaixo + pedidosAtrasados + boletosVencendo + lancamentosVencidos + orcamentosVencendo
+  }, [materiais, pedidosRapidos, lancamentos, orcamentos])
+
   const value = useMemo<DataContextValue>(
     () => ({
       materiais,
@@ -619,6 +644,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addLancamento,
       marcarLancamentoStatus,
       addMensagemBot,
+      totalAlertas,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
