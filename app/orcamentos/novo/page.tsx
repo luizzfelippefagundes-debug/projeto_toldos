@@ -65,6 +65,7 @@ export default function NovoOrcamentoPage() {
   const [horasEstimadas, setHorasEstimadas] = useState("")
   const [ajusteManual, setAjusteManual] = useState("0")
   const [arquivo, setArquivo] = useState<File | null>(null)
+  const [enviando, setEnviando] = useState(false)
 
   const [acabamentosAtivos, setAcabamentosAtivos] = useState<
     Record<string, boolean>
@@ -307,17 +308,34 @@ export default function NovoOrcamentoPage() {
     window.print()
   }
 
-  function handleFechar() {
+  async function handleFechar() {
     if (!podeFechar || !cliente || !material || !servico || !arquivo) return
-    fecharOrcamento({
-      clienteId: cliente.id,
-      item,
-      ajusteManual: numeroOuZero(ajusteManual),
-      anexoNome: arquivo.name,
-      validadeDias: numeroOuZero(validadeDias),
-    })
-    toast.success(`Orçamento fechado para ${cliente.nome}`)
-    router.push("/orcamentos")
+    setEnviando(true)
+    try {
+      const form = new FormData()
+      form.append("file", arquivo)
+      const res = await fetch("/api/upload", { method: "POST", body: form })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Falha no upload do arquivo")
+        return
+      }
+      const { url } = await res.json()
+      fecharOrcamento({
+        clienteId: cliente.id,
+        item,
+        ajusteManual: numeroOuZero(ajusteManual),
+        anexoNome: arquivo.name,
+        anexoUrl: url,
+        validadeDias: numeroOuZero(validadeDias),
+      })
+      toast.success(`Orçamento fechado para ${cliente.nome}`)
+      router.push("/orcamentos")
+    } catch {
+      toast.error("Erro ao enviar arquivo. Tente novamente.")
+    } finally {
+      setEnviando(false)
+    }
   }
 
   function toggleAcabamento(id: string, ativo: boolean) {
@@ -841,18 +859,33 @@ export default function NovoOrcamentoPage() {
               <CardContent className="flex flex-col gap-3">
                 <label
                   htmlFor="anexo"
-                  className="flex cursor-pointer flex-col items-center gap-2 rounded-md border border-dashed border-border py-8 text-center hover:bg-accent"
+                  className="flex cursor-pointer flex-col items-center gap-3 rounded-md border border-dashed border-border py-8 text-center hover:bg-accent transition-colors"
                 >
                   {arquivo ? (
                     <>
-                      <FileCheck2 className="h-6 w-6 text-primary" />
-                      <span className="text-sm">{arquivo.name}</span>
+                      {arquivo.type.startsWith("image/") ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={URL.createObjectURL(arquivo)}
+                          alt="Preview"
+                          className="max-h-48 max-w-full rounded object-contain"
+                        />
+                      ) : (
+                        <FileCheck2 className="h-10 w-10 text-primary" />
+                      )}
+                      <span className="text-sm font-medium">{arquivo.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {(arquivo.size / 1024 / 1024).toFixed(1)} MB — clique para trocar
+                      </span>
                     </>
                   ) : (
                     <>
-                      <Upload className="h-6 w-6 text-muted-foreground" />
+                      <Upload className="h-8 w-8 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
                         Clique para anexar uma foto ou vídeo
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Máximo 50 MB
                       </span>
                     </>
                   )}
@@ -990,8 +1023,8 @@ export default function NovoOrcamentoPage() {
                   <Printer className="mr-2 h-4 w-4" />
                   Gerar PDF
                 </Button>
-                <Button disabled={!podeFechar} onClick={handleFechar}>
-                  Fechar Orçamento
+                <Button disabled={!podeFechar || enviando} onClick={handleFechar}>
+                  {enviando ? "Enviando..." : "Fechar Orçamento"}
                 </Button>
                 {!arquivo && (
                   <p className="text-center text-xs text-muted-foreground">

@@ -198,7 +198,18 @@ export default function OrdemDeServicoPage() {
               <Separator />
               <div>
                 <p className="text-xs text-muted-foreground">Anexo de referência</p>
-                <p className="font-medium">{orcamento.anexoNome}</p>
+                {orcamento.anexoUrl ? (
+                  <a
+                    href={orcamento.anexoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-primary underline underline-offset-2"
+                  >
+                    {orcamento.anexoNome}
+                  </a>
+                ) : (
+                  <p className="font-medium">{orcamento.anexoNome}</p>
+                )}
               </div>
             </>
           )}
