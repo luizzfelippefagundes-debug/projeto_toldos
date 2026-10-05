@@ -5,6 +5,7 @@ import { useData } from "@/context/data-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -14,9 +15,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { quantidadeMaterialConsumida } from "@/lib/calculo"
-import { formatarMoeda } from "@/lib/format"
+import { formatarMoeda, formatarData } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { resumirFinanceiro } from "@/lib/financeiro"
+import { FileSpreadsheet, Printer } from "lucide-react"
 
 export default function RelatoriosPage() {
   const { orcamentos, materiais, lancamentos } = useData()
@@ -54,6 +56,15 @@ export default function RelatoriosPage() {
     [orcamentos, dataDe, dataAte]
   )
 
+  const lancamentosPeriodo = useMemo(() => {
+    return lancamentos.filter((l) => {
+      const dataRef = l.status === "pago" ? (l.pagoEm ?? l.criadoEm) : l.vencimento
+      if (dataDe && dataRef < `${dataDe}T00:00:00`) return false
+      if (dataAte && dataRef > `${dataAte}T23:59:59`) return false
+      return true
+    })
+  }, [lancamentos, dataDe, dataAte])
+
   const usoMaterial = useMemo(() => {
     const porMaterial = new Map<
       string,
@@ -89,14 +100,75 @@ export default function RelatoriosPage() {
     return Array.from(porMaterial.values()).sort((a, b) => b.custo - a.custo)
   }, [orcamentosFechadosPeriodo, materiais])
 
+  async function exportarExcel() {
+    const { utils, writeFile } = await import("xlsx")
+    const periodo = dataDe || dataAte
+      ? `${dataDe || "início"} a ${dataAte || "hoje"}`
+      : "Todos os períodos"
+
+    // Aba 1 — Resumo
+    const abaResumo = [
+      ["Relatório Financeiro — Toldos Print"],
+      ["Período:", periodo],
+      [],
+      ["Indicador", "Valor"],
+      ["Recebido no período", resumo.recebido],
+      ["Pago no período", resumo.pago],
+      ["Em aberto a receber", resumo.aReceber],
+      ["Em aberto a pagar", resumo.aPagar],
+      ["Vencido a receber", resumo.vencidoAReceber],
+      ["Vencido a pagar", resumo.vencidoAPagar],
+    ]
+
+    // Aba 2 — Uso de material
+    const abaMaterial = [
+      ["Material", "Quantidade", "Unidade", "Custo (R$)"],
+      ...usoMaterial.map((m) => [m.nome, m.quantidade.toFixed(2), m.unidade, m.custo]),
+    ]
+
+    // Aba 3 — Lançamentos
+    const abaLancamentos = [
+      ["Descrição", "Tipo", "Categoria", "Valor (R$)", "Vencimento", "Status", "Forma Pgto"],
+      ...lancamentosPeriodo.map((l) => [
+        l.descricao,
+        l.tipo === "receita" ? "Receita" : "Despesa",
+        l.categoria,
+        l.valor,
+        formatarData(l.vencimento),
+        l.status === "pago" ? "Pago" : "Pendente",
+        l.formaPagamento ?? "",
+      ]),
+    ]
+
+    const wb = utils.book_new()
+    utils.book_append_sheet(wb, utils.aoa_to_sheet(abaResumo), "Resumo")
+    utils.book_append_sheet(wb, utils.aoa_to_sheet(abaMaterial), "Uso de Material")
+    utils.book_append_sheet(wb, utils.aoa_to_sheet(abaLancamentos), "Lançamentos")
+
+    const nome = `relatorio-toldos-${dataDe || "inicio"}-${dataAte || "hoje"}.xlsx`
+    writeFile(wb, nome)
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Relatórios</h1>
-        <p className="text-sm text-muted-foreground">
-          O que está entrando, o que foi custo, e quanto de cada material foi
-          usado.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Relatórios</h1>
+          <p className="text-sm text-muted-foreground">
+            O que está entrando, o que foi custo, e quanto de cada material foi
+            usado.
+          </p>
+        </div>
+        <div className="flex gap-2 print:hidden">
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer className="mr-2 h-4 w-4" />
+            PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportarExcel}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Excel
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-end gap-4">
