@@ -321,7 +321,7 @@ export default function NovoOrcamentoPage() {
         return
       }
       const { url } = await res.json()
-      fecharOrcamento({
+      const orcamento = fecharOrcamento({
         clienteId: cliente.id,
         item,
         ajusteManual: numeroOuZero(ajusteManual),
@@ -329,6 +329,30 @@ export default function NovoOrcamentoPage() {
         anexoUrl: url,
         validadeDias: numeroOuZero(validadeDias),
       })
+
+      // Envia email em background se o cliente tiver email cadastrado
+      if (cliente.email && resultado) {
+        fetch("/api/email-orcamento", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clienteNome: cliente.nome,
+            clienteEmail: cliente.email,
+            numero: orcamento.numero,
+            material: material.nome,
+            servico: servico.nome,
+            total: resultado.total + numeroOuZero(ajusteManual),
+            validoAte: validoAte ? formatarData(validoAte.toISOString()) : undefined,
+          }),
+        })
+          .then((r) => r.json())
+          .then((j) => {
+            if (!j.ok) toast.error("Orçamento fechado, mas falha ao enviar email.")
+            else toast.success(`Email enviado para ${cliente.email}`)
+          })
+          .catch(() => toast.error("Orçamento fechado, mas falha ao enviar email."))
+      }
+
       toast.success(`Orçamento fechado para ${cliente.nome}`)
       router.push("/orcamentos")
     } catch {
