@@ -6,6 +6,7 @@ import { useData } from "@/context/data-context"
 import { formatarMoeda } from "@/lib/format"
 import { calcularOrcamentoCompleto } from "@/lib/calculo"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import { ClienteFormDialog } from "@/components/clientes/cliente-form-dialog"
 import { Users, ChevronRight, Phone, Mail } from "lucide-react"
 
 function totalOrcamento(
@@ -40,11 +41,14 @@ export default function ClientesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Clientes</h1>
-        <p className="text-sm text-muted-foreground">
-          Ficha de cada cliente com histórico de orçamentos.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Clientes</h1>
+          <p className="text-sm text-muted-foreground">
+            Ficha de cada cliente com histórico de orçamentos.
+          </p>
+        </div>
+        <ClienteFormDialog />
       </div>
 
       {fichas.length === 0 && (
@@ -56,16 +60,16 @@ export default function ClientesPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {fichas.map(({ cliente, totalOrcamentos, totalFaturado, ultimoOrcamento }) => (
-          <Link
-            key={cliente.id}
-            href={`/clientes/${cliente.id}`}
-            className="group flex flex-col gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-accent"
-          >
+          <div key={cliente.id} className="relative flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
+            <div className="absolute right-2 top-2">
+              <ClienteFormDialog cliente={cliente} />
+            </div>
+            <Link href={`/clientes/${cliente.id}`} className="group flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                 {cliente.nome.charAt(0).toUpperCase()}
               </div>
-              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 mr-6" />
             </div>
 
             <div>
@@ -102,7 +106,8 @@ export default function ClientesPage() {
                 </div>
               )}
             </div>
-          </Link>
+            </Link>
+          </div>
         ))}
       </div>
     </div>

@@ -66,6 +66,8 @@ interface DataContextValue {
   addServico: (dados: Omit<Servico, "id">) => Servico
   updateServico: (id: string, dados: Omit<Servico, "id">) => void
   addCliente: (dados: Omit<Cliente, "id">) => Cliente
+  updateCliente: (id: string, dados: Omit<Cliente, "id">) => void
+  removeCliente: (id: string) => void
   addEntradaEstoque: (dados: Omit<EntradaEstoque, "id" | "data">) => void
   fecharOrcamento: (dados: {
     clienteId: string
@@ -274,6 +276,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setClientes((atual) => [...atual, novo])
     apiPost("/api/clientes", novo)
     return novo
+  }
+
+  const updateCliente: DataContextValue["updateCliente"] = (id, dados) => {
+    setClientes((atual) => atual.map((c) => (c.id === id ? { id, ...dados } : c)))
+    apiPut(`/api/clientes/${id}`, dados)
+  }
+
+  const removeCliente: DataContextValue["removeCliente"] = (id) => {
+    setClientes((atual) => atual.filter((c) => c.id !== id))
+    apiDelete(`/api/clientes/${id}`)
   }
 
   const addEntradaEstoque: DataContextValue["addEntradaEstoque"] = (dados) => {
@@ -633,6 +645,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addServico,
       updateServico,
       addCliente,
+      updateCliente,
+      removeCliente,
       addEntradaEstoque,
       fecharOrcamento,
       reabrirOrcamento,
