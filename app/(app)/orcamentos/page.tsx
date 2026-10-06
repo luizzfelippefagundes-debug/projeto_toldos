@@ -206,6 +206,14 @@ export default function HistoricoOrcamentosPage() {
                       <MoreHorizontal className="h-4 w-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {orcamento.status === "aberto" && (
+                        <DropdownMenuItem
+                          nativeButton={false}
+                          render={<Link href={`/orcamentos/novo?editar=${orcamento.id}`} />}
+                        >
+                          Editar
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         nativeButton={false}
                         render={<Link href={`/orcamentos/${orcamento.id}/os`} />}

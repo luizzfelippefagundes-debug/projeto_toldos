@@ -77,6 +77,17 @@ interface DataContextValue {
     anexoUrl?: string
     validadeDias?: number
   }) => Orcamento
+  updateOrcamentoAberto: (
+    id: string,
+    dados: {
+      clienteId: string
+      item: OrcamentoItem
+      ajusteManual: number
+      validadeDias: number
+      anexoNome?: string | null
+      anexoUrl?: string
+    }
+  ) => void
   reabrirOrcamento: (id: string) => boolean
   duplicarOrcamento: (id: string) => void
   consumirRascunho: () => void
@@ -416,6 +427,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return novo
   }
 
+  const updateOrcamentoAberto: DataContextValue["updateOrcamentoAberto"] = (id, dados) => {
+    setOrcamentos((atual) =>
+      atual.map((o) => {
+        if (o.id !== id || o.status !== "aberto") return o
+        const atualizado: typeof o = {
+          ...o,
+          clienteId: dados.clienteId,
+          item: dados.item,
+          ajusteManual: dados.ajusteManual,
+          validadeDias: dados.validadeDias,
+          anexoNome: dados.anexoNome ?? o.anexoNome,
+          anexoUrl: dados.anexoUrl ?? o.anexoUrl,
+        }
+        apiPut(`/api/orcamentos/${id}`, atualizado)
+        return atualizado
+      })
+    )
+  }
+
   const reabrirOrcamento: DataContextValue["reabrirOrcamento"] = (id) => {
     const orcamento = orcamentos.find((o) => o.id === id)
     if (!orcamento || orcamento.status === "aberto") return false
@@ -649,6 +679,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeCliente,
       addEntradaEstoque,
       fecharOrcamento,
+      updateOrcamentoAberto,
       reabrirOrcamento,
       duplicarOrcamento,
       consumirRascunho,

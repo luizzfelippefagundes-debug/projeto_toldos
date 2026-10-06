@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useData } from "@/context/data-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -48,11 +48,17 @@ export default function NovoOrcamentoPage() {
     clientes,
     materiais,
     servicos,
+    orcamentos,
     rascunho,
     consumirRascunho,
     fecharOrcamento,
+    updateOrcamentoAberto,
   } = useData()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editarId = searchParams.get("editar")
+  const orcamentoEditando = editarId ? orcamentos.find((o) => o.id === editarId && o.status === "aberto") : null
+  const modoEdicao = Boolean(orcamentoEditando)
 
   const [passoAtual, setPassoAtual] = useState(1)
 
@@ -106,6 +112,41 @@ export default function NovoOrcamentoPage() {
   const validoAte = Number.isFinite(validadeTimestamp)
     ? new Date(validadeTimestamp)
     : null
+
+  // Carrega orçamento em edição nos campos do formulário
+  useEffect(() => {
+    if (!orcamentoEditando) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setClienteId(orcamentoEditando.clienteId)
+    setMaterialId(orcamentoEditando.item.materialId)
+    setServicoId(orcamentoEditando.item.servicoId)
+    setLargura(orcamentoEditando.item.largura ? String(orcamentoEditando.item.largura) : "")
+    setAltura(orcamentoEditando.item.altura ? String(orcamentoEditando.item.altura) : "")
+    setQuantidadeUnidades(String(orcamentoEditando.item.quantidadeUnidades || 1))
+    setHorasEstimadas(orcamentoEditando.item.horasEstimadas ? String(orcamentoEditando.item.horasEstimadas) : "")
+    setAjusteManual(String(orcamentoEditando.ajusteManual))
+    setValidadeDias(String(orcamentoEditando.validadeDias ?? 7))
+    const acabamentos = orcamentoEditando.item.acabamentos ?? []
+    setAcabamentosAtivos(Object.fromEntries(acabamentos.map(({ acabamentoId }) => [acabamentoId, true])))
+    setAcabamentosQtd(Object.fromEntries(acabamentos.map(({ acabamentoId, quantidade }) => [acabamentoId, String(quantidade)])))
+    const instalacao = orcamentoEditando.item.instalacao
+    setInstalacaoIncluida(instalacao?.incluida ?? false)
+    setHorasInstalacao(instalacao ? String(instalacao.horas) : "")
+    setCustoHoraInstalacao(instalacao ? String(instalacao.custoHora) : "")
+    setNumAjudantes(instalacao ? String(instalacao.numAjudantes) : "0")
+    setDiariaAjudante(instalacao ? String(instalacao.diariaAjudante) : "")
+    setEquipamentoId(instalacao?.equipamentoId ?? equipamentosAcessoSeed[0].id)
+    const deslocamento = orcamentoEditando.item.deslocamento
+    setDeslocamentoIncluido(deslocamento?.incluido ?? false)
+    setDistanciaKm(deslocamento ? String(deslocamento.distanciaKm) : "")
+    setCustoPorKm(deslocamento ? String(deslocamento.custoPorKm) : "")
+    setPedagio(deslocamento ? String(deslocamento.pedagio) : "")
+    setAlimentacao(deslocamento ? String(deslocamento.alimentacao) : "")
+    setMargemPercent(String(orcamentoEditando.item.margemPercent ?? 0))
+    setDescontoPercent(String(orcamentoEditando.item.descontoPercent ?? 0))
+    setImpostoPercent(String(orcamentoEditando.item.impostoPercent ?? 0))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editarId])
 
   // `rascunho` vem da tela de Histórico (Duplicar) e só existe uma vez, no
   // momento em que esta página monta — mesmo caso já aceito para o
@@ -294,7 +335,7 @@ export default function NovoOrcamentoPage() {
     Boolean(resultado) &&
     Number.isFinite(resultado?.total) &&
     (resultado?.total ?? -1) >= 0
-  const podeFechar = dadosValidos && Boolean(arquivo)
+  const podeFechar = dadosValidos && (Boolean(arquivo) || modoEdicao)
 
   function irPara(passo: number) {
     setPassoAtual(Math.min(Math.max(passo, 1), passos.length))
@@ -306,6 +347,41 @@ export default function NovoOrcamentoPage() {
       return
     }
     window.print()
+  }
+
+  async function handleSalvarEdicao() {
+    if (!podeFechar || !orcamentoEditando) return
+    setEnviando(true)
+    try {
+      let novoAnexoUrl: string | undefined
+      let novoAnexoNome: string | null = orcamentoEditando.anexoNome
+      if (arquivo) {
+        const form = new FormData()
+        form.append("file", arquivo)
+        const res = await fetch("/api/upload", { method: "POST", body: form })
+        if (!res.ok) {
+          toast.error("Falha no upload do arquivo")
+          return
+        }
+        const { url } = await res.json()
+        novoAnexoUrl = url
+        novoAnexoNome = arquivo.name
+      }
+      updateOrcamentoAberto(orcamentoEditando.id, {
+        clienteId: clienteId,
+        item,
+        ajusteManual: numeroOuZero(ajusteManual),
+        validadeDias: numeroOuZero(validadeDias),
+        anexoNome: novoAnexoNome,
+        anexoUrl: novoAnexoUrl,
+      })
+      toast.success("Orçamento atualizado.")
+      router.push("/orcamentos")
+    } catch {
+      toast.error("Erro ao salvar alterações.")
+    } finally {
+      setEnviando(false)
+    }
   }
 
   async function handleFechar() {
@@ -373,9 +449,13 @@ export default function NovoOrcamentoPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="print:hidden">
-        <h1 className="text-2xl font-semibold">Novo Orçamento</h1>
+        <h1 className="text-2xl font-semibold">
+          {modoEdicao ? `Editar Orçamento #${orcamentoEditando?.numero}` : "Novo Orçamento"}
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Preencha os passos abaixo — o valor é calculado automaticamente.
+          {modoEdicao
+            ? "Altere os dados e salve. O orçamento continua aberto."
+            : "Preencha os passos abaixo — o valor é calculado automaticamente."}
         </p>
       </div>
 
@@ -1047,13 +1127,21 @@ export default function NovoOrcamentoPage() {
                   <Printer className="mr-2 h-4 w-4" />
                   Gerar PDF
                 </Button>
-                <Button disabled={!podeFechar || enviando} onClick={handleFechar}>
-                  {enviando ? "Enviando..." : "Fechar Orçamento"}
-                </Button>
-                {!arquivo && (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Anexe uma foto ou vídeo para liberar o fechamento.
-                  </p>
+                {modoEdicao ? (
+                  <Button disabled={!podeFechar || enviando} onClick={handleSalvarEdicao}>
+                    {enviando ? "Salvando..." : "Salvar Alterações"}
+                  </Button>
+                ) : (
+                  <>
+                    <Button disabled={!podeFechar || enviando} onClick={handleFechar}>
+                      {enviando ? "Enviando..." : "Fechar Orçamento"}
+                    </Button>
+                    {!arquivo && (
+                      <p className="text-center text-xs text-muted-foreground">
+                        Anexe uma foto ou vídeo para liberar o fechamento.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </CardContent>
