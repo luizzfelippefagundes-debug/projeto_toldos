@@ -21,6 +21,20 @@ interface PedidoTV {
 interface AvisoTV {
   id: string
   mensagem: string
+  cor: string
+  icone: string
+  som: boolean
+}
+
+const COR_CLASSE: Record<string, string> = {
+  azul:     "text-blue-400",
+  verde:    "text-emerald-400",
+  amarelo:  "text-yellow-400",
+  vermelho: "text-red-400",
+  roxo:     "text-violet-400",
+  laranja:  "text-orange-400",
+  branco:   "text-white",
+  rosa:     "text-pink-400",
 }
 
 const COLUNAS: { status: StatusPedido; label: string; borda: string; fundo: string }[] = [
@@ -63,6 +77,22 @@ function Relogio() {
   )
 }
 
+function tocarBeep() {
+  try {
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = "sine"
+    osc.frequency.setValueAtTime(880, ctx.currentTime)
+    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.6)
+  } catch { /* AudioContext bloqueado antes de interação */ }
+}
+
 export default function TvPage() {
   const [pedidos, setPedidos] = useState<PedidoTV[]>([])
   const [avisos, setAvisos] = useState<AvisoTV[]>([])
@@ -85,6 +115,15 @@ export default function TvPage() {
     const t = setInterval(carregar, 60_000)
     return () => clearInterval(t)
   }, [carregar])
+
+  // Beep periódico se houver aviso com som ativado
+  useEffect(() => {
+    const comSom = avisos.some((a) => a.som)
+    if (!comSom) return
+    tocarBeep()
+    const t = setInterval(tocarBeep, 30_000)
+    return () => clearInterval(t)
+  }, [avisos])
 
   const totalAtivos = pedidos.length
   const totalAtrasados = pedidos.filter((p) => estaAtrasado(p.prazo_entrega_em)).length
@@ -209,16 +248,17 @@ export default function TvPage() {
 
       {/* Ticker de avisos */}
       {avisos.length > 0 && (
-        <div className="shrink-0 overflow-hidden rounded-lg border border-blue-800 bg-blue-950/60 py-2">
+        <div className="shrink-0 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/80 py-2">
           <div
-            className="flex gap-16 whitespace-nowrap"
-            style={{
-              animation: `ticker ${Math.max(avisos.length * 8, 16)}s linear infinite`,
-            }}
+            className="ticker-track"
+            style={{ animationDuration: `${Math.max(avisos.length * 10, 20)}s` }}
           >
             {[...avisos, ...avisos].map((aviso, i) => (
-              <span key={`${aviso.id}-${i}`} className="text-sm font-medium text-blue-200 sm:text-base">
-                📢 {aviso.mensagem}
+              <span
+                key={`${aviso.id}-${i}`}
+                className={`text-sm font-semibold sm:text-base ${COR_CLASSE[aviso.cor ?? "azul"] ?? "text-blue-400"}`}
+              >
+                {aviso.icone ?? "📢"} {aviso.mensagem}
               </span>
             ))}
           </div>
@@ -226,9 +266,17 @@ export default function TvPage() {
       )}
 
       <style>{`
-        @keyframes ticker {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
+        @keyframes ticker-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .ticker-track {
+          display: flex;
+          gap: 5rem;
+          white-space: nowrap;
+          width: max-content;
+          will-change: transform;
+          animation: ticker-scroll linear infinite;
         }
       `}</style>
     </div>

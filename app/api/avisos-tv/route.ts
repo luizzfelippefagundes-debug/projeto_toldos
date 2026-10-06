@@ -7,7 +7,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { id, mensagem, criado_em } = await req.json()
-  await getSql()`INSERT INTO avisos_tv (id, mensagem, criado_em) VALUES (${id}, ${mensagem}, ${criado_em})`
+  const { id, mensagem, criado_em, cor, icone, som } = await req.json()
+  await getSql()`
+    INSERT INTO avisos_tv (id, mensagem, criado_em, cor, icone, som)
+    VALUES (${id}, ${mensagem}, ${criado_em}, ${cor ?? "azul"}, ${icone ?? "📢"}, ${som ?? false})
+  `
   return NextResponse.json({ ok: true }, { status: 201 })
 }

@@ -16,7 +16,7 @@ export async function GET() {
         prazo_entrega_em ASC NULLS LAST,
         criado_em ASC
     `,
-    getSql()`SELECT id, mensagem FROM avisos_tv ORDER BY criado_em DESC`,
+    getSql()`SELECT id, mensagem, cor, icone, som FROM avisos_tv ORDER BY criado_em DESC`,
   ])
   return NextResponse.json({ pedidos, avisos }, { headers: { "Cache-Control": "no-store" } })
 }
