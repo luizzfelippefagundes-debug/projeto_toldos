@@ -18,13 +18,13 @@ interface PedidoTV {
   total: number
 }
 
-const COLUNAS: { status: StatusPedido; label: string; cor: string }[] = [
-  { status: "aguardando", label: "Aguardando", cor: "border-slate-600 bg-slate-800" },
-  { status: "aprovado",   label: "Aprovado",   cor: "border-blue-600 bg-blue-950" },
-  { status: "arte",       label: "Arte",        cor: "border-violet-500 bg-violet-950" },
-  { status: "impressao",  label: "Impressão",   cor: "border-amber-500 bg-amber-950" },
-  { status: "acabamento", label: "Acabamento",  cor: "border-orange-500 bg-orange-950" },
-  { status: "pronto",     label: "Pronto ✓",    cor: "border-emerald-500 bg-emerald-950" },
+const COLUNAS: { status: StatusPedido; label: string; borda: string; fundo: string }[] = [
+  { status: "aguardando", label: "Aguardando", borda: "border-slate-600",  fundo: "bg-slate-800/70" },
+  { status: "aprovado",   label: "Aprovado",   borda: "border-blue-600",   fundo: "bg-blue-950/70" },
+  { status: "arte",       label: "Arte",        borda: "border-violet-500", fundo: "bg-violet-950/70" },
+  { status: "impressao",  label: "Impressão",   borda: "border-amber-500",  fundo: "bg-amber-950/70" },
+  { status: "acabamento", label: "Acabamento",  borda: "border-orange-500", fundo: "bg-orange-950/70" },
+  { status: "pronto",     label: "Pronto ✓",    borda: "border-emerald-500",fundo: "bg-emerald-950/70" },
 ]
 
 function estaAtrasado(prazo: string | null) {
@@ -34,7 +34,7 @@ function estaAtrasado(prazo: string | null) {
 
 function formatarPrazo(prazo: string | null) {
   if (!prazo) return null
-  const [ano, mes, dia] = prazo.split("-")
+  const [, mes, dia] = prazo.split("-")
   return `${dia}/${mes}`
 }
 
@@ -45,16 +45,15 @@ function Relogio() {
     const t = setInterval(() => setAgora(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
-
   if (!agora) return null
-
-  const hora = agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-  const data = agora.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })
-
   return (
-    <div className="text-right">
-      <div className="text-5xl font-bold tabular-nums tracking-tight">{hora}</div>
-      <div className="mt-1 text-lg capitalize text-slate-400">{data}</div>
+    <div className="shrink-0 text-right">
+      <div className="text-3xl font-bold tabular-nums tracking-tight sm:text-4xl lg:text-5xl">
+        {agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+      </div>
+      <div className="mt-0.5 text-sm capitalize text-slate-400 sm:text-base">
+        {agora.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+      </div>
     </div>
   )
 }
@@ -70,9 +69,7 @@ export default function TvPage() {
         setPedidos(await res.json())
         setUltimaAtualizacao(new Date())
       }
-    } catch {
-      // silently retry on next interval
-    }
+    } catch { /* retry on next interval */ }
   }, [])
 
   useEffect(() => {
@@ -85,27 +82,30 @@ export default function TvPage() {
   const totalAtrasados = pedidos.filter((p) => estaAtrasado(p.prazo_entrega_em)).length
 
   return (
-    <div className="flex min-h-screen flex-col p-6 gap-6">
+    <div className="flex h-screen flex-col gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5">
+
       {/* Header */}
-      <header className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500 text-lg font-bold">
+      <header className="flex shrink-0 items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-sm font-bold sm:h-10 sm:w-10 sm:text-lg">
               T
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Toldos Print</h1>
-            <span className="text-slate-500 text-xl">— Painel de Produção</span>
+            <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">
+              Toldos Print
+            </h1>
+            <span className="hidden text-slate-500 sm:inline sm:text-lg">— Produção</span>
           </div>
-          <div className="mt-2 flex items-center gap-4 text-sm text-slate-400">
-            <span>{totalAtivos} pedido{totalAtivos !== 1 ? "s" : ""} em andamento</span>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400 sm:gap-3 sm:text-sm">
+            <span>{totalAtivos} pedido{totalAtivos !== 1 ? "s" : ""}</span>
             {totalAtrasados > 0 && (
-              <span className="flex items-center gap-1 rounded-full bg-red-900/60 px-3 py-0.5 text-red-300 font-medium">
+              <span className="rounded-full bg-red-900/60 px-2 py-0.5 font-medium text-red-300">
                 ⚠ {totalAtrasados} atrasado{totalAtrasados !== 1 ? "s" : ""}
               </span>
             )}
             {ultimaAtualizacao && (
               <span className="text-slate-600">
-                atualizado às {ultimaAtualizacao.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                {ultimaAtualizacao.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </div>
@@ -113,62 +113,68 @@ export default function TvPage() {
         <Relogio />
       </header>
 
-      {/* Kanban */}
-      <div className="flex flex-1 gap-4 overflow-x-auto pb-2">
-        {COLUNAS.map(({ status, label, cor }) => {
+      {/* Kanban grid — auto-fit: encaixa todas as colunas na largura disponível */}
+      <div
+        className="min-h-0 flex-1 gap-2 sm:gap-3"
+        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))" }}
+      >
+        {COLUNAS.map(({ status, label, borda, fundo }) => {
           const colPedidos = pedidos.filter((p) => p.status === status)
           return (
-            <div key={status} className="flex w-72 shrink-0 flex-col gap-3">
-              <div className={`flex items-center justify-between rounded-lg border px-3 py-2 ${cor}`}>
-                <span className="font-semibold tracking-wide">{label}</span>
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-sm font-bold">
+            <div key={status} className="flex min-h-0 flex-col gap-2">
+              {/* Cabeçalho da coluna */}
+              <div className={`flex shrink-0 items-center justify-between rounded-lg border px-2 py-1.5 sm:px-3 sm:py-2 ${borda} ${fundo}`}>
+                <span className="text-xs font-semibold tracking-wide sm:text-sm">{label}</span>
+                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-xs font-bold sm:px-2">
                   {colPedidos.length}
                 </span>
               </div>
 
-              <div className="flex flex-col gap-3">
+              {/* Cards com scroll interno */}
+              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-0.5">
                 {colPedidos.map((pedido) => {
                   const atrasado = estaAtrasado(pedido.prazo_entrega_em)
                   return (
                     <div
                       key={pedido.id}
-                      className={`rounded-xl border p-4 transition-colors ${
+                      className={`shrink-0 rounded-xl border p-2.5 sm:p-3 ${
                         atrasado
                           ? "border-red-500 bg-red-950/60"
                           : "border-slate-700 bg-slate-800/80"
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-xs font-bold text-slate-500">#{pedido.numero}</span>
-                        {atrasado && (
-                          <span className="shrink-0 rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                      <div className="flex items-start justify-between gap-1">
+                        <span className="text-[10px] font-bold text-slate-500 sm:text-xs">
+                          #{pedido.numero}
+                        </span>
+                        {atrasado ? (
+                          <span className="shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white sm:text-xs">
                             ATRASADO
                           </span>
-                        )}
-                        {pedido.prazo_entrega_em && !atrasado && (
-                          <span className="shrink-0 rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
+                        ) : pedido.prazo_entrega_em ? (
+                          <span className="shrink-0 rounded-full bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-300">
                             até {formatarPrazo(pedido.prazo_entrega_em)}
                           </span>
-                        )}
+                        ) : null}
                       </div>
 
-                      <p className="mt-1 text-lg font-bold leading-tight">
+                      <p className="mt-1 text-sm font-bold leading-tight sm:text-base lg:text-lg">
                         {pedido.cliente_nome}
                       </p>
 
-                      <p className="mt-1 text-sm text-slate-300">
+                      <p className="mt-0.5 text-xs text-slate-300 sm:text-sm">
                         {pedido.produto_nome ?? "—"}
                         {pedido.variante_nome ? ` · ${pedido.variante_nome}` : ""}
                       </p>
 
                       {pedido.acabamento && (
-                        <p className="mt-1 text-xs text-slate-400">
-                          Acabamento: {pedido.acabamento}
+                        <p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">
+                          {pedido.acabamento}
                         </p>
                       )}
 
                       {pedido.observacao && (
-                        <p className="mt-2 rounded-md bg-slate-900/60 px-2 py-1 text-xs italic text-slate-400 line-clamp-2">
+                        <p className="mt-1.5 line-clamp-2 rounded-md bg-slate-900/60 px-2 py-1 text-[10px] italic text-slate-400 sm:text-xs">
                           {pedido.observacao}
                         </p>
                       )}
@@ -177,7 +183,7 @@ export default function TvPage() {
                 })}
 
                 {colPedidos.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-800 py-8 text-center text-sm text-slate-700">
+                  <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-slate-800 py-6 text-xs text-slate-700">
                     vazio
                   </div>
                 )}
@@ -188,7 +194,7 @@ export default function TvPage() {
       </div>
 
       {pedidos.length === 0 && (
-        <div className="flex flex-1 items-center justify-center text-2xl font-semibold text-slate-700">
+        <div className="absolute inset-0 flex items-center justify-center text-xl font-semibold text-slate-700 sm:text-2xl">
           Nenhum pedido em andamento no momento
         </div>
       )}
