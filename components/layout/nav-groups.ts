@@ -11,6 +11,7 @@ import {
   BarChart3,
   Bot,
   Users,
+  Tv2,
   type LucideIcon,
 } from "lucide-react"
 import type { Papel } from "@/lib/types"
@@ -22,6 +23,7 @@ export interface NavItem {
   // Quem vê esse item além do "dono" (que sempre vê tudo). Sem essa lista,
   // o item é visível pra qualquer papel.
   papeis?: Papel[]
+  externo?: boolean
 }
 
 export interface NavGroup {
@@ -55,6 +57,7 @@ export const gruposNavegacao: NavGroup[] = [
       },
       { label: "Central do Bot", href: "/bot", icon: Bot },
       { label: "Clientes", href: "/clientes", icon: Users },
+      { label: "Painel TV", href: "/tv", icon: Tv2, externo: true },
     ],
   },
   {

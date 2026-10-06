@@ -73,6 +73,8 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    target={item.externo ? "_blank" : undefined}
+                    rel={item.externo ? "noopener noreferrer" : undefined}
                     className={cn(
                       "flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
                       ativo
