@@ -128,3 +128,9 @@ CREATE TABLE IF NOT EXISTS mensagens_bot (
   autor TEXT NOT NULL,
   criado_em TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS avisos_tv (
+  id TEXT PRIMARY KEY,
+  mensagem TEXT NOT NULL,
+  criado_em TEXT NOT NULL
+);

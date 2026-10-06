@@ -12,6 +12,7 @@ import {
   Bot,
   Users,
   Tv2,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react"
 import type { Papel } from "@/lib/types"
@@ -57,6 +58,7 @@ export const gruposNavegacao: NavGroup[] = [
       },
       { label: "Central do Bot", href: "/bot", icon: Bot },
       { label: "Clientes", href: "/clientes", icon: Users },
+      { label: "Avisos da TV", href: "/avisos-tv", icon: Megaphone },
       { label: "Painel TV", href: "/tv", icon: Tv2, externo: true },
     ],
   },

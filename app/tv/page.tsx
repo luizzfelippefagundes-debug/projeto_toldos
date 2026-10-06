@@ -18,6 +18,11 @@ interface PedidoTV {
   total: number
 }
 
+interface AvisoTV {
+  id: string
+  mensagem: string
+}
+
 const COLUNAS: { status: StatusPedido; label: string; borda: string; fundo: string }[] = [
   { status: "aguardando", label: "Aguardando", borda: "border-slate-600",  fundo: "bg-slate-800/70" },
   { status: "aprovado",   label: "Aprovado",   borda: "border-blue-600",   fundo: "bg-blue-950/70" },
@@ -60,13 +65,16 @@ function Relogio() {
 
 export default function TvPage() {
   const [pedidos, setPedidos] = useState<PedidoTV[]>([])
+  const [avisos, setAvisos] = useState<AvisoTV[]>([])
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date | null>(null)
 
   const carregar = useCallback(async () => {
     try {
       const res = await fetch("/api/tv/pedidos", { cache: "no-store" })
       if (res.ok) {
-        setPedidos(await res.json())
+        const data = await res.json()
+        setPedidos(data.pedidos ?? data)
+        setAvisos(data.avisos ?? [])
         setUltimaAtualizacao(new Date())
       }
     } catch { /* retry on next interval */ }
@@ -198,6 +206,31 @@ export default function TvPage() {
           Nenhum pedido em andamento no momento
         </div>
       )}
+
+      {/* Ticker de avisos */}
+      {avisos.length > 0 && (
+        <div className="shrink-0 overflow-hidden rounded-lg border border-blue-800 bg-blue-950/60 py-2">
+          <div
+            className="flex gap-16 whitespace-nowrap"
+            style={{
+              animation: `ticker ${Math.max(avisos.length * 8, 16)}s linear infinite`,
+            }}
+          >
+            {[...avisos, ...avisos].map((aviso, i) => (
+              <span key={`${aviso.id}-${i}`} className="text-sm font-medium text-blue-200 sm:text-base">
+                📢 {aviso.mensagem}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes ticker {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+      `}</style>
     </div>
   )
 }
