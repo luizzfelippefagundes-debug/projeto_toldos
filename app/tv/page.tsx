@@ -77,20 +77,34 @@ function Relogio() {
   )
 }
 
-function tocarBeep() {
+function tocarAlarme() {
   try {
     const ctx = new AudioContext()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.type = "sine"
-    osc.frequency.setValueAtTime(880, ctx.currentTime)
-    gain.gain.setValueAtTime(0.3, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6)
-    osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + 0.6)
-  } catch { /* AudioContext bloqueado antes de interação */ }
+    const repeticoes = 4
+    const durSom = 0.55
+    const durSilencio = 0.18
+
+    for (let i = 0; i < repeticoes; i++) {
+      const t0 = ctx.currentTime + i * (durSom + durSilencio)
+
+      // Dois osciladores: fundamental + harmônico para som mais encorpado
+      ;[650, 1300].forEach((freq, idx) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.type = "sawtooth"
+        osc.frequency.setValueAtTime(freq, t0)
+        const vol = idx === 0 ? 0.5 : 0.15
+        gain.gain.setValueAtTime(0, t0)
+        gain.gain.linearRampToValueAtTime(vol, t0 + 0.02)
+        gain.gain.setValueAtTime(vol, t0 + durSom - 0.08)
+        gain.gain.linearRampToValueAtTime(0, t0 + durSom)
+        osc.start(t0)
+        osc.stop(t0 + durSom)
+      })
+    }
+  } catch { /* AudioContext bloqueado antes de interação do usuário */ }
 }
 
 export default function TvPage() {
@@ -116,12 +130,12 @@ export default function TvPage() {
     return () => clearInterval(t)
   }, [carregar])
 
-  // Beep periódico se houver aviso com som ativado
+  // Alarme periódico se houver aviso com som ativado
   useEffect(() => {
     const comSom = avisos.some((a) => a.som)
     if (!comSom) return
-    tocarBeep()
-    const t = setInterval(tocarBeep, 30_000)
+    tocarAlarme()
+    const t = setInterval(tocarAlarme, 30_000)
     return () => clearInterval(t)
   }, [avisos])
 
