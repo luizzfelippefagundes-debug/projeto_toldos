@@ -41,23 +41,29 @@ export function Sidebar() {
         <ThemeToggle />
       </div>
 
-      <Select
-        value={papel}
-        onValueChange={(v) => setPapel((v ?? papel) as typeof papel)}
-      >
-        <SelectTrigger className="mb-6 w-full text-xs">
-          <SelectValue>
-            {(valor: string) =>
-              rotuloPapel[valor as keyof typeof rotuloPapel] ?? valor
-            }
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="dono">{rotuloPapel.dono}</SelectItem>
-          <SelectItem value="producao">{rotuloPapel.producao}</SelectItem>
-          <SelectItem value="financeiro">{rotuloPapel.financeiro}</SelectItem>
-        </SelectContent>
-      </Select>
+      {papel === "dono" ? (
+        <Select
+          value={papel}
+          onValueChange={(v) => setPapel((v ?? papel) as typeof papel)}
+        >
+          <SelectTrigger className="mb-6 w-full text-xs">
+            <SelectValue>
+              {(valor: string) =>
+                rotuloPapel[valor as keyof typeof rotuloPapel] ?? valor
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dono">{rotuloPapel.dono}</SelectItem>
+            <SelectItem value="producao">{rotuloPapel.producao}</SelectItem>
+            <SelectItem value="financeiro">{rotuloPapel.financeiro}</SelectItem>
+          </SelectContent>
+        </Select>
+      ) : (
+        <div className="mb-6 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          {rotuloPapel[papel]}
+        </div>
+      )}
 
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">
         {grupos.map((grupo) => (

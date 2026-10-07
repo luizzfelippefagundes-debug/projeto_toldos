@@ -11,6 +11,7 @@ import {
   BarChart3,
   Bot,
   Users,
+  Users2,
   Tv2,
   Megaphone,
   type LucideIcon,
@@ -25,6 +26,8 @@ export interface NavItem {
   // o item é visível pra qualquer papel.
   papeis?: Papel[]
   externo?: boolean
+  // Visível apenas para o dono — escondido de todos os outros papéis.
+  donoApenas?: boolean
 }
 
 export interface NavGroup {
@@ -58,8 +61,9 @@ export const gruposNavegacao: NavGroup[] = [
       },
       { label: "Central do Bot", href: "/bot", icon: Bot },
       { label: "Clientes", href: "/clientes", icon: Users },
-      { label: "Avisos da TV", href: "/avisos-tv", icon: Megaphone },
-      { label: "Painel TV", href: "/tv", icon: Tv2, externo: true },
+      { label: "Avisos da TV", href: "/avisos-tv", icon: Megaphone, donoApenas: true },
+      { label: "Painel TV", href: "/tv", icon: Tv2, externo: true, donoApenas: true },
+      { label: "Equipe", href: "/equipe", icon: Users2, donoApenas: true },
     ],
   },
   {
@@ -111,13 +115,14 @@ export function filtrarGruposPorPapel(
   grupos: NavGroup[],
   papel: Papel
 ): NavGroup[] {
-  if (papel === "dono") return grupos
   return grupos
     .map((grupo) => ({
       ...grupo,
-      items: grupo.items.filter(
-        (item) => !item.papeis || item.papeis.includes(papel)
-      ),
+      items: grupo.items.filter((item) => {
+        if (item.donoApenas && papel !== "dono") return false
+        if (papel === "dono") return true
+        return !item.papeis || item.papeis.includes(papel)
+      }),
     }))
     .filter((grupo) => grupo.items.length > 0)
 }
