@@ -16,21 +16,18 @@ interface Aviso {
   som: boolean
 }
 
-const ICONES = ["📢", "🚨", "⚠️", "✅", "🔔", "❗", "📌", "🎯", "🔴", "⭕", "💬", "ℹ️"]
-
-const CORES: { key: string; label: string; texto: string; bg: string; borda: string }[] = [
-  { key: "azul",    label: "Azul",    texto: "text-blue-400",    bg: "bg-blue-400",    borda: "ring-blue-400" },
-  { key: "verde",   label: "Verde",   texto: "text-emerald-400", bg: "bg-emerald-400", borda: "ring-emerald-400" },
-  { key: "amarelo", label: "Amarelo", texto: "text-yellow-400",  bg: "bg-yellow-400",  borda: "ring-yellow-400" },
-  { key: "vermelho",label: "Vermelho",texto: "text-red-400",     bg: "bg-red-400",     borda: "ring-red-400" },
-  { key: "roxo",    label: "Roxo",    texto: "text-violet-400",  bg: "bg-violet-400",  borda: "ring-violet-400" },
-  { key: "laranja", label: "Laranja", texto: "text-orange-400",  bg: "bg-orange-400",  borda: "ring-orange-400" },
-  { key: "branco",  label: "Branco",  texto: "text-white",       bg: "bg-white",       borda: "ring-white" },
-  { key: "rosa",    label: "Rosa",    texto: "text-pink-400",    bg: "bg-pink-400",    borda: "ring-pink-400" },
+const TIPOS = [
+  { label: "Aviso",   icone: "📢", cor: "azul",     classe: "border-blue-500/50 bg-blue-500/10 text-blue-400",     ativo: "border-blue-500 bg-blue-500/20 text-blue-300 ring-1 ring-blue-500" },
+  { label: "Atenção", icone: "⚠️", cor: "amarelo",  classe: "border-yellow-500/50 bg-yellow-500/10 text-yellow-500", ativo: "border-yellow-500 bg-yellow-500/20 text-yellow-300 ring-1 ring-yellow-500" },
+  { label: "Alerta",  icone: "🚨", cor: "vermelho",  classe: "border-red-500/50 bg-red-500/10 text-red-400",         ativo: "border-red-500 bg-red-500/20 text-red-300 ring-1 ring-red-500" },
+  { label: "OK",      icone: "✅", cor: "verde",     classe: "border-emerald-500/50 bg-emerald-500/10 text-emerald-400", ativo: "border-emerald-500 bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500" },
 ]
 
-function corTextoClass(cor: string) {
-  return CORES.find((c) => c.key === cor)?.texto ?? "text-blue-400"
+const COR_TEXTO: Record<string, string> = {
+  azul:     "text-blue-400",
+  amarelo:  "text-yellow-400",
+  vermelho: "text-red-400",
+  verde:    "text-emerald-400",
 }
 
 function gerarId() {
@@ -39,9 +36,8 @@ function gerarId() {
 
 export default function AvisosTvPage() {
   const [avisos, setAvisos] = useState<Aviso[]>([])
-  const [nova, setNova] = useState("")
-  const [cor, setCor] = useState("azul")
-  const [icone, setIcone] = useState("📢")
+  const [mensagem, setMensagem] = useState("")
+  const [tipoIdx, setTipoIdx] = useState(0)
   const [som, setSom] = useState(false)
   const [salvando, setSalvando] = useState(false)
 
@@ -52,15 +48,17 @@ export default function AvisosTvPage() {
       .catch(() => {})
   }, [])
 
+  const tipo = TIPOS[tipoIdx]
+
   async function adicionar() {
-    if (!nova.trim()) return
+    if (!mensagem.trim()) return
     setSalvando(true)
     const aviso: Aviso = {
       id: gerarId(),
-      mensagem: nova.trim(),
+      mensagem: mensagem.trim(),
       criado_em: new Date().toISOString(),
-      cor,
-      icone,
+      cor: tipo.cor,
+      icone: tipo.icone,
       som,
     }
     try {
@@ -70,8 +68,8 @@ export default function AvisosTvPage() {
         body: JSON.stringify(aviso),
       })
       setAvisos((atual) => [aviso, ...atual])
-      setNova("")
-      toast.success("Aviso adicionado ao painel TV.")
+      setMensagem("")
+      toast.success("Aviso adicionado ao painel.")
     } catch {
       toast.error("Erro ao salvar aviso.")
     } finally {
@@ -89,156 +87,109 @@ export default function AvisosTvPage() {
     }
   }
 
-  const corAtual = CORES.find((c) => c.key === cor) ?? CORES[0]
-
   return (
     <div className="flex flex-col gap-6">
+
+      {/* Cabeçalho */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Avisos do Painel TV</h1>
           <p className="text-sm text-muted-foreground">
-            Mensagens que aparecem no rodapé do painel da TV em tempo real.
+            Aparecem no rodapé do painel da produção em tempo real.
           </p>
         </div>
         <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/tv" target="_blank" />}>
           <ExternalLink className="mr-2 h-4 w-4" />
-          Abrir Painel TV
+          Ver painel
         </Button>
       </div>
 
-      {/* Formulário de novo aviso */}
-      <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-4">
-        <p className="text-sm font-medium text-muted-foreground">Novo aviso</p>
+      {/* Formulário */}
+      <div className="flex flex-col gap-3">
 
-        {/* Texto */}
-        <Input
-          value={nova}
-          onChange={(e) => setNova(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && adicionar()}
-          placeholder="Digite a mensagem que vai aparecer no painel..."
-          maxLength={140}
-        />
-
-        {/* Preview */}
-        {nova.trim() && (
-          <div className="rounded-lg border border-dashed border-border bg-slate-950 px-4 py-2">
-            <span className={`text-sm font-semibold ${corTextoClass(cor)}`}>
-              {icone} {nova.trim()}
-            </span>
-          </div>
-        )}
-
-        {/* Ícone */}
-        <div>
-          <p className="mb-2 text-xs font-medium text-muted-foreground">Ícone</p>
-          <div className="flex flex-wrap gap-2">
-            {ICONES.map((i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setIcone(i)}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border text-lg transition-colors ${
-                  icone === i
-                    ? "border-primary bg-primary/10"
-                    : "border-border bg-muted hover:bg-accent"
-                }`}
-              >
-                {i}
-              </button>
-            ))}
-          </div>
+        {/* Tipo */}
+        <div className="flex gap-2">
+          {TIPOS.map((t, i) => (
+            <button
+              key={t.label}
+              type="button"
+              onClick={() => setTipoIdx(i)}
+              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
+                tipoIdx === i ? t.ativo : t.classe
+              }`}
+            >
+              <span>{t.icone}</span>
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Cor */}
-        <div>
-          <p className="mb-2 text-xs font-medium text-muted-foreground">Cor do texto</p>
-          <div className="flex flex-wrap gap-2">
-            {CORES.map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                onClick={() => setCor(c.key)}
-                title={c.label}
-                className={`h-7 w-7 rounded-full transition-all ${c.bg} ${
-                  cor === c.key ? `ring-2 ring-offset-2 ring-offset-card ${c.borda} scale-110` : "opacity-60 hover:opacity-100"
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Som + Botão */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+        {/* Input + botões */}
+        <div className="flex gap-2">
+          <Input
+            value={mensagem}
+            onChange={(e) => setMensagem(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && adicionar()}
+            placeholder="Escreva a mensagem..."
+            maxLength={140}
+            className="flex-1"
+          />
           <button
             type="button"
             onClick={() => setSom((v) => !v)}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+            title={som ? "Alerta sonoro ativo" : "Sem som"}
+            className={`flex items-center justify-center rounded-lg border px-3 transition-colors ${
               som
-                ? "border-amber-500 bg-amber-500/10 text-amber-500"
+                ? "border-amber-500 bg-amber-500/10 text-amber-400"
                 : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
             {som ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-            {som ? "Alerta sonoro ativado" : "Alerta sonoro desativado"}
           </button>
-
-          <Button
-            onClick={adicionar}
-            disabled={!nova.trim() || salvando}
-            style={{ backgroundColor: som ? undefined : corAtual.bg.replace("bg-", "") }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar aviso
+          <Button onClick={adicionar} disabled={!mensagem.trim() || salvando}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Adicionar
           </Button>
         </div>
       </div>
 
-      {/* Lista de avisos */}
+      {/* Divider */}
+      <div className="border-t border-border" />
+
+      {/* Lista */}
       {avisos.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
-          <Tv2 className="h-10 w-10 opacity-30" />
-          <p>Nenhum aviso no painel ainda.</p>
+        <div className="flex flex-col items-center gap-2 py-16 text-muted-foreground">
+          <Tv2 className="h-8 w-8 opacity-25" />
+          <p className="text-sm">Nenhum aviso ativo no painel.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1.5">
           {avisos.map((aviso) => {
-            const corInfo = CORES.find((c) => c.key === (aviso.cor ?? "azul")) ?? CORES[0]
+            const t = TIPOS.find((x) => x.cor === aviso.cor) ?? TIPOS[0]
             return (
               <div
                 key={aviso.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3"
+                className="group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
               >
-                <div className="min-w-0 flex items-start gap-3">
-                  <span className="shrink-0 text-lg mt-0.5">{aviso.icone ?? "📢"}</span>
-                  <div className="min-w-0">
-                    <p className={`truncate font-medium ${corInfo.texto}`}>
-                      {aviso.mensagem}
-                    </p>
-                    <div className="mt-0.5 flex items-center gap-2">
-                      <span className={`h-2 w-2 rounded-full ${corInfo.bg}`} />
-                      <span className="text-xs text-muted-foreground">{corInfo.label}</span>
-                      {aviso.som && (
-                        <span className="flex items-center gap-1 text-xs text-amber-500">
-                          <Volume2 className="h-3 w-3" /> Som
-                        </span>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(aviso.criado_em).toLocaleString("pt-BR", {
-                          day: "2-digit", month: "2-digit", year: "2-digit",
-                          hour: "2-digit", minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  </div>
+                <span className="shrink-0 text-base">{aviso.icone ?? "📢"}</span>
+                <p className={`flex-1 min-w-0 truncate text-sm font-medium ${COR_TEXTO[aviso.cor] ?? "text-blue-400"}`}>
+                  {aviso.mensagem}
+                </p>
+                <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                  {aviso.som && <Volume2 className="h-3.5 w-3.5 text-amber-500" />}
+                  <span>
+                    {new Date(aviso.criado_em).toLocaleString("pt-BR", {
+                      day: "2-digit", month: "2-digit",
+                      hour: "2-digit", minute: "2-digit",
+                    })}
+                  </span>
+                  <button
+                    onClick={() => remover(aviso.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0 text-destructive hover:text-destructive"
-                  onClick={() => remover(aviso.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </div>
             )
           })}
