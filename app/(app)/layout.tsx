@@ -1,21 +1,41 @@
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { currentUser } from "@clerk/nextjs/server"
+import { SignOutButton } from "@clerk/nextjs"
 import { redirect } from "next/navigation"
 import { DataProvider } from "@/context/data-context"
 import { PapelAtivoProvider } from "@/context/papel-ativo-context"
 import { AppShell } from "@/components/layout/app-shell"
 import { Toaster } from "@/components/ui/sonner"
-import type { Papel } from "@/lib/types"
+import { resolverPapel } from "@/lib/papel"
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { userId } = await auth()
-  if (!userId) redirect("/sign-in")
-
   const user = await currentUser()
-  const papel = ((user?.publicMetadata?.papel as Papel) ?? "dono")
+  if (!user) redirect("/sign-in")
+
+  const email = user.primaryEmailAddress?.emailAddress
+  const papel = resolverPapel(user.publicMetadata?.papel, email)
+
+  if (!papel) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-sm text-center">
+          <h1 className="text-lg font-semibold">Conta aguardando liberação</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Sua conta ({email}) foi criada. Peça ao responsável para liberar seu
+            acesso em Equipe. Depois, recarregue esta página.
+          </p>
+          <SignOutButton>
+            <button className="mt-6 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
+              Sair
+            </button>
+          </SignOutButton>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <DataProvider>
