@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth, clerkClient } from "@clerk/nextjs/server"
 
-const PAPEIS = ["dono", "producao", "financeiro", "pendente"]
+const PAPEIS = ["dono", "producao", "financeiro"]
 
 export async function PATCH(
   req: Request,
@@ -20,7 +20,7 @@ export async function PATCH(
 
   const clerk = await clerkClient()
   await clerk.users.updateUserMetadata(userId, {
-    publicMetadata: { papel: papel === "pendente" ? null : papel },
+    publicMetadata: { papel },
   })
 
   return NextResponse.json({ ok: true })

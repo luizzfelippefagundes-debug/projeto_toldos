@@ -8,19 +8,10 @@ export const ROTULO_PAPEL: Record<Papel, string> = {
   financeiro: "Financeiro",
 }
 
-function emailsDono(): string[] {
-  return (process.env.DONO_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-}
-
-// null = conta criada mas ainda não liberada pelo dono.
-export function resolverPapel(
-  papelMetadata: unknown,
-  email: string | null | undefined
-): Papel | null {
+// Conta nova entra como "dono" por padrão. Pra restringir alguém a um
+// papel menor, o dono troca em Equipe — isso fica salvo em publicMetadata.papel
+// e passa a valer a partir daqui.
+export function resolverPapel(papelMetadata: unknown): Papel {
   if (PAPEIS_VALIDOS.includes(papelMetadata as Papel)) return papelMetadata as Papel
-  if (email && emailsDono().includes(email.toLowerCase())) return "dono"
-  return null
+  return "dono"
 }

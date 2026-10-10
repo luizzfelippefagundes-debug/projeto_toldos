@@ -5,7 +5,6 @@ import { resolverPapel } from "@/lib/papel"
 declare global {
   interface CustomJwtSessionClaims {
     papel?: string | null
-    email?: string | null
   }
 }
 
@@ -35,19 +34,18 @@ export default clerkMiddleware(async (auth, req) => {
     return redirectToSignIn()
   }
 
-  // Páginas: o layout decide o que mostrar (inclusive a tela de "aguardando liberação").
+  // Páginas: o layout decide o papel de quem está vendo.
   if (!rotaApi(req)) return
 
   let papel
-  if (sessionClaims && "email" in sessionClaims) {
-    papel = resolverPapel(sessionClaims.papel, sessionClaims.email)
+  if (sessionClaims && "papel" in sessionClaims) {
+    papel = resolverPapel(sessionClaims.papel)
   } else {
-    // Token de sessão sem os claims customizados: busca direto no Clerk.
+    // Token de sessão sem o claim customizado: busca direto no Clerk.
     const user = await (await clerkClient()).users.getUser(userId)
-    papel = resolverPapel(user.publicMetadata?.papel, user.primaryEmailAddress?.emailAddress)
+    papel = resolverPapel(user.publicMetadata?.papel)
   }
 
-  if (!papel) return NextResponse.json({ error: "Acesso ainda não liberado" }, { status: 403 })
   if (apiSoDono(req) && papel !== "dono") {
     return NextResponse.json({ error: "Apenas o dono" }, { status: 403 })
   }

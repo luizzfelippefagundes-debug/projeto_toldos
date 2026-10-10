@@ -12,13 +12,11 @@ import { Copy, Check } from "lucide-react"
 import { toast } from "sonner"
 import type { Papel } from "@/lib/types"
 
-type PapelEquipe = Papel | "pendente"
-
 interface Membro {
   id: string
   nome: string
   email: string
-  papel: PapelEquipe
+  papel: Papel
   imagemUrl: string
   ultimoLogin: number | null
 }
@@ -27,11 +25,9 @@ const corPapel: Record<string, string> = {
   dono: "bg-violet-500/15 text-violet-600 dark:text-violet-400",
   producao: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
   financeiro: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  pendente: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
 }
 
 const rotuloPapel: Record<string, string> = {
-  pendente: "Sem acesso",
   producao: "Produção",
   financeiro: "Financeiro",
   dono: "Dono",
@@ -88,7 +84,7 @@ export default function EquipePage() {
     })
   }
 
-  async function atualizarPapel(userId: string, novoPapel: PapelEquipe) {
+  async function atualizarPapel(userId: string, novoPapel: Papel) {
     const anterior = membros
     setMembros((m) =>
       m.map((u) => (u.id === userId ? { ...u, papel: novoPapel } : u))
@@ -110,10 +106,6 @@ export default function EquipePage() {
     }
   }
 
-  const ordenados = [...membros].sort(
-    (a, b) => Number(b.papel === "pendente") - Number(a.papel === "pendente")
-  )
-
   return (
     <div className="flex flex-col gap-6">
 
@@ -129,7 +121,7 @@ export default function EquipePage() {
       <div className="rounded-xl border border-border bg-card p-4">
         <p className="mb-1 text-sm font-medium">Link de cadastro</p>
         <p className="mb-3 text-xs text-muted-foreground">
-          Mande esse link pro funcionário. A conta nova entra como &quot;Sem acesso&quot; até você escolher o papel dele aqui embaixo.
+          Mande esse link pro funcionário. A conta nova já entra como Dono — se quiser restringir o acesso dele, troca o papel aqui embaixo.
         </p>
         <div className="flex items-center gap-2">
           <div className="flex-1 truncate rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
@@ -156,7 +148,7 @@ export default function EquipePage() {
         <p className="py-8 text-center text-sm text-muted-foreground">Nenhum membro encontrado.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          {ordenados.map((membro) => (
+          {membros.map((membro) => (
             <div
               key={membro.id}
               className="flex items-center gap-4 rounded-xl border border-border bg-card px-4 py-3"
@@ -176,7 +168,7 @@ export default function EquipePage() {
 
               <Select
                 value={membro.papel}
-                onValueChange={(v) => v && atualizarPapel(membro.id, v as PapelEquipe)}
+                onValueChange={(v) => v && atualizarPapel(membro.id, v as Papel)}
               >
                 <SelectTrigger className={`w-36 shrink-0 rounded-full border-0 text-xs font-medium ${corPapel[membro.papel] ?? ""}`}>
                   <SelectValue>
@@ -184,7 +176,6 @@ export default function EquipePage() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pendente">{rotuloPapel.pendente}</SelectItem>
                   <SelectItem value="producao">{rotuloPapel.producao}</SelectItem>
                   <SelectItem value="financeiro">{rotuloPapel.financeiro}</SelectItem>
                   <SelectItem value="dono">{rotuloPapel.dono}</SelectItem>

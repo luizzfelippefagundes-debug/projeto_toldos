@@ -13,7 +13,7 @@ export async function GET() {
       id: u.id,
       nome: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.username || email || "—",
       email: email ?? "—",
-      papel: resolverPapel(u.publicMetadata?.papel, email) ?? "pendente",
+      papel: resolverPapel(u.publicMetadata?.papel),
       imagemUrl: u.imageUrl,
       ultimoLogin: u.lastSignInAt,
     }
