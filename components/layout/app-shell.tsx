@@ -46,7 +46,7 @@ const rotuloPapel = {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const [menuAberto, setMenuAberto] = useState(false)
-  const { papel, setPapel } = usePapelAtivo()
+  const { papel, setPapel, papelReal } = usePapelAtivo()
   const { totalAlertas } = useData()
 
   // A área do vendedor (/vendedor/*) tem o próprio shell mobile (barra
@@ -99,6 +99,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           grupos={grupos}
           titulo="Toldos Print"
           extra={
+            papelReal !== "dono" ? (
+              <div className="mb-4 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                {rotuloPapel[papelReal]}
+              </div>
+            ) : (
             <Select
               value={papel}
               onValueChange={(v) => setPapel((v ?? papel) as Papel)}
@@ -118,6 +123,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </SelectItem>
               </SelectContent>
             </Select>
+            )
           }
         />
 

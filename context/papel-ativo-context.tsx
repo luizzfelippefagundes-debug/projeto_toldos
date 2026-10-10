@@ -9,8 +9,11 @@ import {
 import type { Papel } from "@/lib/types"
 
 interface PapelAtivoContextValue {
+  // Visão atual — o dono pode simular a visão dos outros papéis.
   papel: Papel
   setPapel: (papel: Papel) => void
+  // Papel de verdade da conta, vindo do Clerk.
+  papelReal: Papel
 }
 
 const PapelAtivoContext = createContext<PapelAtivoContextValue | null>(null)
@@ -25,7 +28,7 @@ export function PapelAtivoProvider({
   const [papel, setPapel] = useState<Papel>(papelInicial)
 
   return (
-    <PapelAtivoContext.Provider value={{ papel, setPapel }}>
+    <PapelAtivoContext.Provider value={{ papel, setPapel, papelReal: papelInicial }}>
       {children}
     </PapelAtivoContext.Provider>
   )

@@ -25,7 +25,7 @@ const rotuloPapel = {
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { papel, setPapel } = usePapelAtivo()
+  const { papel, setPapel, papelReal } = usePapelAtivo()
   const { totalAlertas } = useData()
   const grupos = filtrarGruposPorPapel(gruposNavegacao, papel)
 
@@ -41,7 +41,7 @@ export function Sidebar() {
         <ThemeToggle />
       </div>
 
-      {papel === "dono" ? (
+      {papelReal === "dono" ? (
         <Select
           value={papel}
           onValueChange={(v) => setPapel((v ?? papel) as typeof papel)}
