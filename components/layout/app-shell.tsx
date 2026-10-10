@@ -37,11 +37,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { papel } = usePapelAtivo()
   const { totalAlertas } = useData()
 
-  // A área do vendedor (/vendedor/*) tem o próprio shell mobile (barra
-  // superior + abas embaixo, ver app/vendedor/layout.tsx) — sem a sidebar da
-  // loja. Ela ainda usa o mesmo DataProvider da raiz, só não usa este shell.
+  // A área do vendedor tem barras próprias no celular (VendedorShell); aqui
+  // ela só ganha a barra lateral do computador.
   if (pathname?.startsWith("/vendedor")) {
-    return <>{children}</>
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar />
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
+    )
   }
 
   const grupos = filtrarGruposPorPapel(gruposNavegacao, papel)

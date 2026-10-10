@@ -30,7 +30,7 @@ export default function PainelVendedorPage() {
   const fechados = meusPedidos.filter((p) => p.status !== "aguardando")
   const aguardando = meusPedidos.filter((p) => p.status === "aguardando")
   const emAndamento = meusPedidos.filter(
-    (p) => p.status !== "aguardando" && p.status !== "entregue"
+    (p) => p.status !== "aguardando" && p.status !== "entregue",
   )
   const recentes = [...meusPedidos]
     .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
@@ -42,24 +42,28 @@ export default function PainelVendedorPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-xl font-semibold">Olá, {vendedor?.nome ?? "—"} 👋</h1>
-        <p className="text-sm text-muted-foreground">
-          Acompanhe seus pedidos, produção e comissão estimada.
-        </p>
+      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold md:text-2xl">
+            Olá, {vendedor?.nome ?? "—"} 👋
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Acompanhe seus pedidos, produção e comissão estimada.
+          </p>
+        </div>
+
+        <Button
+          size="lg"
+          className="w-full md:w-auto"
+          nativeButton={false}
+          render={<Link href="/vendedor/novo" />}
+        >
+          <FilePlus2 className="mr-2 h-4 w-4" />
+          Novo Orçamento
+        </Button>
       </div>
 
-      <Button
-        size="lg"
-        className="w-full"
-        nativeButton={false}
-        render={<Link href="/vendedor/novo" />}
-      >
-        <FilePlus2 className="mr-2 h-4 w-4" />
-        Novo Orçamento
-      </Button>
-
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-medium text-muted-foreground">
@@ -80,9 +84,6 @@ export default function PainelVendedorPage() {
             {formatarMoeda(totalVendido)}
           </CardContent>
         </Card>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-medium text-muted-foreground">
@@ -105,49 +106,56 @@ export default function PainelVendedorPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Comissão estimada ({vendedor?.comissaoPercent ?? 0}%)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-3xl font-bold text-primary">
-          {formatarMoeda(comissao)}
-        </CardContent>
-      </Card>
+      <div className="grid gap-5 md:grid-cols-3 md:items-start">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Comissão estimada ({vendedor?.comissaoPercent ?? 0}%)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-3xl font-bold text-primary">
+            {formatarMoeda(comissao)}
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Meus pedidos recentes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {recentes.map((pedido) => (
-            <div
-              key={pedido.id}
-              className="flex items-center justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  #{pedido.numero} · {pedido.clienteNome || "Sem cliente"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {pedido.produtoNome ?? "Produto"} · {formatarData(pedido.criadoEm)}
-                </p>
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">
+              Meus pedidos recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {recentes.map((pedido) => (
+              <div
+                key={pedido.id}
+                className="flex items-center justify-between gap-2 border-b border-border pb-3 last:border-0 last:pb-0"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    #{pedido.numero} · {pedido.clienteNome || "Sem cliente"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {pedido.produtoNome ?? "Produto"} ·{" "}
+                    {formatarData(pedido.criadoEm)}
+                  </p>
+                </div>
+                <Badge
+                  variant={
+                    pedido.status === "entregue" ? "secondary" : "outline"
+                  }
+                >
+                  {statusPedido[pedido.status]}
+                </Badge>
               </div>
-              <Badge variant={pedido.status === "entregue" ? "secondary" : "outline"}>
-                {statusPedido[pedido.status]}
-              </Badge>
-            </div>
-          ))}
-          {recentes.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Nenhum pedido associado a este vendedor.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+            ))}
+            {recentes.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Nenhum pedido associado a este vendedor.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

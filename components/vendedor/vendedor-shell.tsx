@@ -31,15 +31,37 @@ const grupoVendedor = {
   items: abas.map((a) => ({ label: a.label, href: a.href, icon: a.icon })),
 }
 
+function SeletorVendedor({ className }: { className?: string }) {
+  const { vendedorId, setVendedorId } = useVendedorAtivo()
+  return (
+    <Select value={vendedorId} onValueChange={(v) => setVendedorId(v ?? vendedorId)}>
+      <SelectTrigger className={cn("h-8 text-xs", className)}>
+        <SelectValue>
+          {(id: string) => vendedoresSeed.find((v) => v.id === id)?.nome ?? id}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {vendedoresSeed.map((v) => (
+          <SelectItem key={v.id} value={v.id}>
+            {v.nome}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+// No celular tem barra própria (topo + abas embaixo); no computador fica
+// dentro do layout normal, com a barra lateral do sistema.
 export function VendedorShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const { vendedorId, setVendedorId } = useVendedorAtivo()
+  const { vendedorId } = useVendedorAtivo()
   const vendedor = vendedoresSeed.find((v) => v.id === vendedorId)
   const [menuAberto, setMenuAberto] = useState(false)
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col bg-background">
-      <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col bg-background md:max-w-5xl">
+      <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 md:hidden">
         <Button
           variant="ghost"
           size="icon"
@@ -53,37 +75,50 @@ export function VendedorShell({ children }: { children: ReactNode }) {
             <Logo className="px-2 py-1" />
           </Link>
         </div>
-        <Select
-          value={vendedorId}
-          onValueChange={(v) => setVendedorId(v ?? vendedorId)}
-        >
-          <SelectTrigger className="h-8 w-28 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {vendedoresSeed.map((v) => (
-              <SelectItem key={v.id} value={v.id}>
-                {v.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SeletorVendedor className="w-28" />
         <ThemeToggle />
       </header>
+
+      <div className="hidden items-center justify-between gap-4 px-8 pt-8 md:flex">
+        <nav className="flex gap-1 rounded-lg bg-muted p-1">
+          {abas.map((aba) => {
+            const ativo = pathname === aba.href
+            const Icon = aba.icon
+            return (
+              <Link
+                key={aba.href}
+                href={aba.href}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                  ativo
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {aba.label}
+              </Link>
+            )
+          })}
+        </nav>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          Vendedor
+          <SeletorVendedor className="w-36" />
+        </div>
+      </div>
 
       <NavSheet
         open={menuAberto}
         onOpenChange={setMenuAberto}
         grupos={[grupoVendedor, ...gruposNavegacao]}
         titulo={vendedor?.nome ?? "Menu"}
-        subtitulo="Dono também tem acesso ao sistema completo da loja."
       />
 
-      <main className="flex-1 overflow-x-hidden px-4 py-5 pb-24">
+      <main className="flex-1 overflow-x-hidden px-4 py-5 pb-24 md:px-8 md:py-6 md:pb-8">
         {children}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto flex w-full max-w-md border-t border-border bg-card">
+      <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto flex w-full max-w-md border-t border-border bg-card md:hidden">
         {abas.map((aba) => {
           const ativo = pathname === aba.href
           const Icon = aba.icon
