@@ -1,5 +1,4 @@
 import Image from "next/image"
-import { Logo } from "@/components/brand/logo"
 
 export default function AuthLayout({
   children,
@@ -7,21 +6,22 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="flex w-full max-w-4xl items-center justify-center gap-10">
-        <Image
-          src="/brand/mascote.jpg"
-          alt="Print, o mascote da Toldos Print"
-          width={738}
-          height={930}
-          priority
-          className="hidden w-80 shrink-0 rounded-2xl shadow-lg md:block"
-        />
-        <div className="flex flex-col items-center gap-6">
-          <Logo className="w-64 px-4 py-3" />
-          {children}
-        </div>
-      </div>
+    <div
+      className="flex min-h-screen flex-col items-center justify-center gap-8 p-4"
+      style={{
+        background:
+          "linear-gradient(to bottom, #081d50 0%, #0060a7 38%, #0060a7 62%, #082053 100%)",
+      }}
+    >
+      <Image
+        src="/brand/logo.png"
+        alt="Toldos Print — Toldos e Comunicação Visual"
+        width={1200}
+        height={394}
+        priority
+        className="h-auto w-72 drop-shadow-lg sm:w-[28rem]"
+      />
+      {children}
     </div>
   )
 }
