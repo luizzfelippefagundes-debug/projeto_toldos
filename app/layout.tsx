@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { ClerkProvider } from "@clerk/nextjs"
+import { ptBR } from "@clerk/localizations"
 import { ThemeProvider } from "@/components/theme-provider"
 
 const geistSans = Geist({
@@ -41,7 +42,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="antialiased">
-        <ClerkProvider>
+        <ClerkProvider
+          localization={{ ...ptBR, formFieldInputPlaceholder__signUpPassword: "Crie uma senha" }}
+        >
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
             {children}
           </ThemeProvider>
