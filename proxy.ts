@@ -13,6 +13,7 @@ const rotaPublica = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/tv(.*)",
+  "/privacidade",
   "/icon(.*)",
   "/apple-icon(.*)",
   "/manifest(.*)",
