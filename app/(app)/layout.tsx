@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server"
 import { SignOutButton } from "@clerk/nextjs"
 import { redirect } from "next/navigation"
+import Image from "next/image"
 import { DataProvider } from "@/context/data-context"
 import { PapelAtivoProvider } from "@/context/papel-ativo-context"
 import { AppShell } from "@/components/layout/app-shell"
@@ -21,7 +22,14 @@ export default async function AppLayout({
   if (!papel) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-6">
-        <div className="max-w-sm text-center">
+        <div className="flex max-w-sm flex-col items-center text-center">
+          <Image
+            src="/brand/mascote-rosto.png"
+            alt="Print, o mascote da Toldos Print"
+            width={96}
+            height={96}
+            className="mb-4 h-24 w-24 rounded-full ring-4 ring-[#ffd400]"
+          />
           <h1 className="text-lg font-semibold">Conta aguardando liberação</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Sua conta ({email}) foi criada. Peça ao responsável para liberar seu

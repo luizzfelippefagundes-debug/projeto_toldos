@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useData } from "@/context/data-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -162,12 +163,19 @@ export default function DashboardPage() {
       return a.id === "estoque" || a.id === "producao"
     })
 
+  const [saudacao, setSaudacao] = useState("Olá")
+  useEffect(() => {
+    const hora = new Date().getHours()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSaudacao(hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite")
+  }, [])
+
   const tituloDashboard =
     papel === "producao"
       ? "Painel da produção"
       : papel === "financeiro"
         ? "Painel financeiro"
-        : "Bom dia 👋"
+        : saudacao
   const destinoAcao =
     papel === "producao"
       ? { href: "/producao", label: "Acompanhar produção", Icon: Factory }
@@ -221,7 +229,16 @@ export default function DashboardPage() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{tituloDashboard}</h1>
+        <div className="flex items-center gap-3">
+          <Image
+            src="/brand/mascote-rosto.png"
+            alt="Print, o mascote da Toldos Print"
+            width={48}
+            height={48}
+            className="h-12 w-12 rounded-full ring-2 ring-[#ffd400]"
+          />
+          <h1 className="text-2xl font-semibold">{tituloDashboard}</h1>
+        </div>
         <Button
           size="lg"
           nativeButton={false}

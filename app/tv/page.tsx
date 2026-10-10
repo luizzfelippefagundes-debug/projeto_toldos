@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import Image from "next/image"
 
 type StatusPedido = "aguardando" | "aprovado" | "arte" | "impressao" | "acabamento" | "pronto"
 
@@ -148,14 +149,16 @@ export default function TvPage() {
       {/* Header */}
       <header className="flex shrink-0 items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-sm font-bold sm:h-10 sm:w-10 sm:text-lg">
-              T
-            </div>
-            <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">
-              Toldos Print
-            </h1>
-            <span className="hidden text-slate-500 sm:inline sm:text-lg">— Produção</span>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Image
+              src="/brand/logo.png"
+              alt="Toldos Print"
+              width={1200}
+              height={394}
+              priority
+              className="h-auto w-40 shrink-0 sm:w-56 lg:w-72"
+            />
+            <span className="hidden text-slate-400 sm:inline sm:text-lg lg:text-2xl">Produção</span>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400 sm:gap-3 sm:text-sm">
             <span>{totalAtivos} pedido{totalAtivos !== 1 ? "s" : ""}</span>

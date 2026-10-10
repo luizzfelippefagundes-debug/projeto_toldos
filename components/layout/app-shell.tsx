@@ -9,6 +9,7 @@ import { Sidebar } from "./sidebar"
 import { NavSheet } from "./nav-sheet"
 import { filtrarGruposPorPapel, gruposNavegacao } from "./nav-groups"
 import { ThemeToggle } from "./theme-toggle"
+import { Logo } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { useData } from "@/context/data-context"
@@ -75,11 +76,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex flex-1 items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
-              T
-            </div>
-            <span className="text-sm font-semibold">Toldos Print</span>
+          <div className="flex flex-1 items-center">
+            <Link href="/dashboard" className="w-32">
+              <Logo className="px-2 py-1" />
+            </Link>
           </div>
           <ThemeToggle />
           {totalAlertas > 0 && (

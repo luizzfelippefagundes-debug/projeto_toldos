@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { filtrarGruposPorPapel, gruposNavegacao } from "./nav-groups"
 import { ThemeToggle } from "./theme-toggle"
+import { Logo } from "@/components/brand/logo"
 import { UserButton } from "@clerk/nextjs"
 import { Bell } from "lucide-react"
 import { useData } from "@/context/data-context"
@@ -31,13 +32,10 @@ export function Sidebar() {
 
   return (
     <aside className="hidden w-64 shrink-0 border-r border-border bg-card p-4 md:flex md:flex-col print:hidden">
-      <div className="mb-4 flex items-center justify-between gap-2 px-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
-            T
-          </div>
-          <span className="text-sm font-semibold">Toldos Print</span>
-        </div>
+      <div className="mb-4 flex items-center gap-2">
+        <Link href="/dashboard" className="min-w-0 flex-1">
+          <Logo />
+        </Link>
         <ThemeToggle />
       </div>
 

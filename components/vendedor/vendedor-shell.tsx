@@ -10,6 +10,7 @@ import { useVendedorAtivo } from "@/context/vendedor-ativo-context"
 import { gruposNavegacao } from "@/components/layout/nav-groups"
 import { NavSheet } from "@/components/layout/nav-sheet"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
+import { Logo } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -47,11 +48,10 @@ export function VendedorShell({ children }: { children: ReactNode }) {
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <div className="flex flex-1 items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
-            T
-          </div>
-          <span className="text-sm font-semibold">Toldos Print</span>
+        <div className="flex flex-1 items-center">
+          <Link href="/vendedor" className="w-28">
+            <Logo className="px-2 py-1" />
+          </Link>
         </div>
         <Select
           value={vendedorId}
