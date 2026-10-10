@@ -20,7 +20,7 @@ export function Sidebar() {
   const grupos = filtrarGruposPorPapel(gruposNavegacao, papel)
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-border bg-card p-4 md:flex md:flex-col print:hidden">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-border bg-card p-4 md:flex md:flex-col print:hidden">
       <div className="mb-6 flex items-center gap-2">
         <Link href="/dashboard" className="min-w-0 flex-1">
           <Logo />
@@ -28,7 +28,7 @@ export function Sidebar() {
         <ThemeToggle />
       </div>
 
-      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">
+      <nav className="-mr-2 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-2">
         {grupos.map((grupo) => (
           <div key={grupo.title}>
             <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
