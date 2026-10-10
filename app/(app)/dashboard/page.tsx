@@ -264,10 +264,6 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        Perfil de demonstração: os papéis organizam a navegação e os indicadores,
-        mas não são autenticação nem controle real de acesso.
-      </p>
 
       {papel === "dono" && (
         <div className="grid gap-4 sm:grid-cols-3">
