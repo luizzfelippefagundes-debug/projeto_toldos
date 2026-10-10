@@ -1,12 +1,61 @@
 import type { PropsWithChildren } from "react"
 import { act, renderHook, waitFor } from "@testing-library/react"
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { DataProvider, useData } from "@/context/data-context"
-import { materiaisSeed } from "@/lib/seed-data"
+import {
+  clientesSeed,
+  entradasEstoqueSeed,
+  lancamentosFinanceirosSeed,
+  materiaisSeed,
+  mensagensBotSeed,
+  orcamentosSeed,
+  pedidosRapidosSeed,
+  produtosRapidosSeed,
+  servicosSeed,
+} from "@/lib/seed-data"
 import type { OrcamentoItem } from "@/lib/types"
+
+type Registro = { id: string } & Record<string, unknown>
+
+// Banco em memória que imita as rotas /api/* usadas pelo DataProvider.
+function criarBancoFalso() {
+  const tabelas: Record<string, Registro[]> = {
+    materiais: structuredClone(materiaisSeed),
+    servicos: structuredClone(servicosSeed),
+    clientes: structuredClone(clientesSeed),
+    orcamentos: structuredClone(orcamentosSeed),
+    "entradas-estoque": structuredClone(entradasEstoqueSeed),
+    "produtos-rapidos": structuredClone(produtosRapidosSeed),
+    "pedidos-rapidos": structuredClone(pedidosRapidosSeed),
+    lancamentos: structuredClone(lancamentosFinanceirosSeed),
+    "mensagens-bot": structuredClone(mensagensBotSeed),
+  } as unknown as Record<string, Registro[]>
+
+  return async (url: string, init?: RequestInit) => {
+    const [, , tabela, id] = url.split("/")
+    const linhas = tabelas[tabela]
+    const metodo = init?.method ?? "GET"
+    const corpo = init?.body ? JSON.parse(init.body as string) : undefined
+
+    if (metodo === "GET") return Response.json(structuredClone(linhas))
+    if (metodo === "POST") linhas.push(corpo)
+    if (metodo === "PUT") {
+      const i = linhas.findIndex((l) => l.id === id)
+      if (i >= 0) linhas[i] = { ...linhas[i], ...corpo, id }
+    }
+    if (metodo === "DELETE") tabelas[tabela] = linhas.filter((l) => l.id !== id)
+    return Response.json({ ok: true })
+  }
+}
 
 function wrapper({ children }: PropsWithChildren) {
   return <DataProvider>{children}</DataProvider>
+}
+
+async function montar() {
+  const hook = renderHook(() => useData(), { wrapper })
+  await waitFor(() => expect(hook.result.current.materiais.length).toBeGreaterThan(0))
+  return hook
 }
 
 function criarDadosOrcamento(item?: Partial<OrcamentoItem>) {
@@ -29,11 +78,15 @@ function criarDadosOrcamento(item?: Partial<OrcamentoItem>) {
 
 describe("fluxos de dados", () => {
   beforeEach(() => {
-    window.localStorage.clear()
+    vi.stubGlobal("fetch", vi.fn(criarBancoFalso()))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it("atualiza o saldo e mantém o histórico ao registrar entrada de estoque", async () => {
-    const { result } = renderHook(() => useData(), { wrapper })
+    const { result } = await montar()
     const estoqueInicial = materiaisSeed.find((m) => m.id === "mat-1")!
 
     act(() => {
@@ -53,8 +106,8 @@ describe("fluxos de dados", () => {
     })
   })
 
-  it("cria e atualiza cadastros e persiste alterações no navegador", async () => {
-    const { result, unmount } = renderHook(() => useData(), { wrapper })
+  it("cria e atualiza cadastros e persiste alterações no banco", async () => {
+    const { result, unmount } = await montar()
     let materialId = ""
     let clienteId = ""
 
@@ -127,7 +180,6 @@ describe("fluxos de dados", () => {
         result.current.lancamentos.find((l) => l.descricao === "Despesa de teste")
           ?.pagoEm
       ).toBeTruthy()
-      expect(window.localStorage.getItem("toldosys.materiais")).not.toBeNull()
     })
 
     const lancamentoPago = result.current.lancamentos.find(
@@ -141,7 +193,7 @@ describe("fluxos de dados", () => {
     })
 
     unmount()
-    const recarregado = renderHook(() => useData(), { wrapper })
+    const recarregado = await montar()
     await waitFor(() => {
       expect(
         recarregado.result.current.materiais.find((m) => m.id === materialId)
@@ -151,7 +203,7 @@ describe("fluxos de dados", () => {
   })
 
   it("fecha orçamento uma vez e estorna estoque e receita ao reabrir", async () => {
-    const { result } = renderHook(() => useData(), { wrapper })
+    const { result } = await montar()
     const estoqueInicial = materiaisSeed.find((m) => m.id === "mat-1")!
     let orcamentoId = ""
 
@@ -248,7 +300,7 @@ describe("fluxos de dados", () => {
   })
 
   it("estorna só a quantidade realmente debitada quando o estoque era insuficiente", async () => {
-    const { result } = renderHook(() => useData(), { wrapper })
+    const { result } = await montar()
     const material = materiaisSeed.find((m) => m.id === "mat-1")!
     let orcamentoId = ""
 
@@ -292,7 +344,7 @@ describe("fluxos de dados", () => {
   })
 
   it("impede reabrir orçamento com receita paga sem alterar seus registros", async () => {
-    const { result } = renderHook(() => useData(), { wrapper })
+    const { result } = await montar()
     const estoqueInicial = materiaisSeed.find((m) => m.id === "mat-1")!
     let orcamentoId = ""
 
@@ -332,7 +384,7 @@ describe("fluxos de dados", () => {
   })
 
   it("gera só uma receita ao aprovar o pedido e avançar na produção", async () => {
-    const { result } = renderHook(() => useData(), { wrapper })
+    const { result } = await montar()
     let pedidoId = ""
 
     act(() => {
@@ -362,7 +414,7 @@ describe("fluxos de dados", () => {
   })
 
   it("mantém íntegros os dados opcionais ao duplicar um orçamento", async () => {
-    const { result } = renderHook(() => useData(), { wrapper })
+    const { result } = await montar()
     const item: OrcamentoItem = {
       materialId: "mat-1",
       servicoId: "srv-1",

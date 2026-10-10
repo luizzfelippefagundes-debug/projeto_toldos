@@ -24,19 +24,7 @@ import type {
   StatusLancamento,
   StatusPedidoRapido,
 } from "@/lib/types"
-import {
-  acabamentosSeed,
-  clientesSeed,
-  entradasEstoqueSeed,
-  equipamentosAcessoSeed,
-  lancamentosFinanceirosSeed,
-  materiaisSeed,
-  mensagensBotSeed,
-  orcamentosSeed,
-  pedidosRapidosSeed,
-  produtosRapidosSeed,
-  servicosSeed,
-} from "@/lib/seed-data"
+import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarMoeda } from "@/lib/format"
 import { criarPrazoEntregaPedido } from "@/lib/pedidos-rapidos"
@@ -153,33 +141,19 @@ const mensagemStatusPedido: Partial<Record<StatusPedidoRapido, string>> = {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [materiais, setMateriais] = useState<Material[]>(materiaisSeed)
-  const [servicos, setServicos] = useState<Servico[]>(servicosSeed)
-  const [clientes, setClientes] = useState<Cliente[]>(clientesSeed)
-  const [orcamentos, setOrcamentos] = useState<Orcamento[]>(orcamentosSeed)
-  const [entradasEstoque, setEntradasEstoque] = useState<EntradaEstoque[]>(
-    entradasEstoqueSeed
-  )
-  const [produtosRapidos, setProdutosRapidos] = useState<ProdutoRapido[]>(
-    produtosRapidosSeed
-  )
-  const [pedidosRapidos, setPedidosRapidos] = useState<PedidoRapido[]>(
-    pedidosRapidosSeed
-  )
-  const [lancamentos, setLancamentos] = useState<LancamentoFinanceiro[]>(
-    lancamentosFinanceirosSeed
-  )
-  const [mensagensBot, setMensagensBot] = useState<MensagemBot[]>(
-    mensagensBotSeed
-  )
+  const [materiais, setMateriais] = useState<Material[]>([])
+  const [servicos, setServicos] = useState<Servico[]>([])
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [orcamentos, setOrcamentos] = useState<Orcamento[]>([])
+  const [entradasEstoque, setEntradasEstoque] = useState<EntradaEstoque[]>([])
+  const [produtosRapidos, setProdutosRapidos] = useState<ProdutoRapido[]>([])
+  const [pedidosRapidos, setPedidosRapidos] = useState<PedidoRapido[]>([])
+  const [lancamentos, setLancamentos] = useState<LancamentoFinanceiro[]>([])
+  const [mensagensBot, setMensagensBot] = useState<MensagemBot[]>([])
   const [rascunho, setRascunho] = useState<RascunhoOrcamento | null>(null)
 
-  const proximoNumeroRef = useRef(
-    orcamentosSeed.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
-  )
-  const proximoNumeroPedidoRef = useRef(
-    pedidosRapidosSeed.reduce((max, p) => Math.max(max, p.numero), 5000) + 1
-  )
+  const proximoNumeroRef = useRef(1001)
+  const proximoNumeroPedidoRef = useRef(5001)
 
   // Busca dados do banco na montagem do componente
   useEffect(() => {
@@ -229,23 +203,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
           resMensagens.json() as Promise<MensagemBot[]>,
         ])
 
-        if (mat.length) setMateriais(mat)
-        if (srv.length) setServicos(srv)
-        if (cli.length) setClientes(cli)
-        if (orc.length) {
-          setOrcamentos(orc)
-          proximoNumeroRef.current =
-            orc.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
-        }
-        if (ent.length) setEntradasEstoque(ent)
-        if (prod.length) setProdutosRapidos(prod)
-        if (ped.length) {
-          setPedidosRapidos(ped)
-          proximoNumeroPedidoRef.current =
-            ped.reduce((max, p) => Math.max(max, p.numero), 5000) + 1
-        }
-        if (lan.length) setLancamentos(lan)
-        if (msg.length) setMensagensBot(msg)
+        setMateriais(mat)
+        setServicos(srv)
+        setClientes(cli)
+        setOrcamentos(orc)
+        proximoNumeroRef.current =
+          orc.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
+        setEntradasEstoque(ent)
+        setProdutosRapidos(prod)
+        setPedidosRapidos(ped)
+        proximoNumeroPedidoRef.current =
+          ped.reduce((max, p) => Math.max(max, p.numero), 5000) + 1
+        setLancamentos(lan)
+        setMensagensBot(msg)
       } catch {
         toast.error("Não foi possível carregar os dados do servidor.")
       }
