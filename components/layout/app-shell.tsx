@@ -10,7 +10,6 @@ import { NavSheet } from "./nav-sheet"
 import { filtrarGruposPorPapel, gruposNavegacao } from "./nav-groups"
 import { ThemeToggle } from "./theme-toggle"
 import { Logo } from "@/components/brand/logo"
-import { Button } from "@/components/ui/button"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { useData } from "@/context/data-context"
 import type { Papel } from "@/lib/types"
@@ -59,14 +58,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card px-4 py-3 md:hidden print:hidden">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMenuAberto(true)}
-            aria-label="Abrir menu"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
           <div className="flex flex-1 items-center">
             <Link href="/dashboard" className="w-32">
               <Logo className="px-2 py-1" />

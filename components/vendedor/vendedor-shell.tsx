@@ -11,7 +11,6 @@ import { gruposNavegacao } from "@/components/layout/nav-groups"
 import { NavSheet } from "@/components/layout/nav-sheet"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { Logo } from "@/components/brand/logo"
-import { Button } from "@/components/ui/button"
 
 const abas = [
   { label: "Painel", href: "/vendedor", icon: LayoutDashboard },
@@ -34,14 +33,6 @@ export function VendedorShell({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-background md:max-w-5xl">
       <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 md:hidden">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setMenuAberto(true)}
-          aria-label="Abrir menu"
-        >
-          <Menu className="h-5 w-5" />
-        </Button>
         <div className="flex flex-1 items-center">
           <Link href="/vendedor" className="w-28">
             <Logo className="px-2 py-1" />
@@ -104,6 +95,13 @@ export function VendedorShell({ children }: { children: ReactNode }) {
             </Link>
           )
         })}
+        <button
+          onClick={() => setMenuAberto(true)}
+          className="flex flex-1 flex-col items-center gap-1 py-3 text-xs text-muted-foreground"
+        >
+          <Menu className="h-5 w-5" />
+          Menu
+        </button>
       </nav>
     </div>
   )
