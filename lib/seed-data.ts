@@ -10,13 +10,7 @@ import type {
   PedidoRapido,
   ProdutoRapido,
   Servico,
-  Vendedor,
 } from "./types"
-
-export const vendedoresSeed: Vendedor[] = [
-  { id: "vnd-1", nome: "Kaio", telefone: "(11) 98123-4567", comissaoPercent: 5 },
-  { id: "vnd-2", nome: "Renata", telefone: "(11) 97654-3210", comissaoPercent: 5 },
-]
 
 export const acabamentosSeed: Acabamento[] = [
   { id: "acb-1", nome: "Ilhós", precoUnitario: 0.5, unidade: "un" },

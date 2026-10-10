@@ -5,20 +5,13 @@ import { usePathname } from "next/navigation"
 import { useState, type ReactNode } from "react"
 import { LayoutDashboard, FilePlus2, History, Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { vendedoresSeed } from "@/lib/seed-data"
+import { UserButton } from "@clerk/nextjs"
 import { useVendedorAtivo } from "@/context/vendedor-ativo-context"
 import { gruposNavegacao } from "@/components/layout/nav-groups"
 import { NavSheet } from "@/components/layout/nav-sheet"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { Logo } from "@/components/brand/logo"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 const abas = [
   { label: "Painel", href: "/vendedor", icon: LayoutDashboard },
@@ -31,32 +24,11 @@ const grupoVendedor = {
   items: abas.map((a) => ({ label: a.label, href: a.href, icon: a.icon })),
 }
 
-function SeletorVendedor({ className }: { className?: string }) {
-  const { vendedorId, setVendedorId } = useVendedorAtivo()
-  return (
-    <Select value={vendedorId} onValueChange={(v) => setVendedorId(v ?? vendedorId)}>
-      <SelectTrigger className={cn("h-8 text-xs", className)}>
-        <SelectValue>
-          {(id: string) => vendedoresSeed.find((v) => v.id === id)?.nome ?? id}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {vendedoresSeed.map((v) => (
-          <SelectItem key={v.id} value={v.id}>
-            {v.nome}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
-
 // No celular tem barra própria (topo + abas embaixo); no computador fica
 // dentro do layout normal, com a barra lateral do sistema.
 export function VendedorShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const { vendedorId } = useVendedorAtivo()
-  const vendedor = vendedoresSeed.find((v) => v.id === vendedorId)
+  const { nome } = useVendedorAtivo()
   const [menuAberto, setMenuAberto] = useState(false)
 
   return (
@@ -75,11 +47,11 @@ export function VendedorShell({ children }: { children: ReactNode }) {
             <Logo className="px-2 py-1" />
           </Link>
         </div>
-        <SeletorVendedor className="w-28" />
         <ThemeToggle />
+        <UserButton />
       </header>
 
-      <div className="hidden items-center justify-between gap-4 px-8 pt-8 md:flex">
+      <div className="hidden px-8 pt-8 md:flex">
         <nav className="flex gap-1 rounded-lg bg-muted p-1">
           {abas.map((aba) => {
             const ativo = pathname === aba.href
@@ -101,17 +73,13 @@ export function VendedorShell({ children }: { children: ReactNode }) {
             )
           })}
         </nav>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          Vendedor
-          <SeletorVendedor className="w-36" />
-        </div>
       </div>
 
       <NavSheet
         open={menuAberto}
         onOpenChange={setMenuAberto}
         grupos={[grupoVendedor, ...gruposNavegacao]}
-        titulo={vendedor?.nome ?? "Menu"}
+        titulo={nome || "Menu"}
       />
 
       <main className="flex-1 overflow-x-hidden px-4 py-5 pb-24 md:px-8 md:py-6 md:pb-8">

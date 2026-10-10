@@ -166,7 +166,7 @@ function CotacaoVendedor({
       observacao: observacao.trim(),
       total,
       status,
-      vendedorId,
+      vendedorId: vendedorId || undefined,
     })
     toast.success(
       status === "aprovado" ? "Pedido enviado pra produção" : "Orçamento salvo"

@@ -175,13 +175,6 @@ export interface PedidoRapido {
   prazoEntregaEm?: string
 }
 
-export interface Vendedor {
-  id: string
-  nome: string
-  telefone: string
-  comissaoPercent: number
-}
-
 export type Papel = "dono" | "producao" | "financeiro"
 
 export type OrigemMensagemBot = "automatica" | "lembrete" | "pergunta"

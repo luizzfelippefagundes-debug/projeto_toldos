@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { useData } from "@/context/data-context"
 import { useVendedorAtivo } from "@/context/vendedor-ativo-context"
-import { vendedoresSeed } from "@/lib/seed-data"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,8 +22,7 @@ const statusPedido: Record<StatusPedidoRapido, string> = {
 
 export default function PainelVendedorPage() {
   const { pedidosRapidos } = useData()
-  const { vendedorId } = useVendedorAtivo()
-  const vendedor = vendedoresSeed.find((v) => v.id === vendedorId)
+  const { vendedorId, nome, comissaoPercent } = useVendedorAtivo()
 
   const meusPedidos = pedidosRapidos.filter((p) => p.vendedorId === vendedorId)
   const fechados = meusPedidos.filter((p) => p.status !== "aguardando")
@@ -36,16 +34,14 @@ export default function PainelVendedorPage() {
     .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
     .slice(0, 5)
   const totalVendido = fechados.reduce((soma, p) => soma + p.total, 0)
-  const comissao = vendedor
-    ? totalVendido * (vendedor.comissaoPercent / 100)
-    : 0
+  const comissao = totalVendido * (comissaoPercent / 100)
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-xl font-semibold md:text-2xl">
-            Olá, {vendedor?.nome ?? "—"} 👋
+            Olá{nome ? `, ${nome}` : ""} 👋
           </h1>
           <p className="text-sm text-muted-foreground">
             Acompanhe seus pedidos, produção e comissão estimada.
@@ -110,7 +106,7 @@ export default function PainelVendedorPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Comissão estimada ({vendedor?.comissaoPercent ?? 0}%)
+              Comissão estimada ({comissaoPercent}%)
             </CardTitle>
           </CardHeader>
           <CardContent className="text-3xl font-bold text-primary">
@@ -150,7 +146,7 @@ export default function PainelVendedorPage() {
             ))}
             {recentes.length === 0 && (
               <p className="text-sm text-muted-foreground">
-                Nenhum pedido associado a este vendedor.
+                Você ainda não tem pedidos.
               </p>
             )}
           </CardContent>
