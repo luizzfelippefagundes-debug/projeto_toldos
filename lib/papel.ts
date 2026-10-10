@@ -2,6 +2,12 @@ import type { Papel } from "@/lib/types"
 
 const PAPEIS_VALIDOS: Papel[] = ["dono", "producao", "financeiro"]
 
+export const ROTULO_PAPEL: Record<Papel, string> = {
+  dono: "Dono",
+  producao: "Produção",
+  financeiro: "Financeiro",
+}
+
 function emailsDono(): string[] {
   return (process.env.DONO_EMAILS ?? "")
     .split(",")

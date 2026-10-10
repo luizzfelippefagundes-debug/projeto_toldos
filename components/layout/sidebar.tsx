@@ -7,61 +7,26 @@ import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { filtrarGruposPorPapel, gruposNavegacao } from "./nav-groups"
 import { ThemeToggle } from "./theme-toggle"
 import { Logo } from "@/components/brand/logo"
-import { UserButton } from "@clerk/nextjs"
+import { UserButton, useUser } from "@clerk/nextjs"
 import { Bell } from "lucide-react"
 import { useData } from "@/context/data-context"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-
-const rotuloPapel = {
-  dono: "Dono (vê tudo)",
-  producao: "Visão Produção",
-  financeiro: "Visão Financeiro",
-} as const
+import { ROTULO_PAPEL } from "@/lib/papel"
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { papel, setPapel, papelReal } = usePapelAtivo()
+  const { papel } = usePapelAtivo()
+  const { user } = useUser()
   const { totalAlertas } = useData()
   const grupos = filtrarGruposPorPapel(gruposNavegacao, papel)
 
   return (
     <aside className="hidden w-64 shrink-0 border-r border-border bg-card p-4 md:flex md:flex-col print:hidden">
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-6 flex items-center gap-2">
         <Link href="/dashboard" className="min-w-0 flex-1">
           <Logo />
         </Link>
         <ThemeToggle />
       </div>
-
-      {papelReal === "dono" ? (
-        <Select
-          value={papel}
-          onValueChange={(v) => setPapel((v ?? papel) as typeof papel)}
-        >
-          <SelectTrigger className="mb-6 w-full text-xs">
-            <SelectValue>
-              {(valor: string) =>
-                rotuloPapel[valor as keyof typeof rotuloPapel] ?? valor
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="dono">{rotuloPapel.dono}</SelectItem>
-            <SelectItem value="producao">{rotuloPapel.producao}</SelectItem>
-            <SelectItem value="financeiro">{rotuloPapel.financeiro}</SelectItem>
-          </SelectContent>
-        </Select>
-      ) : (
-        <div className="mb-6 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          {rotuloPapel[papel]}
-        </div>
-      )}
 
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto">
         {grupos.map((grupo) => (
@@ -97,9 +62,14 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <UserButton />
-          <span className="text-xs text-muted-foreground">Minha conta</span>
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-sm font-medium">
+              {user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "Minha conta"}
+            </p>
+            <p className="text-xs text-muted-foreground">{ROTULO_PAPEL[papel]}</p>
+          </div>
         </div>
         {totalAlertas > 0 && (
           <Link href="/dashboard" className="relative">

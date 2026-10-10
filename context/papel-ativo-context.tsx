@@ -1,22 +1,9 @@
 "use client"
 
-import {
-  createContext,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react"
+import { createContext, useContext, type ReactNode } from "react"
 import type { Papel } from "@/lib/types"
 
-interface PapelAtivoContextValue {
-  // Visão atual — o dono pode simular a visão dos outros papéis.
-  papel: Papel
-  setPapel: (papel: Papel) => void
-  // Papel de verdade da conta, vindo do Clerk.
-  papelReal: Papel
-}
-
-const PapelAtivoContext = createContext<PapelAtivoContextValue | null>(null)
+const PapelAtivoContext = createContext<{ papel: Papel } | null>(null)
 
 export function PapelAtivoProvider({
   children,
@@ -25,10 +12,8 @@ export function PapelAtivoProvider({
   children: ReactNode
   papelInicial: Papel
 }) {
-  const [papel, setPapel] = useState<Papel>(papelInicial)
-
   return (
-    <PapelAtivoContext.Provider value={{ papel, setPapel, papelReal: papelInicial }}>
+    <PapelAtivoContext.Provider value={{ papel: papelInicial }}>
       {children}
     </PapelAtivoContext.Provider>
   )

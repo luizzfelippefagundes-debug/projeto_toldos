@@ -14,13 +14,6 @@ import { Button } from "@/components/ui/button"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { useData } from "@/context/data-context"
 import type { Papel } from "@/lib/types"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { UserButton } from "@clerk/nextjs"
 
 // Abas rápidas da barra inferior mobile — as mesmas 4 páginas mais usadas no
@@ -38,16 +31,10 @@ const abasRapidas: {
   { label: "Financeiro", href: "/financeiro", icon: Wallet, papeis: ["financeiro"] },
 ]
 
-const rotuloPapel = {
-  dono: "Dono (vê tudo)",
-  producao: "Visão Produção",
-  financeiro: "Visão Financeiro",
-} as const
-
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const [menuAberto, setMenuAberto] = useState(false)
-  const { papel, setPapel, papelReal } = usePapelAtivo()
+  const { papel } = usePapelAtivo()
   const { totalAlertas } = useData()
 
   // A área do vendedor (/vendedor/*) tem o próprio shell mobile (barra
@@ -98,33 +85,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           onOpenChange={setMenuAberto}
           grupos={grupos}
           titulo="Toldos Print"
-          extra={
-            papelReal !== "dono" ? (
-              <div className="mb-4 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                {rotuloPapel[papelReal]}
-              </div>
-            ) : (
-            <Select
-              value={papel}
-              onValueChange={(v) => setPapel((v ?? papel) as Papel)}
-            >
-              <SelectTrigger className="mb-4 w-full text-xs">
-                <SelectValue>
-                  {(valor: string) =>
-                    rotuloPapel[valor as keyof typeof rotuloPapel] ?? valor
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="dono">{rotuloPapel.dono}</SelectItem>
-                <SelectItem value="producao">{rotuloPapel.producao}</SelectItem>
-                <SelectItem value="financeiro">
-                  {rotuloPapel.financeiro}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            )
-          }
         />
 
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 pb-24 md:p-8 md:pb-8">
