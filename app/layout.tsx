@@ -18,8 +18,9 @@ export const metadata: Metadata = {
   title: "Toldos Print — Sistema interno",
   description: "Central operacional para toldos e comunicação visual",
   appleWebApp: {
+    capable: true,
     title: "Toldos Print",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
 }
 

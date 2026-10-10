@@ -1,4 +1,5 @@
 import Image from "next/image"
+import { InstalarApp } from "@/components/instalar-app"
 
 export default function AuthLayout({
   children,
@@ -22,6 +23,7 @@ export default function AuthLayout({
         className="h-auto w-72 drop-shadow-lg sm:w-[28rem]"
       />
       {children}
+      <InstalarApp />
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { PapelAtivoProvider } from "@/context/papel-ativo-context"
 import { AppShell } from "@/components/layout/app-shell"
 import { Toaster } from "@/components/ui/sonner"
 import { resolverPapel } from "@/lib/papel"
+import { InstalarApp } from "@/components/instalar-app"
 
 export default async function AppLayout({
   children,
@@ -41,6 +42,7 @@ export default async function AppLayout({
             </button>
           </SignOutButton>
         </div>
+        <InstalarApp />
       </div>
     )
   }
@@ -49,6 +51,7 @@ export default async function AppLayout({
     <DataProvider>
       <PapelAtivoProvider papelInicial={papel}>
         <AppShell>{children}</AppShell>
+        <InstalarApp className="bottom-20 md:bottom-4" />
         <Toaster richColors position="top-right" />
       </PapelAtivoProvider>
     </DataProvider>
