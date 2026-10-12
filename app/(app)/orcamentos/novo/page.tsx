@@ -333,7 +333,22 @@ export default function NovoOrcamentoPage() {
     Boolean(resultado) &&
     Number.isFinite(resultado?.total) &&
     (resultado?.total ?? -1) >= 0
-  const podeFechar = dadosValidos && (Boolean(arquivo) || modoEdicao)
+
+  // Lista do que falta — mostrada perto do botão "Fechar Orçamento" quando
+  // ele estiver desabilitado, pra nunca ficar travado sem explicação.
+  const pendencias = [
+    !cliente && "selecione o cliente",
+    !material && "selecione o material",
+    material && !medidasValidas && "preencha as medidas corretamente",
+    !camposOpcionaisValidos && "revise os campos de instalação/deslocamento",
+    !acabamentosValidos && "informe a quantidade dos acabamentos marcados",
+    !validadeValida && "informe a validade do orçamento",
+    !descontoValido && "o desconto deve ficar entre 0% e 100%",
+    !horasEstimadasValidas && "informe as horas estimadas do serviço",
+    !Number.isInteger(Number(numAjudantes)) && "revise o número de ajudantes",
+    !isFiniteNumberInput(ajusteManual) && "revise o ajuste manual",
+  ].filter((p): p is string => Boolean(p))
+  const podeFechar = dadosValidos
 
   function irPara(passo: number) {
     setPassoAtual(Math.min(Math.max(passo, 1), passos.length))
@@ -383,24 +398,30 @@ export default function NovoOrcamentoPage() {
   }
 
   async function handleFechar() {
-    if (!podeFechar || !cliente || !material || !arquivo) return
+    if (!podeFechar || !cliente || !material) return
     setEnviando(true)
     try {
-      const form = new FormData()
-      form.append("file", arquivo)
-      const res = await fetch("/api/upload", { method: "POST", body: form })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        toast.error(err.error ?? "Falha no upload do arquivo")
-        return
+      let anexoNome: string | null = null
+      let anexoUrl: string | undefined
+      if (arquivo) {
+        const form = new FormData()
+        form.append("file", arquivo)
+        const res = await fetch("/api/upload", { method: "POST", body: form })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          toast.error(err.error ?? "Falha no upload do arquivo")
+          return
+        }
+        const { url } = await res.json()
+        anexoNome = arquivo.name
+        anexoUrl = url
       }
-      const { url } = await res.json()
       const orcamento = fecharOrcamento({
         clienteId: cliente.id,
         item,
         ajusteManual: numeroOuZero(ajusteManual),
-        anexoNome: arquivo.name,
-        anexoUrl: url,
+        anexoNome,
+        anexoUrl,
         validadeDias: numeroOuZero(validadeDias),
       })
 
@@ -975,7 +996,7 @@ export default function NovoOrcamentoPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Etapa 6 de 6 — Foto ou vídeo do local
+                  Etapa 6 de 6 — Foto ou vídeo do local (opcional)
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
@@ -1004,7 +1025,7 @@ export default function NovoOrcamentoPage() {
                     <>
                       <Upload className="h-8 w-8 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
-                        Clique para anexar uma foto ou vídeo
+                        Clique para anexar uma foto ou vídeo (opcional)
                       </span>
                       <span className="text-xs text-muted-foreground">
                         Máximo 50 MB
@@ -1150,16 +1171,14 @@ export default function NovoOrcamentoPage() {
                     {enviando ? "Salvando..." : "Salvar Alterações"}
                   </Button>
                 ) : (
-                  <>
-                    <Button disabled={!podeFechar || enviando} onClick={handleFechar}>
-                      {enviando ? "Enviando..." : "Fechar Orçamento"}
-                    </Button>
-                    {!arquivo && (
-                      <p className="text-center text-xs text-muted-foreground">
-                        Anexe uma foto ou vídeo para liberar o fechamento.
-                      </p>
-                    )}
-                  </>
+                  <Button disabled={!podeFechar || enviando} onClick={handleFechar}>
+                    {enviando ? "Enviando..." : "Fechar Orçamento"}
+                  </Button>
+                )}
+                {!podeFechar && pendencias.length > 0 && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Falta: {pendencias.join(", ")}.
+                  </p>
                 )}
               </div>
             </CardContent>
