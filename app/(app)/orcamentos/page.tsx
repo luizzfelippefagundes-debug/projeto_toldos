@@ -128,14 +128,14 @@ export default function HistoricoOrcamentosPage() {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="flex flex-col gap-2">
           <span className="text-xs text-muted-foreground">Cliente</span>
           <Select
             value={clienteId}
             onValueChange={(v) => setClienteId(v ?? "todos")}
           >
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue>
                 {(v: string) =>
                   v === "todos" ? "Todos os clientes" : clientes.find((c) => c.id === v)?.nome
@@ -152,27 +152,110 @@ export default function HistoricoOrcamentosPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-2">
-          <span className="text-xs text-muted-foreground">De</span>
-          <Input
-            type="date"
-            value={dataDe}
-            onChange={(e) => setDataDe(e.target.value)}
-            className="w-40"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <span className="text-xs text-muted-foreground">Até</span>
-          <Input
-            type="date"
-            value={dataAte}
-            onChange={(e) => setDataAte(e.target.value)}
-            className="w-40"
-          />
+        <div className="flex gap-4">
+          <div className="flex flex-1 flex-col gap-2 sm:flex-none">
+            <span className="text-xs text-muted-foreground">De</span>
+            <Input
+              type="date"
+              value={dataDe}
+              onChange={(e) => setDataDe(e.target.value)}
+              className="w-full sm:w-40"
+            />
+          </div>
+          <div className="flex flex-1 flex-col gap-2 sm:flex-none">
+            <span className="text-xs text-muted-foreground">Até</span>
+            <Input
+              type="date"
+              value={dataAte}
+              onChange={(e) => setDataAte(e.target.value)}
+              className="w-full sm:w-40"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="rounded-lg border border-border">
+      {/* Celular: lista de cartões */}
+      <div className="flex flex-col gap-2 md:hidden">
+        {orcamentosFiltrados.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Nenhum orçamento encontrado para esse filtro.
+          </p>
+        ) : (
+          orcamentosFiltrados.map((orcamento) => (
+            <div
+              key={orcamento.id}
+              className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium">#{orcamento.numero}</p>
+                  <p className="truncate text-sm text-muted-foreground">
+                    {nomeCliente(orcamento.clienteId)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Badge variant={statusVariant[orcamento.status]}>
+                    {statusLabel[orcamento.status]}
+                  </Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={<Button variant="ghost" size="icon" />}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {orcamento.status === "aberto" && (
+                        <DropdownMenuItem
+                          nativeButton={false}
+                          render={<Link href={`/orcamentos/novo?editar=${orcamento.id}`} />}
+                        >
+                          Editar
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        nativeButton={false}
+                        render={<Link href={`/orcamentos/${orcamento.id}/os`} />}
+                      >
+                        Emitir OS
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDuplicar(orcamento.id)}
+                      >
+                        Duplicar
+                      </DropdownMenuItem>
+                      {orcamento.status !== "aberto" && (
+                        <DropdownMenuItem
+                          onClick={() => handleReabrir(orcamento.id)}
+                        >
+                          Reabrir
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 border-t border-border pt-2 text-sm">
+                <div>
+                  <p className="text-xs text-muted-foreground">Data</p>
+                  <p>{formatarData(orcamento.criadoEm)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Válido até</p>
+                  <p>{formatarData(validoAte(orcamento))}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total</p>
+                  <p className="font-medium">{formatarMoeda(totalOrcamento(orcamento.id))}</p>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Computador: tabela */}
+      <div className="hidden rounded-lg border border-border md:block">
         <Table>
           <TableHeader>
             <TableRow>
