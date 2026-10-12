@@ -93,11 +93,11 @@ export default function HistoricoOrcamentosPage() {
     if (orcamento.totalFechado !== undefined) return orcamento.totalFechado
     const material = materiais.find((m) => m.id === orcamento.item.materialId)
     const servico = servicos.find((s) => s.id === orcamento.item.servicoId)
-    if (!material || !servico) return 0
+    if (!material) return 0
     return calcularOrcamentoCompleto(
       orcamento.item,
       material,
-      servico,
+      servico ?? null,
       orcamento.ajusteManual,
       acabamentosSeed,
       equipamentosAcessoSeed
@@ -136,7 +136,11 @@ export default function HistoricoOrcamentosPage() {
             onValueChange={(v) => setClienteId(v ?? "todos")}
           >
             <SelectTrigger className="w-48">
-              <SelectValue />
+              <SelectValue>
+                {(v: string) =>
+                  v === "todos" ? "Todos os clientes" : clientes.find((c) => c.id === v)?.nome
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os clientes</SelectItem>

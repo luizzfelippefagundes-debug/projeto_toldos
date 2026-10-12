@@ -377,7 +377,9 @@ function PedidoCardConteudo({
             }
           >
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <SelectValue>
+                {(v: StatusPedidoRapido) => statusLabel[v]}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {colunas.map((c) => (

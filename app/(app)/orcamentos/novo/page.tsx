@@ -265,17 +265,16 @@ export default function NovoOrcamentoPage() {
     ]
   )
 
-  const resultado =
-    material && servico
-      ? calcularOrcamentoCompleto(
-          item,
-          material,
-          servico,
-          Number(ajusteManual) || 0,
-          acabamentosSeed,
-          equipamentosAcessoSeed
-        )
-      : null
+  const resultado = material
+    ? calcularOrcamentoCompleto(
+        item,
+        material,
+        servico ?? null,
+        Number(ajusteManual) || 0,
+        acabamentosSeed,
+        equipamentosAcessoSeed
+      )
+    : null
 
   const dimensoesValidas =
     isPositiveNumberInput(largura) && isPositiveNumberInput(altura)
@@ -323,7 +322,6 @@ export default function NovoOrcamentoPage() {
   const dadosValidos =
     Boolean(cliente) &&
     Boolean(material) &&
-    Boolean(servico) &&
     medidasValidas &&
     camposOpcionaisValidos &&
     acabamentosValidos &&
@@ -385,7 +383,7 @@ export default function NovoOrcamentoPage() {
   }
 
   async function handleFechar() {
-    if (!podeFechar || !cliente || !material || !servico || !arquivo) return
+    if (!podeFechar || !cliente || !material || !arquivo) return
     setEnviando(true)
     try {
       const form = new FormData()
@@ -416,7 +414,7 @@ export default function NovoOrcamentoPage() {
             clienteEmail: cliente.email,
             numero: orcamento.numero,
             material: material.nome,
-            servico: servico.nome,
+            servico: servico?.nome,
             total: resultado.total + numeroOuZero(ajusteManual),
             validoAte: validoAte ? formatarData(validoAte.toISOString()) : undefined,
           }),
@@ -482,7 +480,11 @@ export default function NovoOrcamentoPage() {
                     onValueChange={(v) => setClienteId(v ?? "")}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione o cliente" />
+                      <SelectValue placeholder="Selecione o cliente">
+                        {(v: string) =>
+                          clientes.find((c) => c.id === v)?.nome ?? "Selecione o cliente"
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {clientes.map((c) => (
@@ -514,7 +516,11 @@ export default function NovoOrcamentoPage() {
                       onValueChange={(v) => setMaterialId(v ?? "")}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o material" />
+                        <SelectValue placeholder="Selecione o material">
+                          {(v: string) =>
+                            materiais.find((m) => m.id === v)?.nome ?? "Selecione o material"
+                          }
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {materiais.map((m) => (
@@ -526,15 +532,23 @@ export default function NovoOrcamentoPage() {
                     </Select>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label>Serviço</Label>
+                    <Label>
+                      Serviço{" "}
+                      <span className="font-normal text-muted-foreground">(opcional)</span>
+                    </Label>
                     <Select
                       value={servicoId}
                       onValueChange={(v) => setServicoId(v ?? "")}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o serviço" />
+                        <SelectValue placeholder="Sem serviço adicional">
+                          {(v: string) =>
+                            servicos.find((s) => s.id === v)?.nome ?? "Sem serviço adicional"
+                          }
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="nenhum">Sem serviço adicional</SelectItem>
                         {servicos.map((s) => (
                           <SelectItem key={s.id} value={s.id}>
                             {s.nome}
@@ -741,7 +755,11 @@ export default function NovoOrcamentoPage() {
                     onValueChange={(v) => setEquipamentoId(v ?? equipamentoId)}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue>
+                        {(v: string) =>
+                          equipamentosAcessoSeed.find((e) => e.id === v)?.nome
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {equipamentosAcessoSeed.map((e) => (
@@ -887,7 +905,7 @@ export default function NovoOrcamentoPage() {
                       onValueChange={(v) => setImpostoPercent(v ?? impostoPercent)}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue>{(v: string) => `${v}%`}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="6">6%</SelectItem>

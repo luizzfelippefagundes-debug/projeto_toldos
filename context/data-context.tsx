@@ -303,17 +303,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const quantidadeMaterialDebitada = material
       ? Math.min(material.quantidadeEstoque, quantidadeConsumidaSolicitada)
       : undefined
-    const resultado =
-      material && servico
-        ? calcularOrcamentoCompleto(
-            dados.item,
-            material,
-            servico,
-            dados.ajusteManual,
-            acabamentosSeed,
-            equipamentosAcessoSeed
-          )
-        : null
+    const resultado = material
+      ? calcularOrcamentoCompleto(
+          dados.item,
+          material,
+          servico ?? null,
+          dados.ajusteManual,
+          acabamentosSeed,
+          equipamentosAcessoSeed
+        )
+      : null
 
     const novo: Orcamento = {
       id: gerarId("orc"),

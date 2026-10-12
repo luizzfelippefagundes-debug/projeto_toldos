@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     clienteEmail: string
     numero: number
     material: string
-    servico: string
+    servico?: string
     total: number
     validoAte?: string
   } = await req.json()
@@ -45,10 +45,11 @@ export async function POST(req: Request) {
           <td style="padding:10px 12px;font-size:13px;color:#555">Material</td>
           <td style="padding:10px 12px;font-size:14px;font-weight:600">${material}</td>
         </tr>
+        ${servico ? `
         <tr>
           <td style="padding:10px 12px;font-size:13px;color:#555">Serviço</td>
           <td style="padding:10px 12px;font-size:14px;font-weight:600">${servico}</td>
-        </tr>
+        </tr>` : ""}
         <tr style="background:#f4f4f5">
           <td style="padding:10px 12px;font-size:13px;color:#555">Valor total</td>
           <td style="padding:10px 12px;font-size:16px;font-weight:700;color:#2b7fff">${totalFormatado}</td>

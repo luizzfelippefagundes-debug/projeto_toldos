@@ -34,25 +34,29 @@ export default function OrdemDeServicoPage() {
     )
   }
 
-  const resultado =
-    material && servico
-      ? calcularOrcamentoCompleto(
-          orcamento.item,
-          material,
-          servico,
-          orcamento.ajusteManual,
-          acabamentosSeed,
-          equipamentosAcessoSeed
-        )
-      : null
+  const resultado = material
+    ? calcularOrcamentoCompleto(
+        orcamento.item,
+        material,
+        servico ?? null,
+        orcamento.ajusteManual,
+        acabamentosSeed,
+        equipamentosAcessoSeed
+      )
+    : null
   const unidadeMaterial = orcamento.materialFechado?.unidade ?? material?.unidade
   const nomeMaterial =
     orcamento.materialFechado?.nome ?? material?.nome ?? "Material removido"
   const consumo =
     orcamento.materialFechado?.quantidade ??
     (material ? quantidadeMaterialConsumida(orcamento.item, material) : null)
+  const servicoFoiEscolhido = Boolean(
+    orcamento.item.servicoId && orcamento.item.servicoId !== "nenhum"
+  )
   const nomeServico =
-    orcamento.servicoFechado?.nome ?? servico?.nome ?? "Serviço removido"
+    orcamento.servicoFechado?.nome ??
+    servico?.nome ??
+    (servicoFoiEscolhido ? "Serviço removido" : "Nenhum")
   const ferramentas =
     orcamento.servicoFechado?.ferramentas ?? servico?.ferramentas
 

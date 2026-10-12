@@ -113,7 +113,11 @@ function LancamentoFormFields({ onFechar }: { onFechar: () => void }) {
             onValueChange={(v) => setTipo((v as TipoLancamento) ?? tipo)}
           >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue>
+                {(v: TipoLancamento) =>
+                  v === "despesa" ? "Despesa (a pagar)" : "Receita (a receber)"
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="despesa">Despesa (a pagar)</SelectItem>

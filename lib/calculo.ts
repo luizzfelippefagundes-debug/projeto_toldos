@@ -34,7 +34,7 @@ export function quantidadeMaterialConsumida(
 export function calcularOrcamento(
   item: OrcamentoItem,
   material: Material,
-  servico: Servico,
+  servico: Servico | null,
   ajusteManual: number
 ): ResultadoCalculo {
   const areaM2 = item.largura * item.altura
@@ -42,19 +42,21 @@ export function calcularOrcamento(
     quantidadeMaterialConsumida(item, material) * material.precoUnitario
 
   let subtotalMaoDeObra = 0
-  switch (servico.formaCobranca) {
-    case "fixo":
-      subtotalMaoDeObra = servico.valor
-      break
-    case "hora":
-      subtotalMaoDeObra = servico.valor * item.horasEstimadas
-      break
-    case "m2":
-      subtotalMaoDeObra = servico.valor * areaM2
-      break
-    case "percentual":
-      subtotalMaoDeObra = subtotalMaterial * (servico.valor / 100)
-      break
+  if (servico) {
+    switch (servico.formaCobranca) {
+      case "fixo":
+        subtotalMaoDeObra = servico.valor
+        break
+      case "hora":
+        subtotalMaoDeObra = servico.valor * item.horasEstimadas
+        break
+      case "m2":
+        subtotalMaoDeObra = servico.valor * areaM2
+        break
+      case "percentual":
+        subtotalMaoDeObra = subtotalMaterial * (servico.valor / 100)
+        break
+    }
   }
 
   const total = subtotalMaterial + subtotalMaoDeObra + ajusteManual
@@ -73,7 +75,7 @@ export function calcularOrcamento(
 export function calcularOrcamentoCompleto(
   item: OrcamentoItem,
   material: Material,
-  servico: Servico,
+  servico: Servico | null,
   ajusteManual: number,
   acabamentosDisponiveis: Acabamento[],
   equipamentosDisponiveis: EquipamentoAcesso[]

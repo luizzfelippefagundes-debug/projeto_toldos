@@ -181,7 +181,11 @@ function MaterialFormFields({ material, modoEdicao, onFechar }: FieldsProps) {
               onValueChange={(v) => setUnidade(v as UnidadeMedida)}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>
+                  {(v: UnidadeMedida) =>
+                    v === "m2" ? "Metro quadrado (m²)" : "Unidade"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="m2">Metro quadrado (m²)</SelectItem>

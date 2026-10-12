@@ -127,7 +127,11 @@ function ServicoFormFields({ servico, modoEdicao, onFechar }: FieldsProps) {
             onValueChange={(v) => setFormaCobranca(v as FormaCobranca)}
           >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue>
+                {(v: FormaCobranca) =>
+                  formasCobranca.find((f) => f.value === v)?.label
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {formasCobranca.map((f) => (

@@ -17,9 +17,9 @@ function totalOrcamento(
   if (o.totalFechado !== undefined) return o.totalFechado
   const mat = materiais.find((m) => m.id === o.item.materialId)
   const srv = servicos.find((s) => s.id === o.item.servicoId)
-  if (!mat || !srv) return 0
+  if (!mat) return 0
   return calcularOrcamentoCompleto(
-    o.item, mat, srv, o.ajusteManual, acabamentosSeed, equipamentosAcessoSeed
+    o.item, mat, srv ?? null, o.ajusteManual, acabamentosSeed, equipamentosAcessoSeed
   ).total
 }
 

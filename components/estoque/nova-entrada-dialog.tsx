@@ -83,7 +83,11 @@ export function NovaEntradaDialog() {
               onValueChange={(v) => setMaterialId(v ?? "")}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o material" />
+                <SelectValue placeholder="Selecione o material">
+                  {(v: string) =>
+                    materiais.find((m) => m.id === v)?.nome ?? "Selecione o material"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {materiais.map((m) => (
