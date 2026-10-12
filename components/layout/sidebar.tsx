@@ -8,15 +8,13 @@ import { filtrarGruposPorPapel, gruposNavegacao } from "./nav-groups"
 import { ThemeToggle } from "./theme-toggle"
 import { Logo } from "@/components/brand/logo"
 import { UserButton, useUser } from "@clerk/nextjs"
-import { Bell } from "lucide-react"
-import { useData } from "@/context/data-context"
+import { NotificacoesBell } from "./notificacoes-bell"
 import { ROTULO_PAPEL } from "@/lib/papel"
 
 export function Sidebar() {
   const pathname = usePathname()
   const { papel } = usePapelAtivo()
   const { user } = useUser()
-  const { totalAlertas } = useData()
   const grupos = filtrarGruposPorPapel(gruposNavegacao, papel)
 
   return (
@@ -71,14 +69,7 @@ export function Sidebar() {
             <p className="text-xs text-muted-foreground">{ROTULO_PAPEL[papel]}</p>
           </div>
         </div>
-        {totalAlertas > 0 && (
-          <Link href="/dashboard" className="relative">
-            <Bell className="h-5 w-5 text-muted-foreground" />
-            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
-              {totalAlertas > 9 ? "9+" : totalAlertas}
-            </span>
-          </Link>
-        )}
+        <NotificacoesBell />
       </div>
     </aside>
   )

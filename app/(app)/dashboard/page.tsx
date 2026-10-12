@@ -11,21 +11,16 @@ import {
   AlertTriangle,
   Check,
   Factory,
-  FileClock,
   FilePlus2,
   PartyPopper,
-  Warehouse,
   Wallet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { estaNosProximosDias } from "@/lib/date-window"
-import {
-  estaLancamentoVencido,
-  resumirFinanceiro,
-} from "@/lib/financeiro"
+import { resumirFinanceiro } from "@/lib/financeiro"
 import { pedidoRapidoEstaAtrasado } from "@/lib/pedidos-rapidos"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { formatarMoeda } from "@/lib/format"
+import { useAlertas } from "@/hooks/use-alertas"
 
 export default function DashboardPage() {
   const { materiais, servicos, orcamentos, pedidosRapidos, produtosRapidos, lancamentos } =
@@ -77,24 +72,6 @@ export default function DashboardPage() {
     }).length
   }, [pedidosRapidos, produtosRapidos, hoje])
 
-  const lancamentosVencendo = useMemo(() => {
-    if (!hoje) return []
-    return lancamentos.filter(
-      (l) =>
-        l.status === "pendente" &&
-        estaNosProximosDias(l.vencimento, hoje, 3)
-    )
-  }, [lancamentos, hoje])
-  const boletosVencendo = lancamentosVencendo.filter(
-    (l) => l.formaPagamento === "boleto"
-  )
-  const lancamentosVencidos = useMemo(
-    () =>
-      hoje
-        ? lancamentos.filter((l) => estaLancamentoVencido(l, hoje))
-        : [],
-    [lancamentos, hoje]
-  )
   const resumoFinanceiro = useMemo(
     () => resumirFinanceiro(lancamentos, hoje ?? new Date(0)),
     [lancamentos, hoje]
@@ -107,61 +84,7 @@ export default function DashboardPage() {
     (p) => p.status === "pronto"
   ).length
 
-  const orcamentosValidadeVencendo = useMemo(() => {
-    if (!hoje) return 0
-    return orcamentos.filter((o) => {
-      if (o.status !== "fechado") return false
-      const validoAte = new Date(o.criadoEm)
-      validoAte.setDate(validoAte.getDate() + (o.validadeDias ?? 7))
-      return estaNosProximosDias(validoAte, hoje, 3)
-    }).length
-  }, [orcamentos, hoje])
-
-  const alertas = [
-    {
-      id: "estoque",
-      texto: `${estoqueBaixo} ${estoqueBaixo === 1 ? "material" : "materiais"} com estoque baixo`,
-      href: "/estoque",
-      quantidade: estoqueBaixo,
-      Icon: Warehouse,
-    },
-    {
-      id: "producao",
-      texto: `${pedidosAtrasados} pedido${pedidosAtrasados === 1 ? "" : "s"} atrasado${pedidosAtrasados === 1 ? "" : "s"} na produção`,
-      href: "/producao",
-      quantidade: pedidosAtrasados,
-      Icon: Factory,
-    },
-    {
-      id: "boletos",
-      texto: `${boletosVencendo.length} boleto${boletosVencendo.length === 1 ? "" : "s"} vencendo em 3 dias`,
-      href: "/financeiro",
-      quantidade: boletosVencendo.length,
-      Icon: Wallet,
-    },
-    {
-      id: "financeiro-vencido",
-      texto: `${lancamentosVencidos.length} conta${lancamentosVencidos.length === 1 ? "" : "s"} financeira${lancamentosVencidos.length === 1 ? " vencida" : "s vencidas"}`,
-      href: "/financeiro",
-      quantidade: lancamentosVencidos.length,
-      Icon: Wallet,
-    },
-    {
-      id: "validade",
-      texto: `${orcamentosValidadeVencendo} orçamento${orcamentosValidadeVencendo === 1 ? "" : "s"} com validade vencendo em 3 dias`,
-      href: "/orcamentos",
-      quantidade: orcamentosValidadeVencendo,
-      Icon: FileClock,
-    },
-  ]
-    .filter((a) => a.quantidade > 0)
-    .filter((a) => {
-      if (papel === "dono") return true
-      if (papel === "financeiro") {
-        return a.id === "boletos" || a.id === "financeiro-vencido"
-      }
-      return a.id === "estoque" || a.id === "producao"
-    })
+  const alertas = useAlertas()
 
   const [saudacao, setSaudacao] = useState("Olá")
   useEffect(() => {

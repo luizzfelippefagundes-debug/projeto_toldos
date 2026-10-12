@@ -3,15 +3,15 @@
 import { useState, type ReactNode } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Zap, Factory, Wallet, Menu, Bell } from "lucide-react"
+import { LayoutDashboard, Zap, Factory, Wallet, Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Sidebar } from "./sidebar"
 import { NavSheet } from "./nav-sheet"
 import { filtrarGruposPorPapel, gruposNavegacao } from "./nav-groups"
 import { ThemeToggle } from "./theme-toggle"
 import { Logo } from "@/components/brand/logo"
+import { NotificacoesBell } from "./notificacoes-bell"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
-import { useData } from "@/context/data-context"
 import type { Papel } from "@/lib/types"
 import { UserButton } from "@clerk/nextjs"
 
@@ -34,7 +34,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const [menuAberto, setMenuAberto] = useState(false)
   const { papel } = usePapelAtivo()
-  const { totalAlertas } = useData()
 
   // A área do vendedor tem barras próprias no celular (VendedorShell); aqui
   // ela só ganha a barra lateral do computador.
@@ -64,14 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           </div>
           <ThemeToggle />
-          {totalAlertas > 0 && (
-            <Link href="/dashboard" className="relative">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
-                {totalAlertas > 9 ? "9+" : totalAlertas}
-              </span>
-            </Link>
-          )}
+          <NotificacoesBell />
           <UserButton />
         </header>
 
