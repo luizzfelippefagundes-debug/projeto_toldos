@@ -102,14 +102,20 @@ export default function PortfolioFotosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Portfólio</h1>
           <p className="text-sm text-muted-foreground">
             Fotos dos trabalhos que aparecem na página pública, pra mandar pro cliente no WhatsApp.
           </p>
         </div>
-        <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/portfolio" target="_blank" />}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-auto"
+          nativeButton={false}
+          render={<Link href="/portfolio" target="_blank" />}
+        >
           <ExternalLink className="mr-2 h-4 w-4" />
           Ver página pública
         </Button>
@@ -118,9 +124,9 @@ export default function PortfolioFotosPage() {
       {/* Formulário de nova foto */}
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
         <p className="text-sm font-medium text-muted-foreground">Adicionar foto</p>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <Select value={categoria} onValueChange={(v) => v && setCategoria(v as CategoriaProdutoRapido)}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue>{(v: string) => v}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -135,7 +141,7 @@ export default function PortfolioFotosPage() {
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
             placeholder="Descrição (opcional)"
-            className="h-9 flex-1 min-w-40 rounded-md border border-border bg-background px-3 text-sm"
+            className="h-10 flex-1 rounded-md border border-border bg-background px-3 text-sm sm:h-9"
           />
         </div>
         <div>
@@ -154,6 +160,7 @@ export default function PortfolioFotosPage() {
           <Button
             type="button"
             disabled={enviando}
+            className="w-full sm:w-auto"
             onClick={() => inputRef.current?.click()}
           >
             <ImagePlus className="mr-2 h-4 w-4" />
