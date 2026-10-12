@@ -16,13 +16,19 @@ const rotaPublica = createRouteMatcher([
   "/icon(.*)",
   "/apple-icon(.*)",
   "/manifest(.*)",
+  "/portfolio",
   "/api/tv(.*)",
+  "/api/portfolio",
   // Protegida pelo CRON_SECRET dentro da própria rota.
   "/api/cron(.*)",
 ])
 
 const rotaApi = createRouteMatcher(["/api(.*)"])
-const apiSoDono = createRouteMatcher(["/api/equipe(.*)", "/api/avisos-tv(.*)"])
+const apiSoDono = createRouteMatcher([
+  "/api/equipe(.*)",
+  "/api/avisos-tv(.*)",
+  "/api/portfolio-fotos(.*)",
+])
 
 export default clerkMiddleware(async (auth, req) => {
   if (rotaPublica(req)) return

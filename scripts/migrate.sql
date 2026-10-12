@@ -132,5 +132,16 @@ CREATE TABLE IF NOT EXISTS mensagens_bot (
 CREATE TABLE IF NOT EXISTS avisos_tv (
   id TEXT PRIMARY KEY,
   mensagem TEXT NOT NULL,
+  criado_em TEXT NOT NULL,
+  cor TEXT NOT NULL DEFAULT 'azul',
+  icone TEXT NOT NULL DEFAULT '📢',
+  som BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS portfolio_fotos (
+  id TEXT PRIMARY KEY,
+  categoria TEXT NOT NULL,
+  url TEXT NOT NULL,
+  descricao TEXT,
   criado_em TEXT NOT NULL
 );
