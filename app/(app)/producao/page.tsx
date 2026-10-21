@@ -446,7 +446,8 @@ function PedidoCardConteudo({
   onMudarStatus: (status: StatusPedidoRapido) => void
 }) {
   const prazo = obterPrazoEntregaPedido(pedido, produto?.prazoDias)
-  const nome = pedido.clienteNome || "?"
+  const nome = pedido.clienteNome?.trim() || ""
+  const ini = nome ? iniciais(nome) : null
 
   return (
     <div
@@ -463,7 +464,7 @@ function PedidoCardConteudo({
             coluna.cor
           )}
         >
-          {iniciais(nome) ?? <UserRound className="h-4 w-4" />}
+          {ini ?? <UserRound className="h-4 w-4" />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1">
@@ -476,7 +477,9 @@ function PedidoCardConteudo({
               </Badge>
             )}
           </div>
-          <p className="truncate font-medium leading-tight">{nome}</p>
+          <p className="truncate font-medium leading-tight">
+            {nome || <span className="italic text-muted-foreground">Sem cliente</span>}
+          </p>
         </div>
       </div>
 
