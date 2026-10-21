@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { Bell, Check, X } from "lucide-react"
 import { useAlertas } from "@/hooks/use-alertas"
 import {
@@ -14,9 +15,10 @@ import { Button } from "@/components/ui/button"
 
 export function NotificacoesBell() {
   const alertas = useAlertas()
+  const [aberto, setAberto] = useState(false)
 
   return (
-    <Dialog>
+    <Dialog open={aberto} onOpenChange={setAberto}>
       <DialogTrigger render={<Button variant="ghost" size="icon" />}>
         <span className="relative">
           <Bell className="h-5 w-5 text-muted-foreground" />
@@ -47,6 +49,7 @@ export function NotificacoesBell() {
               <Link
                 key={alerta.id}
                 href={alerta.href}
+                onClick={() => setAberto(false)}
                 className="flex items-start gap-3 rounded-lg border border-border bg-accent/30 p-3 text-sm transition-colors hover:bg-accent"
               >
                 <alerta.Icon className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
