@@ -55,7 +55,9 @@ export function LancamentoFormDialog({
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
       {trigger ? (
-        <DialogTrigger asChild>{trigger}</DialogTrigger>
+        <span style={{ display: "contents" }} onClick={() => setAberto(true)}>
+          {trigger}
+        </span>
       ) : (
         <DialogTrigger render={<Button />}>
           <Plus className="mr-2 h-4 w-4" />
