@@ -95,7 +95,7 @@ export default function OrdemDeServicoPage() {
       {/* Documento imprimível */}
       <div
         id="os-print"
-        className="mx-auto max-w-2xl rounded-xl border border-border bg-white p-8 shadow-sm print:max-w-none print:rounded-none print:border-none print:shadow-none print:p-0"
+        className="mx-auto max-w-2xl rounded-xl border border-border bg-white p-8 shadow-sm print:mx-0 print:w-full print:max-w-none print:rounded-none print:border-none print:shadow-none print:p-0"
         style={{ fontFamily: "'Segoe UI', Arial, sans-serif", color: "#111" }}
       >
         {/* ──────────── CABEÇALHO ──────────── */}
@@ -299,9 +299,13 @@ export default function OrdemDeServicoPage() {
       </div>
 
       <style>{`
+        @page {
+          size: A4;
+          margin: 1.5cm;
+        }
         @media print {
-          body { background: white !important; }
-          #os-print { margin: 0; padding: 24px; }
+          html, body { background: white !important; width: 100%; }
+          #os-print { margin: 0 !important; padding: 0 !important; width: 100% !important; max-width: none !important; }
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
