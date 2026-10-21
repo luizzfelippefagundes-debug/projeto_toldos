@@ -304,8 +304,22 @@ export default function OrdemDeServicoPage() {
           margin: 1.5cm;
         }
         @media print {
-          html, body { background: white !important; width: 100%; }
-          #os-print { margin: 0 !important; padding: 0 !important; width: 100% !important; max-width: none !important; }
+          html, body {
+            background: white !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          body > * {
+            display: block !important;
+            width: 100% !important;
+          }
+          #os-print {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+          }
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;

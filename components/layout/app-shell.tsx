@@ -52,10 +52,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   )
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background print:block print:bg-white">
       <Sidebar />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col print:w-full">
         <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card px-4 py-3 md:hidden print:hidden">
           <div className="flex flex-1 items-center">
             <Link href="/dashboard" className="w-32">
@@ -74,7 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           titulo="Toldos Print"
         />
 
-        <main className="min-w-0 flex-1 overflow-x-hidden p-4 pb-24 md:p-8 md:pb-8">
+        <main className="min-w-0 flex-1 overflow-x-hidden p-4 pb-24 md:p-8 md:pb-8 print:p-0 print:pb-0">
           {children}
         </main>
 
