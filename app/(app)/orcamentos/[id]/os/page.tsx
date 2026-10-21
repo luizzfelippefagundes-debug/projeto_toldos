@@ -310,10 +310,7 @@ export default function OrdemDeServicoPage() {
             margin: 0 !important;
             padding: 0 !important;
           }
-          body > * {
-            display: block !important;
-            width: 100% !important;
-          }
+          script, style, link, noscript { display: none !important; }
           #os-print {
             margin: 0 !important;
             padding: 0 !important;
