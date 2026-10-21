@@ -23,7 +23,7 @@ import {
   obterPrazoEntregaPedido,
   pedidoRapidoEstaAtrasado,
 } from "@/lib/pedidos-rapidos"
-import { RefreshCw, Search, Clock, AlertTriangle, CheckCircle2, Package } from "lucide-react"
+import { RefreshCw, Search, Clock, AlertTriangle, CheckCircle2, Package, UserRound } from "lucide-react"
 
 const colunas: {
   status: StatusPedidoRapido
@@ -99,12 +99,9 @@ const colunaMap = Object.fromEntries(colunas.map((c) => [c.status, c])) as Recor
 const statusValidos = new Set<string>(colunas.map((c) => c.status))
 
 function iniciais(nome: string) {
-  return nome
-    .split(" ")
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase()
+  const partes = nome.trim().split(/\s+/).filter((p) => /[a-zA-ZÀ-ú]/.test(p[0]))
+  if (partes.length === 0) return null
+  return partes.slice(0, 2).map((p) => p[0]).join("").toUpperCase()
 }
 
 export default function ProducaoPage() {
@@ -466,7 +463,7 @@ function PedidoCardConteudo({
             coluna.cor
           )}
         >
-          {iniciais(nome)}
+          {iniciais(nome) ?? <UserRound className="h-4 w-4" />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1">
