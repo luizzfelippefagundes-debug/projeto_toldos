@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { OrcamentoDetalhes } from "@/components/orcamentos/orcamento-detalhes"
-import { FileText, Pencil, Copy, RotateCcw, Trash2 } from "lucide-react"
+import { Printer, Pencil, Copy, RotateCcw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 export function OrcamentoDetalheDialog({
@@ -92,8 +92,8 @@ export function OrcamentoDetalheDialog({
                   nativeButton={false}
                   render={<Link href={`/orcamentos/${orcamento.id}/os`} />}
                 >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Emitir OS
+                  <Printer className="mr-2 h-4 w-4" />
+                  Imprimir OS
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleDuplicar}>
                   <Copy className="mr-2 h-4 w-4" />

@@ -449,7 +449,7 @@ export default function NovoOrcamentoPage() {
       }
 
       toast.success(`Orçamento fechado para ${cliente.nome}`)
-      router.push("/orcamentos")
+      router.push(`/orcamentos/${orcamento.id}/os`)
     } catch {
       toast.error("Erro ao enviar arquivo. Tente novamente.")
     } finally {
