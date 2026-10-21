@@ -77,6 +77,7 @@ interface DataContextValue {
     }
   ) => void
   reabrirOrcamento: (id: string) => boolean
+  removeOrcamento: (id: string) => void
   duplicarOrcamento: (id: string) => void
   consumirRascunho: () => void
   addProdutoRapido: (dados: Omit<ProdutoRapido, "id">) => ProdutoRapido
@@ -87,6 +88,8 @@ interface DataContextValue {
   addLancamento: (
     dados: Omit<LancamentoFinanceiro, "id" | "criadoEm">
   ) => LancamentoFinanceiro
+  updateLancamento: (id: string, dados: Omit<LancamentoFinanceiro, "id" | "criadoEm">) => void
+  removeLancamento: (id: string) => void
   marcarLancamentoStatus: (id: string, status: StatusLancamento) => void
   addMensagemBot: (dados: Omit<MensagemBot, "id" | "criadoEm">) => void
 }
@@ -457,6 +460,38 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return true
   }
 
+  const removeOrcamento: DataContextValue["removeOrcamento"] = (id) => {
+    const orcamento = orcamentos.find((o) => o.id === id)
+    if (!orcamento) return
+
+    if (orcamento.status === "fechado") {
+      const material = materiais.find((m) => m.id === orcamento.item.materialId)
+      if (material) {
+        const consumido =
+          orcamento.quantidadeMaterialDebitada ??
+          quantidadeMaterialConsumida(orcamento.item, material)
+        setMateriais((atual) =>
+          atual.map((m) => {
+            if (m.id !== material.id) return m
+            const atualizado = { ...m, quantidadeEstoque: m.quantidadeEstoque + consumido }
+            apiPut(`/api/materiais/${m.id}`, { ...atualizado, id: undefined })
+            return atualizado
+          })
+        )
+      }
+      const relacionados = lancamentos.filter(
+        (l) => l.origem === "orcamento" && l.origemId === id
+      )
+      relacionados.forEach((l) => apiDelete(`/api/lancamentos/${l.id}`))
+      setLancamentos((atual) =>
+        atual.filter((l) => !(l.origem === "orcamento" && l.origemId === id))
+      )
+    }
+
+    setOrcamentos((atual) => atual.filter((o) => o.id !== id))
+    apiDelete(`/api/orcamentos/${id}`)
+  }
+
   const duplicarOrcamento: DataContextValue["duplicarOrcamento"] = (id) => {
     const original = orcamentos.find((o) => o.id === id)
     if (!original) return
@@ -579,6 +614,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return novo
   }
 
+  const updateLancamento: DataContextValue["updateLancamento"] = (id, dados) => {
+    setLancamentos((atual) =>
+      atual.map((l) => {
+        if (l.id !== id) return l
+        const atualizado = { ...l, ...dados }
+        apiPut(`/api/lancamentos/${id}`, atualizado)
+        return atualizado
+      })
+    )
+  }
+
+  const removeLancamento: DataContextValue["removeLancamento"] = (id) => {
+    setLancamentos((atual) => atual.filter((l) => l.id !== id))
+    apiDelete(`/api/lancamentos/${id}`)
+  }
+
   const marcarLancamentoStatus: DataContextValue["marcarLancamentoStatus"] = (
     id,
     status
@@ -625,12 +676,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
       fecharOrcamento,
       updateOrcamentoAberto,
       reabrirOrcamento,
+      removeOrcamento,
       duplicarOrcamento,
       consumirRascunho,
       addProdutoRapido,
       addPedidoRapido,
       moverPedidoRapido,
       addLancamento,
+      updateLancamento,
+      removeLancamento,
       marcarLancamentoStatus,
       addMensagemBot,
     }),

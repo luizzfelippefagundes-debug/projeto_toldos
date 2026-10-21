@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useData } from "@/context/data-context"
-import type { FormaPagamento, TipoLancamento } from "@/lib/types"
+import type { FormaPagamento, LancamentoFinanceiro, TipoLancamento } from "@/lib/types"
 import { isPositiveNumberInput } from "@/lib/number"
 import { formatarDataInput } from "@/lib/date"
 import { Plus } from "lucide-react"
@@ -37,20 +37,35 @@ const formasPagamento: { value: FormaPagamento; label: string }[] = [
   { value: "transferencia", label: "Transferência" },
 ]
 
-export function LancamentoFormDialog() {
-  const [aberto, setAberto] = useState(false)
+export function LancamentoFormDialog({
+  lancamento,
+  trigger,
+  open: openProp,
+  onOpenChange: onOpenChangeProp,
+}: {
+  lancamento?: LancamentoFinanceiro
+  trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
+  const [abertoInterno, setAbertoInterno] = useState(false)
+  const aberto = openProp !== undefined ? openProp : abertoInterno
+  const setAberto = onOpenChangeProp ?? setAbertoInterno
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
-      <DialogTrigger render={<Button />}>
-        <Plus className="mr-2 h-4 w-4" />
-        Novo lançamento
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : (
+        <DialogTrigger render={<Button />}>
+          <Plus className="mr-2 h-4 w-4" />
+          Novo lançamento
+        </DialogTrigger>
+      )}
       <DialogContent>
-        {/* Remontado via `key` a cada abertura — mesmo padrão usado nos
-            outros diálogos de cadastro deste projeto. */}
         <LancamentoFormFields
           key={aberto ? "aberto" : "fechado"}
+          lancamento={lancamento}
           onFechar={() => setAberto(false)}
         />
       </DialogContent>
@@ -58,19 +73,27 @@ export function LancamentoFormDialog() {
   )
 }
 
-function LancamentoFormFields({ onFechar }: { onFechar: () => void }) {
-  const { addLancamento, clientes } = useData()
+function LancamentoFormFields({
+  lancamento,
+  onFechar,
+}: {
+  lancamento?: LancamentoFinanceiro
+  onFechar: () => void
+}) {
+  const { addLancamento, updateLancamento, clientes } = useData()
 
-  const [tipo, setTipo] = useState<TipoLancamento>("despesa")
-  const [descricao, setDescricao] = useState("")
-  const [categoria, setCategoria] = useState("")
-  const [valor, setValor] = useState("")
-  const [vencimento, setVencimento] = useState(hojeISO())
-  const [clienteId, setClienteId] = useState<string>("nenhum")
-  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | "nenhuma">(
-    "nenhuma"
+  const [tipo, setTipo] = useState<TipoLancamento>(lancamento?.tipo ?? "despesa")
+  const [descricao, setDescricao] = useState(lancamento?.descricao ?? "")
+  const [categoria, setCategoria] = useState(lancamento?.categoria ?? "")
+  const [valor, setValor] = useState(lancamento ? String(lancamento.valor) : "")
+  const [vencimento, setVencimento] = useState(
+    lancamento ? formatarDataInput(new Date(lancamento.vencimento)) : hojeISO()
   )
-  const [numeroBoleto, setNumeroBoleto] = useState("")
+  const [clienteId, setClienteId] = useState<string>(lancamento?.clienteId ?? "nenhum")
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | "nenhuma">(
+    lancamento?.formaPagamento ?? "nenhuma"
+  )
+  const [numeroBoleto, setNumeroBoleto] = useState(lancamento?.numeroBoleto ?? "")
 
   const valido =
     descricao.trim().length > 0 &&
@@ -80,29 +103,35 @@ function LancamentoFormFields({ onFechar }: { onFechar: () => void }) {
     Number.isFinite(new Date(`${vencimento}T00:00:00`).getTime())
 
   function salvar() {
-    addLancamento({
+    const dados = {
       descricao: descricao.trim(),
       tipo,
       categoria: categoria.trim(),
       valor: Number(valor),
       vencimento: new Date(`${vencimento}T00:00:00`).toISOString(),
-      status: "pendente",
-      origem: "manual",
-      origemId: null,
+      status: lancamento?.status ?? ("pendente" as const),
+      pagoEm: lancamento?.pagoEm,
+      origem: lancamento?.origem ?? ("manual" as const),
+      origemId: lancamento?.origemId ?? null,
       clienteId: clienteId !== "nenhum" ? clienteId : undefined,
       formaPagamento: formaPagamento !== "nenhuma" ? formaPagamento : undefined,
       numeroBoleto:
         formaPagamento === "boleto" && numeroBoleto.trim()
           ? numeroBoleto.trim()
           : undefined,
-    })
+    }
+    if (lancamento) {
+      updateLancamento(lancamento.id, dados)
+    } else {
+      addLancamento(dados)
+    }
     onFechar()
   }
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Novo lançamento</DialogTitle>
+        <DialogTitle>{lancamento ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
       </DialogHeader>
 
       <div className="flex flex-col gap-4">

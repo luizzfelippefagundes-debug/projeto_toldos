@@ -21,15 +21,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-dialog"
+import { LancamentoDetalheDialog } from "@/components/financeiro/lancamento-detalhe-dialog"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import {
   estaLancamentoVencido,
   resumirFinanceiro,
 } from "@/lib/financeiro"
-import type { StatusLancamento, TipoLancamento } from "@/lib/types"
+import type { LancamentoFinanceiro, TipoLancamento } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { MessageCircle } from "lucide-react"
-import { toast } from "sonner"
+import { Plus } from "lucide-react"
 
 const rotuloFormaPagamento: Record<string, string> = {
   boleto: "Boleto",
@@ -40,15 +40,11 @@ const rotuloFormaPagamento: Record<string, string> = {
 }
 
 export default function FinanceiroPage() {
-  const { lancamentos, clientes, marcarLancamentoStatus, addMensagemBot } =
-    useData()
-  const [filtroTipo, setFiltroTipo] = useState<
-    TipoLancamento | "todos" | "boleto"
-  >("todos")
+  const { lancamentos, clientes } = useData()
+  const [filtroTipo, setFiltroTipo] = useState<TipoLancamento | "todos" | "boleto">("todos")
   const [filtroCliente, setFiltroCliente] = useState("todos")
+  const [selecionado, setSelecionado] = useState<LancamentoFinanceiro | null>(null)
 
-  // "Boletos a vencer" depende de "hoje" — mesmo cuidado de hydration do
-  // resto do app.
   const [hoje, setHoje] = useState<Date | null>(null)
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -62,41 +58,22 @@ export default function FinanceiroPage() {
 
   const saldo = resumo.recebido - resumo.pago
 
-  const lancamentosFiltrados = lancamentos
-    .filter((l) =>
-      filtroTipo === "todos"
-        ? true
-        : filtroTipo === "boleto"
-          ? l.formaPagamento === "boleto"
-          : l.tipo === filtroTipo
-    )
-    .filter((l) => filtroCliente === "todos" || l.clienteId === filtroCliente)
-
-  const ordenados = [...lancamentosFiltrados].sort(
-    (a, b) => new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime()
-  )
+  const ordenados = useMemo(() => {
+    return lancamentos
+      .filter((l) =>
+        filtroTipo === "todos"
+          ? true
+          : filtroTipo === "boleto"
+            ? l.formaPagamento === "boleto"
+            : l.tipo === filtroTipo
+      )
+      .filter((l) => filtroCliente === "todos" || l.clienteId === filtroCliente)
+      .sort((a, b) => new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime())
+  }, [lancamentos, filtroTipo, filtroCliente])
 
   function nomeCliente(id?: string) {
     if (!id) return "—"
     return clientes.find((c) => c.id === id)?.nome ?? "—"
-  }
-
-  function alternarStatus(id: string, statusAtual: StatusLancamento) {
-    marcarLancamentoStatus(id, statusAtual === "pago" ? "pendente" : "pago")
-  }
-
-  function mandarLembrete(lancamento: (typeof lancamentos)[number]) {
-    const cliente = clientes.find((c) => c.id === lancamento.clienteId)
-    if (!cliente) return
-    addMensagemBot({
-      clienteId: cliente.id,
-      clienteNome: cliente.nome,
-      telefone: cliente.telefone,
-      texto: `Lembrete: "${lancamento.descricao}" no valor de ${formatarMoeda(lancamento.valor)} ${estaLancamentoVencido(lancamento, hoje ?? new Date()) ? "venceu em" : "vence em"} ${formatarData(lancamento.vencimento)}.`,
-      origem: "lembrete",
-      autor: "bot",
-    })
-    toast.success(`Lembrete registrado pra ${cliente.nome}`)
   }
 
   return (
@@ -112,6 +89,7 @@ export default function FinanceiroPage() {
         <LancamentoFormDialog />
       </div>
 
+      {/* Cards de resumo */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader>
@@ -229,6 +207,7 @@ export default function FinanceiroPage() {
         sem data de baixa usam a data de criação do lançamento.
       </p>
 
+      {/* Filtros */}
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex flex-wrap gap-2">
           {(
@@ -272,7 +251,65 @@ export default function FinanceiroPage() {
         </Select>
       </div>
 
-      <div className="rounded-lg border border-border">
+      {/* Mobile: cards */}
+      <div className="flex flex-col gap-2 md:hidden">
+        {ordenados.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Nenhum lançamento encontrado.
+          </p>
+        ) : (
+          ordenados.map((lancamento) => {
+            const vencido = hoje ? estaLancamentoVencido(lancamento, hoje) : false
+            return (
+              <button
+                key={lancamento.id}
+                onClick={() => setSelecionado(lancamento)}
+                className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-accent/50 active:bg-accent"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{lancamento.descricao}</p>
+                    <p className="text-sm text-muted-foreground">{lancamento.categoria}</p>
+                  </div>
+                  <Badge
+                    variant={lancamento.status === "pago" ? "secondary" : "default"}
+                    className="shrink-0"
+                  >
+                    {lancamento.status === "pago" ? "Pago" : "Pendente"}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-3 gap-2 border-t border-border pt-2 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Vencimento</p>
+                    <p className={cn(vencido && lancamento.status !== "pago" && "font-medium text-destructive")}>
+                      {formatarData(lancamento.vencimento)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Cliente</p>
+                    <p className="truncate">{nomeCliente(lancamento.clienteId)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Valor</p>
+                    <p
+                      className={cn(
+                        "font-medium",
+                        lancamento.tipo === "receita" ? "text-primary" : "text-destructive"
+                      )}
+                    >
+                      {lancamento.tipo === "receita" ? "+" : "−"}{" "}
+                      {formatarMoeda(lancamento.valor)}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            )
+          })
+        )}
+      </div>
+
+      {/* Desktop: tabela */}
+      <div className="hidden rounded-lg border border-border md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -283,97 +320,64 @@ export default function FinanceiroPage() {
               <TableHead>Vencimento</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-48" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ordenados.map((lancamento) => (
-              <TableRow key={lancamento.id}>
-                <TableCell className="font-medium">
-                  {lancamento.descricao}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {nomeCliente(lancamento.clienteId)}
-                </TableCell>
-                <TableCell>{lancamento.categoria}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {lancamento.formaPagamento
-                    ? rotuloFormaPagamento[lancamento.formaPagamento]
-                    : "—"}
-                  {lancamento.numeroBoleto && (
-                    <span className="block text-xs">
-                      Nº {lancamento.numeroBoleto}
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <span>{formatarData(lancamento.vencimento)}</span>
-                  {hoje && estaLancamentoVencido(lancamento, hoje) && (
-                    <Badge variant="destructive" className="mt-1 block w-fit">
-                      Vencido
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell
-                  className={
-                    lancamento.tipo === "receita"
-                      ? "text-primary"
-                      : "text-destructive"
-                  }
+            {ordenados.map((lancamento) => {
+              const vencido = hoje ? estaLancamentoVencido(lancamento, hoje) : false
+              return (
+                <TableRow
+                  key={lancamento.id}
+                  onClick={() => setSelecionado(lancamento)}
+                  className="cursor-pointer"
                 >
-                  {lancamento.tipo === "receita" ? "+ " : "− "}
-                  {formatarMoeda(lancamento.valor)}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      lancamento.status === "pago" ? "secondary" : "default"
+                  <TableCell className="font-medium">{lancamento.descricao}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {nomeCliente(lancamento.clienteId)}
+                  </TableCell>
+                  <TableCell>{lancamento.categoria}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {lancamento.formaPagamento
+                      ? rotuloFormaPagamento[lancamento.formaPagamento]
+                      : "—"}
+                    {lancamento.numeroBoleto && (
+                      <span className="block text-xs">Nº {lancamento.numeroBoleto}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span>{formatarData(lancamento.vencimento)}</span>
+                    {vencido && lancamento.status !== "pago" && (
+                      <Badge variant="destructive" className="mt-1 block w-fit">
+                        Vencido
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell
+                    className={
+                      lancamento.tipo === "receita" ? "text-primary" : "text-destructive"
                     }
                   >
-                    {lancamento.status === "pago" ? "Pago" : "Pendente"}
-                  </Badge>
-                  {lancamento.status === "pago" && (
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      {lancamento.pagoEm
-                        ? `Baixado em ${formatarData(lancamento.pagoEm)}`
-                        : "Baixa antiga sem data"}
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-2">
-                    {lancamento.status === "pendente" &&
-                      lancamento.clienteId && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => mandarLembrete(lancamento)}
-                        >
-                          <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
-                          Lembrete
-                        </Button>
-                      )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        alternarStatus(lancamento.id, lancamento.status)
-                      }
-                    >
-                      {lancamento.status === "pago"
-                        ? "Marcar pendente"
-                        : "Marcar pago"}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                    {lancamento.tipo === "receita" ? "+ " : "− "}
+                    {formatarMoeda(lancamento.valor)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={lancamento.status === "pago" ? "secondary" : "default"}>
+                      {lancamento.status === "pago" ? "Pago" : "Pendente"}
+                    </Badge>
+                    {lancamento.status === "pago" && (
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {lancamento.pagoEm
+                          ? `Baixado em ${formatarData(lancamento.pagoEm)}`
+                          : "Baixa antiga sem data"}
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
             {ordenados.length === 0 && (
               <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="py-8 text-center text-muted-foreground"
-                >
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   Nenhum lançamento encontrado.
                 </TableCell>
               </TableRow>
@@ -381,6 +385,23 @@ export default function FinanceiroPage() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Botão novo lançamento mobile */}
+      <div className="fixed bottom-6 right-6 md:hidden">
+        <LancamentoFormDialog
+          trigger={
+            <Button size="lg" className="rounded-full shadow-lg">
+              <Plus className="h-5 w-5" />
+            </Button>
+          }
+        />
+      </div>
+
+      <LancamentoDetalheDialog
+        lancamento={selecionado}
+        onOpenChange={(open) => !open && setSelecionado(null)}
+        hoje={hoje}
+      />
     </div>
   )
 }

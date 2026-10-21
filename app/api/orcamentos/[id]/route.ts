@@ -19,3 +19,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   `
   return NextResponse.json(b)
 }
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  await getSql()`DELETE FROM orcamentos WHERE id=${id}`
+  return new NextResponse(null, { status: 204 })
+}
