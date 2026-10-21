@@ -319,7 +319,17 @@ export default function OrdemDeServicoPage() {
             padding: 0 !important;
             width: 100% !important;
             max-width: none !important;
+            font-size: 13pt !important;
           }
+          #os-print p, #os-print td, #os-print th, #os-print span, #os-print div {
+            font-size: inherit;
+          }
+          #os-print .text-2xl { font-size: 22pt !important; }
+          #os-print .text-lg  { font-size: 16pt !important; }
+          #os-print .text-base { font-size: 13pt !important; }
+          #os-print .text-sm  { font-size: 11pt !important; }
+          #os-print .text-xs  { font-size: 9pt  !important; }
+          #os-print .text-\\[10px\\] { font-size: 8pt !important; }
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
