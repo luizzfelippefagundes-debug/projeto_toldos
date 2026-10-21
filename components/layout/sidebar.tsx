@@ -71,39 +71,60 @@ export function Sidebar() {
       </div>
 
       {/* Navegação */}
-      <nav className={cn("flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto", collapsed ? "items-center" : "-mr-1 pr-1")}>
-        {grupos.map((grupo) => (
-          <div key={grupo.title} className={cn("flex flex-col", collapsed ? "items-center gap-1" : "gap-1")}>
+      <nav
+        className={cn(
+          "flex min-h-0 flex-1 flex-col overflow-y-auto",
+          collapsed
+            ? "items-center gap-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            : "gap-5 -mr-1 pr-1"
+        )}
+      >
+        {grupos.map((grupo, gi) => (
+          <div
+            key={grupo.title}
+            className={cn(
+              "flex flex-col",
+              collapsed ? "w-full items-center" : "gap-1"
+            )}
+          >
+            {/* Separador entre grupos no modo colapsado */}
+            {collapsed && gi > 0 && (
+              <div className="my-1 h-px w-8 rounded-full bg-border" />
+            )}
+
             {!collapsed && (
               <p className="mb-1 px-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 {grupo.title}
               </p>
             )}
-            {grupo.items.map((item) => {
-              const ativo = pathname === item.href
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  target={item.externo ? "_blank" : undefined}
-                  rel={item.externo ? "noopener noreferrer" : undefined}
-                  title={collapsed ? item.label : undefined}
-                  className={cn(
-                    "flex items-center rounded-md transition-colors",
-                    collapsed
-                      ? "h-9 w-9 justify-center"
-                      : "gap-2 px-2 py-2 text-sm",
-                    ativo
-                      ? "bg-primary/15 font-medium text-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {!collapsed && item.label}
-                </Link>
-              )
-            })}
+
+            <div className={cn("flex flex-col", collapsed ? "w-full items-center gap-0.5" : "gap-0.5")}>
+              {grupo.items.map((item) => {
+                const ativo = pathname === item.href
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    target={item.externo ? "_blank" : undefined}
+                    rel={item.externo ? "noopener noreferrer" : undefined}
+                    title={collapsed ? item.label : undefined}
+                    className={cn(
+                      "flex items-center rounded-md transition-colors",
+                      collapsed
+                        ? "h-9 w-10 justify-center"
+                        : "gap-2 px-2 py-2 text-sm",
+                      ativo
+                        ? "bg-primary/15 text-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    )}
+                  >
+                    <Icon className={cn("shrink-0", collapsed ? "h-[18px] w-[18px]" : "h-4 w-4")} />
+                    {!collapsed && <span className="font-medium">{item.label}</span>}
+                  </Link>
+                )
+              })}
+            </div>
           </div>
         ))}
       </nav>
