@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import Image from "next/image"
+import Link from "next/link"
 
 type StatusPedido = "aguardando" | "aprovado" | "arte" | "impressao" | "acabamento" | "pronto"
 
@@ -144,7 +145,15 @@ export default function TvPage() {
   const totalAtrasados = pedidos.filter((p) => estaAtrasado(p.prazo_entrega_em)).length
 
   return (
-    <div className="flex h-screen flex-col gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5">
+    <div className="group/tv flex h-screen flex-col gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5">
+
+      {/* Botão voltar — visível só ao passar o mouse */}
+      <Link
+        href="/dashboard"
+        className="fixed top-3 right-3 z-50 rounded-lg bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-400 opacity-0 backdrop-blur transition-opacity hover:text-white group-hover/tv:opacity-100"
+      >
+        ← Voltar
+      </Link>
 
       {/* Header */}
       <header className="flex shrink-0 items-start justify-between gap-4">
