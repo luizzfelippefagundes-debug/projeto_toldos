@@ -1,9 +1,9 @@
 "use client"
 
-import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
 import { useData } from "@/context/data-context"
 import { Button } from "@/components/ui/button"
+import { Logo } from "@/components/brand/logo"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
@@ -100,16 +100,7 @@ export default function OrdemDeServicoPage() {
       >
         {/* ──────────── CABEÇALHO ──────────── */}
         <div className="flex items-center justify-between border-b-2 border-gray-800 pb-5">
-          <div className="flex items-center gap-4">
-            <Image
-              src="/brand/logo.png"
-              alt="Toldos Print"
-              width={600}
-              height={197}
-              className="h-auto w-48"
-              priority
-            />
-          </div>
+          <Logo className="w-44 rounded-lg" />
           <div className="text-right">
             <p className="text-2xl font-bold tracking-tight text-gray-800">ORDEM DE SERVIÇO</p>
             <p className="mt-1 text-lg font-semibold text-gray-600">Nº {String(orcamento.numero).padStart(4, "0")}</p>
@@ -298,10 +289,12 @@ export default function OrdemDeServicoPage() {
         </div>
 
         {/* ──────────── RODAPÉ ──────────── */}
-        <div
-          className="mt-6 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400"
-        >
-          Toldos Print · Comunicação Visual · Documento gerado em {formatarData(hoje.toISOString())}
+        <div className="mt-6 border-t border-gray-200 pt-3 text-center text-[10px] text-gray-400">
+          <p className="font-semibold text-gray-600">Toldos Print · Toldos e Comunicação Visual</p>
+          <p className="mt-0.5">
+            (27) 99748-9714 · (27) 99612-5835 · @toldosprint
+          </p>
+          <p className="mt-0.5">Documento gerado em {formatarData(hoje.toISOString())}</p>
         </div>
       </div>
 
