@@ -926,9 +926,12 @@ export default function NovoOrcamentoPage() {
                       onValueChange={(v) => setImpostoPercent(v ?? impostoPercent)}
                     >
                       <SelectTrigger>
-                        <SelectValue>{(v: string) => `${v}%`}</SelectValue>
+                        <SelectValue>
+                          {(v: string) => (v === "0" ? "Sem imposto" : `${v}%`)}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="0">Sem imposto</SelectItem>
                         <SelectItem value="6">6%</SelectItem>
                         <SelectItem value="7">7%</SelectItem>
                         <SelectItem value="8">8%</SelectItem>
@@ -977,7 +980,7 @@ export default function NovoOrcamentoPage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Imposto ({impostoPercent || 0}%)
+                        {Number(impostoPercent) > 0 ? `Imposto (${impostoPercent}%)` : "Sem imposto"}
                       </span>
                       <span>{formatarMoeda(resultado.valorImposto)}</span>
                     </div>
@@ -1139,7 +1142,7 @@ export default function NovoOrcamentoPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
-                  Imposto ({impostoPercent || 0}%)
+                  {Number(impostoPercent) > 0 ? `Imposto (${impostoPercent}%)` : "Sem imposto"}
                 </span>
                 <span>
                   {resultado ? formatarMoeda(resultado.valorImposto) : "—"}
