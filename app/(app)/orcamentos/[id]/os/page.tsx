@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useData } from "@/context/data-context"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/brand/logo"
-import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
+import { calcularOrcamentoCompleto, quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import { ArrowLeft, Printer } from "lucide-react"
@@ -165,7 +165,7 @@ export default function OrdemDeServicoPage() {
                   {consumo !== null && (
                     <span className="ml-2 text-gray-500">
                       ({unidadeMaterial === "m2"
-                        ? `${orcamento.item.largura} × ${orcamento.item.altura} m = ${consumo.toFixed(2)} m²`
+                        ? `${orcamento.item.largura} × ${orcamento.item.altura} m × ${quantidadePecas(orcamento.item)} un = ${consumo.toFixed(2)} m²`
                         : `${orcamento.item.quantidadeUnidades} un`})
                     </span>
                   )}

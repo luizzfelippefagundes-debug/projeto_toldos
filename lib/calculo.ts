@@ -23,11 +23,17 @@ export interface ResultadoCalculoCompleto extends ResultadoCalculo {
   valorImposto: number
 }
 
+// Quantas peças iguais o item tem. Em material por m² multiplica a área;
+// orçamentos antigos que não guardaram quantidade valem 1 peça.
+export function quantidadePecas(item: OrcamentoItem): number {
+  return item.quantidadeUnidades > 0 ? item.quantidadeUnidades : 1
+}
+
 export function quantidadeMaterialConsumida(
   item: OrcamentoItem,
   material: Material
 ): number {
-  const areaM2 = item.largura * item.altura
+  const areaM2 = item.largura * item.altura * quantidadePecas(item)
   return material.unidade === "m2" ? areaM2 : item.quantidadeUnidades
 }
 
@@ -37,7 +43,10 @@ export function calcularOrcamento(
   servico: Servico | null,
   ajusteManual: number
 ): ResultadoCalculo {
-  const areaM2 = item.largura * item.altura
+  const areaM2 =
+    item.largura *
+    item.altura *
+    (material.unidade === "m2" ? quantidadePecas(item) : 1)
   const subtotalMaterial =
     quantidadeMaterialConsumida(item, material) * material.precoUnitario
 

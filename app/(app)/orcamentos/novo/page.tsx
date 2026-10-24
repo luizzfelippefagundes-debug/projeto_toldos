@@ -284,7 +284,7 @@ export default function NovoOrcamentoPage() {
   const medidasValidas =
     Boolean(material) &&
     (material?.unidade !== "m2" || dimensoesValidas) &&
-    (material?.unidade !== "unidade" || quantidadeValida) &&
+    quantidadeValida &&
     (servico?.formaCobranca !== "m2" || dimensoesValidas)
 
   const camposNaoNegativos = [
@@ -608,16 +608,22 @@ export default function NovoOrcamentoPage() {
                   </div>
                 )}
 
-                {material?.unidade === "unidade" && (
+                {material && (
                   <div className="flex flex-col gap-2 sm:w-48">
                     <Label htmlFor="quantidade">Quantidade</Label>
                     <Input
                       id="quantidade"
                       type="number"
-                      min="0"
+                      min="1"
+                      step="1"
                       value={quantidadeUnidades}
                       onChange={(e) => setQuantidadeUnidades(e.target.value)}
                     />
+                    {material.unidade === "m2" && (
+                      <p className="text-xs text-muted-foreground">
+                        Peças com a largura e altura acima.
+                      </p>
+                    )}
                   </div>
                 )}
 

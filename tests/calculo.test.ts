@@ -159,3 +159,18 @@ describe("cálculo de orçamento", () => {
     expect(resultado.subtotalDeslocamento).toBe(0)
   })
 })
+
+describe("quantidade em material por m²", () => {
+  it("multiplica a área pela quantidade de peças", () => {
+    const item = { ...itemBasico, quantidadeUnidades: 3 }
+    const r = calcularOrcamento(item, materialM2, null, 0)
+    expect(r.areaM2).toBe(6 * 3)
+    expect(quantidadeMaterialConsumida(item, materialM2)).toBe(18)
+    expect(r.subtotalMaterial).toBe(18 * materialM2.precoUnitario)
+  })
+
+  it("trata quantidade zerada (orçamento antigo) como 1 peça", () => {
+    const item = { ...itemBasico, quantidadeUnidades: 0 }
+    expect(quantidadeMaterialConsumida(item, materialM2)).toBe(6)
+  })
+})

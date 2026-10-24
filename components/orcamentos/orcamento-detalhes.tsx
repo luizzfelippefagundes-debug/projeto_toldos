@@ -3,7 +3,7 @@
 import { useData } from "@/context/data-context"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
+import { calcularOrcamentoCompleto, quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import type { Orcamento, StatusOrcamento } from "@/lib/types"
@@ -121,7 +121,7 @@ export function OrcamentoDetalhes({ orcamento }: { orcamento: Orcamento }) {
           <p className="text-xs text-muted-foreground">Medidas / consumo</p>
           <p className="font-medium">
             {unidadeMaterial === "m2"
-              ? `${orcamento.item.largura} × ${orcamento.item.altura} m`
+              ? `${orcamento.item.largura} × ${orcamento.item.altura} m × ${quantidadePecas(orcamento.item)} un`
               : `${orcamento.item.quantidadeUnidades} un`}{" "}
             —{" "}
             {consumo === null
