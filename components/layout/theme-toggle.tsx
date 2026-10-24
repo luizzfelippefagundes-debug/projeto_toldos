@@ -23,7 +23,16 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       aria-label={escuro ? "Mudar para tema claro" : "Mudar para tema escuro"}
-      onClick={() => setTheme(escuro ? "light" : "dark")}
+      onClick={() => {
+        const tema = escuro ? "light" : "dark"
+        setTheme(tema)
+        // O Painel TV roda em outro aparelho e segue o tema salvo no servidor.
+        fetch("/api/tema", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tema }),
+        }).catch(() => {})
+      }}
     >
       {escuro ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
     </Button>

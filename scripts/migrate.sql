@@ -145,3 +145,9 @@ CREATE TABLE IF NOT EXISTS portfolio_fotos (
   descricao TEXT,
   criado_em TEXT NOT NULL
 );
+
+-- Configurações gerais (chave/valor). Hoje só o tema do Painel TV.
+CREATE TABLE IF NOT EXISTS configuracoes (
+  chave TEXT PRIMARY KEY,
+  valor TEXT NOT NULL
+);
