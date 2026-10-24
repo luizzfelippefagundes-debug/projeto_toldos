@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useTheme } from "next-themes"
@@ -145,20 +145,33 @@ export default function TvPage() {
 
   // A TV roda em outro aparelho: segue o tema escolhido no sistema, que fica
   // salvo no servidor. Consulta leve a cada 10 s pra trocar quase na hora.
+  // Só aplica quando o valor do servidor MUDA: se a TV estiver aberta no mesmo
+  // navegador do sistema, aplicar a cada consulta desfazia o clique de quem
+  // acabou de trocar o tema (o servidor ainda não tinha gravado). O setTheme
+  // fica num ref porque muda de identidade a cada troca de tema e reiniciaria
+  // o efeito, disparando justamente essa consulta fora de hora.
   const { setTheme } = useTheme()
+  const setThemeRef = useRef(setTheme)
   useEffect(() => {
+    setThemeRef.current = setTheme
+  }, [setTheme])
+  useEffect(() => {
+    let ultimoDoServidor: string | null = null
     async function sincronizarTema() {
       try {
         const res = await fetch("/api/tv/tema", { cache: "no-store" })
         if (!res.ok) return
         const { tema } = await res.json()
-        if (tema === "light" || tema === "dark") setTheme(tema)
+        if ((tema === "light" || tema === "dark") && tema !== ultimoDoServidor) {
+          ultimoDoServidor = tema
+          setThemeRef.current(tema)
+        }
       } catch { /* tenta de novo no próximo ciclo */ }
     }
     sincronizarTema()
     const t = setInterval(sincronizarTema, 10_000)
     return () => clearInterval(t)
-  }, [setTheme])
+  }, [])
 
   // Alarme periódico se houver aviso com som ativado
   useEffect(() => {
