@@ -12,7 +12,7 @@ export async function GET() {
       FROM pedidos_rapidos
       WHERE status = ANY(${STATUS_VISIVEIS})
       ORDER BY
-        CASE WHEN prazo_entrega_em IS NOT NULL AND prazo_entrega_em < ${hoje} THEN 0 ELSE 1 END,
+        CASE WHEN status <> 'pronto' AND prazo_entrega_em IS NOT NULL AND prazo_entrega_em < ${hoje} THEN 0 ELSE 1 END,
         prazo_entrega_em ASC NULLS LAST,
         criado_em ASC
     `,

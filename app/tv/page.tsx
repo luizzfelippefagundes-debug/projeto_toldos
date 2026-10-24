@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { interpretarDataLocal } from "@/lib/date"
 
 type StatusPedido = "aguardando" | "aprovado" | "arte" | "impressao" | "acabamento" | "pronto"
 
@@ -48,15 +49,24 @@ const COLUNAS: { status: StatusPedido; label: string; borda: string; fundo: stri
   { status: "pronto",     label: "Pronto ✓",    borda: "border-emerald-500",fundo: "bg-emerald-950/70" },
 ]
 
-function estaAtrasado(prazo: string | null) {
-  if (!prazo) return false
-  return prazo < new Date().toISOString().slice(0, 10)
+function inicioDoDia(data: Date) {
+  return new Date(data.getFullYear(), data.getMonth(), data.getDate()).getTime()
+}
+
+// O prazo é salvo com data e hora (ISO). Atrasado é quando o dia do prazo já
+// passou; pedido pronto já foi produzido, então não conta como atrasado.
+function estaAtrasado(pedido: PedidoTV) {
+  if (pedido.status === "pronto" || !pedido.prazo_entrega_em) return false
+  const prazo = interpretarDataLocal(pedido.prazo_entrega_em)
+  if (!Number.isFinite(prazo.getTime())) return false
+  return inicioDoDia(prazo) < inicioDoDia(new Date())
 }
 
 function formatarPrazo(prazo: string | null) {
   if (!prazo) return null
-  const [, mes, dia] = prazo.split("-")
-  return `${dia}/${mes}`
+  const data = interpretarDataLocal(prazo)
+  if (!Number.isFinite(data.getTime())) return null
+  return data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
 }
 
 function Relogio() {
@@ -142,7 +152,7 @@ export default function TvPage() {
   }, [avisos])
 
   const totalAtivos = pedidos.length
-  const totalAtrasados = pedidos.filter((p) => estaAtrasado(p.prazo_entrega_em)).length
+  const totalAtrasados = pedidos.filter((p) => estaAtrasado(p)).length
 
   return (
     <div className="group/tv flex h-screen flex-col gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5">
@@ -206,7 +216,7 @@ export default function TvPage() {
               {/* Cards com scroll interno */}
               <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-0.5">
                 {colPedidos.map((pedido) => {
-                  const atrasado = estaAtrasado(pedido.prazo_entrega_em)
+                  const atrasado = estaAtrasado(pedido)
                   return (
                     <div
                       key={pedido.id}
