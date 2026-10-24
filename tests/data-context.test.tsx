@@ -299,6 +299,114 @@ describe("fluxos de dados", () => {
     })
   })
 
+  it("edita orçamento fechado refazendo estoque e receita sem mudar o número", async () => {
+    const { result } = await montar()
+    const estoqueInicial = materiaisSeed.find((m) => m.id === "mat-1")!
+    let orcamento = { id: "", numero: 0 }
+
+    act(() => {
+      orcamento = result.current.fecharOrcamento(criarDadosOrcamento())
+    })
+    await waitFor(() =>
+      expect(
+        result.current.lancamentos.filter((l) => l.origemId === orcamento.id)
+      ).toHaveLength(1)
+    )
+    const lancamentoId = result.current.lancamentos.find(
+      (l) => l.origemId === orcamento.id
+    )!.id
+
+    let salvou = false
+    act(() => {
+      // 3 x 2 m -> 2 peças: consumo vai de 6 para 12 m²
+      salvou = result.current.updateOrcamento(
+        orcamento.id,
+        criarDadosOrcamento({ quantidadeUnidades: 2 })
+      )
+    })
+
+    await waitFor(() => {
+      expect(salvou).toBe(true)
+      expect(
+        result.current.materiais.find((m) => m.id === estoqueInicial.id)
+          ?.quantidadeEstoque
+      ).toBe(estoqueInicial.quantidadeEstoque - 12)
+      const editado = result.current.orcamentos.find((o) => o.id === orcamento.id)!
+      expect(editado).toMatchObject({
+        numero: orcamento.numero,
+        status: "fechado",
+        quantidadeMaterialDebitada: 12,
+        materialFechado: { quantidade: 12 },
+      })
+      const receitas = result.current.lancamentos.filter(
+        (l) => l.origemId === orcamento.id
+      )
+      expect(receitas).toHaveLength(1)
+      expect(receitas[0].id).toBe(lancamentoId)
+      expect(receitas[0].valor).toBe(editado.totalFechado)
+    })
+  })
+
+  it("fecha de novo um orçamento reaberto mantendo o número", async () => {
+    const { result } = await montar()
+    const estoqueInicial = materiaisSeed.find((m) => m.id === "mat-1")!
+    let orcamento = { id: "", numero: 0 }
+    act(() => {
+      orcamento = result.current.fecharOrcamento(criarDadosOrcamento())
+    })
+    await waitFor(() =>
+      expect(result.current.lancamentos.some((l) => l.origemId === orcamento.id)).toBe(true)
+    )
+    act(() => {
+      result.current.reabrirOrcamento(orcamento.id)
+    })
+    await waitFor(() =>
+      expect(result.current.orcamentos.find((o) => o.id === orcamento.id)?.status).toBe("aberto")
+    )
+
+    act(() => {
+      result.current.updateOrcamento(orcamento.id, criarDadosOrcamento(), { fechar: true })
+    })
+
+    await waitFor(() => {
+      expect(result.current.orcamentos.find((o) => o.id === orcamento.id)).toMatchObject({
+        status: "fechado",
+        numero: orcamento.numero,
+        quantidadeMaterialDebitada: 6,
+      })
+      expect(
+        result.current.materiais.find((m) => m.id === estoqueInicial.id)?.quantidadeEstoque
+      ).toBe(estoqueInicial.quantidadeEstoque - 6)
+      expect(
+        result.current.lancamentos.filter((l) => l.origemId === orcamento.id)
+      ).toHaveLength(1)
+    })
+  })
+
+  it("não edita orçamento fechado com receita paga", async () => {
+    const { result } = await montar()
+    let orcamentoId = ""
+    act(() => {
+      orcamentoId = result.current.fecharOrcamento(criarDadosOrcamento()).id
+    })
+    await waitFor(() =>
+      expect(result.current.lancamentos.some((l) => l.origemId === orcamentoId)).toBe(true)
+    )
+    const receita = result.current.lancamentos.find((l) => l.origemId === orcamentoId)!
+    act(() => {
+      result.current.marcarLancamentoStatus(receita.id, "pago")
+    })
+
+    let salvou = true
+    act(() => {
+      salvou = result.current.updateOrcamento(
+        orcamentoId,
+        criarDadosOrcamento({ quantidadeUnidades: 2 })
+      )
+    })
+    expect(salvou).toBe(false)
+  })
+
   it("estorna só a quantidade realmente debitada quando o estoque era insuficiente", async () => {
     const { result } = await montar()
     const material = materiaisSeed.find((m) => m.id === "mat-1")!

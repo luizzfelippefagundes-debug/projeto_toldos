@@ -48,7 +48,7 @@ export function NavSheet({
 
         {extra && <div className="px-4">{extra}</div>}
 
-        <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
+        <nav className="scroll-painel flex flex-1 flex-col gap-6 px-4 pb-4">
           {grupos.map((grupo) => (
             <div key={grupo.title}>
               <p className="mb-2 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">

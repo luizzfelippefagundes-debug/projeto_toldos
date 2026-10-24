@@ -65,7 +65,11 @@ interface DataContextValue {
     anexoUrl?: string
     validadeDias?: number
   }) => Orcamento
-  updateOrcamentoAberto: (
+  // Edita um orçamento aberto ou fechado. Em fechado, refaz a baixa de
+  // estoque e atualiza o lançamento financeiro. Com `fechar`, um orçamento
+  // aberto (ex.: reaberto) volta a ser fechado mantendo o número. Devolve
+  // false se não puder editar (cancelado, ou já tem pagamento registrado).
+  updateOrcamento: (
     id: string,
     dados: {
       clienteId: string
@@ -74,8 +78,9 @@ interface DataContextValue {
       validadeDias: number
       anexoNome?: string | null
       anexoUrl?: string
-    }
-  ) => void
+    },
+    opcoes?: { fechar?: boolean }
+  ) => boolean
   reabrirOrcamento: (id: string) => boolean
   removeOrcamento: (id: string) => void
   duplicarOrcamento: (id: string) => void
@@ -398,23 +403,136 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return novo
   }
 
-  const updateOrcamentoAberto: DataContextValue["updateOrcamentoAberto"] = (id, dados) => {
-    setOrcamentos((atual) =>
-      atual.map((o) => {
-        if (o.id !== id || o.status !== "aberto") return o
-        const atualizado: typeof o = {
-          ...o,
-          clienteId: dados.clienteId,
-          item: dados.item,
-          ajusteManual: dados.ajusteManual,
-          validadeDias: dados.validadeDias,
-          anexoNome: dados.anexoNome ?? o.anexoNome,
-          anexoUrl: dados.anexoUrl ?? o.anexoUrl,
+  const updateOrcamento: DataContextValue["updateOrcamento"] = (id, dados, opcoes) => {
+    const orcamento = orcamentos.find((o) => o.id === id)
+    if (!orcamento || orcamento.status === "cancelado") return false
+
+    const base = {
+      ...orcamento,
+      clienteId: dados.clienteId,
+      item: dados.item,
+      ajusteManual: dados.ajusteManual,
+      validadeDias: dados.validadeDias,
+      anexoNome: dados.anexoNome ?? orcamento.anexoNome,
+      anexoUrl: dados.anexoUrl ?? orcamento.anexoUrl,
+    }
+
+    const estavaAberto = orcamento.status === "aberto"
+    if (estavaAberto && !opcoes?.fechar) {
+      setOrcamentos((atual) => atual.map((o) => (o.id === id ? base : o)))
+      apiPut(`/api/orcamentos/${id}`, base)
+      return true
+    }
+
+    const lancamentosRelacionados = lancamentos.filter(
+      (l) => l.origem === "orcamento" && l.origemId === id
+    )
+    if (lancamentosRelacionados.some((l) => l.status === "pago")) return false
+
+    // Estoque: devolve o que a versão antiga baixou e baixa o da nova. Aberto
+    // não tem baixa (o Reabrir já devolveu), mesmo que o campo tenha ficado.
+    const materialAntigo = estavaAberto
+      ? undefined
+      : materiais.find((m) => m.id === orcamento.item.materialId)
+    const devolver = materialAntigo
+      ? orcamento.quantidadeMaterialDebitada ??
+        quantidadeMaterialConsumida(orcamento.item, materialAntigo)
+      : 0
+    const material = materiais.find((m) => m.id === dados.item.materialId)
+    const servico = servicos.find((s) => s.id === dados.item.servicoId)
+    const cliente = clientes.find((c) => c.id === dados.clienteId)
+    const consumo = material ? quantidadeMaterialConsumida(dados.item, material) : 0
+    const estoqueDisponivel = material
+      ? material.quantidadeEstoque + (material.id === materialAntigo?.id ? devolver : 0)
+      : 0
+
+    setMateriais((atual) =>
+      atual.map((m) => {
+        const delta =
+          (m.id === materialAntigo?.id ? devolver : 0) -
+          (m.id === material?.id ? consumo : 0)
+        if (delta === 0) return m
+        const atualizado = {
+          ...m,
+          quantidadeEstoque: Math.max(0, m.quantidadeEstoque + delta),
         }
-        apiPut(`/api/orcamentos/${id}`, atualizado)
+        apiPut(`/api/materiais/${m.id}`, { ...atualizado, id: undefined })
         return atualizado
       })
     )
+
+    const resultado = material
+      ? calcularOrcamentoCompleto(
+          dados.item,
+          material,
+          servico ?? null,
+          dados.ajusteManual,
+          acabamentosSeed,
+          equipamentosAcessoSeed
+        )
+      : null
+
+    const atualizado: Orcamento = {
+      ...base,
+      status: "fechado",
+      fechadoEm: orcamento.fechadoEm ?? new Date().toISOString(),
+      quantidadeMaterialDebitada: material
+        ? Math.min(estoqueDisponivel, consumo)
+        : undefined,
+      materialFechado: material
+        ? {
+            id: material.id,
+            nome: material.nome,
+            unidade: material.unidade,
+            quantidade: consumo,
+            custo: consumo * material.precoUnitario,
+          }
+        : orcamento.materialFechado,
+      servicoFechado: servico
+        ? { nome: servico.nome, ferramentas: servico.ferramentas }
+        : undefined,
+      totalFechado: resultado?.total ?? orcamento.totalFechado,
+    }
+    setOrcamentos((atual) => atual.map((o) => (o.id === id ? atualizado : o)))
+    apiPut(`/api/orcamentos/${id}`, atualizado)
+
+    if (resultado && lancamentosRelacionados.length === 0) {
+      const lancamento: LancamentoFinanceiro = {
+        id: gerarId("lan"),
+        descricao: `Orçamento #${orcamento.numero} — ${cliente?.nome ?? "Cliente"}`,
+        tipo: "receita",
+        categoria: "Orçamento",
+        valor: resultado.total,
+        vencimento: new Date(Date.now() + dados.validadeDias * UM_DIA_MS).toISOString(),
+        status: "pendente",
+        origem: "orcamento",
+        origemId: id,
+        criadoEm: new Date().toISOString(),
+        clienteId: dados.clienteId,
+      }
+      setLancamentos((atual) => [lancamento, ...atual])
+      apiPost("/api/lancamentos", lancamento)
+    } else if (resultado) {
+      const vencimento = new Date(
+        new Date(orcamento.criadoEm).getTime() + dados.validadeDias * UM_DIA_MS
+      ).toISOString()
+      const descricao = `Orçamento #${orcamento.numero} — ${cliente?.nome ?? "Cliente"}`
+      setLancamentos((atual) =>
+        atual.map((l) => {
+          if (!(l.origem === "orcamento" && l.origemId === id)) return l
+          const novo = {
+            ...l,
+            descricao,
+            valor: resultado.total,
+            vencimento,
+            clienteId: dados.clienteId,
+          }
+          apiPut(`/api/lancamentos/${l.id}`, novo)
+          return novo
+        })
+      )
+    }
+    return true
   }
 
   const reabrirOrcamento: DataContextValue["reabrirOrcamento"] = (id) => {
@@ -674,7 +792,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeCliente,
       addEntradaEstoque,
       fecharOrcamento,
-      updateOrcamentoAberto,
+      updateOrcamento,
       reabrirOrcamento,
       removeOrcamento,
       duplicarOrcamento,

@@ -73,10 +73,10 @@ export function Sidebar() {
       {/* Navegação */}
       <nav
         className={cn(
-          "flex min-h-0 flex-1 flex-col overflow-y-auto",
+          "flex min-h-0 flex-1 flex-col",
           collapsed
-            ? "items-center gap-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            : "gap-5 -mr-1 pr-1"
+            ? "items-center gap-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            : "scroll-painel gap-5 -mr-1 pr-1 py-2"
         )}
       >
         {grupos.map((grupo, gi) => (
@@ -140,7 +140,7 @@ export function Sidebar() {
             <UserButton />
           </>
         ) : (
-          <>
+           <>
             <div className="flex min-w-0 items-center gap-2">
               <UserButton />
               <div className="min-w-0 leading-tight">

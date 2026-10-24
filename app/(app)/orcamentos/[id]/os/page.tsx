@@ -86,10 +86,18 @@ export default function OrdemDeServicoPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
-        <Button onClick={() => window.print()}>
-          <Printer className="mr-2 h-4 w-4" />
-          Imprimir OS
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/orcamentos/${orcamento.id}/orcamento`)}
+          >
+            Ver orçamento (PDF)
+          </Button>
+          <Button onClick={() => window.print()}>
+            <Printer className="mr-2 h-4 w-4" />
+            Imprimir OS
+          </Button>
+        </div>
       </div>
 
       {/* Documento imprimível */}

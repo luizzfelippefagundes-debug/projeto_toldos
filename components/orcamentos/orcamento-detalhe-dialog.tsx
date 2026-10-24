@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { OrcamentoDetalhes } from "@/components/orcamentos/orcamento-detalhes"
-import { Printer, Pencil, Copy, RotateCcw, Trash2 } from "lucide-react"
+import { Printer, FileText, Pencil, Copy, RotateCcw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 export function OrcamentoDetalheDialog({
@@ -77,14 +77,25 @@ export function OrcamentoDetalheDialog({
               <OrcamentoDetalhes orcamento={orcamento} />
 
               <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+                {orcamento.status !== "cancelado" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={<Link href={`/orcamentos/novo?editar=${orcamento.id}`} />}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Editar
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
                   nativeButton={false}
-                  render={<Link href={`/orcamentos/novo?editar=${orcamento.id}`} />}
+                  render={<Link href={`/orcamentos/${orcamento.id}/orcamento`} />}
                 >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Editar
+                  <FileText className="mr-2 h-4 w-4" />
+                  Orçamento (PDF)
                 </Button>
                 <Button
                   variant="outline"

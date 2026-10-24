@@ -128,3 +128,28 @@
     @apply font-sans;
   }
 }
+/* Rolagem de painel: barra fina e arredondada na cor do tema, que só
+   ganha destaque quando o mouse está em cima, e um esmaecido nas bordas
+   pra indicar que tem mais conteúdo acima/abaixo. */
+@utility scroll-painel {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 25%, transparent)
+    transparent;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 20px,
+    #000 calc(100% - 28px),
+    transparent
+  );
+  transition: scrollbar-color 0.2s;
+
+  &:hover {
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 55%, transparent)
+      transparent;
+  }
+}

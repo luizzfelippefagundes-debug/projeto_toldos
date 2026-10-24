@@ -72,6 +72,11 @@ export interface DeslocamentoOrcamento {
   alimentacao: number
 }
 
+export interface FotoOrcamento {
+  url: string
+  legenda: string
+}
+
 export interface OrcamentoItem {
   materialId: string
   servicoId: string
@@ -85,6 +90,9 @@ export interface OrcamentoItem {
   margemPercent?: number
   descontoPercent?: number
   impostoPercent?: number
+  // Usados só no PDF oficial; ficam dentro do item (JSONB) pra não precisar de coluna nova.
+  condicoesPagamento?: string
+  fotos?: FotoOrcamento[]
 }
 
 export interface Orcamento {

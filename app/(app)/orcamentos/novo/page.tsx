@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 import { ClienteQuickAddDialog } from "@/components/orcamento/cliente-quick-add-dialog"
 import { Stepper, type StepperStep } from "@/components/orcamento/stepper"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
@@ -27,7 +28,10 @@ import {
   isPositiveNumberInput,
 } from "@/lib/number"
 import { toast } from "sonner"
-import { Upload, FileCheck2, Printer, ArrowLeft, ArrowRight } from "lucide-react"
+import { Upload, FileCheck2, Printer, ArrowLeft, ArrowRight, X } from "lucide-react"
+import type { FotoOrcamento } from "@/lib/types"
+import { OrcamentoOficial } from "@/components/orcamentos/orcamento-oficial"
+import { ehImagem, formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 
 function numeroOuZero(valor: string): number {
   const numero = Number(valor)
@@ -52,12 +56,14 @@ export default function NovoOrcamentoPage() {
     rascunho,
     consumirRascunho,
     fecharOrcamento,
-    updateOrcamentoAberto,
+    updateOrcamento,
   } = useData()
   const router = useRouter()
   const searchParams = useSearchParams()
   const editarId = searchParams.get("editar")
-  const orcamentoEditando = editarId ? orcamentos.find((o) => o.id === editarId && o.status === "aberto") : null
+  const orcamentoEditando = editarId
+    ? orcamentos.find((o) => o.id === editarId && o.status !== "cancelado")
+    : null
   const modoEdicao = Boolean(orcamentoEditando)
 
   const [passoAtual, setPassoAtual] = useState(1)
@@ -71,6 +77,9 @@ export default function NovoOrcamentoPage() {
   const [horasEstimadas, setHorasEstimadas] = useState("")
   const [ajusteManual, setAjusteManual] = useState("0")
   const [arquivo, setArquivo] = useState<File | null>(null)
+  const [condicoesPagamento, setCondicoesPagamento] = useState("À vista")
+  const [fotos, setFotos] = useState<FotoOrcamento[]>([])
+  const [enviandoFoto, setEnviandoFoto] = useState(false)
   const [enviando, setEnviando] = useState(false)
 
   const [acabamentosAtivos, setAcabamentosAtivos] = useState<
@@ -145,8 +154,12 @@ export default function NovoOrcamentoPage() {
     setMargemPercent(String(orcamentoEditando.item.margemPercent ?? 0))
     setDescontoPercent(String(orcamentoEditando.item.descontoPercent ?? 0))
     setImpostoPercent(String(orcamentoEditando.item.impostoPercent ?? 0))
+    setCondicoesPagamento(orcamentoEditando.item.condicoesPagamento ?? "À vista")
+    setFotos(orcamentoEditando.item.fotos ?? [])
+  // Os orçamentos chegam do servidor depois da página montar; roda de novo
+  // quando o orçamento aparece, mas não a cada mudança na lista.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editarId])
+  }, [editarId, orcamentoEditando?.id])
 
   // `rascunho` vem da tela de Histórico (Duplicar) e só existe uma vez, no
   // momento em que esta página monta — mesmo caso já aceito para o
@@ -194,13 +207,14 @@ export default function NovoOrcamentoPage() {
     setMargemPercent(String(rascunho.item.margemPercent ?? 0))
     setDescontoPercent(String(rascunho.item.descontoPercent ?? 0))
     setImpostoPercent(String(rascunho.item.impostoPercent ?? 0))
+    setCondicoesPagamento(rascunho.item.condicoesPagamento ?? "À vista")
+    setFotos(rascunho.item.fotos ?? [])
     consumirRascunho()
   }, [rascunho, consumirRascunho])
 
   const material = materiais.find((m) => m.id === materialId)
   const servico = servicos.find((s) => s.id === servicoId)
   const cliente = clientes.find((c) => c.id === clienteId)
-  const equipamento = equipamentosAcessoSeed.find((e) => e.id === equipamentoId)
 
   const item = useMemo(
     () => ({
@@ -238,6 +252,8 @@ export default function NovoOrcamentoPage() {
       margemPercent: numeroOuZero(margemPercent),
       descontoPercent: numeroOuZero(descontoPercent),
       impostoPercent: numeroOuZero(impostoPercent),
+      condicoesPagamento: condicoesPagamento.trim() || undefined,
+      fotos: fotos.length > 0 ? fotos : undefined,
     }),
     [
       materialId,
@@ -262,6 +278,8 @@ export default function NovoOrcamentoPage() {
       margemPercent,
       descontoPercent,
       impostoPercent,
+      condicoesPagamento,
+      fotos,
     ]
   )
 
@@ -350,6 +368,44 @@ export default function NovoOrcamentoPage() {
   ].filter((p): p is string => Boolean(p))
   const podeFechar = dadosValidos
 
+  // Dados do PDF oficial. Orçamento novo ainda não tem número: usa o próximo
+  // da sequência (mesma regra do data-context), que é o que ele vai receber.
+  const dataPdf = orcamentoEditando?.criadoEm ?? new Date().toISOString()
+  const numeroPdf = formatarNumeroOrcamento(
+    orcamentoEditando?.numero ??
+      orcamentos.reduce((max, o) => Math.max(max, o.numero), 1000) + 1,
+    dataPdf
+  )
+  const [urlAnexoLocal, setUrlAnexoLocal] = useState<string | null>(null)
+  useEffect(() => {
+    if (!arquivo || !ehImagem(arquivo.type)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUrlAnexoLocal(null)
+      return
+    }
+    const url = URL.createObjectURL(arquivo)
+    setUrlAnexoLocal(url)
+    return () => URL.revokeObjectURL(url)
+  }, [arquivo])
+  const urlAnexoPdf =
+    urlAnexoLocal ??
+    (!arquivo && orcamentoEditando?.anexoUrl && ehImagem(orcamentoEditando.anexoNome)
+      ? orcamentoEditando.anexoUrl
+      : null)
+  const fotosPdf = [...(urlAnexoPdf ? [{ url: urlAnexoPdf, legenda: "" }] : []), ...fotos]
+
+  const linhasPdf =
+    material && resultado
+      ? gerarLinhasOrcamento({
+          item,
+          nomeMaterial: material.nome,
+          unidadeMaterial: material.unidade,
+          acabamentosDisponiveis: acabamentosSeed,
+          resultado,
+          total: resultado.total,
+        })
+      : []
+
   function irPara(passo: number) {
     setPassoAtual(Math.min(Math.max(passo, 1), passos.length))
   }
@@ -362,7 +418,7 @@ export default function NovoOrcamentoPage() {
     window.print()
   }
 
-  async function handleSalvarEdicao() {
+  async function handleSalvarEdicao(fechar = false) {
     if (!podeFechar || !orcamentoEditando) return
     setEnviando(true)
     try {
@@ -380,15 +436,19 @@ export default function NovoOrcamentoPage() {
         novoAnexoUrl = url
         novoAnexoNome = arquivo.name
       }
-      updateOrcamentoAberto(orcamentoEditando.id, {
+      const salvou = updateOrcamento(orcamentoEditando.id, {
         clienteId: clienteId,
         item,
         ajusteManual: numeroOuZero(ajusteManual),
         validadeDias: numeroOuZero(validadeDias),
         anexoNome: novoAnexoNome,
         anexoUrl: novoAnexoUrl,
-      })
-      toast.success("Orçamento atualizado.")
+      }, { fechar })
+      if (!salvou) {
+        toast.error("Este orçamento já tem pagamento registrado no financeiro e não pode ser editado.")
+        return
+      }
+      toast.success(fechar ? "Orçamento fechado." : "Orçamento atualizado.")
       router.push("/orcamentos")
     } catch {
       toast.error("Erro ao salvar alterações.")
@@ -449,12 +509,41 @@ export default function NovoOrcamentoPage() {
       }
 
       toast.success(`Orçamento fechado para ${cliente.nome}`)
-      router.push(`/orcamentos/${orcamento.id}/os`)
+      router.push(`/orcamentos/${orcamento.id}/orcamento`)
     } catch {
       toast.error("Erro ao enviar arquivo. Tente novamente.")
     } finally {
       setEnviando(false)
     }
+  }
+
+  async function adicionarFotos(arquivos: FileList | null) {
+    const imagens = Array.from(arquivos ?? []).filter((f) => f.type.startsWith("image/"))
+    if (imagens.length === 0) return
+    setEnviandoFoto(true)
+    try {
+      const novas: FotoOrcamento[] = []
+      for (const imagem of imagens) {
+        const form = new FormData()
+        form.append("file", imagem)
+        const res = await fetch("/api/upload", { method: "POST", body: form })
+        if (!res.ok) {
+          toast.error(`Falha ao enviar ${imagem.name}`)
+          continue
+        }
+        const { url } = await res.json()
+        novas.push({ url, legenda: "" })
+      }
+      setFotos((atual) => [...atual, ...novas])
+    } finally {
+      setEnviandoFoto(false)
+    }
+  }
+
+  // Na edição a tela é uma página única: todos os blocos aparecem juntos,
+  // sem etapas, pra alterar só o campo que precisa.
+  function mostrarPasso(passo: number) {
+    return modoEdicao || passoAtual === passo
   }
 
   function toggleAcabamento(id: string, ativo: boolean) {
@@ -467,30 +556,77 @@ export default function NovoOrcamentoPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="print:hidden">
-        <h1 className="text-2xl font-semibold">
-          {modoEdicao ? `Editar Orçamento #${orcamentoEditando?.numero}` : "Novo Orçamento"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {modoEdicao
-            ? "Altere os dados e salve. O orçamento continua aberto."
-            : "Preencha os passos abaixo — o valor é calculado automaticamente."}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3 print:hidden">
+        <div>
+          <h1 className="text-2xl font-semibold">
+            {modoEdicao ? `Editar Orçamento #${orcamentoEditando?.numero}` : "Novo Orçamento"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {modoEdicao
+              ? "Altere o que precisar e salve. O total ao lado atualiza na hora."
+              : "Preencha os passos abaixo — o valor é calculado automaticamente."}
+          </p>
+        </div>
+        {modoEdicao && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => router.push("/orcamentos")}>
+              Cancelar
+            </Button>
+            <Button variant="outline" onClick={handleGerarPdf}>
+              <Printer className="mr-2 h-4 w-4" />
+              PDF
+            </Button>
+            <Button
+              variant={orcamentoEditando?.status === "aberto" ? "outline" : "default"}
+              disabled={!podeFechar || enviando}
+              onClick={() => handleSalvarEdicao()}
+            >
+              {enviando ? "Salvando..." : "Salvar"}
+            </Button>
+            {orcamentoEditando?.status === "aberto" && (
+              <Button disabled={!podeFechar || enviando} onClick={() => handleSalvarEdicao(true)}>
+                Salvar e fechar
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
-      <Card className="print:hidden">
-        <CardContent className="pt-6">
-          <Stepper passos={passos} atual={passoAtual} />
-        </CardContent>
-      </Card>
+      {!modoEdicao && (
+        <Card className="print:hidden">
+          <CardContent className="pt-6">
+            <Stepper passos={passos} atual={passoAtual} />
+          </CardContent>
+        </Card>
+      )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2 print:hidden">
-          {passoAtual === 1 && (
+      <div className="hidden print:block">
+        <OrcamentoOficial
+          clienteNome={cliente?.nome ?? "—"}
+          data={dataPdf}
+          numero={numeroPdf}
+          linhas={linhasPdf}
+          total={resultado?.total ?? 0}
+          condicoes={condicoesPagamento.trim() || "À vista"}
+          fotos={fotosPdf}
+        />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3 print:hidden">
+        <div
+          className={cn(
+            "flex flex-col gap-6 lg:col-span-2 print:hidden",
+            // Edição: só os campos rolam; menu e resumo ficam parados.
+            // Os blocos não podem encolher pra caber na altura, senão cortam.
+            modoEdicao &&
+              "lg:scroll-painel lg:h-[calc(100dvh-10rem)] lg:py-5 lg:pr-3 lg:[&>*]:shrink-0"
+          )}
+        >
+          {mostrarPasso(1) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Etapa 1 de 6 — Cliente
+                  {modoEdicao ? "" : "Etapa 1 de 6 — "}Cliente
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap items-end gap-4">
@@ -521,11 +657,11 @@ export default function NovoOrcamentoPage() {
             </Card>
           )}
 
-          {passoAtual === 2 && (
+          {mostrarPasso(2) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Etapa 2 de 6 — Produto e medidas
+                  {modoEdicao ? "" : "Etapa 2 de 6 — "}Produto e medidas
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
@@ -644,11 +780,11 @@ export default function NovoOrcamentoPage() {
             </Card>
           )}
 
-          {passoAtual === 3 && (
+          {mostrarPasso(3) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Etapa 3 de 6 — Acabamentos
+                  {modoEdicao ? "" : "Etapa 3 de 6 — "}Acabamentos
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
@@ -696,11 +832,11 @@ export default function NovoOrcamentoPage() {
             </Card>
           )}
 
-          {passoAtual === 4 && (
+          {mostrarPasso(4) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Etapa 4 de 6 — Instalação e logística
+                  {modoEdicao ? "" : "Etapa 4 de 6 — "}Instalação e logística
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-6">
@@ -882,11 +1018,11 @@ export default function NovoOrcamentoPage() {
             </Card>
           )}
 
-          {passoAtual === 5 && (
+          {mostrarPasso(5) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Etapa 5 de 6 — Precificação
+                  {modoEdicao ? "" : "Etapa 5 de 6 — "}Precificação
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
@@ -1001,11 +1137,11 @@ export default function NovoOrcamentoPage() {
             </Card>
           )}
 
-          {passoAtual === 6 && (
+          {mostrarPasso(6) && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Etapa 6 de 6 — Foto ou vídeo do local (opcional)
+                  {modoEdicao ? "" : "Etapa 6 de 6 — "}Foto ou vídeo do local (opcional)
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
@@ -1056,7 +1192,83 @@ export default function NovoOrcamentoPage() {
             </Card>
           )}
 
-          <div className="flex justify-between print:hidden">
+          {mostrarPasso(6) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Dados do orçamento (PDF)</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="condicoes">Condições de pagamento</Label>
+                  <Input
+                    id="condicoes"
+                    value={condicoesPagamento}
+                    onChange={(e) => setCondicoesPagamento(e.target.value)}
+                    placeholder="Ex: À vista, 50% entrada + 50% na entrega"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label>Mais fotos para o PDF (opcional)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    A foto anexada acima já entra no PDF. Aqui você pode
+                    adicionar outras e escrever legenda.
+                  </p>
+                  {fotos.length > 0 && (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {fotos.map((f, i) => (
+                        <div key={`${f.url}-${i}`} className="flex flex-col gap-2 rounded-md border border-border p-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={f.url} alt="" className="h-28 w-full rounded object-contain" />
+                          <div className="flex gap-2">
+                            <Input
+                              value={f.legenda}
+                              placeholder="Legenda (ex: Placa)"
+                              onChange={(e) =>
+                                setFotos((atual) =>
+                                  atual.map((x, j) => (j === i ? { ...x, legenda: e.target.value } : x))
+                                )
+                              }
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              aria-label="Remover foto"
+                              onClick={() => setFotos((atual) => atual.filter((_, j) => j !== i))}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <label
+                    htmlFor="fotos-pdf"
+                    className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border py-4 text-sm text-muted-foreground transition-colors hover:bg-accent"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {enviandoFoto ? "Enviando…" : "Adicionar fotos"}
+                  </label>
+                  <input
+                    id="fotos-pdf"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    disabled={enviandoFoto}
+                    onChange={(e) => {
+                      adicionarFotos(e.target.files)
+                      e.target.value = ""
+                    }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className={modoEdicao ? "hidden" : "flex justify-between print:hidden"}>
             <Button
               variant="outline"
               onClick={() => irPara(passoAtual - 1)}
@@ -1080,17 +1292,6 @@ export default function NovoOrcamentoPage() {
               <CardTitle className="text-base">Resumo do orçamento</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
-              <div className="hidden print:block">
-                <p className="font-semibold">Orçamento — Toldos Print</p>
-                <p>Cliente: {cliente?.nome ?? "—"}</p>
-                <p>Material: {material?.nome ?? "—"}</p>
-                <p>Serviço: {servico?.nome ?? "—"}</p>
-                <p>Equipamento de acesso: {equipamento?.nome ?? "—"}</p>
-                <p>
-                  Válido até:{" "}
-                  {validoAte ? formatarData(validoAte.toISOString()) : "—"}
-                </p>
-              </div>
 
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Área</span>
@@ -1163,6 +1364,14 @@ export default function NovoOrcamentoPage() {
                   {resultado ? formatarMoeda(resultado.total) : formatarMoeda(0)}
                 </span>
               </div>
+              {orcamentoEditando?.totalFechado !== undefined &&
+                resultado &&
+                Math.abs(orcamentoEditando.totalFechado - resultado.total) > 0.005 && (
+                  <div className="flex justify-between text-xs text-muted-foreground print:hidden">
+                    <span>Antes da edição</span>
+                    <span>{formatarMoeda(orcamentoEditando.totalFechado)}</span>
+                  </div>
+                )}
               <div className="flex justify-between text-xs text-muted-foreground print:hidden">
                 <span>Válido até</span>
                 <span>
@@ -1176,9 +1385,20 @@ export default function NovoOrcamentoPage() {
                   Gerar PDF
                 </Button>
                 {modoEdicao ? (
-                  <Button disabled={!podeFechar || enviando} onClick={handleSalvarEdicao}>
-                    {enviando ? "Salvando..." : "Salvar Alterações"}
-                  </Button>
+                  <>
+                    <Button disabled={!podeFechar || enviando} onClick={() => handleSalvarEdicao()}>
+                      {enviando ? "Salvando..." : "Salvar Alterações"}
+                    </Button>
+                    {orcamentoEditando?.status === "aberto" && (
+                      <Button
+                        variant="secondary"
+                        disabled={!podeFechar || enviando}
+                        onClick={() => handleSalvarEdicao(true)}
+                      >
+                        Salvar e fechar orçamento
+                      </Button>
+                    )}
+                  </>
                 ) : (
                   <Button disabled={!podeFechar || enviando} onClick={handleFechar}>
                     {enviando ? "Enviando..." : "Fechar Orçamento"}
