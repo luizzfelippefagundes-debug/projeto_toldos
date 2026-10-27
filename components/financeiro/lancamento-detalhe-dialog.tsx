@@ -25,6 +25,8 @@ import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-di
 import { useData } from "@/context/data-context"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { estaLancamentoVencido } from "@/lib/financeiro"
+import { resumirSerie } from "@/lib/series"
+import { Input } from "@/components/ui/input"
 import type { LancamentoFinanceiro } from "@/lib/types"
 import { MessageCircle, Pencil, Receipt, Trash2, CheckCircle2, Clock } from "lucide-react"
 import { toast } from "sonner"
@@ -51,6 +53,7 @@ export function LancamentoDetalheDialog({
   const router = useRouter()
   const [confirmarRemocao, setConfirmarRemocao] = useState(false)
   const [editAberto, setEditAberto] = useState(false)
+  const [quantasPagas, setQuantasPagas] = useState("")
 
   if (!lancamento) return null
 
@@ -96,6 +99,28 @@ export function LancamentoDetalheDialog({
         : `${alvos.length} lançamento${alvos.length === 1 ? "" : "s"} voltou${alvos.length === 1 ? "" : "ram"} para a empresa.`
     )
     onOpenChange(false)
+  }
+
+  const serie = resumirSerie(lancamentos, lancamento)
+
+  // Marca as N primeiras parcelas ainda pendentes da série como pagas, cada
+  // uma na data do próprio vencimento (não "hoje").
+  function marcarPrimeirasPagas() {
+    if (!serie) return
+    const n = Number(quantasPagas)
+    if (!Number.isInteger(n) || n < 1 || n > serie.pendentes.length) {
+      toast.error(`Informe de 1 a ${serie.pendentes.length}.`)
+      return
+    }
+    serie.pendentes.slice(0, n).forEach((l) => {
+      updateLancamento(l.id, {
+        ...l,
+        status: "pago",
+        pagoEm: new Date(new Date(l.vencimento).getTime()).toISOString(),
+      })
+    })
+    toast.success(`${n} parcela${n === 1 ? "" : "s"} marcada${n === 1 ? "" : "s"} como paga${n === 1 ? "" : "s"}.`)
+    setQuantasPagas("")
   }
 
   function mandarLembrete() {
@@ -201,6 +226,53 @@ export function LancamentoDetalheDialog({
                 <p className="capitalize">{lancamento.origem}</p>
               </div>
             </div>
+
+            {serie && (
+              <div className="flex flex-col gap-3 rounded-lg border border-border p-3 text-sm">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="font-medium">
+                    {serie.nome}: {serie.pagas.length} de {serie.parcelas.length} pagas
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    quita em {formatarData(serie.quitaEm)}
+                  </p>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${(serie.pagas.length / serie.parcelas.length) * 100}%` }}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Já pagou</p>
+                    <p className="font-semibold">{formatarMoeda(serie.valorPago)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Falta ({serie.pendentes.length} parcela{serie.pendentes.length === 1 ? "" : "s"})
+                    </p>
+                    <p className="font-semibold text-destructive">{formatarMoeda(serie.valorRestante)}</p>
+                  </div>
+                </div>
+                {serie.pendentes.length > 0 && (
+                  <div className="flex items-center gap-2 border-t border-border pt-3">
+                    <Input
+                      type="number"
+                      min="1"
+                      max={serie.pendentes.length}
+                      placeholder="Quantas?"
+                      className="w-28"
+                      value={quantasPagas}
+                      onChange={(e) => setQuantasPagas(e.target.value)}
+                    />
+                    <Button variant="outline" size="sm" onClick={marcarPrimeirasPagas}>
+                      Marcar as primeiras como pagas
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Ações */}
             <div className="flex flex-wrap gap-2 border-t border-border pt-3">

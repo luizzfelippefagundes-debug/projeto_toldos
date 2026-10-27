@@ -24,13 +24,14 @@ import {
 import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-dialog"
 import { LancamentoDetalheDialog } from "@/components/financeiro/lancamento-detalhe-dialog"
 import { formatarData, formatarMoeda } from "@/lib/format"
+import { agruparPagasDaSerie } from "@/lib/series"
 import {
   estaLancamentoVencido,
   resumirFinanceiro,
 } from "@/lib/financeiro"
 import type { LancamentoFinanceiro, TipoLancamento } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { Plus } from "lucide-react"
+import { ChevronRight, Plus } from "lucide-react"
 
 const rotuloFormaPagamento: Record<string, string> = {
   boleto: "Boleto",
@@ -47,6 +48,12 @@ export default function FinanceiroPage() {
   const [selecionado, setSelecionado] = useState<LancamentoFinanceiro | null>(null)
   // Despesas pessoais ficam fora dos totais, a não ser que a pessoa queira ver tudo junto.
   const [incluirPessoais, setIncluirPessoais] = useState(false)
+  // Séries (financiamento etc.) com as parcelas pagas abertas na lista.
+  const [seriesAbertas, setSeriesAbertas] = useState<Set<string>>(new Set())
+
+  function abrirSerie(chave: string) {
+    setSeriesAbertas((atual) => new Set(atual).add(chave))
+  }
 
   const [hoje, setHoje] = useState<Date | null>(null)
   useEffect(() => {
@@ -73,6 +80,11 @@ export default function FinanceiroPage() {
       .filter((l) => filtroCliente === "todos" || l.clienteId === filtroCliente)
       .sort((a, b) => new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime())
   }, [lancamentos, filtroTipo, filtroCliente])
+
+  const itensLista = useMemo(
+    () => agruparPagasDaSerie(ordenados, lancamentos, seriesAbertas),
+    [ordenados, lancamentos, seriesAbertas]
+  )
 
   function nomeCliente(id?: string) {
     if (!id) return "—"
@@ -272,14 +284,44 @@ export default function FinanceiroPage() {
         </Select>
       </div>
 
+      {seriesAbertas.size > 0 && (
+        <button
+          onClick={() => setSeriesAbertas(new Set())}
+          className="w-fit text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Recolher parcelas pagas
+        </button>
+      )}
+
       {/* Mobile: cards */}
       <div className="flex flex-col gap-2 md:hidden">
-        {ordenados.length === 0 ? (
+        {itensLista.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             Nenhum lançamento encontrado.
           </p>
         ) : (
-          ordenados.map((lancamento) => {
+          itensLista.map((item) => {
+            if (item.tipo === "pagas") {
+              return (
+                <button
+                  key={`pagas-${item.chave}`}
+                  onClick={() => abrirSerie(item.chave)}
+                  className="flex items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-muted/30 p-4 text-left text-sm transition-colors hover:bg-accent/50"
+                >
+                  <span className="flex items-center gap-2">
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <span>
+                      <span className="font-medium">{item.nome}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {item.itens.length} parcelas pagas — toque pra ver
+                      </span>
+                    </span>
+                  </span>
+                  <span className="font-medium text-muted-foreground">{formatarMoeda(item.total)}</span>
+                </button>
+              )
+            }
+            const lancamento = item.lancamento
             const vencido = hoje ? estaLancamentoVencido(lancamento, hoje) : false
             return (
               <button
@@ -351,7 +393,29 @@ export default function FinanceiroPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ordenados.map((lancamento) => {
+            {itensLista.map((item) => {
+              if (item.tipo === "pagas") {
+                return (
+                  <TableRow
+                    key={`pagas-${item.chave}`}
+                    onClick={() => abrirSerie(item.chave)}
+                    className="cursor-pointer bg-muted/30"
+                  >
+                    <TableCell colSpan={5} className="text-muted-foreground">
+                      <span className="flex items-center gap-2">
+                        <ChevronRight className="h-4 w-4" />
+                        <span className="font-medium text-foreground">{item.nome}</span>
+                        — {item.itens.length} parcelas pagas (clique pra ver uma por uma)
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{formatarMoeda(item.total)}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">Pagas</Badge>
+                    </TableCell>
+                  </TableRow>
+                )
+              }
+              const lancamento = item.lancamento
               const vencido = hoje ? estaLancamentoVencido(lancamento, hoje) : false
               return (
                 <TableRow
@@ -410,7 +474,7 @@ export default function FinanceiroPage() {
                 </TableRow>
               )
             })}
-            {ordenados.length === 0 && (
+            {itensLista.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   Nenhum lançamento encontrado.

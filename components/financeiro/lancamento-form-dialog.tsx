@@ -102,6 +102,8 @@ function LancamentoFormFields({
   const [pessoal, setPessoal] = useState(lancamento?.pessoal ?? false)
   // Só no lançamento novo: gera uma parcela por mês (financiamento, aluguel…).
   const [meses, setMeses] = useState("1")
+  // Dessas parcelas, quantas (as primeiras) já foram pagas: entram como pagas.
+  const [jaPagas, setJaPagas] = useState("0")
 
   const quantidadeMeses = Number(meses)
   const mesesValidos =
@@ -109,6 +111,10 @@ function LancamentoFormFields({
     (Number.isInteger(quantidadeMeses) && quantidadeMeses >= 1 && quantidadeMeses <= 60)
   const repetir = !lancamento && mesesValidos && quantidadeMeses > 1
   const datasRepeticao = repetir ? datasMensais(vencimento, quantidadeMeses) : []
+  const quantidadeJaPagas = Number(jaPagas)
+  const jaPagasValidas =
+    !repetir ||
+    (Number.isInteger(quantidadeJaPagas) && quantidadeJaPagas >= 0 && quantidadeJaPagas <= quantidadeMeses)
 
   const valido =
     descricao.trim().length > 0 &&
@@ -116,7 +122,8 @@ function LancamentoFormFields({
     isPositiveNumberInput(valor) &&
     Boolean(vencimento) &&
     Number.isFinite(new Date(`${vencimento}T00:00:00`).getTime()) &&
-    mesesValidos
+    mesesValidos &&
+    jaPagasValidas
 
   function salvar() {
     const dados = {
@@ -146,6 +153,10 @@ function LancamentoFormFields({
           ...dados,
           descricao: nomeDaParcela(dados.descricao, i, datasRepeticao.length),
           vencimento: new Date(`${data}T00:00:00`).toISOString(),
+          // As primeiras já pagas entram baixadas na data do próprio vencimento.
+          ...(i < quantidadeJaPagas
+            ? { status: "pago" as const, pagoEm: new Date(`${data}T12:00:00`).toISOString() }
+            : {}),
         })
       )
     } else {
@@ -241,6 +252,27 @@ function LancamentoFormFields({
               {repetir
                 ? `Cria ${quantidadeMeses} lançamentos de ${isPositiveNumberInput(valor) ? formatarMoeda(Number(valor)) : "R$ 0,00"}, todo mês no mesmo dia — de ${datasRepeticao[0].split("-").reverse().join("/")} até ${datasRepeticao[datasRepeticao.length - 1].split("-").reverse().join("/")}. O valor acima é o de cada parcela.`
                 : "1 = lançamento único. Use pra financiamento, aluguel e contas que se repetem: o valor acima é o de cada mês."}
+            </p>
+          </div>
+        )}
+
+        {repetir && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="ja-pagas">Dessas, quantas já foram pagas?</Label>
+            <Input
+              id="ja-pagas"
+              type="number"
+              min="0"
+              max={quantidadeMeses}
+              step="1"
+              className="sm:w-40"
+              value={jaPagas}
+              onChange={(e) => setJaPagas(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {quantidadeJaPagas > 0 && jaPagasValidas
+                ? `As ${quantidadeJaPagas} primeiras parcelas (até ${datasRepeticao[quantidadeJaPagas - 1].split("-").reverse().join("/")}) entram como pagas e o resto fica pendente. Se a primeira parcela já passou, coloque a data dela no vencimento.`
+                : "Deixe 0 se nenhuma foi paga. Se já pagou as primeiras, coloque aqui — sem precisar marcar uma por uma."}
             </p>
           </div>
         )}
