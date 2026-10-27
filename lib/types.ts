@@ -243,4 +243,6 @@ export interface LancamentoFinanceiro {
   formaPagamento?: FormaPagamento
   numeroBoleto?: string
   parcela?: ParcelaLancamento
+  // Despesa pessoal: fica fora dos totais da empresa.
+  pessoal?: boolean
 }

@@ -138,3 +138,27 @@ describe("resumo financeiro", () => {
     ).toBe(false)
   })
 })
+
+describe("despesas pessoais e a pagar do mês", () => {
+  const base = { tipo: "despesa" as const, status: "pendente" as const }
+  const dados = [
+    lancamento({ ...base, id: "este-mes", valor: 100, vencimento: new Date(2026, 8, 30, 12).toISOString() }),
+    lancamento({ ...base, id: "atrasada", valor: 50, vencimento: new Date(2026, 8, 10, 12).toISOString() }),
+    lancamento({ ...base, id: "mes-que-vem", valor: 400, vencimento: new Date(2026, 9, 5, 12).toISOString() }),
+    lancamento({ ...base, id: "pessoal", valor: 1000, pessoal: true, vencimento: new Date(2026, 8, 30, 12).toISOString() }),
+  ]
+
+  it("separa o a pagar do mês do total comprometido e deixa as pessoais de fora", () => {
+    const r = resumirFinanceiro(dados, hoje)
+    expect(r.aPagar).toBe(550)
+    expect(r.aPagarMes).toBe(150)
+    expect(r.pessoalForaDosTotais).toBe(1000)
+  })
+
+  it("inclui as pessoais quando pedido", () => {
+    const r = resumirFinanceiro(dados, hoje, "", "", true)
+    expect(r.aPagar).toBe(1550)
+    expect(r.aPagarMes).toBe(1150)
+    expect(r.pessoalForaDosTotais).toBe(0)
+  })
+})

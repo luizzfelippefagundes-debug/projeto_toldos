@@ -54,3 +54,34 @@ describe("textoCondicoesPagamento", () => {
     expect(textoCondicoesPagamento(100)).toBe("À vista")
   })
 })
+
+import { datasMensais, nomeDaParcela } from "@/lib/parcelas"
+
+describe("datasMensais", () => {
+  it("repete o mesmo dia todo mês, virando o ano", () => {
+    const datas = datasMensais("2026-10-28", 4)
+    expect(datas).toEqual(["2026-10-28", "2026-11-28", "2026-12-28", "2027-01-28"])
+  })
+
+  it("no mês sem o dia cai no último dia e volta ao dia original depois", () => {
+    expect(datasMensais("2027-01-31", 3)).toEqual(["2027-01-31", "2027-02-28", "2027-03-31"])
+  })
+
+  it("gera as 15 parcelas da Strada até 28/12/2027", () => {
+    const datas = datasMensais("2026-10-28", 15)
+    expect(datas).toHaveLength(15)
+    expect(datas[14]).toBe("2027-12-28")
+  })
+
+  it("rejeita quantidade ou data inválida", () => {
+    expect(datasMensais("2026-10-28", 0)).toEqual([])
+    expect(datasMensais("abc", 3)).toEqual([])
+  })
+})
+
+describe("nomeDaParcela", () => {
+  it("numera só quando há mais de uma parcela", () => {
+    expect(nomeDaParcela("STRADA", 2, 15)).toBe("STRADA (3/15)")
+    expect(nomeDaParcela("STRADA", 0, 1)).toBe("STRADA")
+  })
+})

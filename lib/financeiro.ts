@@ -12,6 +12,10 @@ export interface ResumoFinanceiro {
   recebiveisVencendo7Dias: number
   boletosVencendo7Dias: number
   quantidadeVencida: number
+  // Despesas pendentes que vencem até o fim do mês atual (inclui as vencidas).
+  aPagarMes: number
+  // Despesas pessoais pendentes deixadas de fora dos totais acima.
+  pessoalForaDosTotais: number
 }
 
 function dentroDoPeriodo(
@@ -64,7 +68,8 @@ export function resumirFinanceiro(
   lancamentos: LancamentoFinanceiro[],
   hoje: Date,
   dataDe = "",
-  dataAte = ""
+  dataAte = "",
+  incluirPessoais = false
 ): ResumoFinanceiro {
   const resumo: ResumoFinanceiro = {
     aReceber: 0,
@@ -76,9 +81,18 @@ export function resumirFinanceiro(
     recebiveisVencendo7Dias: 0,
     boletosVencendo7Dias: 0,
     quantidadeVencida: 0,
+    aPagarMes: 0,
+    pessoalForaDosTotais: 0,
   }
+  const fimDoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59, 999)
 
   for (const lancamento of lancamentos) {
+    if (lancamento.pessoal && !incluirPessoais) {
+      if (lancamento.status === "pendente" && lancamento.tipo === "despesa") {
+        resumo.pessoalForaDosTotais += lancamento.valor
+      }
+      continue
+    }
     const vencido = estaLancamentoVencido(lancamento, hoje)
     const dataReferencia =
       lancamento.status === "pago"
@@ -93,7 +107,13 @@ export function resumirFinanceiro(
 
     if (lancamento.status === "pendente" && noPeriodo) {
       if (lancamento.tipo === "receita") resumo.aReceber += lancamento.valor
-      else resumo.aPagar += lancamento.valor
+      else {
+        resumo.aPagar += lancamento.valor
+        const vencimento = interpretarDataLocal(lancamento.vencimento)
+        if (Number.isFinite(vencimento.getTime()) && vencimento <= fimDoMes) {
+          resumo.aPagarMes += lancamento.valor
+        }
+      }
 
       if (vencido) {
         resumo.quantidadeVencida += 1

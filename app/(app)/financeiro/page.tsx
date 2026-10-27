@@ -5,6 +5,7 @@ import { useData } from "@/context/data-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -44,6 +45,8 @@ export default function FinanceiroPage() {
   const [filtroTipo, setFiltroTipo] = useState<TipoLancamento | "todos" | "boleto">("todos")
   const [filtroCliente, setFiltroCliente] = useState("todos")
   const [selecionado, setSelecionado] = useState<LancamentoFinanceiro | null>(null)
+  // Despesas pessoais ficam fora dos totais, a não ser que a pessoa queira ver tudo junto.
+  const [incluirPessoais, setIncluirPessoais] = useState(false)
 
   const [hoje, setHoje] = useState<Date | null>(null)
   useEffect(() => {
@@ -52,8 +55,8 @@ export default function FinanceiroPage() {
   }, [])
 
   const resumo = useMemo(
-    () => resumirFinanceiro(lancamentos, hoje ?? new Date(0)),
-    [lancamentos, hoje]
+    () => resumirFinanceiro(lancamentos, hoje ?? new Date(0), "", "", incluirPessoais),
+    [lancamentos, hoje, incluirPessoais]
   )
 
   const saldo = resumo.recebido - resumo.pago
@@ -104,11 +107,16 @@ export default function FinanceiroPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              A pagar
+              A pagar este mês
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-bold text-destructive">
-            {formatarMoeda(resumo.aPagar)}
+          <CardContent>
+            <p className="text-3xl font-bold text-destructive">
+              {hoje ? formatarMoeda(resumo.aPagarMes) : "—"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Total comprometido (com parcelas futuras): {formatarMoeda(resumo.aPagar)}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -202,6 +210,19 @@ export default function FinanceiroPage() {
           </CardContent>
         </Card>
       </div>
+      {(resumo.pessoalForaDosTotais > 0 || incluirPessoais) && (
+        <label className="flex w-fit cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm">
+          <Switch checked={incluirPessoais} onCheckedChange={setIncluirPessoais} />
+          <span>
+            Incluir despesas pessoais nos totais
+            {!incluirPessoais && (
+              <span className="ml-1 text-muted-foreground">
+                ({formatarMoeda(resumo.pessoalForaDosTotais)} a pagar ficam de fora)
+              </span>
+            )}
+          </span>
+        </label>
+      )}
       <p className="text-xs text-muted-foreground">
         Valores recebidos e pagos consideram a data da baixa. Registros antigos
         sem data de baixa usam a data de criação do lançamento.
@@ -268,7 +289,14 @@ export default function FinanceiroPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{lancamento.descricao}</p>
+                    <p className="truncate font-medium">
+                      {lancamento.descricao}
+                      {lancamento.pessoal && (
+                        <Badge variant="outline" className="ml-2 px-1.5 py-0 text-[10px]">
+                          Pessoal
+                        </Badge>
+                      )}
+                    </p>
                     <p className="text-sm text-muted-foreground">{lancamento.categoria}</p>
                   </div>
                   <Badge
@@ -331,7 +359,14 @@ export default function FinanceiroPage() {
                   onClick={() => setSelecionado(lancamento)}
                   className="cursor-pointer"
                 >
-                  <TableCell className="font-medium">{lancamento.descricao}</TableCell>
+                  <TableCell className="font-medium">
+                    {lancamento.descricao}
+                    {lancamento.pessoal && (
+                      <Badge variant="outline" className="ml-2 px-1.5 py-0 text-[10px]">
+                        Pessoal
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {nomeCliente(lancamento.clienteId)}
                   </TableCell>

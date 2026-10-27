@@ -47,7 +47,7 @@ export function LancamentoDetalheDialog({
   onOpenChange: (open: boolean) => void
   hoje: Date | null
 }) {
-  const { clientes, marcarLancamentoStatus, removeLancamento, addMensagemBot } = useData()
+  const { clientes, lancamentos, updateLancamento, marcarLancamentoStatus, removeLancamento, addMensagemBot } = useData()
   const router = useRouter()
   const [confirmarRemocao, setConfirmarRemocao] = useState(false)
   const [editAberto, setEditAberto] = useState(false)
@@ -68,6 +68,33 @@ export function LancamentoDetalheDialog({
         duration: 10000,
       })
     }
+    onOpenChange(false)
+  }
+
+  // Mesma categoria e despesa, ainda não paga: dá pra marcar a série toda de uma vez
+  // (financiamento, parcelas) em vez de lançamento por lançamento.
+  const mesmaCategoria =
+    lancamento.tipo === "despesa"
+      ? lancamentos.filter(
+          (l) =>
+            l.tipo === "despesa" &&
+            l.categoria === lancamento.categoria &&
+            Boolean(l.pessoal) === Boolean(lancamento.pessoal)
+        )
+      : []
+
+  function alternarPessoal(todos: boolean) {
+    if (!lancamento) return
+    const novoValor = !lancamento.pessoal
+    const alvos = todos ? mesmaCategoria : [lancamento]
+    alvos.forEach((l) => {
+      updateLancamento(l.id, { ...l, pessoal: novoValor ? true : undefined })
+    })
+    toast.success(
+      novoValor
+        ? `${alvos.length} lançamento${alvos.length === 1 ? "" : "s"} marcado${alvos.length === 1 ? "" : "s"} como pessoal.`
+        : `${alvos.length} lançamento${alvos.length === 1 ? "" : "s"} voltou${alvos.length === 1 ? "" : "ram"} para a empresa.`
+    )
     onOpenChange(false)
   }
 
@@ -163,6 +190,12 @@ export function LancamentoDetalheDialog({
                   <p className="font-mono text-xs">{lancamento.numeroBoleto}</p>
                 </div>
               )}
+              {lancamento.pessoal && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Tipo de despesa</p>
+                  <p>Pessoal (fora dos totais)</p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-muted-foreground">Origem</p>
                 <p className="capitalize">{lancamento.origem}</p>
@@ -200,6 +233,17 @@ export function LancamentoDetalheDialog({
                 <Button variant="outline" size="sm" onClick={mandarLembrete}>
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Lembrete
+                </Button>
+              )}
+
+              {lancamento.tipo === "despesa" && (
+                <Button variant="outline" size="sm" onClick={() => alternarPessoal(false)}>
+                  {lancamento.pessoal ? "Voltar pra empresa" : "Marcar como pessoal"}
+                </Button>
+              )}
+              {mesmaCategoria.length > 1 && (
+                <Button variant="outline" size="sm" onClick={() => alternarPessoal(true)}>
+                  {lancamento.pessoal ? "Voltar" : "Marcar"} todas de “{lancamento.categoria}” ({mesmaCategoria.length})
                 </Button>
               )}
 

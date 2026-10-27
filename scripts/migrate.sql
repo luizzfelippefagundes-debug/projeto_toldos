@@ -157,3 +157,6 @@ ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS retorno JSONB;
 
 -- Entrada/restante de orçamento (recibos).
 ALTER TABLE lancamentos_financeiros ADD COLUMN IF NOT EXISTS parcela TEXT;
+
+-- Despesa pessoal fica fora dos totais da empresa.
+ALTER TABLE lancamentos_financeiros ADD COLUMN IF NOT EXISTS pessoal BOOLEAN NOT NULL DEFAULT FALSE;
