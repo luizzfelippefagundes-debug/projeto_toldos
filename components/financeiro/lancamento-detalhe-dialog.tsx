@@ -155,7 +155,7 @@ export function LancamentoDetalheDialog({
 
           <div className="flex flex-col gap-4">
             {/* Valor destaque */}
-            <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/50 px-4 py-3">
               <span
                 className={cn(
                   "text-2xl font-bold",
@@ -171,7 +171,7 @@ export function LancamentoDetalheDialog({
             </div>
 
             {/* Detalhes em grade */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 break-words text-sm">
               <div>
                 <p className="text-xs text-muted-foreground">Tipo</p>
                 <p>{lancamento.tipo === "receita" ? "Receita" : "Despesa"}</p>
@@ -269,7 +269,7 @@ export function LancamentoDetalheDialog({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-auto min-h-8 whitespace-normal py-1.5 text-left"
+                      className="h-auto min-h-8 max-w-full whitespace-normal py-1.5 text-left"
                       onClick={marcarPrimeirasPagas}
                     >
                       Marcar as primeiras como pagas
@@ -322,7 +322,7 @@ export function LancamentoDetalheDialog({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-auto min-h-8 whitespace-normal py-1.5 text-left"
+                  className="h-auto min-h-8 max-w-full whitespace-normal py-1.5 text-left"
                   onClick={() => alternarPessoal(true)}
                 >
                   {lancamento.pessoal ? "Voltar" : "Marcar"} todas de “{lancamento.categoria}” ({mesmaCategoria.length})

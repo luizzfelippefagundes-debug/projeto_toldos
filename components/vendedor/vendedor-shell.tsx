@@ -33,8 +33,8 @@ export function VendedorShell({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-background md:max-w-5xl">
       <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-card px-3 py-3 md:hidden">
-        <div className="flex flex-1 items-center">
-          <Link href="/vendedor" className="w-28">
+        <div className="flex min-w-0 flex-1 items-center">
+          <Link href="/vendedor" className="w-28 max-w-full">
             <Logo className="px-2 py-1" />
           </Link>
         </div>

@@ -57,8 +57,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col print:w-full">
         <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card px-4 py-3 md:hidden print:hidden">
-          <div className="flex flex-1 items-center">
-            <Link href="/dashboard" className="w-32">
+          <div className="flex min-w-0 flex-1 items-center">
+            <Link href="/dashboard" className="w-32 max-w-full">
               <Logo className="px-2 py-1" />
             </Link>
           </div>
