@@ -30,6 +30,7 @@ import {
 import { toast } from "sonner"
 import { Upload, FileCheck2, Printer, ArrowLeft, ArrowRight, X } from "lucide-react"
 import type { FotoOrcamento } from "@/lib/types"
+import { entradaEfetiva, textoCondicoesPagamento } from "@/lib/parcelas"
 import { OrcamentoOficial } from "@/components/orcamentos/orcamento-oficial"
 import { ehImagem, formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 
@@ -77,7 +78,10 @@ export default function NovoOrcamentoPage() {
   const [horasEstimadas, setHorasEstimadas] = useState("")
   const [ajusteManual, setAjusteManual] = useState("0")
   const [arquivo, setArquivo] = useState<File | null>(null)
-  const [condicoesPagamento, setCondicoesPagamento] = useState("À vista")
+  // Entrada cobrada ao fechar; o restante fica pra entrega. Vazio ou 0 = à vista.
+  const [entradaPercent, setEntradaPercent] = useState("50")
+  // Vazio = o texto das condições segue a entrada automaticamente.
+  const [condicoesPagamento, setCondicoesPagamento] = useState("")
   const [fotos, setFotos] = useState<FotoOrcamento[]>([])
   const [enviandoFoto, setEnviandoFoto] = useState(false)
   const [enviando, setEnviando] = useState(false)
@@ -154,7 +158,8 @@ export default function NovoOrcamentoPage() {
     setMargemPercent(String(orcamentoEditando.item.margemPercent ?? 0))
     setDescontoPercent(String(orcamentoEditando.item.descontoPercent ?? 0))
     setImpostoPercent(String(orcamentoEditando.item.impostoPercent ?? 0))
-    setCondicoesPagamento(orcamentoEditando.item.condicoesPagamento ?? "À vista")
+    setCondicoesPagamento(orcamentoEditando.item.condicoesPagamento ?? "")
+    setEntradaPercent(String(orcamentoEditando.item.entradaPercent ?? 100))
     setFotos(orcamentoEditando.item.fotos ?? [])
   // Os orçamentos chegam do servidor depois da página montar; roda de novo
   // quando o orçamento aparece, mas não a cada mudança na lista.
@@ -207,7 +212,8 @@ export default function NovoOrcamentoPage() {
     setMargemPercent(String(rascunho.item.margemPercent ?? 0))
     setDescontoPercent(String(rascunho.item.descontoPercent ?? 0))
     setImpostoPercent(String(rascunho.item.impostoPercent ?? 0))
-    setCondicoesPagamento(rascunho.item.condicoesPagamento ?? "À vista")
+    setCondicoesPagamento(rascunho.item.condicoesPagamento ?? "")
+    setEntradaPercent(String(rascunho.item.entradaPercent ?? 100))
     setFotos(rascunho.item.fotos ?? [])
     consumirRascunho()
   }, [rascunho, consumirRascunho])
@@ -253,6 +259,7 @@ export default function NovoOrcamentoPage() {
       descontoPercent: numeroOuZero(descontoPercent),
       impostoPercent: numeroOuZero(impostoPercent),
       condicoesPagamento: condicoesPagamento.trim() || undefined,
+      entradaPercent: numeroOuZero(entradaPercent),
       fotos: fotos.length > 0 ? fotos : undefined,
     }),
     [
@@ -279,6 +286,7 @@ export default function NovoOrcamentoPage() {
       descontoPercent,
       impostoPercent,
       condicoesPagamento,
+      entradaPercent,
       fotos,
     ]
   )
@@ -328,6 +336,9 @@ export default function NovoOrcamentoPage() {
       !acabamentosAtivos[acabamento.id] ||
       isPositiveNumberInput(acabamentosQtd[acabamento.id] ?? "")
   )
+  const entradaValida =
+    entradaPercent.trim() === "" ||
+    (isNonNegativeNumberInput(entradaPercent) && Number(entradaPercent) <= 100)
   const validadeValida =
     isPositiveNumberInput(validadeDias) &&
     Number.isInteger(Number(validadeDias)) &&
@@ -344,6 +355,7 @@ export default function NovoOrcamentoPage() {
     camposOpcionaisValidos &&
     acabamentosValidos &&
     validadeValida &&
+    entradaValida &&
     descontoValido &&
     horasEstimadasValidas &&
     Number.isInteger(Number(numAjudantes)) &&
@@ -361,6 +373,7 @@ export default function NovoOrcamentoPage() {
     !camposOpcionaisValidos && "revise os campos de instalação/deslocamento",
     !acabamentosValidos && "informe a quantidade dos acabamentos marcados",
     !validadeValida && "informe a validade do orçamento",
+    !entradaValida && "a entrada deve ficar entre 0% e 100%",
     !descontoValido && "o desconto deve ficar entre 0% e 100%",
     !horasEstimadasValidas && "informe as horas estimadas do serviço",
     !Number.isInteger(Number(numAjudantes)) && "revise o número de ajudantes",
@@ -607,7 +620,7 @@ export default function NovoOrcamentoPage() {
           numero={numeroPdf}
           linhas={linhasPdf}
           total={resultado?.total ?? 0}
-          condicoes={condicoesPagamento.trim() || "À vista"}
+          condicoes={condicoesPagamento.trim() || textoCondicoesPagamento(numeroOuZero(entradaPercent))}
           fotos={fotosPdf}
         />
       </div>
@@ -1092,6 +1105,27 @@ export default function NovoOrcamentoPage() {
                   </div>
                 </div>
 
+                <div className="flex flex-col gap-2 sm:w-1/2">
+                  <Label htmlFor="entrada">Entrada ao fechar (%)</Label>
+                  <Input
+                    id="entrada"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={entradaPercent}
+                    onChange={(e) => setEntradaPercent(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {(() => {
+                      const pct = entradaEfetiva(numeroOuZero(entradaPercent))
+                      const total = resultado?.total ?? 0
+                      if (pct === null) return "Sem entrada: o valor todo fica pra receber em um pagamento só."
+                      const entrada = Math.round(((total * pct) / 100) * 100) / 100
+                      return `Entrada de ${formatarMoeda(entrada)} agora e ${formatarMoeda(Math.round((total - entrada) * 100) / 100)} na entrega. Cada pagamento marcado como pago gera um recibo.`
+                    })()}
+                  </p>
+                </div>
+
                 <p className="text-xs text-muted-foreground">
                   Margem e desconto são aplicados sobre o custo total (material
                   + mão de obra + acabamentos + instalação + logística), o
@@ -1204,7 +1238,7 @@ export default function NovoOrcamentoPage() {
                     id="condicoes"
                     value={condicoesPagamento}
                     onChange={(e) => setCondicoesPagamento(e.target.value)}
-                    placeholder="Ex: À vista, 50% entrada + 50% na entrega"
+                    placeholder={textoCondicoesPagamento(numeroOuZero(entradaPercent))}
                   />
                 </div>
 

@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Factory, FileClock, Wallet, Warehouse, type LucideIcon } from "lucide-react"
+import { Factory, FileClock, PhoneCall, Wallet, Warehouse, type LucideIcon } from "lucide-react"
 import { useData } from "@/context/data-context"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { estaNosProximosDias } from "@/lib/date-window"
 import { estaLancamentoVencido } from "@/lib/financeiro"
 import { pedidoRapidoEstaAtrasado } from "@/lib/pedidos-rapidos"
+import { entraNoQuadro, retornoDoOrcamento, situacaoContato } from "@/lib/retornos"
 
 export interface Alerta {
   id: string
@@ -68,8 +69,24 @@ export function useAlertas(): Alerta[] {
     }).length
   }, [orcamentos, hoje])
 
+  const retornosPendentes = useMemo(() => {
+    if (!hoje) return 0
+    return orcamentos.filter((o) => {
+      if (!entraNoQuadro(o)) return false
+      const situacao = situacaoContato(retornoDoOrcamento(o), hoje)
+      return situacao === "hoje" || situacao === "atrasado"
+    }).length
+  }, [orcamentos, hoje])
+
   return useMemo(() => {
     const todos: Alerta[] = [
+      {
+        id: "retornos",
+        texto: `${retornosPendentes} cliente${retornosPendentes === 1 ? "" : "s"} pra retornar sobre orçamento (hoje ou atrasado)`,
+        href: "/retornos",
+        quantidade: retornosPendentes,
+        Icon: PhoneCall,
+      },
       {
         id: "estoque",
         texto: `${estoqueBaixo} ${estoqueBaixo === 1 ? "material" : "materiais"} com estoque baixo`,
@@ -108,9 +125,10 @@ export function useAlertas(): Alerta[] {
     ]
 
     return todos.filter((a) => a.quantidade > 0).filter((a) => {
-      if (papel === "dono") return true
+      // Retornos é pra todo mundo da loja correr atrás.
+      if (papel === "dono" || a.id === "retornos") return true
       if (papel === "financeiro") return a.id === "boletos" || a.id === "financeiro-vencido"
       return a.id === "estoque" || a.id === "producao"
     })
-  }, [estoqueBaixo, pedidosAtrasados, boletosVencendo, lancamentosVencidos, orcamentosValidadeVencendo, papel])
+  }, [retornosPendentes, estoqueBaixo, pedidosAtrasados, boletosVencendo, lancamentosVencidos, orcamentosValidadeVencendo, papel])
 }

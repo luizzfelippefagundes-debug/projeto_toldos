@@ -151,3 +151,9 @@ CREATE TABLE IF NOT EXISTS configuracoes (
   chave TEXT PRIMARY KEY,
   valor TEXT NOT NULL
 );
+
+-- Acompanhamento comercial do orçamento (quadro Retornos).
+ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS retorno JSONB;
+
+-- Entrada/restante de orçamento (recibos).
+ALTER TABLE lancamentos_financeiros ADD COLUMN IF NOT EXISTS parcela TEXT;

@@ -383,6 +383,74 @@ describe("fluxos de dados", () => {
     })
   })
 
+  it("fecha com entrada de 50% criando entrada e restante, e refaz as parcelas ao editar", async () => {
+    const { result } = await montar()
+    let orcamento = { id: "", numero: 0 }
+    act(() => {
+      orcamento = result.current.fecharOrcamento(
+        criarDadosOrcamento({ entradaPercent: 50 })
+      )
+    })
+
+    await waitFor(() => {
+      const parcelas = result.current.lancamentos.filter((l) => l.origemId === orcamento.id)
+      expect(parcelas.map((l) => l.parcela).sort()).toEqual(["entrada", "restante"])
+      const total = result.current.orcamentos.find((o) => o.id === orcamento.id)!.totalFechado!
+      expect(parcelas.reduce((soma, l) => soma + l.valor, 0)).toBeCloseTo(total, 2)
+      expect(parcelas.find((l) => l.parcela === "entrada")!.valor).toBeCloseTo(total / 2, 2)
+    })
+    const restanteAntes = result.current.lancamentos.find(
+      (l) => l.origemId === orcamento.id && l.parcela === "restante"
+    )!
+
+    // Edita pra 2 peças e entrada de 30%: mesmas duas parcelas, valores novos.
+    act(() => {
+      result.current.updateOrcamento(
+        orcamento.id,
+        criarDadosOrcamento({ quantidadeUnidades: 2, entradaPercent: 30 })
+      )
+    })
+    await waitFor(() => {
+      const parcelas = result.current.lancamentos.filter((l) => l.origemId === orcamento.id)
+      const total = result.current.orcamentos.find((o) => o.id === orcamento.id)!.totalFechado!
+      expect(parcelas).toHaveLength(2)
+      expect(parcelas.find((l) => l.parcela === "entrada")!.valor).toBeCloseTo(total * 0.3, 2)
+      expect(parcelas.find((l) => l.parcela === "restante")!.id).toBe(restanteAntes.id)
+    })
+
+    // Volta pra pagamento único: sobra uma receita só, sem parcela.
+    act(() => {
+      result.current.updateOrcamento(orcamento.id, criarDadosOrcamento({ entradaPercent: 100 }))
+    })
+    await waitFor(() => {
+      const parcelas = result.current.lancamentos.filter((l) => l.origemId === orcamento.id)
+      expect(parcelas).toHaveLength(1)
+      expect(parcelas[0].parcela).toBeUndefined()
+    })
+  })
+
+  it("não edita orçamento depois que a entrada foi paga", async () => {
+    const { result } = await montar()
+    let orcamentoId = ""
+    act(() => {
+      orcamentoId = result.current.fecharOrcamento(criarDadosOrcamento({ entradaPercent: 50 })).id
+    })
+    await waitFor(() =>
+      expect(result.current.lancamentos.filter((l) => l.origemId === orcamentoId)).toHaveLength(2)
+    )
+    const entrada = result.current.lancamentos.find(
+      (l) => l.origemId === orcamentoId && l.parcela === "entrada"
+    )!
+    act(() => {
+      result.current.marcarLancamentoStatus(entrada.id, "pago")
+    })
+    let salvou = true
+    act(() => {
+      salvou = result.current.updateOrcamento(orcamentoId, criarDadosOrcamento({ quantidadeUnidades: 2 }))
+    })
+    expect(salvou).toBe(false)
+  })
+
   it("não edita orçamento fechado com receita paga", async () => {
     const { result } = await montar()
     let orcamentoId = ""

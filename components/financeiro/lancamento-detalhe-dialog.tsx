@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import {
   Dialog,
   DialogContent,
@@ -24,7 +26,7 @@ import { useData } from "@/context/data-context"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { estaLancamentoVencido } from "@/lib/financeiro"
 import type { LancamentoFinanceiro } from "@/lib/types"
-import { MessageCircle, Pencil, Trash2, CheckCircle2, Clock } from "lucide-react"
+import { MessageCircle, Pencil, Receipt, Trash2, CheckCircle2, Clock } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -46,6 +48,7 @@ export function LancamentoDetalheDialog({
   hoje: Date | null
 }) {
   const { clientes, marcarLancamentoStatus, removeLancamento, addMensagemBot } = useData()
+  const router = useRouter()
   const [confirmarRemocao, setConfirmarRemocao] = useState(false)
   const [editAberto, setEditAberto] = useState(false)
 
@@ -56,10 +59,15 @@ export function LancamentoDetalheDialog({
 
   function alternarStatus() {
     if (!lancamento) return
-    marcarLancamentoStatus(
-      lancamento.id,
-      lancamento.status === "pago" ? "pendente" : "pago"
-    )
+    const vaiPagar = lancamento.status !== "pago"
+    marcarLancamentoStatus(lancamento.id, vaiPagar ? "pago" : "pendente")
+    if (vaiPagar && lancamento.tipo === "receita") {
+      const id = lancamento.id
+      toast.success("Pagamento registrado.", {
+        action: { label: "Gerar recibo", onClick: () => router.push(`/financeiro/${id}/recibo`) },
+        duration: 10000,
+      })
+    }
     onOpenChange(false)
   }
 
@@ -176,6 +184,17 @@ export function LancamentoDetalheDialog({
                   </>
                 )}
               </Button>
+
+              {lancamento.status === "pago" && lancamento.tipo === "receita" && (
+                <Button
+                  size="sm"
+                  nativeButton={false}
+                  render={<Link href={`/financeiro/${lancamento.id}/recibo`} />}
+                >
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Gerar recibo
+                </Button>
+              )}
 
               {lancamento.status === "pendente" && cliente && (
                 <Button variant="outline" size="sm" onClick={mandarLembrete}>

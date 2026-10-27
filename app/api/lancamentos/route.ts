@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
+import { garantirColunasLancamentos } from "@/lib/migracoes"
 import type { LancamentoFinanceiro } from "@/lib/types"
 
 function rowToLancamento(r: Record<string, unknown>): LancamentoFinanceiro {
@@ -18,25 +19,28 @@ function rowToLancamento(r: Record<string, unknown>): LancamentoFinanceiro {
     clienteId: (r.cliente_id as string) ?? undefined,
     formaPagamento: (r.forma_pagamento as LancamentoFinanceiro["formaPagamento"]) ?? undefined,
     numeroBoleto: (r.numero_boleto as string) ?? undefined,
+    parcela: (r.parcela as LancamentoFinanceiro["parcela"]) ?? undefined,
   }
 }
 
 export async function GET() {
+  await garantirColunasLancamentos()
   const rows = await getSql()`SELECT * FROM lancamentos_financeiros ORDER BY vencimento DESC`
   return NextResponse.json(rows.map(rowToLancamento))
 }
 
 export async function POST(req: Request) {
   const b: LancamentoFinanceiro = await req.json()
+  await garantirColunasLancamentos()
   await getSql()`
     INSERT INTO lancamentos_financeiros (
       id, descricao, tipo, categoria, valor, vencimento, status, pago_em,
-      origem, origem_id, criado_em, cliente_id, forma_pagamento, numero_boleto
+      origem, origem_id, criado_em, cliente_id, forma_pagamento, numero_boleto, parcela
     ) VALUES (
       ${b.id}, ${b.descricao}, ${b.tipo}, ${b.categoria}, ${b.valor},
       ${b.vencimento}, ${b.status}, ${b.pagoEm ?? null}, ${b.origem},
       ${b.origemId ?? null}, ${b.criadoEm}, ${b.clienteId ?? null},
-      ${b.formaPagamento ?? null}, ${b.numeroBoleto ?? null}
+      ${b.formaPagamento ?? null}, ${b.numeroBoleto ?? null}, ${b.parcela ?? null}
     )
   `
   return NextResponse.json(b, { status: 201 })

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
+import { garantirColunasOrcamentos } from "@/lib/migracoes"
 import type { Orcamento } from "@/lib/types"
 
 function rowToOrcamento(r: Record<string, unknown>): Orcamento {
@@ -19,21 +20,25 @@ function rowToOrcamento(r: Record<string, unknown>): Orcamento {
     criadoEm: r.criado_em as string,
     fechadoEm: (r.fechado_em as string) ?? null,
     validadeDias: r.validade_dias != null ? Number(r.validade_dias) : undefined,
+    retorno: (r.retorno as Orcamento["retorno"]) ?? undefined,
   }
 }
 
 export async function GET() {
+  await garantirColunasOrcamentos()
   const rows = await getSql()`SELECT * FROM orcamentos ORDER BY numero DESC`
   return NextResponse.json(rows.map(rowToOrcamento))
 }
 
 export async function POST(req: Request) {
   const b: Orcamento = await req.json()
+  await garantirColunasOrcamentos()
   await getSql()`
     INSERT INTO orcamentos (
       id, numero, cliente_id, item, quantidade_material_debitada,
       material_fechado, servico_fechado, total_fechado, ajuste_manual,
-      anexo_nome, anexo_url, status, criado_em, fechado_em, validade_dias
+      anexo_nome, anexo_url, status, criado_em, fechado_em, validade_dias,
+      retorno
     ) VALUES (
       ${b.id}, ${b.numero}, ${b.clienteId}, ${JSON.stringify(b.item)},
       ${b.quantidadeMaterialDebitada ?? null},
@@ -42,7 +47,8 @@ export async function POST(req: Request) {
       ${b.totalFechado ?? null}, ${b.ajusteManual},
       ${b.anexoNome ?? null}, ${b.anexoUrl ?? null},
       ${b.status}, ${b.criadoEm}, ${b.fechadoEm ?? null},
-      ${b.validadeDias ?? null}
+      ${b.validadeDias ?? null},
+      ${b.retorno ? JSON.stringify(b.retorno) : null}
     )
   `
   return NextResponse.json(b, { status: 201 })

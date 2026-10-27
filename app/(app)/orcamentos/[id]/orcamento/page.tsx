@@ -5,6 +5,7 @@ import { useData } from "@/context/data-context"
 import { Button } from "@/components/ui/button"
 import { calcularOrcamentoCompleto } from "@/lib/calculo"
 import { ehImagem, formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
+import { textoCondicoesPagamento } from "@/lib/parcelas"
 import { OrcamentoOficial } from "@/components/orcamentos/orcamento-oficial"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import { ArrowLeft, Printer } from "lucide-react"
@@ -64,7 +65,7 @@ export default function OrcamentoOficialPage() {
       : []),
     ...(orcamento.item.fotos ?? []),
   ]
-  const condicoes = orcamento.item.condicoesPagamento?.trim() || "À vista"
+  const condicoes = orcamento.item.condicoesPagamento?.trim() || textoCondicoesPagamento(orcamento.item.entradaPercent)
   const numero = formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)
 
   return (

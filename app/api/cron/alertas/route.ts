@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import { getSql } from "@/lib/db"
+import { garantirColunasOrcamentos } from "@/lib/migracoes"
+import { retornoDoOrcamento, situacaoContato } from "@/lib/retornos"
+import type { Orcamento } from "@/lib/types"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -13,12 +16,13 @@ export async function GET(req: Request) {
   const destino = process.env.ALERT_EMAIL
   if (!destino) return NextResponse.json({ ok: true, skipped: "sem ALERT_EMAIL" })
 
+  await garantirColunasOrcamentos()
   const sql = getSql()
   const agora = new Date()
   const em3Dias = new Date(agora.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   const hoje = agora.toISOString().slice(0, 10)
 
-  const [orcamentosRows, lancamentosRows, pedidosRows] = await Promise.all([
+  const [orcamentosRows, lancamentosRows, pedidosRows, emitidosRows] = await Promise.all([
     sql`
       SELECT o.numero, c.nome AS cliente_nome, o.validade_dias, o.criado_em
       FROM orcamentos o
@@ -36,7 +40,26 @@ export async function GET(req: Request) {
       FROM pedidos_rapidos
       WHERE status != 'entregue' AND prazo_entrega_em IS NOT NULL AND prazo_entrega_em < ${hoje}
     `,
+    sql`
+      SELECT o.numero, o.status, o.criado_em, o.fechado_em, o.retorno,
+             c.nome AS cliente_nome, c.telefone
+      FROM orcamentos o
+      JOIN clientes c ON c.id = o.cliente_id
+      WHERE o.status = 'fechado'
+    `,
   ])
+
+  // Quadro Retornos: clientes pra contatar hoje ou com contato atrasado.
+  const retornosPendentes = emitidosRows.filter((o) => {
+    const retorno = retornoDoOrcamento({
+      status: "fechado",
+      criadoEm: o.criado_em as string,
+      fechadoEm: (o.fechado_em as string) ?? null,
+      retorno: (o.retorno as Orcamento["retorno"]) ?? undefined,
+    } as Orcamento)
+    const situacao = situacaoContato(retorno, agora)
+    return situacao === "hoje" || situacao === "atrasado"
+  })
 
   // Filtra orçamentos vencendo em 3 dias
   const orcamentosVencendo = orcamentosRows.filter((o) => {
@@ -46,11 +69,20 @@ export async function GET(req: Request) {
     return diffMs >= 0 && diffMs <= 3 * 24 * 60 * 60 * 1000
   })
 
-  const semAlertas = orcamentosVencendo.length === 0 && lancamentosRows.length === 0 && pedidosRows.length === 0
+  const semAlertas =
+    orcamentosVencendo.length === 0 &&
+    lancamentosRows.length === 0 &&
+    pedidosRows.length === 0 &&
+    retornosPendentes.length === 0
   if (semAlertas) return NextResponse.json({ ok: true, skipped: "sem alertas" })
 
   const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
   const fmtData = (d: string) => new Date(d).toLocaleDateString("pt-BR")
+
+  const secRetornos = retornosPendentes.length > 0 ? `
+    <h3 style="color:#2563eb;margin:16px 0 8px">📞 Clientes pra retornar sobre orçamento</h3>
+    <ul>${retornosPendentes.map((o) => `<li>#${o.numero} — ${o.cliente_nome}${o.telefone ? ` — ${o.telefone}` : ""}</li>`).join("")}</ul>
+  ` : ""
 
   const secOrcamentos = orcamentosVencendo.length > 0 ? `
     <h3 style="color:#b45309;margin:16px 0 8px">⚠️ Orçamentos vencendo em 3 dias</h3>
@@ -74,7 +106,7 @@ export async function GET(req: Request) {
         <h1 style="color:#fff;margin:0;font-size:18px">Toldos Print — Alertas do dia</h1>
         <p style="color:#c7dcff;margin:4px 0 0;font-size:13px">${agora.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
       </div>
-      ${secOrcamentos}${secLancamentos}${secPedidos}
+      ${secRetornos}${secOrcamentos}${secLancamentos}${secPedidos}
     </body></html>
   `
 

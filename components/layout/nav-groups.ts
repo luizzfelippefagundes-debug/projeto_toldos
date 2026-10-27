@@ -16,6 +16,7 @@ import {
   Megaphone,
   Smartphone,
   Images,
+  PhoneCall,
   type LucideIcon,
 } from "lucide-react"
 import type { Papel } from "@/lib/types"
@@ -49,6 +50,7 @@ export const gruposNavegacao: NavGroup[] = [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Gráfica Rápida", href: "/grafica-rapida", icon: Zap },
       { label: "Novo Orçamento", href: "/orcamentos/novo", icon: FilePlus2 },
+      { label: "Retornos", href: "/retornos", icon: PhoneCall },
       { label: "Área do Vendedor", href: "/vendedor", icon: Smartphone, donoApenas: true },
       {
         label: "Histórico de Orçamentos",

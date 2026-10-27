@@ -93,6 +93,21 @@ export interface OrcamentoItem {
   // Usados só no PDF oficial; ficam dentro do item (JSONB) pra não precisar de coluna nova.
   condicoesPagamento?: string
   fotos?: FotoOrcamento[]
+  // % cobrado como entrada ao fechar; o resto é cobrado na entrega. Sem o
+  // campo (orçamentos antigos) ou 0/100, é um pagamento único.
+  entradaPercent?: number
+}
+
+// Acompanhamento comercial depois de emitir o orçamento (quadro Retornos).
+export type EtapaRetorno = "aguardando" | "negociacao" | "aprovado" | "perdido"
+
+export interface RetornoOrcamento {
+  etapa: EtapaRetorno
+  // YYYY-MM-DD: dia de entrar em contato de novo com o cliente.
+  proximoContato?: string
+  anotacao?: string
+  responsavel?: string
+  atualizadoEm: string
 }
 
 export interface Orcamento {
@@ -120,6 +135,7 @@ export interface Orcamento {
   criadoEm: string
   fechadoEm: string | null
   validadeDias?: number
+  retorno?: RetornoOrcamento
 }
 
 export interface EntradaEstoque {
@@ -208,6 +224,9 @@ export type FormaPagamento =
   | "cartao"
   | "transferencia"
 
+// Receitas de orçamento podem ser divididas em entrada + restante.
+export type ParcelaLancamento = "entrada" | "restante"
+
 export interface LancamentoFinanceiro {
   id: string
   descricao: string
@@ -223,4 +242,5 @@ export interface LancamentoFinanceiro {
   clienteId?: string
   formaPagamento?: FormaPagamento
   numeroBoleto?: string
+  parcela?: ParcelaLancamento
 }

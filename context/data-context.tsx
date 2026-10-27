@@ -18,6 +18,7 @@ import type {
   MensagemBot,
   Orcamento,
   OrcamentoItem,
+  RetornoOrcamento,
   PedidoRapido,
   ProdutoRapido,
   Servico,
@@ -25,6 +26,7 @@ import type {
   StatusPedidoRapido,
 } from "@/lib/types"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import { gerarParcelasOrcamento } from "@/lib/parcelas"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarMoeda } from "@/lib/format"
 import { criarPrazoEntregaPedido } from "@/lib/pedidos-rapidos"
@@ -81,6 +83,11 @@ interface DataContextValue {
     },
     opcoes?: { fechar?: boolean }
   ) => boolean
+  // Etapa/lembrete do quadro Retornos. Não mexe em estoque nem financeiro.
+  atualizarRetorno: (
+    id: string,
+    retorno: Omit<RetornoOrcamento, "atualizadoEm">
+  ) => void
   reabrirOrcamento: (id: string) => boolean
   removeOrcamento: (id: string) => void
   duplicarOrcamento: (id: string) => void
@@ -370,30 +377,39 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
 
     if (resultado) {
-      const lancamento: LancamentoFinanceiro = {
+      const agora = new Date()
+      const parcelas = gerarParcelasOrcamento({
+        total: resultado.total,
+        entradaPercent: dados.item.entradaPercent,
+        descricaoBase: `Orçamento #${numero} — ${cliente?.nome ?? "Cliente"}`,
+        vencimentoEntrada: agora.toISOString(),
+        vencimentoRestante: new Date(
+          agora.getTime() + (dados.validadeDias ?? 7) * UM_DIA_MS
+        ).toISOString(),
+      })
+      const novosLancamentos: LancamentoFinanceiro[] = parcelas.map((p) => ({
         id: gerarId("lan"),
-        descricao: `Orçamento #${numero} — ${cliente?.nome ?? "Cliente"}`,
+        descricao: p.descricao,
         tipo: "receita",
         categoria: "Orçamento",
-        valor: resultado.total,
-        vencimento: new Date(
-          Date.now() + (dados.validadeDias ?? 7) * UM_DIA_MS
-        ).toISOString(),
+        valor: p.valor,
+        vencimento: p.vencimento,
         status: "pendente",
         origem: "orcamento",
         origemId: novo.id,
-        criadoEm: new Date().toISOString(),
+        criadoEm: agora.toISOString(),
         clienteId: dados.clienteId,
-      }
-      setLancamentos((atual) => [lancamento, ...atual])
-      apiPost("/api/lancamentos", lancamento)
+        parcela: p.parcela,
+      }))
+      setLancamentos((atual) => [...novosLancamentos, ...atual])
+      novosLancamentos.forEach((l) => apiPost("/api/lancamentos", l))
 
       if (cliente) {
         registrarMensagemBot({
           clienteId: cliente.id,
           clienteNome: cliente.nome,
           telefone: cliente.telefone,
-          texto: `Olá! Seu orçamento #${numero} foi fechado no valor de ${formatarMoeda(resultado.total)}, válido por ${dados.validadeDias ?? 7} dias. Qualquer dúvida é só chamar por aqui.`,
+          texto: `Olá! Seu orçamento #${numero} foi fechado no valor de ${formatarMoeda(resultado.total)}${parcelas.length > 1 ? ` (entrada de ${formatarMoeda(parcelas[0].valor)} agora e ${formatarMoeda(parcelas[1].valor)} na entrega)` : ""}, válido por ${dados.validadeDias ?? 7} dias. Qualquer dúvida é só chamar por aqui.`,
           origem: "automatica",
           autor: "bot",
         })
@@ -496,43 +512,68 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setOrcamentos((atual) => atual.map((o) => (o.id === id ? atualizado : o)))
     apiPut(`/api/orcamentos/${id}`, atualizado)
 
-    if (resultado && lancamentosRelacionados.length === 0) {
-      const lancamento: LancamentoFinanceiro = {
-        id: gerarId("lan"),
-        descricao: `Orçamento #${orcamento.numero} — ${cliente?.nome ?? "Cliente"}`,
-        tipo: "receita",
-        categoria: "Orçamento",
-        valor: resultado.total,
-        vencimento: new Date(Date.now() + dados.validadeDias * UM_DIA_MS).toISOString(),
-        status: "pendente",
-        origem: "orcamento",
-        origemId: id,
-        criadoEm: new Date().toISOString(),
-        clienteId: dados.clienteId,
-      }
-      setLancamentos((atual) => [lancamento, ...atual])
-      apiPost("/api/lancamentos", lancamento)
-    } else if (resultado) {
-      const vencimento = new Date(
-        new Date(orcamento.criadoEm).getTime() + dados.validadeDias * UM_DIA_MS
-      ).toISOString()
-      const descricao = `Orçamento #${orcamento.numero} — ${cliente?.nome ?? "Cliente"}`
-      setLancamentos((atual) =>
-        atual.map((l) => {
-          if (!(l.origem === "orcamento" && l.origemId === id)) return l
-          const novo = {
-            ...l,
-            descricao,
-            valor: resultado.total,
-            vencimento,
-            clienteId: dados.clienteId,
-          }
-          apiPut(`/api/lancamentos/${l.id}`, novo)
-          return novo
-        })
-      )
+    if (resultado) {
+      // Refaz as parcelas conforme o novo total e a nova entrada. As que já
+      // existiam (mesma parcela) mantêm o id e o vencimento, que a pessoa
+      // pode ter ajustado; nada aqui está pago (checado acima).
+      const agora = new Date()
+      const parcelas = gerarParcelasOrcamento({
+        total: resultado.total,
+        entradaPercent: dados.item.entradaPercent,
+        descricaoBase: `Orçamento #${orcamento.numero} — ${cliente?.nome ?? "Cliente"}`,
+        vencimentoEntrada: agora.toISOString(),
+        vencimentoRestante: new Date(
+          new Date(orcamento.criadoEm).getTime() + dados.validadeDias * UM_DIA_MS
+        ).toISOString(),
+      })
+      const chave = (parcela: string | undefined) => parcela ?? "unica"
+      const existentes = new Map(lancamentosRelacionados.map((l) => [chave(l.parcela), l]))
+      const novos: LancamentoFinanceiro[] = parcelas.map((p) => {
+        const antigo = existentes.get(chave(p.parcela))
+        return {
+          id: antigo?.id ?? gerarId("lan"),
+          descricao: p.descricao,
+          tipo: "receita",
+          categoria: "Orçamento",
+          valor: p.valor,
+          vencimento: antigo?.vencimento ?? p.vencimento,
+          status: "pendente",
+          origem: "orcamento",
+          origemId: id,
+          criadoEm: antigo?.criadoEm ?? agora.toISOString(),
+          clienteId: dados.clienteId,
+          formaPagamento: antigo?.formaPagamento,
+          parcela: p.parcela,
+        }
+      })
+      const idsNovos = new Set(novos.map((l) => l.id))
+      lancamentosRelacionados
+        .filter((l) => !idsNovos.has(l.id))
+        .forEach((l) => apiDelete(`/api/lancamentos/${l.id}`))
+      novos.forEach((l) => {
+        if (existentes.has(chave(l.parcela))) apiPut(`/api/lancamentos/${l.id}`, l)
+        else apiPost("/api/lancamentos", l)
+      })
+      setLancamentos((atual) => [
+        ...novos,
+        ...atual.filter((l) => !(l.origem === "orcamento" && l.origemId === id)),
+      ])
     }
     return true
+  }
+
+  const atualizarRetorno: DataContextValue["atualizarRetorno"] = (id, retorno) => {
+    setOrcamentos((atual) =>
+      atual.map((o) => {
+        if (o.id !== id) return o
+        const atualizado = {
+          ...o,
+          retorno: { ...retorno, atualizadoEm: new Date().toISOString() },
+        }
+        apiPut(`/api/orcamentos/${id}`, atualizado)
+        return atualizado
+      })
+    )
   }
 
   const reabrirOrcamento: DataContextValue["reabrirOrcamento"] = (id) => {
@@ -793,6 +834,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addEntradaEstoque,
       fecharOrcamento,
       updateOrcamento,
+      atualizarRetorno,
       reabrirOrcamento,
       removeOrcamento,
       duplicarOrcamento,
