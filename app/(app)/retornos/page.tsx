@@ -218,7 +218,7 @@ export default function RetornosPage() {
       {/* Desktop: kanban com arrastar e soltar */}
       <div className="hidden md:block">
         <DndContext sensors={sensores} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             {colunas.map((col) => {
               const daColuna = cards.filter((c) => c.retorno.etapa === col.etapa)
               return (
@@ -388,7 +388,7 @@ function CardConteudo({ card, onAbrir }: { card: CardRetorno; onAbrir: () => voi
         card.situacao === "atrasado" ? "border-destructive/50" : card.situacao === "hoje" ? "border-amber-500/60" : "border-border"
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
         <span className="text-xs font-bold text-muted-foreground">
           #{formatarNumeroOrcamento(card.orcamento.numero, card.orcamento.criadoEm)}
         </span>
