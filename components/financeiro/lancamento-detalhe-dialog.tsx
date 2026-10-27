@@ -148,7 +148,7 @@ export function LancamentoDetalheDialog({
   return (
     <>
       <Dialog open={Boolean(lancamento)} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md [&>*]:min-w-0">
           <DialogHeader>
             <DialogTitle className="text-base">{lancamento.descricao}</DialogTitle>
           </DialogHeader>
@@ -229,7 +229,7 @@ export function LancamentoDetalheDialog({
 
             {serie && (
               <div className="flex flex-col gap-3 rounded-lg border border-border p-3 text-sm">
-                <div className="flex items-baseline justify-between gap-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                   <p className="font-medium">
                     {serie.nome}: {serie.pagas.length} de {serie.parcelas.length} pagas
                   </p>
@@ -256,7 +256,7 @@ export function LancamentoDetalheDialog({
                   </div>
                 </div>
                 {serie.pendentes.length > 0 && (
-                  <div className="flex items-center gap-2 border-t border-border pt-3">
+                  <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
                     <Input
                       type="number"
                       min="1"
@@ -266,7 +266,12 @@ export function LancamentoDetalheDialog({
                       value={quantasPagas}
                       onChange={(e) => setQuantasPagas(e.target.value)}
                     />
-                    <Button variant="outline" size="sm" onClick={marcarPrimeirasPagas}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-auto min-h-8 whitespace-normal py-1.5 text-left"
+                      onClick={marcarPrimeirasPagas}
+                    >
                       Marcar as primeiras como pagas
                     </Button>
                   </div>
@@ -314,7 +319,12 @@ export function LancamentoDetalheDialog({
                 </Button>
               )}
               {mesmaCategoria.length > 1 && (
-                <Button variant="outline" size="sm" onClick={() => alternarPessoal(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-auto min-h-8 whitespace-normal py-1.5 text-left"
+                  onClick={() => alternarPessoal(true)}
+                >
                   {lancamento.pessoal ? "Voltar" : "Marcar"} todas de “{lancamento.categoria}” ({mesmaCategoria.length})
                 </Button>
               )}
