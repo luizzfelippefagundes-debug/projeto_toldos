@@ -3,11 +3,11 @@
 import { useParams, useRouter } from "next/navigation"
 import { useData } from "@/context/data-context"
 import { Button } from "@/components/ui/button"
-import { calcularOrcamentoCompleto } from "@/lib/calculo"
+import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { ehImagem, formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 import { textoCondicoesPagamento } from "@/lib/parcelas"
 import { OrcamentoOficial } from "@/components/orcamentos/orcamento-oficial"
-import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import { acabamentosSeed } from "@/lib/seed-data"
 import { ArrowLeft, Printer } from "lucide-react"
 
 export default function OrcamentoOficialPage() {
@@ -31,18 +31,8 @@ export default function OrcamentoOficialPage() {
 
   const cliente = clientes.find((c) => c.id === orcamento.clienteId)
   const material = materiais.find((m) => m.id === orcamento.item.materialId)
-  const servico = servicos.find((s) => s.id === orcamento.item.servicoId)
 
-  const resultado = material
-    ? calcularOrcamentoCompleto(
-        orcamento.item,
-        material,
-        servico ?? null,
-        orcamento.ajusteManual,
-        acabamentosSeed,
-        equipamentosAcessoSeed
-      )
-    : null
+  const resultado = calcularOrcamentoSalvo(orcamento, materiais, servicos)
 
   const total = orcamento.totalFechado ?? resultado?.total ?? 0
   const nomeMaterial = orcamento.materialFechado?.nome ?? material?.nome ?? "Material removido"
@@ -56,6 +46,14 @@ export default function OrcamentoOficialPage() {
         acabamentosDisponiveis: acabamentosSeed,
         resultado,
         total,
+        adicionais: (orcamento.item.itensAdicionais ?? []).map((extra) => {
+          const materialExtra = materiais.find((m) => m.id === extra.materialId)
+          return {
+            item: extra,
+            nomeMaterial: extra.materialFechado?.nome ?? materialExtra?.nome ?? "Material removido",
+            unidadeMaterial: extra.materialFechado?.unidade ?? materialExtra?.unidade ?? ("unidade" as const),
+          }
+        }),
       })
     : []
 

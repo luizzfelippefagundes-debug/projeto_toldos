@@ -3,10 +3,12 @@
 import { useData } from "@/context/data-context"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { calcularOrcamentoCompleto, quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
+import { quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
+import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import type { Orcamento, StatusOrcamento } from "@/lib/types"
+import { ItensAdicionaisLista } from "./itens-adicionais-lista"
 
 const statusLabel: Record<StatusOrcamento, string> = {
   aberto: "Aberto",
@@ -32,16 +34,7 @@ export function OrcamentoDetalhes({ orcamento }: { orcamento: Orcamento }) {
   const material = materiais.find((m) => m.id === orcamento.item.materialId)
   const servico = servicos.find((s) => s.id === orcamento.item.servicoId)
 
-  const resultado = material
-    ? calcularOrcamentoCompleto(
-        orcamento.item,
-        material,
-        servico ?? null,
-        orcamento.ajusteManual,
-        acabamentosSeed,
-        equipamentosAcessoSeed
-      )
-    : null
+  const resultado = calcularOrcamentoSalvo(orcamento, materiais, servicos)
   const unidadeMaterial = orcamento.materialFechado?.unidade ?? material?.unidade
   const nomeMaterial =
     orcamento.materialFechado?.nome ?? material?.nome ?? "Material removido"
@@ -147,6 +140,13 @@ export function OrcamentoDetalhes({ orcamento }: { orcamento: Orcamento }) {
           </p>
         </div>
       </div>
+
+      <ItensAdicionaisLista
+        itens={orcamento.item.itensAdicionais ?? []}
+        partes={resultado?.itens.slice(1)}
+        materiais={materiais}
+        servicos={servicos}
+      />
 
       {instalacao?.incluida && (
         <>

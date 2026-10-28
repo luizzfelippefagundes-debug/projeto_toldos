@@ -4,8 +4,7 @@ import { useMemo } from "react"
 import Link from "next/link"
 import { useData } from "@/context/data-context"
 import { formatarMoeda } from "@/lib/format"
-import { calcularOrcamentoCompleto } from "@/lib/calculo"
-import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { ClienteFormDialog } from "@/components/clientes/cliente-form-dialog"
 import { Users, ChevronRight, Phone, Mail } from "lucide-react"
 
@@ -15,12 +14,7 @@ function totalOrcamento(
   servicos: ReturnType<typeof useData>["servicos"]
 ) {
   if (o.totalFechado !== undefined) return o.totalFechado
-  const mat = materiais.find((m) => m.id === o.item.materialId)
-  const srv = servicos.find((s) => s.id === o.item.servicoId)
-  if (!mat) return 0
-  return calcularOrcamentoCompleto(
-    o.item, mat, srv ?? null, o.ajusteManual, acabamentosSeed, equipamentosAcessoSeed
-  ).total
+  return calcularOrcamentoSalvo(o, materiais, servicos)?.total ?? 0
 }
 
 export default function ClientesPage() {

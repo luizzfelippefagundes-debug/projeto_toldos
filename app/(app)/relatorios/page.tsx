@@ -18,6 +18,7 @@ import { quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarMoeda, formatarData } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { resumirFinanceiro } from "@/lib/financeiro"
+import type { ItemProduto, Orcamento } from "@/lib/types"
 import { FileSpreadsheet, Printer, TrendingUp, TrendingDown, Clock, Package, FileText, Layers } from "lucide-react"
 
 function atalhosDePeriodo() {
@@ -94,17 +95,22 @@ export default function RelatoriosPage() {
   const usoMaterial = useMemo(() => {
     const porMaterial = new Map<string, { nome: string; unidade: string; quantidade: number; custo: number }>()
     for (const o of orcamentosPeriodo) {
-      const mat = materiais.find((m) => m.id === o.item.materialId)
-      const snap = o.materialFechado
-      if (!snap && !mat) continue
-      const id = snap?.id ?? mat!.id
-      const nome = snap?.nome ?? mat!.nome
-      const unidade = snap?.unidade ?? mat!.unidade
-      const qtd = snap?.quantidade ?? quantidadeMaterialConsumida(o.item, mat!)
-      const custo = snap?.custo ?? qtd * mat!.precoUnitario
-      const atual = porMaterial.get(id)
-      if (atual) { atual.quantidade += qtd; atual.custo += custo }
-      else porMaterial.set(id, { nome, unidade: unidade === "m2" ? "m²" : "un", quantidade: qtd, custo })
+      const partes: { item: ItemProduto; snap?: Orcamento["materialFechado"] }[] = [
+        { item: o.item, snap: o.materialFechado },
+        ...(o.item.itensAdicionais ?? []).map((extra) => ({ item: extra, snap: extra.materialFechado })),
+      ]
+      for (const { item, snap } of partes) {
+        const mat = materiais.find((m) => m.id === item.materialId)
+        if (!snap && !mat) continue
+        const id = snap?.id ?? mat!.id
+        const nome = snap?.nome ?? mat!.nome
+        const unidade = snap?.unidade ?? mat!.unidade
+        const qtd = snap?.quantidade ?? quantidadeMaterialConsumida(item, mat!)
+        const custo = snap?.custo ?? qtd * mat!.precoUnitario
+        const atual = porMaterial.get(id)
+        if (atual) { atual.quantidade += qtd; atual.custo += custo }
+        else porMaterial.set(id, { nome, unidade: unidade === "m2" ? "m²" : "un", quantidade: qtd, custo })
+      }
     }
     return Array.from(porMaterial.values()).sort((a, b) => b.custo - a.custo)
   }, [orcamentosPeriodo, materiais])

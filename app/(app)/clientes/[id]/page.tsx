@@ -5,8 +5,7 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { useData } from "@/context/data-context"
 import { formatarData, formatarMoeda } from "@/lib/format"
-import { calcularOrcamentoCompleto } from "@/lib/calculo"
-import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -33,12 +32,7 @@ function totalOrcamento(
   servicos: ReturnType<typeof useData>["servicos"]
 ) {
   if (o.totalFechado !== undefined) return o.totalFechado
-  const mat = materiais.find((m) => m.id === o.item.materialId)
-  const srv = servicos.find((s) => s.id === o.item.servicoId)
-  if (!mat) return 0
-  return calcularOrcamentoCompleto(
-    o.item, mat, srv ?? null, o.ajusteManual, acabamentosSeed, equipamentosAcessoSeed
-  ).total
+  return calcularOrcamentoSalvo(o, materiais, servicos)?.total ?? 0
 }
 
 export default function FichaClientePage() {
@@ -174,6 +168,8 @@ export default function FichaClientePage() {
                     <TableCell>{formatarData(o.criadoEm)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {o.materialFechado?.nome ?? mat?.nome ?? "—"}
+                      {(o.item.itensAdicionais?.length ?? 0) > 0 &&
+                        ` +${o.item.itensAdicionais!.length} ${o.item.itensAdicionais!.length === 1 ? "item" : "itens"}`}
                     </TableCell>
                     <TableCell>{formatarMoeda(totalOrcamento(o, materiais, servicos))}</TableCell>
                     <TableCell>

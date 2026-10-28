@@ -21,8 +21,7 @@ import {
 } from "@/components/ui/select"
 import { OrcamentoDetalheDialog } from "@/components/orcamentos/orcamento-detalhe-dialog"
 import { formatarData, formatarMoeda } from "@/lib/format"
-import { calcularOrcamentoCompleto } from "@/lib/calculo"
-import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import type { StatusOrcamento } from "@/lib/types"
 
 const statusLabel: Record<StatusOrcamento, string> = {
@@ -74,17 +73,7 @@ export default function HistoricoOrcamentosPage() {
     const orcamento = orcamentos.find((o) => o.id === orcamentoId)
     if (!orcamento) return 0
     if (orcamento.totalFechado !== undefined) return orcamento.totalFechado
-    const material = materiais.find((m) => m.id === orcamento.item.materialId)
-    const servico = servicos.find((s) => s.id === orcamento.item.servicoId)
-    if (!material) return 0
-    return calcularOrcamentoCompleto(
-      orcamento.item,
-      material,
-      servico ?? null,
-      orcamento.ajusteManual,
-      acabamentosSeed,
-      equipamentosAcessoSeed
-    ).total
+    return calcularOrcamentoSalvo(orcamento, materiais, servicos)?.total ?? 0
   }
 
   return (

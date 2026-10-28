@@ -4,8 +4,10 @@ import { useParams, useRouter } from "next/navigation"
 import { useData } from "@/context/data-context"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/brand/logo"
-import { calcularOrcamentoCompleto, quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
+import { ItensAdicionaisLista } from "@/components/orcamentos/itens-adicionais-lista"
+import { quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
+import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import { ArrowLeft, Printer } from "lucide-react"
 
@@ -32,16 +34,7 @@ export default function OrdemDeServicoPage() {
   const material = materiais.find((m) => m.id === orcamento.item.materialId)
   const servico = servicos.find((s) => s.id === orcamento.item.servicoId)
 
-  const resultado = material
-    ? calcularOrcamentoCompleto(
-        orcamento.item,
-        material,
-        servico ?? null,
-        orcamento.ajusteManual,
-        acabamentosSeed,
-        equipamentosAcessoSeed
-      )
-    : null
+  const resultado = calcularOrcamentoSalvo(orcamento, materiais, servicos)
 
   const unidadeMaterial = orcamento.materialFechado?.unidade ?? material?.unidade
   const nomeMaterial = orcamento.materialFechado?.nome ?? material?.nome ?? "Material removido"
@@ -179,7 +172,7 @@ export default function OrdemDeServicoPage() {
                   )}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  {resultado ? formatarMoeda(resultado.subtotalMaterial) : "—"}
+                  {resultado ? formatarMoeda(resultado.itens[0].subtotalMaterial) : "—"}
                 </td>
               </tr>
 
@@ -193,7 +186,7 @@ export default function OrdemDeServicoPage() {
                   )}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  {resultado ? formatarMoeda(resultado.subtotalMaoDeObra) : "—"}
+                  {resultado ? formatarMoeda(resultado.itens[0].subtotalMaoDeObra) : "—"}
                 </td>
               </tr>
 
@@ -203,7 +196,7 @@ export default function OrdemDeServicoPage() {
                   <td className="px-3 py-2 text-gray-500">Acabamentos</td>
                   <td className="px-3 py-2 font-medium">{acabamentosSelecionados.join(", ")}</td>
                   <td className="px-3 py-2 text-right">
-                    {resultado ? formatarMoeda(resultado.subtotalAcabamentos) : "—"}
+                    {resultado ? formatarMoeda(resultado.itens[0].subtotalAcabamentos) : "—"}
                   </td>
                 </tr>
               )}
@@ -254,6 +247,17 @@ export default function OrdemDeServicoPage() {
               </tr>
             </tfoot>
           </table>
+          {/* Só com adicionais: um div vazio com mt-4 mudaria o espaçamento dos orçamentos antigos. */}
+          {(orcamento.item.itensAdicionais?.length ?? 0) > 0 && (
+            <div className="mt-4">
+              <ItensAdicionaisLista
+                itens={orcamento.item.itensAdicionais ?? []}
+                partes={resultado?.itens.slice(1)}
+                materiais={materiais}
+                servicos={servicos}
+              />
+            </div>
+          )}
         </div>
 
         {/* Ajuste manual */}
