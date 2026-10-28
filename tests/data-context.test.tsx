@@ -519,6 +519,141 @@ describe("fluxos de dados", () => {
     })
   })
 
+  const itemAcm = {
+    id: "ad-1",
+    materialId: "mat-2",
+    servicoId: "nenhum",
+    largura: 1,
+    altura: 1,
+    quantidadeUnidades: 2,
+    horasEstimadas: 0,
+  }
+
+  it("baixa o estoque de todos os itens ao fechar e devolve ao reabrir", async () => {
+    const { result } = await montar()
+    const lona = materiaisSeed.find((m) => m.id === "mat-1")!
+    const acm = materiaisSeed.find((m) => m.id === "mat-2")!
+    let orcamentoId = ""
+
+    act(() => {
+      orcamentoId = result.current.fecharOrcamento(
+        criarDadosOrcamento({ itensAdicionais: [itemAcm] })
+      ).id
+    })
+
+    await waitFor(() => {
+      const estoque = (id: string) =>
+        result.current.materiais.find((m) => m.id === id)?.quantidadeEstoque
+      expect(estoque("mat-1")).toBe(lona.quantidadeEstoque - 6)
+      expect(estoque("mat-2")).toBe(acm.quantidadeEstoque - 2)
+      expect(result.current.orcamentos.find((o) => o.id === orcamentoId)).toMatchObject({
+        totalFechado: 608, // 418 do principal + 2 m² x 95 do adicional
+        item: { itensAdicionais: [{ quantidadeMaterialDebitada: 2 }] },
+      })
+    })
+
+    act(() => {
+      result.current.reabrirOrcamento(orcamentoId)
+    })
+
+    await waitFor(() => {
+      const estoque = (id: string) =>
+        result.current.materiais.find((m) => m.id === id)?.quantidadeEstoque
+      expect(estoque("mat-1")).toBe(lona.quantidadeEstoque)
+      expect(estoque("mat-2")).toBe(acm.quantidadeEstoque)
+    })
+  })
+
+  it("limita a baixa do adicional ao estoque e devolve só o que baixou", async () => {
+    const { result } = await montar()
+    const acm = materiaisSeed.find((m) => m.id === "mat-2")!
+    let orcamentoId = ""
+
+    act(() => {
+      orcamentoId = result.current.fecharOrcamento(
+        criarDadosOrcamento({
+          itensAdicionais: [{ ...itemAcm, largura: 5, altura: 5 }], // pede 50 m², só há 12
+        })
+      ).id
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.materiais.find((m) => m.id === "mat-2")?.quantidadeEstoque
+      ).toBe(0)
+      expect(
+        result.current.orcamentos.find((o) => o.id === orcamentoId)?.item.itensAdicionais?.[0]
+          .quantidadeMaterialDebitada
+      ).toBe(acm.quantidadeEstoque)
+    })
+
+    act(() => {
+      result.current.reabrirOrcamento(orcamentoId)
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.materiais.find((m) => m.id === "mat-2")?.quantidadeEstoque
+      ).toBe(acm.quantidadeEstoque)
+    })
+  })
+
+  it("ao editar um orçamento fechado, remover o adicional devolve o material dele", async () => {
+    const { result } = await montar()
+    const lona = materiaisSeed.find((m) => m.id === "mat-1")!
+    const acm = materiaisSeed.find((m) => m.id === "mat-2")!
+    let orcamentoId = ""
+
+    act(() => {
+      orcamentoId = result.current.fecharOrcamento(
+        criarDadosOrcamento({ itensAdicionais: [itemAcm] })
+      ).id
+    })
+    await waitFor(() =>
+      expect(result.current.materiais.find((m) => m.id === "mat-2")?.quantidadeEstoque).toBe(
+        acm.quantidadeEstoque - 2
+      )
+    )
+
+    act(() => {
+      result.current.updateOrcamento(orcamentoId, criarDadosOrcamento())
+    })
+
+    await waitFor(() => {
+      const estoque = (id: string) =>
+        result.current.materiais.find((m) => m.id === id)?.quantidadeEstoque
+      expect(estoque("mat-2")).toBe(acm.quantidadeEstoque)
+      expect(estoque("mat-1")).toBe(lona.quantidadeEstoque - 6)
+    })
+  })
+
+  it("excluir um orçamento fechado devolve o estoque de todos os itens", async () => {
+    const { result } = await montar()
+    const lona = materiaisSeed.find((m) => m.id === "mat-1")!
+    const acm = materiaisSeed.find((m) => m.id === "mat-2")!
+    let orcamentoId = ""
+
+    act(() => {
+      orcamentoId = result.current.fecharOrcamento(
+        criarDadosOrcamento({ itensAdicionais: [itemAcm] })
+      ).id
+    })
+    await waitFor(() =>
+      expect(result.current.orcamentos.some((o) => o.id === orcamentoId)).toBe(true)
+    )
+
+    act(() => {
+      result.current.removeOrcamento(orcamentoId)
+    })
+
+    await waitFor(() => {
+      const estoque = (id: string) =>
+        result.current.materiais.find((m) => m.id === id)?.quantidadeEstoque
+      expect(estoque("mat-1")).toBe(lona.quantidadeEstoque)
+      expect(estoque("mat-2")).toBe(acm.quantidadeEstoque)
+    })
+  })
+
   it("impede reabrir orçamento com receita paga sem alterar seus registros", async () => {
     const { result } = await montar()
     const estoqueInicial = materiaisSeed.find((m) => m.id === "mat-1")!

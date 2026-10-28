@@ -27,7 +27,14 @@ import type {
 } from "@/lib/types"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
 import { gerarParcelasOrcamento } from "@/lib/parcelas"
-import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
+import { calcularOrcamentoCompleto } from "@/lib/calculo"
+import {
+  deltasDeEstoque,
+  devolucoesDoOrcamento,
+  itemComBaixas,
+  itensDoOrcamento,
+  planejarBaixas,
+} from "@/lib/orcamento-itens"
 import { formatarMoeda } from "@/lib/format"
 import { criarPrazoEntregaPedido } from "@/lib/pedidos-rapidos"
 
@@ -305,18 +312,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  // Aplica uma variação de estoque por material (positiva devolve, negativa baixa).
+  function ajustarEstoque(deltas: Map<string, number>) {
+    if ([...deltas.values()].every((d) => d === 0)) return
+    setMateriais((atual) =>
+      atual.map((m) => {
+        const delta = deltas.get(m.id) ?? 0
+        if (delta === 0) return m
+        const atualizado = {
+          ...m,
+          quantidadeEstoque: Math.max(0, m.quantidadeEstoque + delta),
+        }
+        apiPut(`/api/materiais/${m.id}`, { ...atualizado, id: undefined })
+        return atualizado
+      })
+    )
+  }
+
   const fecharOrcamento: DataContextValue["fecharOrcamento"] = (dados) => {
     const material = materiais.find((m) => m.id === dados.item.materialId)
     const servico = servicos.find((s) => s.id === dados.item.servicoId)
     const cliente = clientes.find((c) => c.id === dados.clienteId)
     const numero = proximoNumeroRef.current
     proximoNumeroRef.current += 1
-    const quantidadeConsumidaSolicitada = material
-      ? quantidadeMaterialConsumida(dados.item, material)
-      : 0
-    const quantidadeMaterialDebitada = material
-      ? Math.min(material.quantidadeEstoque, quantidadeConsumidaSolicitada)
-      : undefined
+    const baixas = planejarBaixas(itensDoOrcamento(dados.item), materiais)
+    const itemFechado = itemComBaixas(dados.item, baixas, materiais)
+    const quantidadeConsumidaSolicitada = baixas[0].solicitada
+    const quantidadeMaterialDebitada = material ? baixas[0].debitada : undefined
     const resultado = material
       ? calcularOrcamentoCompleto(
           dados.item,
@@ -324,7 +346,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           servico ?? null,
           dados.ajusteManual,
           acabamentosSeed,
-          equipamentosAcessoSeed
+          equipamentosAcessoSeed,
+          { materiais, servicos }
         )
       : null
 
@@ -332,7 +355,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       id: gerarId("orc"),
       numero,
       clienteId: dados.clienteId,
-      item: dados.item,
+      item: itemFechado,
       quantidadeMaterialDebitada,
       materialFechado: material
         ? {
@@ -359,22 +382,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setOrcamentos((atual) => [novo, ...atual])
     apiPost("/api/orcamentos", novo)
 
-    if (material) {
-      setMateriais((atual) =>
-        atual.map((m) => {
-          if (m.id !== material.id) return m
-          const atualizado = {
-            ...m,
-            quantidadeEstoque: Math.max(
-              0,
-              m.quantidadeEstoque - quantidadeConsumidaSolicitada
-            ),
-          }
-          apiPut(`/api/materiais/${m.id}`, { ...atualizado, id: undefined })
-          return atualizado
-        })
-      )
-    }
+    ajustarEstoque(deltasDeEstoque(baixas, new Map()))
 
     if (resultado) {
       const agora = new Date()
@@ -447,35 +455,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     // Estoque: devolve o que a versão antiga baixou e baixa o da nova. Aberto
     // não tem baixa (o Reabrir já devolveu), mesmo que o campo tenha ficado.
-    const materialAntigo = estavaAberto
-      ? undefined
-      : materiais.find((m) => m.id === orcamento.item.materialId)
-    const devolver = materialAntigo
-      ? orcamento.quantidadeMaterialDebitada ??
-        quantidadeMaterialConsumida(orcamento.item, materialAntigo)
-      : 0
+    const devolucoes = estavaAberto
+      ? new Map<string, number>()
+      : devolucoesDoOrcamento(orcamento, materiais)
+    const baixas = planejarBaixas(itensDoOrcamento(dados.item), materiais, devolucoes)
+    const itemFechado = itemComBaixas(dados.item, baixas, materiais)
     const material = materiais.find((m) => m.id === dados.item.materialId)
     const servico = servicos.find((s) => s.id === dados.item.servicoId)
     const cliente = clientes.find((c) => c.id === dados.clienteId)
-    const consumo = material ? quantidadeMaterialConsumida(dados.item, material) : 0
-    const estoqueDisponivel = material
-      ? material.quantidadeEstoque + (material.id === materialAntigo?.id ? devolver : 0)
-      : 0
+    const consumo = baixas[0].solicitada
 
-    setMateriais((atual) =>
-      atual.map((m) => {
-        const delta =
-          (m.id === materialAntigo?.id ? devolver : 0) -
-          (m.id === material?.id ? consumo : 0)
-        if (delta === 0) return m
-        const atualizado = {
-          ...m,
-          quantidadeEstoque: Math.max(0, m.quantidadeEstoque + delta),
-        }
-        apiPut(`/api/materiais/${m.id}`, { ...atualizado, id: undefined })
-        return atualizado
-      })
-    )
+    ajustarEstoque(deltasDeEstoque(baixas, devolucoes))
 
     const resultado = material
       ? calcularOrcamentoCompleto(
@@ -484,17 +474,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
           servico ?? null,
           dados.ajusteManual,
           acabamentosSeed,
-          equipamentosAcessoSeed
+          equipamentosAcessoSeed,
+          { materiais, servicos }
         )
       : null
 
     const atualizado: Orcamento = {
       ...base,
       status: "fechado",
+      item: itemFechado,
       fechadoEm: orcamento.fechadoEm ?? new Date().toISOString(),
-      quantidadeMaterialDebitada: material
-        ? Math.min(estoqueDisponivel, consumo)
-        : undefined,
+      quantidadeMaterialDebitada: material ? baixas[0].debitada : undefined,
       materialFechado: material
         ? {
             id: material.id,
@@ -586,22 +576,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       )
       if (lancamentosRelacionados.some((l) => l.status === "pago")) return false
 
-      const material = materiais.find(
-        (m) => m.id === orcamento.item.materialId
-      )
-      if (material) {
-        const consumido =
-          orcamento.quantidadeMaterialDebitada ??
-          quantidadeMaterialConsumida(orcamento.item, material)
-        setMateriais((atual) =>
-          atual.map((m) => {
-            if (m.id !== material.id) return m
-            const atualizado = { ...m, quantidadeEstoque: m.quantidadeEstoque + consumido }
-            apiPut(`/api/materiais/${m.id}`, { ...atualizado, id: undefined })
-            return atualizado
-          })
-        )
-      }
+      ajustarEstoque(devolucoesDoOrcamento(orcamento, materiais))
 
       lancamentosRelacionados.forEach((l) => apiDelete(`/api/lancamentos/${l.id}`))
       setLancamentos((atual) =>
@@ -624,20 +599,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (!orcamento) return
 
     if (orcamento.status === "fechado") {
-      const material = materiais.find((m) => m.id === orcamento.item.materialId)
-      if (material) {
-        const consumido =
-          orcamento.quantidadeMaterialDebitada ??
-          quantidadeMaterialConsumida(orcamento.item, material)
-        setMateriais((atual) =>
-          atual.map((m) => {
-            if (m.id !== material.id) return m
-            const atualizado = { ...m, quantidadeEstoque: m.quantidadeEstoque + consumido }
-            apiPut(`/api/materiais/${m.id}`, { ...atualizado, id: undefined })
-            return atualizado
-          })
-        )
-      }
+      ajustarEstoque(devolucoesDoOrcamento(orcamento, materiais))
       const relacionados = lancamentos.filter(
         (l) => l.origem === "orcamento" && l.origemId === id
       )
