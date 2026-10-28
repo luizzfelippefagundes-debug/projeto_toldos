@@ -381,6 +381,31 @@ export default function NovoOrcamentoPage() {
   ].filter((p): p is string => Boolean(p))
   const podeFechar = dadosValidos
 
+  // Pendências por etapa: no passo a passo o "Próximo" só libera quando a
+  // etapa atual está certa, pra ninguém chegar no fim sem saber o que faltou.
+  const pendenciasPorPasso: Record<number, (string | false | undefined)[]> = {
+    1: [!cliente && "selecione o cliente"],
+    2: [
+      !material && "selecione o material",
+      material && !medidasValidas && "preencha as medidas corretamente",
+      !horasEstimadasValidas && "informe as horas estimadas do serviço",
+    ],
+    3: [!acabamentosValidos && "informe a quantidade dos acabamentos marcados"],
+    4: [
+      !camposOpcionaisValidos && "revise os campos de instalação/deslocamento",
+      !Number.isInteger(Number(numAjudantes)) && "revise o número de ajudantes",
+    ],
+    5: [
+      !validadeValida && "informe a validade do orçamento",
+      !entradaValida && "a entrada deve ficar entre 0% e 100%",
+      !descontoValido && "o desconto deve ficar entre 0% e 100%",
+      !isFiniteNumberInput(ajusteManual) && "revise o ajuste manual",
+    ],
+  }
+  const pendenciasPassoAtual = (pendenciasPorPasso[passoAtual] ?? []).filter(
+    (p): p is string => Boolean(p)
+  )
+
   // Dados do PDF oficial. Orçamento novo ainda não tem número: usa o próximo
   // da sequência (mesma regra do data-context), que é o que ele vai receber.
   const dataPdf = orcamentoEditando?.criadoEm ?? new Date().toISOString()
@@ -420,6 +445,10 @@ export default function NovoOrcamentoPage() {
       : []
 
   function irPara(passo: number) {
+    if (passo > passoAtual && pendenciasPassoAtual.length > 0) {
+      toast.error(`Falta: ${pendenciasPassoAtual.join(", ")}`)
+      return
+    }
     setPassoAtual(Math.min(Math.max(passo, 1), passos.length))
   }
 
@@ -581,7 +610,7 @@ export default function NovoOrcamentoPage() {
           </p>
         </div>
         {modoEdicao && (
-          <div className="flex gap-2">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <Button variant="outline" onClick={() => router.push("/orcamentos")}>
               Cancelar
             </Button>
@@ -1312,12 +1341,20 @@ export default function NovoOrcamentoPage() {
               Anterior
             </Button>
             {passoAtual < passos.length && (
-              <Button onClick={() => irPara(passoAtual + 1)}>
+              <Button
+                disabled={pendenciasPassoAtual.length > 0}
+                onClick={() => irPara(passoAtual + 1)}
+              >
                 Próximo
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             )}
           </div>
+          {!modoEdicao && pendenciasPassoAtual.length > 0 && (
+            <p className="-mt-3 rounded-md border border-red-400/50 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-300 print:hidden">
+              Falta: {pendenciasPassoAtual.join(", ")}.
+            </p>
+          )}
         </div>
 
         <div className="lg:col-span-1">
@@ -1340,9 +1377,9 @@ export default function NovoOrcamentoPage() {
                 </span>
               </div>
               {material && (
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Consumo de material</span>
-                  <span>
+                <div className="flex flex-col gap-0.5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:gap-3">
+                  <span className="shrink-0">Consumo de material</span>
+                  <span className="min-w-0 break-words sm:text-right">
                     {quantidadeMaterialConsumida(item, material).toFixed(2)}{" "}
                     {material.unidade === "m2" ? "m²" : "un"} de{" "}
                     {material.nome}
@@ -1439,7 +1476,7 @@ export default function NovoOrcamentoPage() {
                   </Button>
                 )}
                 {!podeFechar && pendencias.length > 0 && (
-                  <p className="text-center text-xs text-muted-foreground">
+                  <p className="rounded-md border border-red-400/50 bg-red-500/10 px-3 py-2 text-center text-sm font-medium text-red-600 dark:text-red-300">
                     Falta: {pendencias.join(", ")}.
                   </p>
                 )}
