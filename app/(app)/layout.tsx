@@ -7,6 +7,7 @@ import { AppShell } from "@/components/layout/app-shell"
 import { Toaster } from "@/components/ui/sonner"
 import { operadorPodeAcessar, resolverPapel } from "@/lib/papel"
 import { InstalarApp } from "@/components/instalar-app"
+import { RegistrarServiceWorker } from "@/components/registrar-service-worker"
 
 export default async function AppLayout({
   children,
@@ -29,6 +30,7 @@ export default async function AppLayout({
       <PapelAtivoProvider papelInicial={papel}>
         <AppShell>{children}</AppShell>
         <InstalarApp className="bottom-20 md:bottom-4" />
+        <RegistrarServiceWorker />
         <Toaster richColors position="top-right" />
       </PapelAtivoProvider>
     </DataProvider>
