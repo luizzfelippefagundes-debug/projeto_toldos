@@ -1,6 +1,6 @@
 import type { ResultadoCalculoCompleto } from "./calculo"
 import { quantidadePecas } from "./calculo"
-import type { Acabamento, OrcamentoItem, UnidadeMedida } from "./types"
+import type { Acabamento, ItemProduto, OrcamentoItem, UnidadeMedida } from "./types"
 import { interpretarDataLocal } from "./date"
 
 // Dados fixos do cabeçalho/rodapé do orçamento oficial da empresa.
@@ -36,6 +36,51 @@ export function formatarNumeroOrcamento(numero: number, criadoEm: string): strin
   return `${String(numero).padStart(4, "0")}-${String(ano % 100).padStart(2, "0")}`
 }
 
+export interface ItemAdicionalPdf {
+  item: ItemProduto
+  nomeMaterial: string
+  unidadeMaterial: UnidadeMedida
+}
+
+type LinhaBruta = Omit<LinhaOrcamento, "valorUnitario">
+
+function linhaDoProduto(
+  item: ItemProduto,
+  nomeMaterial: string,
+  unidadeMaterial: UnidadeMedida,
+  valorTotal: number
+): LinhaBruta {
+  const pecas = quantidadePecas(item)
+  const nome =
+    unidadeMaterial === "m2" && item.largura > 0 && item.altura > 0
+      ? `${nomeMaterial} ${medida(item.largura)} x ${medida(item.altura)} m`
+      : nomeMaterial
+  return {
+    nome,
+    quantidade: unidadeMaterial === "m2" ? pecas : item.quantidadeUnidades || 1,
+    unidade: "un",
+    valorTotal,
+  }
+}
+
+function linhasDosAcabamentos(
+  item: ItemProduto,
+  acabamentosDisponiveis: Acabamento[]
+): LinhaBruta[] {
+  const linhas: LinhaBruta[] = []
+  for (const sel of item.acabamentos ?? []) {
+    const acabamento = acabamentosDisponiveis.find((a) => a.id === sel.acabamentoId)
+    if (!acabamento || sel.quantidade <= 0) continue
+    linhas.push({
+      nome: acabamento.nome,
+      quantidade: sel.quantidade,
+      unidade: acabamento.unidade,
+      valorTotal: acabamento.precoUnitario * sel.quantidade,
+    })
+  }
+  return linhas
+}
+
 /**
  * Monta as linhas da tabela "Serviços" a partir do cálculo do orçamento: uma
  * linha pro produto (material + mão de obra), uma por acabamento e uma pra
@@ -49,6 +94,7 @@ export function gerarLinhasOrcamento({
   acabamentosDisponiveis,
   resultado,
   total,
+  adicionais,
 }: {
   item: OrcamentoItem
   nomeMaterial: string
@@ -56,32 +102,35 @@ export function gerarLinhasOrcamento({
   acabamentosDisponiveis: Acabamento[]
   resultado: ResultadoCalculoCompleto
   total: number
+  adicionais?: ItemAdicionalPdf[]
 }): LinhaOrcamento[] {
-  const pecas = quantidadePecas(item)
-  const nomeProduto =
-    unidadeMaterial === "m2" && item.largura > 0 && item.altura > 0
-      ? `${nomeMaterial} ${medida(item.largura)} x ${medida(item.altura)} m`
-      : nomeMaterial
-
-  const brutas: Omit<LinhaOrcamento, "valorUnitario">[] = [
-    {
-      nome: nomeProduto,
-      quantidade: unidadeMaterial === "m2" ? pecas : item.quantidadeUnidades || 1,
-      unidade: "un",
-      valorTotal: resultado.subtotalMaterial + resultado.subtotalMaoDeObra,
-    },
+  // O resultado soma todos os itens; o principal é o total menos os adicionais.
+  const partesAdicionais = resultado.itens.slice(1)
+  const valorAdicionais = partesAdicionais.reduce(
+    (s, p) => s + p.subtotalMaterial + p.subtotalMaoDeObra,
+    0
+  )
+  const brutas: LinhaBruta[] = [
+    linhaDoProduto(
+      item,
+      nomeMaterial,
+      unidadeMaterial,
+      resultado.subtotalMaterial + resultado.subtotalMaoDeObra - valorAdicionais
+    ),
+    ...linhasDosAcabamentos(item, acabamentosDisponiveis),
   ]
-
-  for (const sel of item.acabamentos ?? []) {
-    const acabamento = acabamentosDisponiveis.find((a) => a.id === sel.acabamentoId)
-    if (!acabamento || sel.quantidade <= 0) continue
-    brutas.push({
-      nome: acabamento.nome,
-      quantidade: sel.quantidade,
-      unidade: acabamento.unidade,
-      valorTotal: acabamento.precoUnitario * sel.quantidade,
-    })
-  }
+  ;(adicionais ?? []).forEach((adicional, i) => {
+    const parte = partesAdicionais[i]
+    brutas.push(
+      linhaDoProduto(
+        adicional.item,
+        adicional.nomeMaterial,
+        adicional.unidadeMaterial,
+        parte ? parte.subtotalMaterial + parte.subtotalMaoDeObra : 0
+      ),
+      ...linhasDosAcabamentos(adicional.item, acabamentosDisponiveis)
+    )
+  })
   if (resultado.subtotalInstalacao > 0) {
     brutas.push({
       nome: "Instalação",

@@ -60,6 +60,47 @@ describe("gerarLinhasOrcamento", () => {
     expect(linhas).toHaveLength(1)
     expect(linhas[0].valorTotal).toBe(100)
   })
+
+  it("gera uma linha de produto por item adicional e a soma bate com o total", () => {
+    const comExtra: OrcamentoItem = {
+      ...item,
+      itensAdicionais: [
+        {
+          id: "ad-1",
+          materialId: "m",
+          servicoId: "nenhum",
+          largura: 1,
+          altura: 1,
+          quantidadeUnidades: 2,
+          horasEstimadas: 0,
+          acabamentos: [{ acabamentoId: "a1", quantidade: 4 }],
+        },
+      ],
+    }
+    const r = calcularOrcamentoCompleto(comExtra, material, null, 0, acabamentos, [], {
+      materiais: [material],
+      servicos: [],
+    })
+    const linhas = gerarLinhasOrcamento({
+      item: comExtra,
+      nomeMaterial: "LONA",
+      unidadeMaterial: "m2",
+      acabamentosDisponiveis: acabamentos,
+      resultado: r,
+      total: r.total,
+      adicionais: [{ item: comExtra.itensAdicionais![0], nomeMaterial: "LONA", unidadeMaterial: "m2" }],
+    })
+    expect(linhas.map((l) => l.nome)).toEqual([
+      "LONA 2,00 x 1,00 m", // principal
+      "Ilhós", // acabamentos do principal
+      "LONA 1,00 x 1,00 m", // adicional
+      "Ilhós", // acabamentos do adicional
+    ])
+    expect(linhas[2].quantidade).toBe(2)
+    expect(linhas[3].quantidade).toBe(4)
+    const soma = linhas.reduce((s, l) => s + l.valorTotal, 0)
+    expect(Math.round(soma * 100)).toBe(Math.round(r.total * 100))
+  })
 })
 
 describe("formatarNumeroOrcamento", () => {
