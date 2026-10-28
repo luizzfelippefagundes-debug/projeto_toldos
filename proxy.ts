@@ -12,6 +12,8 @@ const rotaPublica = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/tv(.*)",
+  // Tela que o service worker mostra quando não há internet.
+  "/offline",
   "/privacidade",
   "/icon(.*)",
   "/apple-icon(.*)",
