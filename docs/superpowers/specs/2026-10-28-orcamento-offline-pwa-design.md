@@ -11,9 +11,11 @@ com um toque) e aparecer para os outros usuários.
 
 ## Decisões já tomadas
 
-- **Escopo offline:** só **criar orçamento novo** (`/orcamentos/novo`). Cadastrar
-  cliente novo, editar orçamentos, financeiro, produção, estoque etc. continuam
-  exigindo internet. A Gráfica Rápida (`/vendedor`) fica de fora.
+- **Escopo offline:** só **criar orçamento novo** (`/orcamentos/novo`), de ponta
+  a ponta: escolher ou **cadastrar cliente novo** (nome e telefone), vários
+  itens, instalação, deslocamento, preço, fotos e PDF. Editar orçamentos,
+  financeiro, produção, estoque etc. continuam exigindo internet. A Gráfica
+  Rápida (`/vendedor`) fica de fora por enquanto.
 - **Não trocar de tecnologia.** Fica Next.js; o offline vem de um service
   worker, uma cópia local dos dados e uma fila no aparelho.
 - **Número do orçamento:** o PDF feito offline sai como **"Orçamento
@@ -41,13 +43,16 @@ páginas de login e do painel da TV.
 Banco `toldosprint-offline`, loja `catalogo`. A cada carga bem-sucedida do
 `DataProvider` com internet, grava uma cópia de **clientes, materiais e
 serviços** e a data/hora da cópia. Sem internet, o `DataProvider` usa essa
-cópia em vez de mostrar erro. A tela mostra "Dados de DD/MM às HH:mm" quando
+cópia em vez de mostrar erro. Clientes novos criados offline aparecem na lista
+de clientes do aparelho (marcados "novo, aguardando envio") para poderem ser
+reutilizados em outros orçamentos antes do sinal voltar. A tela mostra "Dados de DD/MM às HH:mm" quando
 está usando a cópia. Acabamentos e equipamentos já são constantes do código.
 
 ### 3. Fila de orçamentos (IndexedDB)
 
 Loja `fila`. Cada item guarda: `id` (gerado no aparelho, ex. `orc-ab12cd34`),
-os dados do orçamento (cliente, `item` com `itensAdicionais`, ajuste, validade),
+o **cliente novo** quando houver (com `id` próprio gerado no aparelho, nome e
+telefone), os dados do orçamento (cliente, `item` com `itensAdicionais`, ajuste, validade),
 as fotos como Blob, o `totalProvisorio` mostrado no PDF offline, `criadoEm`, `tentativas` e `ultimoErro`.
 
 Ao tocar em **Fechar Orçamento** sem internet, o orçamento **não** vai para o
@@ -64,13 +69,16 @@ Para cada item da fila, em ordem de criação, **depois que o `DataProvider`
 terminou de carregar os dados atuais**:
 1. Se já existe orçamento com esse `id` nos dados carregados, o item é dado
    como enviado (idempotência) e sai da fila.
-2. Envia as fotos (`/api/upload`) e troca os Blobs pelas URLs.
-3. Chama `fecharOrcamento` com o `id` do item. Isso reaproveita a regra que já
+2. Se o item traz cliente novo e esse `id` de cliente ainda não existe, cria o
+   cliente primeiro (mesma regra do cadastro rápido de hoje). Cliente novo
+   usado em mais de um orçamento da fila é criado uma vez só.
+3. Envia as fotos (`/api/upload`) e troca os Blobs pelas URLs.
+4. Chama `fecharOrcamento` com o `id` do item. Isso reaproveita a regra que já
    existe: número oficial a partir dos dados atuais, estoque, parcelas
    financeiras e mensagem do bot. Se o total final for diferente do
    `totalProvisorio`, o vendedor vê um aviso "Orçamento #1003: o valor mudou de
    R$ X para R$ Y" (preço de material pode ter mudado desde a última cópia).
-4. Só remove da fila depois que o orçamento aparece salvo no servidor.
+5. Só remove da fila depois que o orçamento aparece salvo no servidor.
 
 Se algo falhar, o item **continua na fila** com `ultimoErro` e `tentativas`
 somadas; nada se perde. Itens com 5 falhas seguidas ficam marcados "Precisa de
@@ -117,6 +125,8 @@ atenção" e deixam de tentar sozinhos, mas continuam no aparelho.
 ## Testes
 
 - Fila: gravar, ordenar, remover só após confirmação, manter com erro.
+- Cliente novo offline: criado uma vez só mesmo usado em 2 orçamentos; enviar
+  duas vezes não duplica o cliente.
 - Sincronização: sucesso; falha no meio (foto ok, fechar falha); envio duplo
   não duplica; item já existente no servidor é dado como enviado.
 - Cópia local: grava após carga online; é usada quando o `fetch` falha.
@@ -126,6 +136,6 @@ atenção" e deixam de tentar sozinhos, mas continuam no aparelho.
 ## Fora deste projeto
 
 - Editar, excluir ou reabrir orçamento offline.
-- Cadastrar cliente novo offline.
+- Editar dados de cliente já cadastrado offline.
 - Gráfica Rápida / Produção offline.
 - Perfil do funcionário e tarefas da Produção (próxima frente).
