@@ -28,10 +28,18 @@ import {
   isPositiveNumberInput,
 } from "@/lib/number"
 import { toast } from "sonner"
-import { Upload, FileCheck2, Printer, ArrowLeft, ArrowRight, X } from "lucide-react"
+import { Upload, FileCheck2, Printer, ArrowLeft, ArrowRight, Plus, X } from "lucide-react"
 import type { FotoOrcamento } from "@/lib/types"
 import { entradaEfetiva, textoCondicoesPagamento } from "@/lib/parcelas"
 import { OrcamentoOficial } from "@/components/orcamentos/orcamento-oficial"
+import { ItemAdicionalCard } from "@/components/orcamento/item-adicional-card"
+import {
+  formParaItem,
+  formVazio,
+  itemParaForm,
+  pendenciasItem,
+  type ItemAdicionalForm,
+} from "@/lib/item-adicional-form"
 import { ehImagem, formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 
 function numeroOuZero(valor: string): number {
@@ -76,6 +84,8 @@ export default function NovoOrcamentoPage() {
   const [altura, setAltura] = useState("")
   const [quantidadeUnidades, setQuantidadeUnidades] = useState("1")
   const [horasEstimadas, setHorasEstimadas] = useState("")
+  // Itens a mais do orçamento (além do principal, que usa os campos acima).
+  const [extras, setExtras] = useState<ItemAdicionalForm[]>([])
   const [ajusteManual, setAjusteManual] = useState("0")
   const [arquivo, setArquivo] = useState<File | null>(null)
   // Entrada cobrada ao fechar; o restante fica pra entrega. Vazio ou 0 = à vista.
@@ -161,6 +171,7 @@ export default function NovoOrcamentoPage() {
     setCondicoesPagamento(orcamentoEditando.item.condicoesPagamento ?? "")
     setEntradaPercent(String(orcamentoEditando.item.entradaPercent ?? 100))
     setFotos(orcamentoEditando.item.fotos ?? [])
+    setExtras((orcamentoEditando.item.itensAdicionais ?? []).map(itemParaForm))
   // Os orçamentos chegam do servidor depois da página montar; roda de novo
   // quando o orçamento aparece, mas não a cada mudança na lista.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -215,6 +226,7 @@ export default function NovoOrcamentoPage() {
     setCondicoesPagamento(rascunho.item.condicoesPagamento ?? "")
     setEntradaPercent(String(rascunho.item.entradaPercent ?? 100))
     setFotos(rascunho.item.fotos ?? [])
+    setExtras((rascunho.item.itensAdicionais ?? []).map(itemParaForm))
     consumirRascunho()
   }, [rascunho, consumirRascunho])
 
@@ -261,6 +273,7 @@ export default function NovoOrcamentoPage() {
       condicoesPagamento: condicoesPagamento.trim() || undefined,
       entradaPercent: numeroOuZero(entradaPercent),
       fotos: fotos.length > 0 ? fotos : undefined,
+      itensAdicionais: extras.length > 0 ? extras.map(formParaItem) : undefined,
     }),
     [
       materialId,
@@ -288,6 +301,7 @@ export default function NovoOrcamentoPage() {
       condicoesPagamento,
       entradaPercent,
       fotos,
+      extras,
     ]
   )
 
@@ -298,7 +312,8 @@ export default function NovoOrcamentoPage() {
         servico ?? null,
         Number(ajusteManual) || 0,
         acabamentosSeed,
-        equipamentosAcessoSeed
+        equipamentosAcessoSeed,
+        { materiais, servicos }
       )
     : null
 
@@ -348,12 +363,17 @@ export default function NovoOrcamentoPage() {
     isPositiveNumberInput(horasEstimadas)
   const descontoValido =
     Number(descontoPercent) >= 0 && Number(descontoPercent) <= 100
+  const pendenciasExtras = extras.flatMap((form, i) =>
+    pendenciasItem(form, materiais, servicos, i + 2)
+  )
+  const extrasValidos = pendenciasExtras.length === 0
   const dadosValidos =
     Boolean(cliente) &&
     Boolean(material) &&
     medidasValidas &&
     camposOpcionaisValidos &&
     acabamentosValidos &&
+    extrasValidos &&
     validadeValida &&
     entradaValida &&
     descontoValido &&
@@ -370,6 +390,7 @@ export default function NovoOrcamentoPage() {
     !cliente && "selecione o cliente",
     !material && "selecione o material",
     material && !medidasValidas && "preencha as medidas corretamente",
+    ...pendenciasExtras,
     !camposOpcionaisValidos && "revise os campos de instalação/deslocamento",
     !acabamentosValidos && "informe a quantidade dos acabamentos marcados",
     !validadeValida && "informe a validade do orçamento",
@@ -389,6 +410,7 @@ export default function NovoOrcamentoPage() {
       !material && "selecione o material",
       material && !medidasValidas && "preencha as medidas corretamente",
       !horasEstimadasValidas && "informe as horas estimadas do serviço",
+      ...pendenciasExtras,
     ],
     3: [!acabamentosValidos && "informe a quantidade dos acabamentos marcados"],
     4: [
@@ -441,6 +463,14 @@ export default function NovoOrcamentoPage() {
           acabamentosDisponiveis: acabamentosSeed,
           resultado,
           total: resultado.total,
+          adicionais: extras.map((form) => {
+            const materialExtra = materiais.find((m) => m.id === form.materialId)
+            return {
+              item: formParaItem(form),
+              nomeMaterial: materialExtra?.nome ?? "Material removido",
+              unidadeMaterial: materialExtra?.unidade ?? ("unidade" as const),
+            }
+          }),
         })
       : []
 
@@ -707,14 +737,18 @@ export default function NovoOrcamentoPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
+                {extras.length > 0 && (
+                  <p className="text-sm font-semibold">Item 1</p>
+                )}
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex flex-col gap-2">
+                  <div className="flex min-w-0 flex-col gap-2">
                     <Label>Material</Label>
                     <Select
                       value={materialId}
                       onValueChange={(v) => setMaterialId(v ?? "")}
                     >
-                      <SelectTrigger>
+                      {/* Nome longo de material não pode alargar a tela no celular. */}
+                      <SelectTrigger className="w-full min-w-0">
                         <SelectValue placeholder="Selecione o material">
                           {(v: string) =>
                             materiais.find((m) => m.id === v)?.nome ?? "Selecione o material"
@@ -730,7 +764,7 @@ export default function NovoOrcamentoPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex min-w-0 flex-col gap-2">
                     <Label>
                       Serviço{" "}
                       <span className="font-normal text-muted-foreground">(opcional)</span>
@@ -739,7 +773,7 @@ export default function NovoOrcamentoPage() {
                       value={servicoId}
                       onValueChange={(v) => setServicoId(v ?? "")}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full min-w-0">
                         <SelectValue placeholder="Sem serviço adicional">
                           {(v: string) =>
                             servicos.find((s) => s.id === v)?.nome ?? "Sem serviço adicional"
@@ -818,6 +852,38 @@ export default function NovoOrcamentoPage() {
                     />
                   </div>
                 )}
+
+                <Separator />
+                <div className="flex flex-col gap-3">
+                  {extras.map((form, i) => (
+                    <ItemAdicionalCard
+                      key={form.id}
+                      numero={i + 2}
+                      form={form}
+                      materiais={materiais}
+                      servicos={servicos}
+                      onChange={(novo) =>
+                        setExtras((atual) => atual.map((f) => (f.id === novo.id ? novo : f)))
+                      }
+                      onRemover={() =>
+                        setExtras((atual) => atual.filter((f) => f.id !== form.id))
+                      }
+                    />
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      setExtras((atual) => [
+                        ...atual,
+                        formVazio(`item-${Math.random().toString(36).slice(2, 10)}`),
+                      ])
+                    }
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar outro item
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -1363,6 +1429,28 @@ export default function NovoOrcamentoPage() {
               <CardTitle className="text-base">Resumo do orçamento</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3 text-sm">
+              {resultado && extras.length > 0 && (
+                <div className="flex flex-col gap-1.5 rounded-md bg-muted/40 p-2 text-xs">
+                  {resultado.itens.map((parte, i) => {
+                    const nome =
+                      materiais.find((m) => m.id === parte.materialId)?.nome ?? "Material removido"
+                    return (
+                      <div key={i} className="flex justify-between gap-3">
+                        <span className="min-w-0 break-words text-muted-foreground">
+                          Item {i + 1} — {nome}
+                        </span>
+                        <span className="shrink-0">
+                          {formatarMoeda(
+                            parte.subtotalMaterial +
+                              parte.subtotalMaoDeObra +
+                              parte.subtotalAcabamentos
+                          )}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Área</span>
