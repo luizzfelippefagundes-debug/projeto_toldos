@@ -13,6 +13,7 @@ import { Logo } from "@/components/brand/logo"
 import { NotificacoesBell } from "./notificacoes-bell"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import type { Papel } from "@/lib/types"
+import { ROTULO_PAPEL } from "@/lib/papel"
 import { UserButton } from "@clerk/nextjs"
 
 // Abas rápidas da barra inferior mobile — as mesmas 4 páginas mais usadas no
@@ -26,14 +27,14 @@ const abasRapidas: {
 }[] = [
   { label: "Início", href: "/dashboard", icon: LayoutDashboard },
   { label: "Rápida", href: "/grafica-rapida", icon: Zap },
-  { label: "Produção", href: "/producao", icon: Factory, papeis: ["producao"] },
+  { label: "Produção", href: "/producao", icon: Factory, papeis: ["producao", "operador"] },
   { label: "Financeiro", href: "/financeiro", icon: Wallet, papeis: ["financeiro"] },
 ]
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const [menuAberto, setMenuAberto] = useState(false)
-  const { papel } = usePapelAtivo()
+  const { papel, previa, verComo } = usePapelAtivo()
 
   // A área do vendedor tem barras próprias no celular (VendedorShell); aqui
   // ela só ganha a barra lateral do computador.
@@ -48,7 +49,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const grupos = filtrarGruposPorPapel(gruposNavegacao, papel)
   const abasVisiveis = abasRapidas.filter(
-    (aba) => papel === "dono" || !aba.papeis || aba.papeis.includes(papel)
+    (aba) =>
+      papel === "operador"
+        ? aba.papeis?.includes(papel)
+        : papel === "dono" || !aba.papeis || aba.papeis.includes(papel)
   )
 
   return (
@@ -56,6 +60,19 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
 
       <div className="flex min-w-0 flex-1 flex-col print:w-full">
+        {previa && (
+          <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 bg-amber-500 px-4 py-2 text-sm font-medium text-black print:hidden">
+            <span>Você está vendo como: {ROTULO_PAPEL[papel]}</span>
+            <Link
+              href="/equipe"
+              onClick={() => verComo(null)}
+              className="rounded-md bg-black/15 px-3 py-1"
+            >
+              Voltar ao normal
+            </Link>
+          </div>
+        )}
+
         <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card px-4 py-3 md:hidden print:hidden">
           <div className="flex min-w-0 flex-1 items-center">
             <Link href="/dashboard" className="w-32 max-w-full">

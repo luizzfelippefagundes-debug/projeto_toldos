@@ -40,8 +40,13 @@ export default clerkMiddleware(async (auth, req) => {
     return redirectToSignIn()
   }
 
-  // Páginas: o layout decide o papel de quem está vendo.
-  if (!rotaApi(req)) return
+  // Páginas: o layout decide o papel de quem está vendo (e manda o operador
+  // de volta pra Produção). Aqui só repassa o caminho pra ele saber onde está.
+  if (!rotaApi(req)) {
+    const headers = new Headers(req.headers)
+    headers.set("x-pathname", req.nextUrl.pathname)
+    return NextResponse.next({ request: { headers } })
+  }
 
   let papel
   if (sessionClaims && "papel" in sessionClaims) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth, clerkClient } from "@clerk/nextjs/server"
 
-const PAPEIS = ["dono", "producao", "financeiro"]
+const PAPEIS = ["dono", "producao", "financeiro", "operador"]
 
 export async function PATCH(
   req: Request,

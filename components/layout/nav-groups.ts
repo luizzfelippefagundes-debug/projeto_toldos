@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import type { Papel } from "@/lib/types"
+import { operadorPodeAcessar } from "@/lib/papel"
 
 export interface NavItem {
   label: string
@@ -125,6 +126,8 @@ export function filtrarGruposPorPapel(
     .map((grupo) => ({
       ...grupo,
       items: grupo.items.filter((item) => {
+        // Operador: só Produção e Painel TV, nada além disso.
+        if (papel === "operador") return operadorPodeAcessar(item.href)
         if (item.donoApenas && papel !== "dono") return false
         if (papel === "dono") return true
         return !item.papeis || item.papeis.includes(papel)

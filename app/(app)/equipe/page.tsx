@@ -10,6 +10,9 @@ import {
 } from "@/components/ui/select"
 import { Copy, Check } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { usePapelAtivo } from "@/context/papel-ativo-context"
 import type { Papel } from "@/lib/types"
 
 interface Membro {
@@ -25,12 +28,14 @@ const corPapel: Record<string, string> = {
   dono: "bg-violet-500/15 text-violet-600 dark:text-violet-400",
   producao: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
   financeiro: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  operador: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
 }
 
 const rotuloPapel: Record<string, string> = {
   producao: "Produção",
   financeiro: "Financeiro",
   dono: "Dono",
+  operador: "Produção e TV",
 }
 
 function Avatar({ nome, imagemUrl }: { nome: string; imagemUrl: string }) {
@@ -61,6 +66,8 @@ function Avatar({ nome, imagemUrl }: { nome: string; imagemUrl: string }) {
 }
 
 export default function EquipePage() {
+  const router = useRouter()
+  const { verComo } = usePapelAtivo()
   const [membros, setMembros] = useState<Membro[]>([])
   const [carregando, setCarregando] = useState(true)
   const [copiado, setCopiado] = useState(false)
@@ -115,6 +122,26 @@ export default function EquipePage() {
         <p className="text-sm text-muted-foreground">
           Defina o que cada funcionário pode ver no sistema.
         </p>
+      </div>
+
+      {/* Prévia: o dono vê o sistema como o funcionário veria */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Ver como funcionário</p>
+          <p className="text-xs text-muted-foreground">
+            Mostra só a Produção e o Painel TV, igual ao que o papel &quot;Produção e TV&quot; enxerga.
+            Seu acesso de dono não muda.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => {
+            verComo("operador")
+            router.push("/producao")
+          }}
+        >
+          Ver como Produção e TV
+        </Button>
       </div>
 
       {/* Link de cadastro */}
@@ -176,6 +203,7 @@ export default function EquipePage() {
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="operador">{rotuloPapel.operador}</SelectItem>
                   <SelectItem value="producao">{rotuloPapel.producao}</SelectItem>
                   <SelectItem value="financeiro">{rotuloPapel.financeiro}</SelectItem>
                   <SelectItem value="dono">{rotuloPapel.dono}</SelectItem>

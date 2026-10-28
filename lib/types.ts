@@ -199,7 +199,7 @@ export interface PedidoRapido {
   prazoEntregaEm?: string
 }
 
-export type Papel = "dono" | "producao" | "financeiro"
+export type Papel = "dono" | "producao" | "financeiro" | "operador"
 
 export type OrigemMensagemBot = "automatica" | "lembrete" | "pergunta"
 
