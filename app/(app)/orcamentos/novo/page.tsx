@@ -1466,7 +1466,9 @@ export default function NovoOrcamentoPage() {
               </div>
               {material && (
                 <div className="flex flex-col gap-0.5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:gap-3">
-                  <span className="shrink-0">Consumo de material</span>
+                  <span className="shrink-0">
+                    {extras.length > 0 ? "Consumo de material (item 1)" : "Consumo de material"}
+                  </span>
                   <span className="min-w-0 break-words sm:text-right">
                     {quantidadeMaterialConsumida(item, material).toFixed(2)}{" "}
                     {material.unidade === "m2" ? "m²" : "un"} de{" "}

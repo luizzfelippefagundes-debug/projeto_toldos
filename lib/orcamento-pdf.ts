@@ -104,19 +104,13 @@ export function gerarLinhasOrcamento({
   total: number
   adicionais?: ItemAdicionalPdf[]
 }): LinhaOrcamento[] {
-  // O resultado soma todos os itens; o principal é o total menos os adicionais.
-  const partesAdicionais = resultado.itens.slice(1)
-  const valorAdicionais = partesAdicionais.reduce(
-    (s, p) => s + p.subtotalMaterial + p.subtotalMaoDeObra,
-    0
-  )
+  // O resultado traz a parte de cada item: [0] é o principal, o resto os adicionais.
+  const [partePrincipal, ...partesAdicionais] = resultado.itens
+  const valorPrincipal = partePrincipal
+    ? partePrincipal.subtotalMaterial + partePrincipal.subtotalMaoDeObra
+    : resultado.subtotalMaterial + resultado.subtotalMaoDeObra
   const brutas: LinhaBruta[] = [
-    linhaDoProduto(
-      item,
-      nomeMaterial,
-      unidadeMaterial,
-      resultado.subtotalMaterial + resultado.subtotalMaoDeObra - valorAdicionais
-    ),
+    linhaDoProduto(item, nomeMaterial, unidadeMaterial, valorPrincipal),
     ...linhasDosAcabamentos(item, acabamentosDisponiveis),
   ]
   ;(adicionais ?? []).forEach((adicional, i) => {
@@ -127,9 +121,13 @@ export function gerarLinhasOrcamento({
         adicional.nomeMaterial,
         adicional.unidadeMaterial,
         parte ? parte.subtotalMaterial + parte.subtotalMaoDeObra : 0
-      ),
-      ...linhasDosAcabamentos(adicional.item, acabamentosDisponiveis)
+      )
     )
+    // Adicional sem material no cadastro entra zerado no cálculo (acabamentos
+    // inclusive); gerar as linhas de acabamento dele inflaria a diluição.
+    if (parte && parte.subtotalAcabamentos > 0) {
+      brutas.push(...linhasDosAcabamentos(adicional.item, acabamentosDisponiveis))
+    }
   })
   if (resultado.subtotalInstalacao > 0) {
     brutas.push({

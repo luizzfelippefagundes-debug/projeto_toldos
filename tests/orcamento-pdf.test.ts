@@ -101,6 +101,68 @@ describe("gerarLinhasOrcamento", () => {
     const soma = linhas.reduce((s, l) => s + l.valorTotal, 0)
     expect(Math.round(soma * 100)).toBe(Math.round(r.total * 100))
   })
+
+  it("não gera acabamentos de adicional cujo material saiu do cadastro", () => {
+    const comExtraSemMaterial: OrcamentoItem = {
+      ...item,
+      itensAdicionais: [
+        {
+          id: "ad-1",
+          materialId: "removido",
+          servicoId: "nenhum",
+          largura: 1,
+          altura: 1,
+          quantidadeUnidades: 2,
+          horasEstimadas: 0,
+          acabamentos: [{ acabamentoId: "a1", quantidade: 4 }],
+        },
+      ],
+    }
+    const r = calcularOrcamentoCompleto(
+      comExtraSemMaterial,
+      material,
+      null,
+      0,
+      acabamentos,
+      [],
+      { materiais: [material], servicos: [] }
+    )
+    const linhas = gerarLinhasOrcamento({
+      item: comExtraSemMaterial,
+      nomeMaterial: "LONA",
+      unidadeMaterial: "m2",
+      acabamentosDisponiveis: acabamentos,
+      resultado: r,
+      total: r.total,
+      adicionais: [
+        {
+          item: comExtraSemMaterial.itensAdicionais![0],
+          nomeMaterial: "Material removido",
+          unidadeMaterial: "m2",
+        },
+      ],
+    })
+    expect(linhas.map((l) => l.nome)).toEqual([
+      "LONA 2,00 x 1,00 m",
+      "Ilhós",
+      "Material removido 1,00 x 1,00 m",
+    ])
+    const soma = linhas.reduce((s, l) => s + l.valorTotal, 0)
+    expect(Math.round(soma * 100)).toBe(Math.round(r.total * 100))
+    // Sem o adicional, o principal fica com os mesmos valores do orçamento só dele.
+    const soPrincipal = gerarLinhasOrcamento({
+      item,
+      nomeMaterial: "LONA",
+      unidadeMaterial: "m2",
+      acabamentosDisponiveis: acabamentos,
+      resultado,
+      total: resultado.total,
+    })
+    expect(r.total).toBeCloseTo(resultado.total, 2)
+    expect(linhas[0].valorTotal).toBe(soPrincipal[0].valorTotal)
+    expect(linhas[1].valorTotal).toBe(soPrincipal[1].valorTotal)
+    expect(linhas[2].valorTotal).toBe(0)
+  })
 })
 
 describe("formatarNumeroOrcamento", () => {
