@@ -77,7 +77,9 @@ export interface FotoOrcamento {
   legenda: string
 }
 
-export interface OrcamentoItem {
+// Campos de produto de um item: material, serviço, medidas, quantidade e
+// acabamentos. O item principal do orçamento e cada item adicional têm isso.
+export interface ItemProduto {
   materialId: string
   servicoId: string
   largura: number
@@ -85,6 +87,27 @@ export interface OrcamentoItem {
   quantidadeUnidades: number
   horasEstimadas: number
   acabamentos?: AcabamentoSelecionado[]
+}
+
+// Item a mais no mesmo orçamento (ex.: uma janela junto com as portas). Não
+// repete instalação, desconto etc.: esses valem pro orçamento todo e ficam no
+// item principal.
+export interface ItemAdicional extends ItemProduto {
+  id: string
+  // Preenchidos ao fechar (mesma ideia do materialFechado/quantidadeMaterialDebitada
+  // do orçamento, que descrevem o item principal).
+  materialFechado?: {
+    id: string
+    nome: string
+    unidade: UnidadeMedida
+    quantidade: number
+    custo: number
+  }
+  quantidadeMaterialDebitada?: number
+}
+
+export interface OrcamentoItem extends ItemProduto {
+  itensAdicionais?: ItemAdicional[]
   instalacao?: InstalacaoOrcamento
   deslocamento?: DeslocamentoOrcamento
   margemPercent?: number

@@ -174,3 +174,102 @@ describe("quantidade em material por m²", () => {
     expect(quantidadeMaterialConsumida(item, materialM2)).toBe(6)
   })
 })
+
+describe("orçamento com itens adicionais", () => {
+  const catalogo = { materiais: [materialM2], servicos: [servicoFixo] }
+
+  it("sem adicionais o resultado é o mesmo de antes e tem um item", () => {
+    const r = calcularOrcamentoCompleto(itemBasico, materialM2, servicoFixo, 0, [], [], catalogo)
+    expect(r.subtotalMaterial).toBe(168)
+    expect(r.subtotalMaoDeObra).toBe(250)
+    expect(r.total).toBe(418)
+    expect(r.itens).toHaveLength(1)
+    expect(r.itens[0]).toMatchObject({ subtotalMaterial: 168, subtotalMaoDeObra: 250 })
+  })
+
+  it("soma material, mão de obra e área dos adicionais ao total", () => {
+    const item: OrcamentoItem = {
+      ...itemBasico,
+      itensAdicionais: [
+        {
+          id: "ad-1",
+          materialId: materialM2.id,
+          servicoId: "nenhum",
+          largura: 1,
+          altura: 1,
+          quantidadeUnidades: 2,
+          horasEstimadas: 0,
+        },
+      ],
+    }
+    const r = calcularOrcamentoCompleto(item, materialM2, servicoFixo, 0, [], [], catalogo)
+    // principal: 3x2 = 6 m² x 28 = 168 + 250; adicional: 1x1x2 = 2 m² x 28 = 56
+    expect(r.areaM2).toBe(8)
+    expect(r.subtotalMaterial).toBe(224)
+    expect(r.subtotalMaoDeObra).toBe(250)
+    expect(r.total).toBe(474)
+    expect(r.itens).toHaveLength(2)
+    expect(r.itens[1]).toMatchObject({ materialId: materialM2.id, subtotalMaterial: 56, subtotalMaoDeObra: 0 })
+  })
+
+  it("aplica margem, desconto e imposto uma vez sobre o custo de todos os itens", () => {
+    const item: OrcamentoItem = {
+      ...itemBasico,
+      margemPercent: 10,
+      descontoPercent: 10,
+      impostoPercent: 6,
+      itensAdicionais: [
+        {
+          id: "ad-1",
+          materialId: materialM2.id,
+          servicoId: "nenhum",
+          largura: 1,
+          altura: 1,
+          quantidadeUnidades: 2,
+          horasEstimadas: 0,
+        },
+      ],
+    }
+    const r = calcularOrcamentoCompleto(item, materialM2, servicoFixo, 0, [], [], catalogo)
+    // custo 474 -> com margem 521,4 -> com desconto 469,26 -> imposto 28,1556
+    expect(r.custoBase).toBeCloseTo(474)
+    expect(r.comDesconto).toBeCloseTo(469.26)
+    expect(r.total).toBeCloseTo(497.4156)
+  })
+
+  it("soma os acabamentos dos adicionais", () => {
+    const item: OrcamentoItem = {
+      ...itemBasico,
+      itensAdicionais: [
+        {
+          id: "ad-1",
+          materialId: materialM2.id,
+          servicoId: "nenhum",
+          largura: 1,
+          altura: 1,
+          quantidadeUnidades: 1,
+          horasEstimadas: 0,
+          acabamentos: [{ acabamentoId: "acb-1", quantidade: 4 }],
+        },
+      ],
+    }
+    const acabamentos = [{ id: "acb-1", nome: "Ilhós", precoUnitario: 2, unidade: "un" }]
+    const r = calcularOrcamentoCompleto(item, materialM2, servicoFixo, 0, acabamentos, [], catalogo)
+    expect(r.subtotalAcabamentos).toBe(8)
+    expect(r.itens[1].subtotalAcabamentos).toBe(8)
+  })
+
+  it("adicional com material removido conta zero e mantém o alinhamento da lista", () => {
+    const item: OrcamentoItem = {
+      ...itemBasico,
+      itensAdicionais: [
+        { id: "ad-1", materialId: "sumiu", servicoId: "nenhum", largura: 1, altura: 1, quantidadeUnidades: 1, horasEstimadas: 0 },
+        { id: "ad-2", materialId: materialM2.id, servicoId: "nenhum", largura: 1, altura: 1, quantidadeUnidades: 1, horasEstimadas: 0 },
+      ],
+    }
+    const r = calcularOrcamentoCompleto(item, materialM2, servicoFixo, 0, [], [], catalogo)
+    expect(r.itens).toHaveLength(3)
+    expect(r.itens[1].subtotalMaterial).toBe(0)
+    expect(r.itens[2].subtotalMaterial).toBe(28)
+  })
+})
