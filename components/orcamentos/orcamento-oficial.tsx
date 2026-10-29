@@ -42,6 +42,7 @@ export function OrcamentoOficial({
   total,
   condicoes,
   fotos,
+  provisorio,
 }: {
   clienteNome: string
   data: string
@@ -50,6 +51,8 @@ export function OrcamentoOficial({
   total: number
   condicoes: string
   fotos: FotoOrcamento[]
+  // Orçamento feito sem internet: ainda não tem número oficial.
+  provisorio?: boolean
 }) {
   return (
     <>
@@ -114,8 +117,13 @@ export function OrcamentoOficial({
               padding: "1.5pt 0",
             }}
           >
-            ORÇAMENTO Nº {numero}
+            {provisorio ? "ORÇAMENTO PROVISÓRIO" : <>ORÇAMENTO Nº {numero}</>}
           </div>
+          {provisorio && (
+            <div style={{ fontSize: "8pt", textAlign: "center", marginTop: "3pt" }}>
+              O número oficial será enviado quando o orçamento for sincronizado.
+            </div>
+          )}
 
           <Secao>Serviços</Secao>
           <div style={{ marginTop: "10pt", fontSize: "9pt" }}>
