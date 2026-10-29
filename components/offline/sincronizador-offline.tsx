@@ -144,8 +144,10 @@ export function SincronizadorOffline() {
   if (fila.length === 0) return null
   const precisamAtencao = fila.filter(precisaAtencao).length
 
+  // No celular fica logo abaixo do cabeçalho: embaixo ele ficava atrás do aviso
+  // "Instale o app" e não era visto.
   return (
-    <div className="fixed inset-x-3 bottom-20 z-20 flex flex-col gap-2 rounded-lg border border-amber-500/40 bg-card p-3 shadow-lg md:bottom-4 md:left-auto md:w-96 print:hidden">
+    <div className="fixed inset-x-3 top-[4.75rem] z-30 flex flex-col gap-2 rounded-lg border border-amber-500/40 bg-card p-3 shadow-lg md:top-auto md:bottom-4 md:left-auto md:w-96 print:hidden">
       <p className="text-sm font-medium">
         {fila.length === 1
           ? "1 orçamento aguardando envio"
