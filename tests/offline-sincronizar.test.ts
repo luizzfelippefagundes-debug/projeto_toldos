@@ -82,6 +82,24 @@ describe("sincronizarFila", () => {
     expect(deps.criarCliente).toHaveBeenCalledWith(novo)
   })
 
+  it("espera o cliente novo ficar pronto antes de fechar o orçamento", async () => {
+    const novo: Cliente = { id: "cli-novo", nome: "Seu José", telefone: "27988880000" }
+    const ordem: string[] = []
+    const { deps } = criarDeps([item("orc-a", { clienteId: novo.id, clienteNovo: novo })], {
+      criarCliente: vi.fn(async () => {
+        await new Promise((r) => setTimeout(r, 20))
+        ordem.push("cliente pronto")
+      }),
+      fecharOrcamento: vi.fn((dados) => {
+        ordem.push("orçamento fechado")
+        return { id: dados.id, numero: 1003, totalFechado: 100 } as Orcamento
+      }),
+      existeNoServidor: vi.fn(async () => ordem.includes("orçamento fechado")),
+    })
+    await sincronizarFila(deps)
+    expect(ordem).toEqual(["cliente pronto", "orçamento fechado"])
+  })
+
   it("envia as fotos e o anexo e troca as urls provisórias pelas reais", async () => {
     const { deps } = criarDeps([
       item("orc-a", {

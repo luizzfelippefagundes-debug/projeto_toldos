@@ -8,7 +8,9 @@ export interface DependenciasSincronizacao {
   // Consulta o SERVIDOR (não a memória da tela): é o que prova que salvou.
   existeNoServidor(id: string): Promise<boolean>
   clienteExiste(id: string): boolean
-  criarCliente(cliente: Cliente): void
+  // Pode devolver uma promessa: o orçamento só fecha depois que o cliente novo
+  // estiver pronto (senão o fechamento não encontra o nome do cliente).
+  criarCliente(cliente: Cliente): void | Promise<void>
   enviarArquivo(arquivo: ArquivoFila): Promise<string>
   fecharOrcamento(dados: {
     id: string
@@ -49,7 +51,7 @@ export async function sincronizarFila(
       }
 
       if (item.clienteNovo && !deps.clienteExiste(item.clienteNovo.id)) {
-        deps.criarCliente(item.clienteNovo)
+        await deps.criarCliente(item.clienteNovo)
       }
 
       const urlsDasFotos: string[] = []

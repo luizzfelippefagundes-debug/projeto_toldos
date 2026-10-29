@@ -78,8 +78,14 @@ export function SincronizadorOffline() {
             registrarFalha: (id, mensagem) => registrarFalha(arm, id, mensagem),
             existeNoServidor,
             clienteExiste: (id) => clientesRef.current.some((c) => c.id === id),
-            criarCliente: (c) =>
-              addClienteRef.current({ nome: c.nome, telefone: c.telefone, email: c.email }, c.id),
+            criarCliente: async (c) => {
+              addClienteRef.current({ nome: c.nome, telefone: c.telefone, email: c.email }, c.id)
+              // Espera a tela "enxergar" o cliente novo: o fechamento procura o
+              // nome dele (descrição das parcelas e mensagem ao cliente).
+              for (let i = 0; i < 60 && !clientesRef.current.some((x) => x.id === c.id); i++) {
+                await new Promise((r) => setTimeout(r, 50))
+              }
+            },
             enviarArquivo,
             fecharOrcamento: (dados) => fecharOrcamentoRef.current(dados),
           },
