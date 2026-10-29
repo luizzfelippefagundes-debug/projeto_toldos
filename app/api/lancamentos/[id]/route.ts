@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
+import { excluirComHistorico } from "@/lib/historico-exclusoes"
 import { garantirColunasLancamentos } from "@/lib/migracoes"
 import type { LancamentoFinanceiro } from "@/lib/types"
 
@@ -23,6 +24,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  await getSql()`DELETE FROM lancamentos_financeiros WHERE id=${id}`
+  await excluirComHistorico("lancamentos_financeiros", id)
   return new NextResponse(null, { status: 204 })
 }

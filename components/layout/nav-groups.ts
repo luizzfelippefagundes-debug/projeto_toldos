@@ -12,6 +12,7 @@ import {
   Bot,
   Users,
   Users2,
+  ArchiveX,
   Tv2,
   Megaphone,
   Smartphone,
@@ -71,6 +72,7 @@ export const gruposNavegacao: NavGroup[] = [
       { label: "Portfólio", href: "/portfolio-fotos", icon: Images, donoApenas: true },
       { label: "Painel TV", href: "/tv", icon: Tv2, externo: true, donoApenas: true },
       { label: "Equipe", href: "/equipe", icon: Users2, donoApenas: true },
+      { label: "Exclusões", href: "/exclusoes", icon: ArchiveX, donoApenas: true },
     ],
   },
   {

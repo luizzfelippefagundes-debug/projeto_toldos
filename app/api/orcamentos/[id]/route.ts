@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
 import { garantirColunasOrcamentos } from "@/lib/migracoes"
+import { excluirComHistorico } from "@/lib/historico-exclusoes"
 import type { Orcamento } from "@/lib/types"
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -25,6 +26,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  await getSql()`DELETE FROM orcamentos WHERE id=${id}`
+  await excluirComHistorico("orcamentos", id)
   return new NextResponse(null, { status: 204 })
 }

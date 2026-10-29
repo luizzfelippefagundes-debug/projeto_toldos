@@ -30,6 +30,8 @@ const apiSoDono = createRouteMatcher([
   "/api/equipe(.*)",
   "/api/avisos-tv(.*)",
   "/api/portfolio-fotos(.*)",
+  // Histórico do que foi apagado (quem, quando e o conteúdo).
+  "/api/exclusoes(.*)",
 ])
 
 export default clerkMiddleware(async (auth, req) => {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
+import { excluirComHistorico } from "@/lib/historico-exclusoes"
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -14,6 +15,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  await getSql()`DELETE FROM clientes WHERE id = ${id}`
+  await excluirComHistorico("clientes", id)
   return NextResponse.json({ ok: true })
 }

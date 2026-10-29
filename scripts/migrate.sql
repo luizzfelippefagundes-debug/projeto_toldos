@@ -160,3 +160,16 @@ ALTER TABLE lancamentos_financeiros ADD COLUMN IF NOT EXISTS parcela TEXT;
 
 -- Despesa pessoal fica fora dos totais da empresa.
 ALTER TABLE lancamentos_financeiros ADD COLUMN IF NOT EXISTS pessoal BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Histórico do que foi apagado (orçamentos, clientes e lançamentos financeiros).
+-- Também é criada sozinha pelo sistema na primeira exclusão (lib/historico-exclusoes.ts).
+CREATE TABLE IF NOT EXISTS historico_exclusoes (
+  id TEXT PRIMARY KEY,
+  tabela TEXT NOT NULL,
+  registro_id TEXT NOT NULL,
+  resumo TEXT NOT NULL,
+  dados JSONB NOT NULL,
+  excluido_por_id TEXT,
+  excluido_por_nome TEXT,
+  excluido_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
