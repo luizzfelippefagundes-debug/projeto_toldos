@@ -1629,10 +1629,15 @@ export function NovoOrcamentoForm() {
               </div>
 
               <div className="flex flex-col gap-2 pt-4 print:hidden">
-                <Button variant="outline" onClick={handleGerarPdf}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Gerar PDF
-                </Button>
+                {/* Orçamento novo: um botão só, que salva e já abre o PDF (gerar o PDF
+                    sem salvar deixava mandar ao cliente um orçamento que não existe
+                    no sistema). Na edição o orçamento já está salvo. */}
+                {modoEdicao && (
+                  <Button variant="outline" onClick={handleGerarPdf}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Gerar PDF
+                  </Button>
+                )}
                 {modoEdicao ? (
                   <>
                     <Button disabled={!podeFechar || enviando} onClick={() => handleSalvarEdicao()}>
@@ -1650,7 +1655,11 @@ export function NovoOrcamentoForm() {
                   </>
                 ) : (
                   <Button disabled={!podeFechar || enviando} onClick={handleFechar}>
-                    {enviando ? "Enviando..." : "Fechar Orçamento"}
+                    {enviando
+                      ? "Enviando..."
+                      : offline
+                        ? "Fechar Orçamento"
+                        : "Fechar e gerar PDF"}
                   </Button>
                 )}
                 {!podeFechar && pendencias.length > 0 && (

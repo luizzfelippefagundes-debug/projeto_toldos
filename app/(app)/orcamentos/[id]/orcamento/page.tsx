@@ -8,7 +8,9 @@ import { ehImagem, formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/o
 import { textoCondicoesPagamento } from "@/lib/parcelas"
 import { OrcamentoOficial } from "@/components/orcamentos/orcamento-oficial"
 import { acabamentosSeed } from "@/lib/seed-data"
-import { ArrowLeft, Printer } from "lucide-react"
+import { ArrowLeft, MessageCircle, Printer } from "lucide-react"
+import { formatarData, formatarMoeda } from "@/lib/format"
+import { linkWhatsapp, mensagemOrcamentoWhatsapp } from "@/lib/whatsapp"
 
 export default function OrcamentoOficialPage() {
   const { id } = useParams<{ id: string }>()
@@ -66,17 +68,46 @@ export default function OrcamentoOficialPage() {
   const condicoes = orcamento.item.condicoesPagamento?.trim() || textoCondicoesPagamento(orcamento.item.entradaPercent)
   const numero = formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)
 
+  const validoAte = new Date(orcamento.criadoEm)
+  validoAte.setDate(validoAte.getDate() + (orcamento.validadeDias ?? 7))
+  const linkDoWhatsapp = linkWhatsapp(
+    cliente?.telefone ?? "",
+    mensagemOrcamentoWhatsapp({
+      clienteNome: cliente?.nome ?? "cliente",
+      numero,
+      total: formatarMoeda(total).replace(/\u00a0/g, " "),
+      validoAte: formatarData(validoAte.toISOString()),
+    })
+  )
+
   return (
     <>
-      <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Button variant="ghost" onClick={() => router.push("/orcamentos")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
-        <Button onClick={() => window.print()}>
-          <Printer className="mr-2 h-4 w-4" />
-          Imprimir / salvar PDF
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {linkDoWhatsapp ? (
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<a href={linkDoWhatsapp} target="_blank" rel="noopener noreferrer" />}
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Enviar pelo WhatsApp
+            </Button>
+          ) : (
+            <Button variant="outline" disabled title="O cliente não tem telefone cadastrado">
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Cliente sem telefone
+            </Button>
+          )}
+          <Button onClick={() => window.print()}>
+            <Printer className="mr-2 h-4 w-4" />
+            Imprimir / salvar PDF
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto print:overflow-visible">
