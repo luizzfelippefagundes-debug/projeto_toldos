@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { formatarData, formatarMoeda } from "@/lib/format"
+import { usePapelAtivo } from "@/context/papel-ativo-context"
 import type { PedidoRapido, ProdutoRapido, StatusPedidoRapido } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
@@ -445,6 +446,8 @@ function PedidoCardConteudo({
   coluna: (typeof colunas)[number]
   onMudarStatus: (status: StatusPedidoRapido) => void
 }) {
+  // Funcionário (papel "Produção e TV") vê o pedido, mas não o valor em reais.
+  const { papel } = usePapelAtivo()
   const prazo = obterPrazoEntregaPedido(pedido, produto?.prazoDias)
   const nome = pedido.clienteNome?.trim() || ""
   const ini = nome ? iniciais(nome) : null
@@ -499,9 +502,11 @@ function PedidoCardConteudo({
           <Clock className="h-3 w-3 shrink-0" />
           <span>{prazo ? formatarData(prazo.toISOString()) : "Sem prazo"}</span>
         </div>
-        <span className={cn("text-sm font-bold", coluna.corTexto)}>
-          {formatarMoeda(pedido.total)}
-        </span>
+        {papel !== "operador" && (
+          <span className={cn("text-sm font-bold", coluna.corTexto)}>
+            {formatarMoeda(pedido.total)}
+          </span>
+        )}
       </div>
 
       {/* Select de status — para mobile e como ação rápida no desktop */}
