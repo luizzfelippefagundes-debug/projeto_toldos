@@ -6,7 +6,7 @@
 // Importante: não dá pra depender de guardar páginas do sistema (/dashboard
 // etc.): elas exigem login e o login às vezes responde com redirecionamento,
 // que não é guardado. Por isso o plano B é sempre a tela /offline.
-const CACHE = "toldosprint-v2"
+const CACHE = "toldosprint-v3"
 const TELA_OFFLINE = "/offline"
 
 // Guarda a tela offline e os arquivos que ela precisa para abrir sem rede.
@@ -29,6 +29,29 @@ async function guardarTelaOffline() {
         if (r.ok) await cache.put(arquivo, r)
       } catch {
         // Um arquivo que falhar não impede o resto de ser guardado.
+      }
+    })
+  )
+  // Fontes (e imagens) citadas dentro dos CSS da tela offline.
+  const folhas = [...arquivos].filter((arquivo) => arquivo.endsWith(".css"))
+  // Imagens do PDF provisório: não aparecem no HTML guardado (a tela abre
+  // carregando), então vão na lista fixa.
+  const extras = new Set(["/brand/logo-orcamento.png", "/brand/assinatura-kaio.png"])
+  for (const folha of folhas) {
+    const guardado = await cache.match(folha)
+    if (!guardado) continue
+    const css = await guardado.clone().text()
+    for (const achado of css.matchAll(/url\((?:"|')?(\/_next\/static\/[^)"']+)(?:"|')?\)/g)) {
+      extras.add(achado[1])
+    }
+  }
+  await Promise.all(
+    [...extras].map(async (arquivo) => {
+      try {
+        const r = await fetch(arquivo)
+        if (r.ok) await cache.put(arquivo, r)
+      } catch {
+        // Fonte que falhar: a tela abre com a fonte padrão.
       }
     })
   )
@@ -64,13 +87,12 @@ async function estaticoPrimeiro(request) {
 async function redePrimeiro(request) {
   const cache = await caches.open(CACHE)
   try {
-    const resposta = await fetch(request)
-    // Redirecionamento (ex.: / -> /dashboard, ou ida pro login) não é guardado.
-    if (resposta.ok && !resposta.redirected) cache.put(request, resposta.clone())
-    return resposta
+    // Páginas do sistema não são guardadas: sem rede elas abririam sem dados
+    // (e esconderiam a tela offline, que é onde o orçamento funciona).
+    return await fetch(request)
   } catch (erro) {
-    const guardado = await cache.match(request)
-    if (guardado) return guardado
+    // Sem rede, qualquer página abre a tela offline (o orçamento com os dados
+    // guardados no aparelho).
     const telaOffline = await cache.match(TELA_OFFLINE)
     if (telaOffline) return telaOffline
     throw erro

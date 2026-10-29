@@ -687,6 +687,8 @@ export function NovoOrcamentoForm() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Depois de salvar offline, a confirmação aparece sozinha (sem título nem passos). */}
+      {!salvoOffline && (
       <div className="flex flex-wrap items-start justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-2xl font-semibold">
@@ -722,8 +724,9 @@ export function NovoOrcamentoForm() {
           </div>
         )}
       </div>
+      )}
 
-      {!modoEdicao && (
+      {!modoEdicao && !salvoOffline && (
         <Card className="print:hidden">
           <CardContent className="pt-6">
             <Stepper passos={passos} atual={passoAtual} />
