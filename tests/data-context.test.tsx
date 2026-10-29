@@ -877,4 +877,42 @@ describe("fluxos de dados", () => {
       expect(result.current.rascunho?.clienteId).toBe("cli-1")
     })
   })
+
+  it("fecha o orçamento com o id recebido (idempotência do envio offline)", async () => {
+    const { result } = await montar()
+    let orcamento: { id: string } | undefined
+    act(() => {
+      orcamento = result.current.fecharOrcamento({ ...criarDadosOrcamento(), id: "orc-offline-1" })
+    })
+    expect(orcamento?.id).toBe("orc-offline-1")
+    await waitFor(() =>
+      expect(result.current.orcamentos.some((o) => o.id === "orc-offline-1")).toBe(true)
+    )
+  })
+
+  it("sem id, o orçamento continua ganhando um id gerado", async () => {
+    const { result } = await montar()
+    let id = ""
+    act(() => {
+      id = result.current.fecharOrcamento(criarDadosOrcamento()).id
+    })
+    expect(id).toMatch(/^orc-/)
+  })
+
+  it("cadastra cliente com o id recebido", async () => {
+    const { result } = await montar()
+    let cliente: { id: string } | undefined
+    act(() => {
+      cliente = result.current.addCliente({ nome: "Seu José", telefone: "27988880000" }, "cli-offline-1")
+    })
+    expect(cliente?.id).toBe("cli-offline-1")
+    await waitFor(() =>
+      expect(result.current.clientes.some((c) => c.id === "cli-offline-1")).toBe(true)
+    )
+  })
+
+  it("expõe `carregado` verdadeiro depois de carregar os dados do servidor", async () => {
+    const { result } = await montar()
+    await waitFor(() => expect(result.current.carregado).toBe(true))
+  })
 })

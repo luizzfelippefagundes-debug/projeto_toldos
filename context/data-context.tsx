@@ -37,6 +37,8 @@ import {
 } from "@/lib/orcamento-itens"
 import { formatarMoeda } from "@/lib/format"
 import { criarPrazoEntregaPedido } from "@/lib/pedidos-rapidos"
+import { armazenamentoLocal } from "@/lib/offline/armazenamento"
+import { salvarCatalogo } from "@/lib/offline/catalogo"
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000
 const SETE_DIAS_MS = 7 * UM_DIA_MS
@@ -47,7 +49,7 @@ interface RascunhoOrcamento {
   ajusteManual: number
 }
 
-interface DataContextValue {
+export interface DataContextValue {
   materiais: Material[]
   servicos: Servico[]
   clientes: Cliente[]
@@ -58,15 +60,17 @@ interface DataContextValue {
   lancamentos: LancamentoFinanceiro[]
   mensagensBot: MensagemBot[]
   rascunho: RascunhoOrcamento | null
+  carregado: boolean
   addMaterial: (dados: Omit<Material, "id">) => Material
   updateMaterial: (id: string, dados: Omit<Material, "id">) => void
   addServico: (dados: Omit<Servico, "id">) => Servico
   updateServico: (id: string, dados: Omit<Servico, "id">) => void
-  addCliente: (dados: Omit<Cliente, "id">) => Cliente
+  addCliente: (dados: Omit<Cliente, "id">, id?: string) => Cliente
   updateCliente: (id: string, dados: Omit<Cliente, "id">) => void
   removeCliente: (id: string) => void
   addEntradaEstoque: (dados: Omit<EntradaEstoque, "id" | "data">) => void
   fecharOrcamento: (dados: {
+    id?: string
     clienteId: string
     item: OrcamentoItem
     ajusteManual: number
@@ -113,7 +117,7 @@ interface DataContextValue {
   addMensagemBot: (dados: Omit<MensagemBot, "id" | "criadoEm">) => void
 }
 
-const DataContext = createContext<DataContextValue | null>(null)
+export const DataContext = createContext<DataContextValue | null>(null)
 
 function gerarId(prefixo: string) {
   return `${prefixo}-${Math.random().toString(36).slice(2, 10)}`
@@ -172,6 +176,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [lancamentos, setLancamentos] = useState<LancamentoFinanceiro[]>([])
   const [mensagensBot, setMensagensBot] = useState<MensagemBot[]>([])
   const [rascunho, setRascunho] = useState<RascunhoOrcamento | null>(null)
+  const [carregado, setCarregado] = useState(false)
 
   const proximoNumeroRef = useRef(1001)
   const proximoNumeroPedidoRef = useRef(5001)
@@ -237,12 +242,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ped.reduce((max, p) => Math.max(max, p.numero), 5000) + 1
         setLancamentos(lan)
         setMensagensBot(msg)
+        setCarregado(true)
       } catch {
         toast.error("Não foi possível carregar os dados do servidor.")
       }
     }
     carregar()
   }, [])
+
+  // Guarda uma cópia dos dados que o orçamento usa, pra abrir sem internet.
+  // Só depois da primeira carga (senão guardaria listas vazias por cima).
+  useEffect(() => {
+    if (!carregado) return
+    try {
+      salvarCatalogo(armazenamentoLocal(), { clientes, materiais, servicos }).catch(() => {})
+    } catch {
+      // Sem IndexedDB (ex.: testes): segue sem cópia local.
+    }
+  }, [carregado, clientes, materiais, servicos])
 
   const addMaterial: DataContextValue["addMaterial"] = (dados) => {
     const novo: Material = { id: gerarId("mat"), ...dados }
@@ -273,8 +290,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     apiPut(`/api/servicos/${id}`, dados)
   }
 
-  const addCliente: DataContextValue["addCliente"] = (dados) => {
-    const novo: Cliente = { id: gerarId("cli"), ...dados }
+  const addCliente: DataContextValue["addCliente"] = (dados, id) => {
+    const novo: Cliente = { id: id ?? gerarId("cli"), ...dados }
     setClientes((atual) => [...atual, novo])
     apiPost("/api/clientes", novo)
     return novo
@@ -352,7 +369,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       : null
 
     const novo: Orcamento = {
-      id: gerarId("orc"),
+      id: dados.id ?? gerarId("orc"),
       numero,
       clienteId: dados.clienteId,
       item: itemFechado,
@@ -786,6 +803,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       lancamentos,
       mensagensBot,
       rascunho,
+      carregado,
       addMaterial,
       updateMaterial,
       addServico,
@@ -822,6 +840,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       lancamentos,
       mensagensBot,
       rascunho,
+      carregado,
     ]
   )
 
