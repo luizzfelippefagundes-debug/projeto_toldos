@@ -1,5 +1,11 @@
 import { SignIn } from "@clerk/nextjs"
+import { LimparCopiaLocal } from "@/components/offline/limpar-copia-local"
 
 export default function SignInPage() {
-  return <SignIn signUpUrl="/sign-up" />
+  return (
+    <>
+      <LimparCopiaLocal />
+      <SignIn signUpUrl="/sign-up" />
+    </>
+  )
 }

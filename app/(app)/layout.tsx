@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { operadorPodeAcessar, resolverPapel } from "@/lib/papel"
 import { InstalarApp } from "@/components/instalar-app"
 import { RegistrarServiceWorker } from "@/components/registrar-service-worker"
+import { SincronizadorOffline } from "@/components/offline/sincronizador-offline"
 
 export default async function AppLayout({
   children,
@@ -31,6 +32,7 @@ export default async function AppLayout({
         <AppShell>{children}</AppShell>
         <InstalarApp className="bottom-20 md:bottom-4" />
         <RegistrarServiceWorker />
+        <SincronizadorOffline />
         <Toaster richColors position="top-right" />
       </PapelAtivoProvider>
     </DataProvider>
