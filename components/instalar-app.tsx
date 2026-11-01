@@ -101,7 +101,7 @@ export function InstalarApp({ className }: { className?: string }) {
 
       <div className="flex items-center gap-3 pr-6">
         <Image
-          src="/icon-192.png"
+          src="/icon-192-v2.png"
           alt=""
           width={48}
           height={48}
