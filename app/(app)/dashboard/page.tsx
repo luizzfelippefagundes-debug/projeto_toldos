@@ -153,15 +153,13 @@ export default function DashboardPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#0060a7] ring-2 ring-[#ffd400]">
-            <Image
-              src="/brand/logo-simbolo.png"
-              alt="Símbolo da Toldos Print"
-              width={650}
-              height={175}
-              className="h-auto w-10"
-            />
-          </div>
+          <Image
+            src="/brand/logo-simbolo.png"
+            alt="Símbolo da Toldos Print"
+            width={650}
+            height={155}
+            className="h-auto w-[88px] shrink-0"
+          />
           <h1 className="text-2xl font-semibold">{tituloDashboard}</h1>
         </div>
         <Button
