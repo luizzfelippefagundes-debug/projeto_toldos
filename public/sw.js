@@ -6,7 +6,7 @@
 // Importante: não dá pra depender de guardar páginas do sistema (/dashboard
 // etc.): elas exigem login e o login às vezes responde com redirecionamento,
 // que não é guardado. Por isso o plano B é sempre a tela /offline.
-const CACHE = "toldosprint-v3"
+const CACHE = "toldosprint-v4"
 const TELA_OFFLINE = "/offline"
 
 // Guarda a tela offline e os arquivos que ela precisa para abrir sem rede.
