@@ -18,7 +18,14 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
-import type { PedidoRapido, ProdutoRapido, StatusPedidoRapido } from "@/lib/types"
+import type {
+  Cliente,
+  Material,
+  Orcamento,
+  PedidoRapido,
+  ProdutoRapido,
+  StatusPedidoRapido,
+} from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
   obterPrazoEntregaPedido,
@@ -105,8 +112,94 @@ function iniciais(nome: string) {
   return partes.slice(0, 2).map((p) => p[0]).join("").toUpperCase()
 }
 
+// O quadro mistura dois tipos de trabalho — pedidos da Gráfica Rápida e
+// orçamentos de toldo que já tiveram a OS emitida —, então cada card usa essa
+// forma só com o que o quadro precisa mostrar, sem se importar com a origem.
+interface ItemProducao {
+  tipo: "pedido" | "orcamento"
+  id: string
+  numero: number
+  numeroRotulo: string
+  clienteNome: string
+  status: StatusPedidoRapido
+  atrasado: boolean
+  dataRotulo: string
+  data: Date | null
+  valor: number
+  tituloProduto: string
+  subtituloProduto: string | null
+}
+
+function pedidoParaItem(
+  pedido: PedidoRapido,
+  produto: ProdutoRapido | undefined,
+  atrasado: boolean
+): ItemProducao {
+  return {
+    tipo: "pedido",
+    id: pedido.id,
+    numero: pedido.numero,
+    numeroRotulo: `#${pedido.numero}`,
+    clienteNome: pedido.clienteNome?.trim() || "",
+    status: pedido.status,
+    atrasado,
+    dataRotulo: "Prazo",
+    data: obterPrazoEntregaPedido(pedido, produto?.prazoDias),
+    valor: pedido.total,
+    tituloProduto: pedido.produtoNome ?? produto?.nome ?? "Produto removido",
+    subtituloProduto: pedido.varianteNome ?? null,
+  }
+}
+
+// Só entra no quadro depois de emitida a OS (orcamento.statusProducao
+// definido — ver o botão "Emitir OS e enviar pra produção" na tela da OS).
+function orcamentoParaItem(
+  orcamento: Orcamento,
+  clientes: Cliente[],
+  materiais: Material[]
+): ItemProducao | null {
+  if (!orcamento.statusProducao) return null
+  const cliente = clientes.find((c) => c.id === orcamento.clienteId)
+  const material = materiais.find((m) => m.id === orcamento.item.materialId)
+  const unidade = orcamento.materialFechado?.unidade ?? material?.unidade
+  const medida =
+    unidade === "m2" && orcamento.item.largura > 0 && orcamento.item.altura > 0
+      ? `${orcamento.item.largura} × ${orcamento.item.altura} m`
+      : orcamento.item.quantidadeUnidades > 1
+        ? `${orcamento.item.quantidadeUnidades} un`
+        : null
+  const itensExtras = orcamento.item.itensAdicionais?.length ?? 0
+  return {
+    tipo: "orcamento",
+    id: orcamento.id,
+    numero: orcamento.numero,
+    numeroRotulo: `OS #${orcamento.numero}`,
+    clienteNome: cliente?.nome?.trim() || "",
+    status: orcamento.statusProducao,
+    // Orçamento de toldo ainda não tem prazo de produção configurável; sem
+    // prazo não dá pra calcular atraso (fica pro dono acompanhar pela etapa).
+    atrasado: false,
+    dataRotulo: "Emitida em",
+    data: orcamento.osEmitidaEm ? new Date(orcamento.osEmitidaEm) : null,
+    valor: orcamento.totalFechado ?? 0,
+    tituloProduto: orcamento.materialFechado?.nome ?? material?.nome ?? "Material removido",
+    subtituloProduto:
+      [medida, itensExtras > 0 ? `+${itensExtras} ${itensExtras === 1 ? "item" : "itens"}` : null]
+        .filter(Boolean)
+        .join(" · ") || null,
+  }
+}
+
 export default function ProducaoPage() {
-  const { pedidosRapidos, produtosRapidos, moverPedidoRapido } = useData()
+  const {
+    pedidosRapidos,
+    produtosRapidos,
+    moverPedidoRapido,
+    orcamentos,
+    clientes,
+    materiais,
+    moverStatusProducaoOrcamento,
+  } = useData()
   const [busca, setBusca] = useState("")
   const [colunaAtiva, setColunaAtiva] = useState<StatusPedidoRapido | "todas">("todas")
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
@@ -131,25 +224,43 @@ export default function ProducaoPage() {
     return pedidoRapidoEstaAtrasado(pedido, produto?.prazoDias, hoje)
   }
 
-  const pedidosFiltrados = useMemo(() => {
+  // Pedidos da Gráfica Rápida + orçamentos de toldo com OS emitida, juntos
+  // num quadro só.
+  const itens = useMemo<ItemProducao[]>(() => {
+    const dosPedidos = pedidosRapidos.map((pedido) =>
+      pedidoParaItem(pedido, produtoDoPedido(pedido), estaAtrasado(pedido))
+    )
+    const dosOrcamentos = orcamentos
+      .map((o) => orcamentoParaItem(o, clientes, materiais))
+      .filter((item): item is ItemProducao => item !== null)
+    return [...dosPedidos, ...dosOrcamentos]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedidosRapidos, produtosRapidos, orcamentos, clientes, materiais, hoje])
+
+  function moverStatus(item: ItemProducao, status: StatusPedidoRapido) {
+    if (item.tipo === "pedido") moverPedidoRapido(item.id, status)
+    else moverStatusProducaoOrcamento(item.id, status)
+  }
+
+  const itensFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
-    return pedidosRapidos.filter((pedido) => {
+    return itens.filter((item) => {
       if (!termo) return true
       return (
-        pedido.clienteNome.toLowerCase().includes(termo) ||
-        String(pedido.numero).includes(termo)
+        item.clienteNome.toLowerCase().includes(termo) ||
+        String(item.numero).includes(termo)
       )
     })
-  }, [pedidosRapidos, busca])
+  }, [itens, busca])
 
-  const emProducao = pedidosRapidos.filter((p) =>
-    ["aprovado", "arte", "impressao", "acabamento", "pronto"].includes(p.status)
+  const emProducao = itens.filter((i) =>
+    ["aprovado", "arte", "impressao", "acabamento", "pronto"].includes(i.status)
   ).length
-  const atrasados = pedidosRapidos.filter(estaAtrasado).length
-  const prontos = pedidosRapidos.filter((p) => p.status === "pronto").length
+  const atrasados = itens.filter((i) => i.atrasado).length
+  const prontos = itens.filter((i) => i.status === "pronto").length
 
-  const pedidoArrastando = arrastandoId
-    ? pedidosRapidos.find((p) => p.id === arrastandoId)
+  const itemArrastando = arrastandoId
+    ? (itens.find((i) => i.id === arrastandoId) ?? null)
     : null
 
   function handleDragStart(event: DragStartEvent) {
@@ -162,9 +273,9 @@ export default function ProducaoPage() {
     if (!over) return
     const novoStatus = String(over.id)
     if (!statusValidos.has(novoStatus)) return
-    const pedido = pedidosRapidos.find((p) => p.id === active.id)
-    if (!pedido || pedido.status === novoStatus) return
-    moverPedidoRapido(String(active.id), novoStatus as StatusPedidoRapido)
+    const item = itens.find((i) => i.id === active.id)
+    if (!item || item.status === novoStatus) return
+    moverStatus(item, novoStatus as StatusPedidoRapido)
   }
 
   return (
@@ -240,10 +351,10 @@ export default function ProducaoPage() {
               : "border-border text-muted-foreground"
           )}
         >
-          Todas ({pedidosFiltrados.length})
+          Todas ({itensFiltrados.length})
         </button>
         {colunas.map((col) => {
-          const qtd = pedidosFiltrados.filter((p) => p.status === col.status).length
+          const qtd = itensFiltrados.filter((i) => i.status === col.status).length
           return (
             <button
               key={col.status}
@@ -266,10 +377,8 @@ export default function ProducaoPage() {
         {colunas
           .filter((col) => colunaAtiva === "todas" || col.status === colunaAtiva)
           .map((col) => {
-            const pedidosDaColuna = pedidosFiltrados.filter(
-              (p) => p.status === col.status
-            )
-            if (colunaAtiva === "todas" && pedidosDaColuna.length === 0) return null
+            const itensDaColuna = itensFiltrados.filter((i) => i.status === col.status)
+            if (colunaAtiva === "todas" && itensDaColuna.length === 0) return null
             return (
               <div key={col.status} className="flex flex-col gap-2">
                 {colunaAtiva === "todas" && (
@@ -279,21 +388,19 @@ export default function ProducaoPage() {
                       {col.titulo}
                     </span>
                     <span className={cn("text-xs font-bold", col.corTexto)}>
-                      {pedidosDaColuna.length}
+                      {itensDaColuna.length}
                     </span>
                   </div>
                 )}
-                {pedidosDaColuna.map((pedido) => (
-                  <PedidoCardConteudo
-                    key={pedido.id}
-                    pedido={pedido}
-                    produto={produtoDoPedido(pedido)}
-                    atrasado={estaAtrasado(pedido)}
-                    coluna={colunaMap[pedido.status]}
-                    onMudarStatus={(status) => moverPedidoRapido(pedido.id, status)}
+                {itensDaColuna.map((item) => (
+                  <CardProducao
+                    key={item.id}
+                    item={item}
+                    coluna={colunaMap[item.status]}
+                    onMudarStatus={(status) => moverStatus(item, status)}
                   />
                 ))}
-                {pedidosDaColuna.length === 0 && colunaAtiva !== "todas" && (
+                {itensDaColuna.length === 0 && colunaAtiva !== "todas" && (
                   <p className="py-6 text-center text-sm text-muted-foreground">
                     Nenhum pedido em {col.titulo}.
                   </p>
@@ -301,7 +408,7 @@ export default function ProducaoPage() {
               </div>
             )
           })}
-        {pedidosFiltrados.length === 0 && (
+        {itensFiltrados.length === 0 && (
           <p className="py-8 text-center text-sm text-muted-foreground">
             Nenhum pedido encontrado.
           </p>
@@ -317,9 +424,7 @@ export default function ProducaoPage() {
         >
           <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-4">
             {colunas.map((col) => {
-              const pedidosDaColuna = pedidosFiltrados.filter(
-                (p) => p.status === col.status
-              )
+              const itensDaColuna = itensFiltrados.filter((i) => i.status === col.status)
               return (
                 <ColunaDroppable key={col.status} status={col.status} coluna={col}>
                   <div className={cn(
@@ -336,27 +441,23 @@ export default function ProducaoPage() {
                       "rounded-full px-2 py-0.5 text-xs font-bold",
                       col.corFundo, col.corTexto
                     )}>
-                      {pedidosDaColuna.length}
+                      {itensDaColuna.length}
                     </span>
                   </div>
                   <div className="flex flex-col gap-2 p-2">
-                    {pedidosDaColuna.length === 0 && (
+                    {itensDaColuna.length === 0 && (
                       <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
                         Vazio
                       </div>
                     )}
-                    {pedidosDaColuna.map((pedido) => (
-                      <PedidoCardArrastavel key={pedido.id} pedido={pedido}>
-                        <PedidoCardConteudo
-                          pedido={pedido}
-                          produto={produtoDoPedido(pedido)}
-                          atrasado={estaAtrasado(pedido)}
-                          coluna={colunaMap[pedido.status]}
-                          onMudarStatus={(status) =>
-                            moverPedidoRapido(pedido.id, status)
-                          }
+                    {itensDaColuna.map((item) => (
+                      <CardArrastavel key={item.id} id={item.id}>
+                        <CardProducao
+                          item={item}
+                          coluna={colunaMap[item.status]}
+                          onMudarStatus={(status) => moverStatus(item, status)}
                         />
-                      </PedidoCardArrastavel>
+                      </CardArrastavel>
                     ))}
                   </div>
                 </ColunaDroppable>
@@ -365,13 +466,11 @@ export default function ProducaoPage() {
           </div>
 
           <DragOverlay>
-            {pedidoArrastando ? (
+            {itemArrastando ? (
               <div className="w-56 rotate-2 opacity-90 shadow-xl">
-                <PedidoCardConteudo
-                  pedido={pedidoArrastando}
-                  produto={produtoDoPedido(pedidoArrastando)}
-                  atrasado={estaAtrasado(pedidoArrastando)}
-                  coluna={colunaMap[pedidoArrastando.status]}
+                <CardProducao
+                  item={itemArrastando}
+                  coluna={colunaMap[itemArrastando.status]}
                   onMudarStatus={() => {}}
                 />
               </div>
@@ -407,16 +506,8 @@ function ColunaDroppable({
   )
 }
 
-function PedidoCardArrastavel({
-  pedido,
-  children,
-}: {
-  pedido: PedidoRapido
-  children: ReactNode
-}) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: pedido.id,
-  })
+function CardArrastavel({ id, children }: { id: string; children: ReactNode }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id })
 
   return (
     <div
@@ -433,30 +524,24 @@ function PedidoCardArrastavel({
   )
 }
 
-function PedidoCardConteudo({
-  pedido,
-  produto,
-  atrasado,
+function CardProducao({
+  item,
   coluna,
   onMudarStatus,
 }: {
-  pedido: PedidoRapido
-  produto: ProdutoRapido | undefined
-  atrasado: boolean
+  item: ItemProducao
   coluna: (typeof colunas)[number]
   onMudarStatus: (status: StatusPedidoRapido) => void
 }) {
-  // Funcionário (papel "Produção e TV") vê o pedido, mas não o valor em reais.
+  // Funcionário (papel "Produção e TV") vê o card, mas não o valor em reais.
   const { papel } = usePapelAtivo()
-  const prazo = obterPrazoEntregaPedido(pedido, produto?.prazoDias)
-  const nome = pedido.clienteNome?.trim() || ""
-  const ini = nome ? iniciais(nome) : null
+  const ini = item.clienteNome ? iniciais(item.clienteNome) : null
 
   return (
     <div
       className={cn(
         "flex flex-col gap-3 rounded-lg border bg-card p-3 text-sm shadow-sm",
-        atrasado ? "border-destructive/50" : "border-border"
+        item.atrasado ? "border-destructive/50" : "border-border"
       )}
     >
       {/* Topo: avatar + número + badge atrasado */}
@@ -472,39 +557,39 @@ function PedidoCardConteudo({
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-1">
             <span className="text-xs font-bold text-muted-foreground">
-              #{pedido.numero}
+              {item.numeroRotulo}
             </span>
-            {atrasado && (
+            {item.atrasado && (
               <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
                 Atrasado
               </Badge>
             )}
           </div>
           <p className="truncate font-medium leading-tight">
-            {nome || <span className="italic text-muted-foreground">Sem cliente</span>}
+            {item.clienteNome || <span className="italic text-muted-foreground">Sem cliente</span>}
           </p>
         </div>
       </div>
 
       {/* Produto */}
       <div className={cn("rounded-md px-2 py-1.5 text-xs", coluna.corFundo)}>
-        <p className={cn("font-semibold", coluna.corTexto)}>
-          {pedido.produtoNome ?? produto?.nome ?? "Produto removido"}
-        </p>
-        {pedido.varianteNome && (
-          <p className="mt-0.5 text-muted-foreground">{pedido.varianteNome}</p>
+        <p className={cn("font-semibold", coluna.corTexto)}>{item.tituloProduto}</p>
+        {item.subtituloProduto && (
+          <p className="mt-0.5 text-muted-foreground">{item.subtituloProduto}</p>
         )}
       </div>
 
-      {/* Prazo + valor */}
+      {/* Data + valor */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3 shrink-0" />
-          <span>{prazo ? formatarData(prazo.toISOString()) : "Sem prazo"}</span>
+          <span>
+            {item.data ? `${item.dataRotulo} ${formatarData(item.data.toISOString())}` : "Sem prazo"}
+          </span>
         </div>
         {papel !== "operador" && (
           <span className={cn("text-sm font-bold", coluna.corTexto)}>
-            {formatarMoeda(pedido.total)}
+            {formatarMoeda(item.valor)}
           </span>
         )}
       </div>
@@ -518,7 +603,7 @@ function PedidoCardConteudo({
               onClick={() => onMudarStatus(c.status)}
               className={cn(
                 "rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
-                pedido.status === c.status
+                item.status === c.status
                   ? `${c.cor} border-transparent text-white`
                   : "border-border text-muted-foreground hover:bg-accent"
               )}

@@ -159,6 +159,11 @@ export interface Orcamento {
   fechadoEm: string | null
   validadeDias?: number
   retorno?: RetornoOrcamento
+  // Preenchido ao emitir a OS (ver app/(app)/orcamentos/[id]/os/page.tsx): a
+  // partir daí o orçamento aparece no quadro de Produção, com as mesmas
+  // etapas dos pedidos da Gráfica Rápida. Sem isso, não aparece lá.
+  statusProducao?: StatusPedidoRapido
+  osEmitidaEm?: string
 }
 
 export interface EntradaEstoque {

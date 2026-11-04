@@ -1,6 +1,7 @@
 "use client"
 
 import { useParams, useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { useData } from "@/context/data-context"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/brand/logo"
@@ -9,12 +10,12 @@ import { quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
-import { ArrowLeft, Printer } from "lucide-react"
+import { ArrowLeft, Factory, Printer } from "lucide-react"
 
 export default function OrdemDeServicoPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const { orcamentos, clientes, materiais, servicos } = useData()
+  const { orcamentos, clientes, materiais, servicos, emitirOsOrcamento } = useData()
 
   const orcamento = orcamentos.find((o) => o.id === id)
 
@@ -71,15 +72,33 @@ export default function OrdemDeServicoPage() {
   const totalFinal = orcamento.totalFechado ?? resultado?.total ?? 0
   const hoje = new Date()
 
+  function handleEmitirOs() {
+    if (emitirOsOrcamento(orcamento!.id)) {
+      toast.success("OS emitida: o orçamento já está no quadro de Produção.")
+    }
+  }
+
   return (
     <>
       {/* Barra de ações — só na tela, some ao imprimir */}
-      <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Button variant="ghost" onClick={() => router.push("/orcamentos")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {orcamento.status === "fechado" &&
+            (orcamento.statusProducao ? (
+              <span className="flex items-center gap-1.5 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-600 dark:text-emerald-300">
+                <Factory className="h-4 w-4" />
+                Na produção desde {formatarData(orcamento.osEmitidaEm ?? orcamento.criadoEm)}
+              </span>
+            ) : (
+              <Button onClick={handleEmitirOs}>
+                <Factory className="mr-2 h-4 w-4" />
+                Emitir OS e enviar pra produção
+              </Button>
+            ))}
           <Button
             variant="outline"
             onClick={() => router.push(`/orcamentos/${orcamento.id}/orcamento`)}

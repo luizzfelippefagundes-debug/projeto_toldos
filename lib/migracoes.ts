@@ -9,6 +9,8 @@ let lancamentosProntos = false
 export async function garantirColunasOrcamentos() {
   if (orcamentosProntos) return
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS retorno JSONB`
+  await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS status_producao TEXT`
+  await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS os_emitida_em TEXT`
   orcamentosProntos = true
 }
 

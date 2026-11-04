@@ -915,4 +915,98 @@ describe("fluxos de dados", () => {
     const { result } = await montar()
     await waitFor(() => expect(result.current.carregado).toBe(true))
   })
+
+  it("emite a OS e manda o orçamento pra produção, começando em 'aprovado'", async () => {
+    const { result } = await montar()
+    let id = ""
+    act(() => {
+      id = result.current.fecharOrcamento(criarDadosOrcamento()).id
+    })
+    await waitFor(() => expect(result.current.orcamentos.some((o) => o.id === id)).toBe(true))
+
+    let emitiu = false
+    act(() => {
+      emitiu = result.current.emitirOsOrcamento(id)
+    })
+
+    expect(emitiu).toBe(true)
+    const orcamento = result.current.orcamentos.find((o) => o.id === id)
+    expect(orcamento?.statusProducao).toBe("aprovado")
+    expect(orcamento?.osEmitidaEm).toBeTruthy()
+  })
+
+  it("não deixa emitir a OS duas vezes", async () => {
+    const { result } = await montar()
+    let id = ""
+    act(() => {
+      id = result.current.fecharOrcamento(criarDadosOrcamento()).id
+    })
+    await waitFor(() => expect(result.current.orcamentos.some((o) => o.id === id)).toBe(true))
+
+    act(() => {
+      result.current.emitirOsOrcamento(id)
+    })
+    let segundaVez = true
+    act(() => {
+      segundaVez = result.current.emitirOsOrcamento(id)
+    })
+
+    expect(segundaVez).toBe(false)
+  })
+
+  it("não emite a OS de um orçamento que não está fechado", async () => {
+    const { result } = await montar()
+    let id = ""
+    act(() => {
+      id = result.current.fecharOrcamento(criarDadosOrcamento()).id
+    })
+    await waitFor(() => expect(result.current.orcamentos.some((o) => o.id === id)).toBe(true))
+    act(() => {
+      result.current.reabrirOrcamento(id)
+    })
+    await waitFor(() =>
+      expect(result.current.orcamentos.find((o) => o.id === id)?.status).toBe("aberto")
+    )
+
+    let emitiu = true
+    act(() => {
+      emitiu = result.current.emitirOsOrcamento(id)
+    })
+
+    expect(emitiu).toBe(false)
+    expect(result.current.orcamentos.find((o) => o.id === id)?.statusProducao).toBeUndefined()
+  })
+
+  it("move o orçamento entre as etapas de produção depois de emitida a OS", async () => {
+    const { result } = await montar()
+    let id = ""
+    act(() => {
+      id = result.current.fecharOrcamento(criarDadosOrcamento()).id
+    })
+    await waitFor(() => expect(result.current.orcamentos.some((o) => o.id === id)).toBe(true))
+    act(() => {
+      result.current.emitirOsOrcamento(id)
+    })
+
+    act(() => {
+      result.current.moverStatusProducaoOrcamento(id, "arte")
+    })
+
+    expect(result.current.orcamentos.find((o) => o.id === id)?.statusProducao).toBe("arte")
+  })
+
+  it("não move pra produção um orçamento cuja OS nunca foi emitida", async () => {
+    const { result } = await montar()
+    let id = ""
+    act(() => {
+      id = result.current.fecharOrcamento(criarDadosOrcamento()).id
+    })
+    await waitFor(() => expect(result.current.orcamentos.some((o) => o.id === id)).toBe(true))
+
+    act(() => {
+      result.current.moverStatusProducaoOrcamento(id, "arte")
+    })
+
+    expect(result.current.orcamentos.find((o) => o.id === id)?.statusProducao).toBeUndefined()
+  })
 })

@@ -102,6 +102,13 @@ export interface DataContextValue {
   reabrirOrcamento: (id: string) => boolean
   removeOrcamento: (id: string) => void
   duplicarOrcamento: (id: string) => void
+  // Emite a OS e manda o orçamento pro quadro de Produção, com as mesmas
+  // etapas dos pedidos da Gráfica Rápida (começa em "aprovado": o cliente já
+  // assinou a OS, então já está aprovado). Só funciona uma vez por orçamento
+  // fechado; devolve false se já tiver sido emitida ou o orçamento não
+  // estiver fechado.
+  emitirOsOrcamento: (id: string) => boolean
+  moverStatusProducaoOrcamento: (id: string, status: StatusPedidoRapido) => void
   consumirRascunho: () => void
   addProdutoRapido: (dados: Omit<ProdutoRapido, "id">) => ProdutoRapido
   addPedidoRapido: (
@@ -640,6 +647,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const emitirOsOrcamento: DataContextValue["emitirOsOrcamento"] = (id) => {
+    const orcamento = orcamentos.find((o) => o.id === id)
+    if (!orcamento || orcamento.status !== "fechado" || orcamento.statusProducao) {
+      return false
+    }
+    const atualizado: Orcamento = {
+      ...orcamento,
+      statusProducao: "aprovado",
+      osEmitidaEm: new Date().toISOString(),
+    }
+    setOrcamentos((atual) => atual.map((o) => (o.id === id ? atualizado : o)))
+    apiPut(`/api/orcamentos/${id}`, atualizado)
+    return true
+  }
+
+  const moverStatusProducaoOrcamento: DataContextValue["moverStatusProducaoOrcamento"] = (
+    id,
+    status
+  ) => {
+    const orcamento = orcamentos.find((o) => o.id === id)
+    if (!orcamento || !orcamento.statusProducao) return
+    const atualizado: Orcamento = { ...orcamento, statusProducao: status }
+    setOrcamentos((atual) => atual.map((o) => (o.id === id ? atualizado : o)))
+    apiPut(`/api/orcamentos/${id}`, atualizado)
+  }
+
   const consumirRascunho = () => setRascunho(null)
 
   const addProdutoRapido: DataContextValue["addProdutoRapido"] = (dados) => {
@@ -818,6 +851,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       reabrirOrcamento,
       removeOrcamento,
       duplicarOrcamento,
+      emitirOsOrcamento,
+      moverStatusProducaoOrcamento,
       consumirRascunho,
       addProdutoRapido,
       addPedidoRapido,

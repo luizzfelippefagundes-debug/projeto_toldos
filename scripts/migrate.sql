@@ -173,3 +173,7 @@ CREATE TABLE IF NOT EXISTS historico_exclusoes (
   excluido_por_nome TEXT,
   excluido_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Orçamento entra no quadro de Produção ao emitir a OS (lib/migracoes.ts cria sozinho).
+ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS status_producao TEXT;
+ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS os_emitida_em TEXT;
