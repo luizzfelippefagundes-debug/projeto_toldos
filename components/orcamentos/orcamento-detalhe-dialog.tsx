@@ -22,7 +22,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { OrcamentoDetalhes } from "@/components/orcamentos/orcamento-detalhes"
-import { Printer, FileText, Pencil, Copy, RotateCcw, Trash2 } from "lucide-react"
+import { EnviarWhatsappDialog } from "@/components/orcamentos/enviar-whatsapp-dialog"
+import { Printer, FileText, Pencil, Copy, RotateCcw, Trash2, MessageCircle } from "lucide-react"
 import { toast } from "sonner"
 
 export function OrcamentoDetalheDialog({
@@ -32,11 +33,13 @@ export function OrcamentoDetalheDialog({
   orcamentoId: string | null
   onOpenChange: (open: boolean) => void
 }) {
-  const { orcamentos, reabrirOrcamento, duplicarOrcamento, removeOrcamento } = useData()
+  const { orcamentos, clientes, reabrirOrcamento, duplicarOrcamento, removeOrcamento } = useData()
   const router = useRouter()
   const [confirmarRemocao, setConfirmarRemocao] = useState(false)
+  const [whatsappAberto, setWhatsappAberto] = useState(false)
 
   const orcamento = orcamentos.find((o) => o.id === orcamentoId)
+  const cliente = clientes.find((c) => c.id === orcamento?.clienteId)
 
   function handleReabrir() {
     if (!orcamento) return
@@ -110,6 +113,15 @@ export function OrcamentoDetalheDialog({
                   <Copy className="mr-2 h-4 w-4" />
                   Duplicar
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-green-700 border-green-300 hover:bg-green-50"
+                  onClick={() => setWhatsappAberto(true)}
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  WhatsApp
+                </Button>
                 {orcamento.status !== "aberto" && (
                   <Button variant="outline" size="sm" onClick={handleReabrir}>
                     <RotateCcw className="mr-2 h-4 w-4" />
@@ -130,6 +142,15 @@ export function OrcamentoDetalheDialog({
           )}
         </DialogContent>
       </Dialog>
+
+      {orcamento && (
+        <EnviarWhatsappDialog
+          open={whatsappAberto}
+          onOpenChange={setWhatsappAberto}
+          orcamento={orcamento}
+          cliente={cliente}
+        />
+      )}
 
       <AlertDialog open={confirmarRemocao} onOpenChange={setConfirmarRemocao}>
         <AlertDialogContent>
