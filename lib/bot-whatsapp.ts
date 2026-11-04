@@ -111,9 +111,13 @@ async function processarComTravaAdquirida(
 
   const HORAS_PARA_EXPIRAR = 6
   const sessaoExpirada = Date.now() - new Date(conversa.atualizadoEm).getTime() > HORAS_PARA_EXPIRAR * 3600_000
-  const historico: MensagemHistorico[] = sessaoExpirada ? [] : conversa.historico
-  let nomeTemp = sessaoExpirada ? null : conversa.nomeTemp
-  let localTemp = sessaoExpirada ? null : conversa.localTemp
+  // Saudação simples reinicia a conversa: evita o bot continuar um histórico
+  // quebrado (ex: mensagens que falharam a enviar durante problemas técnicos).
+  const eSaudacao = /^(oi+|ol[aá]+|e a[ií]|bom dia|boa tarde|boa noite|hey|hello|al[oô]+)[\s!?.]*$/i.test(textoRecebido.trim())
+  const reiniciar = sessaoExpirada || (eSaudacao && conversa.historico.length > 0)
+  const historico: MensagemHistorico[] = reiniciar ? [] : conversa.historico
+  let nomeTemp = reiniciar ? null : conversa.nomeTemp
+  let localTemp = reiniciar ? null : conversa.localTemp
   let transferido = false
 
   const systemPrompt = `Você é o atendente virtual da TOLDOSPRINT (Toldos e Comunicação Visual), respondendo pelo WhatsApp.
