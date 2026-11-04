@@ -173,3 +173,21 @@ CREATE TABLE IF NOT EXISTS historico_exclusoes (
   excluido_por_nome TEXT,
   excluido_em TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Status do orçamento no quadro de Produção, preenchido ao emitir a OS.
+ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS status_producao TEXT;
+ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS os_emitida_em TEXT;
+
+-- Estado da conversa do bot do WhatsApp, por telefone (ver lib/bot-conversa.ts).
+CREATE TABLE IF NOT EXISTS conversas_bot (
+  id TEXT PRIMARY KEY,
+  telefone TEXT NOT NULL UNIQUE,
+  cliente_id TEXT,
+  nome_temp TEXT,
+  local_temp TEXT,
+  historico TEXT NOT NULL DEFAULT '[]',
+  transferido_em TEXT,
+  processando_desde TEXT,
+  criado_em TEXT NOT NULL,
+  atualizado_em TEXT NOT NULL
+);
