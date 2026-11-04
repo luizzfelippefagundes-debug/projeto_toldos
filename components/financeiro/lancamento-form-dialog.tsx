@@ -40,16 +40,29 @@ const formasPagamento: { value: FormaPagamento; label: string }[] = [
   { value: "transferencia", label: "Transferência" },
 ]
 
+interface InicialLancamento {
+  descricao?: string
+  categoria?: string
+  valor?: number
+  vencimento?: string
+  formaPagamento?: string
+  numeroBoleto?: string
+}
+
 export function LancamentoFormDialog({
   lancamento,
   trigger,
   open: openProp,
   onOpenChange: onOpenChangeProp,
+  avisos,
+  inicial,
 }: {
   lancamento?: LancamentoFinanceiro
   trigger?: React.ReactNode
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  avisos?: string[]
+  inicial?: InicialLancamento
 }) {
   const [abertoInterno, setAbertoInterno] = useState(false)
   const aberto = openProp !== undefined ? openProp : abertoInterno
@@ -72,6 +85,8 @@ export function LancamentoFormDialog({
           key={aberto ? "aberto" : "fechado"}
           lancamento={lancamento}
           onFechar={() => setAberto(false)}
+          avisos={avisos}
+          inicial={inicial}
         />
       </DialogContent>
     </Dialog>
@@ -81,24 +96,30 @@ export function LancamentoFormDialog({
 function LancamentoFormFields({
   lancamento,
   onFechar,
+  avisos,
+  inicial,
 }: {
   lancamento?: LancamentoFinanceiro
   onFechar: () => void
+  avisos?: string[]
+  inicial?: InicialLancamento
 }) {
   const { addLancamento, updateLancamento, clientes } = useData()
 
   const [tipo, setTipo] = useState<TipoLancamento>(lancamento?.tipo ?? "despesa")
-  const [descricao, setDescricao] = useState(lancamento?.descricao ?? "")
-  const [categoria, setCategoria] = useState(lancamento?.categoria ?? "")
-  const [valor, setValor] = useState(lancamento ? String(lancamento.valor) : "")
+  const [descricao, setDescricao] = useState(lancamento?.descricao ?? inicial?.descricao ?? "")
+  const [categoria, setCategoria] = useState(lancamento?.categoria ?? inicial?.categoria ?? "")
+  const [valor, setValor] = useState(lancamento ? String(lancamento.valor) : inicial?.valor != null ? String(inicial.valor) : "")
   const [vencimento, setVencimento] = useState(
-    lancamento ? formatarDataInput(new Date(lancamento.vencimento)) : hojeISO()
+    lancamento ? formatarDataInput(new Date(lancamento.vencimento))
+    : inicial?.vencimento ? formatarDataInput(new Date(inicial.vencimento))
+    : hojeISO()
   )
   const [clienteId, setClienteId] = useState<string>(lancamento?.clienteId ?? "nenhum")
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | "nenhuma">(
-    lancamento?.formaPagamento ?? "nenhuma"
+    lancamento?.formaPagamento ?? (inicial?.formaPagamento as FormaPagamento | undefined) ?? "nenhuma"
   )
-  const [numeroBoleto, setNumeroBoleto] = useState(lancamento?.numeroBoleto ?? "")
+  const [numeroBoleto, setNumeroBoleto] = useState(lancamento?.numeroBoleto ?? inicial?.numeroBoleto ?? "")
   const [pessoal, setPessoal] = useState(lancamento?.pessoal ?? false)
   // Só no lançamento novo: gera uma parcela por mês (financiamento, aluguel…).
   const [meses, setMeses] = useState("1")
@@ -170,6 +191,12 @@ function LancamentoFormFields({
       <DialogHeader>
         <DialogTitle>{lancamento ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
       </DialogHeader>
+
+      {avisos && avisos.length > 0 && (
+        <div className="flex flex-col gap-1 rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+          {avisos.map((a, i) => <p key={i}>{a}</p>)}
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
