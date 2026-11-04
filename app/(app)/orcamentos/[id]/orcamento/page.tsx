@@ -1,6 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { useData } from "@/context/data-context"
 import { Button } from "@/components/ui/button"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
@@ -11,11 +13,14 @@ import { acabamentosSeed } from "@/lib/seed-data"
 import { ArrowLeft, MessageCircle, Printer } from "lucide-react"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { linkWhatsapp, mensagemOrcamentoWhatsapp } from "@/lib/whatsapp"
+import { gerarPdfOrcamento } from "@/lib/pdf-orcamento"
+import { compartilharOuBaixarArquivo } from "@/lib/compartilhar"
 
 export default function OrcamentoOficialPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { orcamentos, clientes, materiais, servicos } = useData()
+  const [enviando, setEnviando] = useState(false)
 
   const orcamento = orcamentos.find((o) => o.id === id)
 
@@ -70,15 +75,33 @@ export default function OrcamentoOficialPage() {
 
   const validoAte = new Date(orcamento.criadoEm)
   validoAte.setDate(validoAte.getDate() + (orcamento.validadeDias ?? 7))
-  const linkDoWhatsapp = linkWhatsapp(
-    cliente?.telefone ?? "",
-    mensagemOrcamentoWhatsapp({
-      clienteNome: cliente?.nome ?? "cliente",
-      numero,
-      total: formatarMoeda(total).replace(/\u00a0/g, " "),
-      validoAte: formatarData(validoAte.toISOString()),
-    })
-  )
+  const mensagemWhatsapp = mensagemOrcamentoWhatsapp({
+    clienteNome: cliente?.nome ?? "cliente",
+    numero,
+    total: formatarMoeda(total).replace(/\u00a0/g, " "),
+    validoAte: formatarData(validoAte.toISOString()),
+  })
+  const linkDoWhatsapp = linkWhatsapp(cliente?.telefone ?? "", mensagemWhatsapp)
+
+  async function handleEnviarWhatsapp() {
+    if (!linkDoWhatsapp) return
+    setEnviando(true)
+    try {
+      const arquivo = await gerarPdfOrcamento("orcamento-print", `Orcamento-${numero}.pdf`)
+      const resultado = await compartilharOuBaixarArquivo(arquivo, mensagemWhatsapp)
+      if (resultado === "compartilhado") {
+        toast.success("Escolha o WhatsApp e o contato na tela de compartilhamento.")
+      } else if (resultado === "baixado") {
+        toast.success("PDF baixado. Abrindo o WhatsApp \u2014 \u00e9 s\u00f3 anexar o arquivo na conversa.")
+        window.open(linkDoWhatsapp, "_blank")
+      }
+    } catch {
+      toast.error("N\u00e3o consegui gerar o PDF. Abrindo o WhatsApp sem o anexo.")
+      window.open(linkDoWhatsapp, "_blank")
+    } finally {
+      setEnviando(false)
+    }
+  }
 
   return (
     <>
@@ -89,13 +112,9 @@ export default function OrcamentoOficialPage() {
         </Button>
         <div className="flex flex-wrap gap-2">
           {linkDoWhatsapp ? (
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<a href={linkDoWhatsapp} target="_blank" rel="noopener noreferrer" />}
-            >
+            <Button variant="outline" onClick={handleEnviarWhatsapp} disabled={enviando}>
               <MessageCircle className="mr-2 h-4 w-4" />
-              Enviar pelo WhatsApp
+              {enviando ? "Gerando PDF..." : "Enviar pelo WhatsApp"}
             </Button>
           ) : (
             <Button variant="outline" disabled title="O cliente não tem telefone cadastrado">
