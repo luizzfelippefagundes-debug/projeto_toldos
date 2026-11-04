@@ -227,14 +227,6 @@ export default function OrdemDeServicoPage() {
                 </tr>
               )}
 
-              {/* Imposto */}
-              {resultado && resultado.valorImposto > 0 && (
-                <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td className="px-3 py-2 text-gray-500">Impostos</td>
-                  <td className="px-3 py-2 text-gray-500">{orcamento.item.impostoPercent ?? 0}%</td>
-                  <td className="px-3 py-2 text-right">{formatarMoeda(resultado.valorImposto)}</td>
-                </tr>
-              )}
             </tbody>
             <tfoot>
               <tr style={{ backgroundColor: "#1f2937", color: "#fff" }}>

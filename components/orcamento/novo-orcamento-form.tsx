@@ -179,7 +179,7 @@ export function NovoOrcamentoForm() {
     setAlimentacao(deslocamento ? String(deslocamento.alimentacao) : "")
     setMargemPercent(String(orcamentoEditando.item.margemPercent ?? 0))
     setDescontoPercent(String(orcamentoEditando.item.descontoPercent ?? 0))
-    setImpostoPercent(String(orcamentoEditando.item.impostoPercent ?? 0))
+    setImpostoPercent("6")
     setCondicoesPagamento(orcamentoEditando.item.condicoesPagamento ?? "")
     setEntradaPercent(String(orcamentoEditando.item.entradaPercent ?? 100))
     setFotos(orcamentoEditando.item.fotos ?? [])
@@ -234,7 +234,7 @@ export function NovoOrcamentoForm() {
     setAlimentacao(deslocamento ? String(deslocamento.alimentacao) : "")
     setMargemPercent(String(rascunho.item.margemPercent ?? 0))
     setDescontoPercent(String(rascunho.item.descontoPercent ?? 0))
-    setImpostoPercent(String(rascunho.item.impostoPercent ?? 0))
+    setImpostoPercent("6")
     setCondicoesPagamento(rascunho.item.condicoesPagamento ?? "")
     setEntradaPercent(String(rascunho.item.entradaPercent ?? 100))
     setFotos(rascunho.item.fotos ?? [])
@@ -1258,25 +1258,6 @@ export function NovoOrcamentoForm() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="flex flex-col gap-2">
-                    <Label>Imposto</Label>
-                    <Select
-                      value={impostoPercent}
-                      onValueChange={(v) => setImpostoPercent(v ?? impostoPercent)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue>
-                          {(v: string) => (v === "0" ? "Sem imposto" : `${v}%`)}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">Sem imposto</SelectItem>
-                        <SelectItem value="6">6%</SelectItem>
-                        <SelectItem value="7">7%</SelectItem>
-                        <SelectItem value="8">8%</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-2">
                     <Label htmlFor="validade">Validade do orçamento (dias)</Label>
                     <Input
                       id="validade"
@@ -1336,12 +1317,6 @@ export function NovoOrcamentoForm() {
                         Com desconto ({descontoPercent || 0}%)
                       </span>
                       <span>{formatarMoeda(resultado.comDesconto)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {Number(impostoPercent) > 0 ? `Imposto (${impostoPercent}%)` : "Sem imposto"}
-                      </span>
-                      <span>{formatarMoeda(resultado.valorImposto)}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between text-base font-semibold">
@@ -1596,15 +1571,6 @@ export function NovoOrcamentoForm() {
                     : "—"}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  {Number(impostoPercent) > 0 ? `Imposto (${impostoPercent}%)` : "Sem imposto"}
-                </span>
-                <span>
-                  {resultado ? formatarMoeda(resultado.valorImposto) : "—"}
-                </span>
-              </div>
-
               <Separator />
 
               <div className="flex justify-between text-base font-semibold">
