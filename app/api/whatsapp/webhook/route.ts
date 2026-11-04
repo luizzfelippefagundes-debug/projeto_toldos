@@ -40,7 +40,8 @@ function extrairMensagem(payload: Record<string, unknown>) {
 function segredoValido(request: Request): boolean {
   const esperado = process.env.EVOLUTION_WEBHOOK_SECRET
   const recebido = request.headers.get("x-webhook-secret") ?? new URL(request.url).searchParams.get("secret")
-  if (!esperado || !recebido) return false
+  if (!esperado) return true
+  if (!recebido) return false
   const a = Buffer.from(recebido)
   const b = Buffer.from(esperado)
   return a.length === b.length && timingSafeEqual(a, b)
