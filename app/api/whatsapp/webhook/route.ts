@@ -1,8 +1,7 @@
 import { timingSafeEqual } from "node:crypto"
 import { NextResponse } from "next/server"
 import { garantirTabelaConversasBot, garantirColunasOrcamentos } from "@/lib/migracoes"
-import { buscarClientePorTelefone, processarMensagemWhatsapp } from "@/lib/bot-whatsapp"
-import { enviarMensagemWhatsapp } from "@/lib/evolution-api"
+import { buscarClientePorTelefone } from "@/lib/bot-whatsapp"
 import { registrarMensagemBot } from "@/lib/bot-registro"
 
 interface ChaveMensagem {
@@ -86,18 +85,7 @@ export async function POST(request: Request) {
       autor: "cliente",
     })
 
-    const resposta = await processarMensagemWhatsapp(telefone, texto)
-    if (resposta) {
-      await enviarMensagemWhatsapp(telefone, resposta)
-      await registrarMensagemBot({
-        clienteId: cliente?.id ?? null,
-        clienteNome: nomeExibicao,
-        telefone,
-        texto: resposta,
-        origem: "automatica",
-        autor: "bot",
-      })
-    }
+    // Auto-resposta desativada — bot só envia notificações manuais por enquanto.
   } catch (e) {
     console.error("[whatsapp webhook] erro processando mensagem:", e)
   }
