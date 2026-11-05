@@ -105,6 +105,7 @@ export default function RetornosPage() {
     etapa: EtapaRetorno
     mensagem: string
     enviando: boolean
+    executar?: () => void
   } | null>(null)
 
   const sensores = useSensors(
@@ -189,7 +190,11 @@ export default function RetornosPage() {
   async function confirmarMudanca(enviarWhatsApp: boolean) {
     if (!confirmando) return
     setConfirmando((c) => c ? { ...c, enviando: true } : null)
-    moverPara(confirmando.card, confirmando.etapa)
+    if (confirmando.executar) {
+      confirmando.executar()
+    } else {
+      moverPara(confirmando.card, confirmando.etapa)
+    }
     if (enviarWhatsApp && confirmando.card.cliente?.telefone) {
       const telefone = normalizarTelefone(confirmando.card.cliente.telefone)
       await fetch("/api/whatsapp/enviar-notificacao", {
@@ -303,8 +308,21 @@ export default function RetornosPage() {
           hoje={hoje}
           onFechar={() => setEditandoId(null)}
           onSalvar={(retorno) => {
-            atualizarRetorno(cardEditando.orcamento.id, retorno)
-            setEditandoId(null)
+            const etapaFinalizada = retorno.etapa === "aprovado" || retorno.etapa === "perdido"
+            const etapaMudou = retorno.etapa !== cardEditando.retorno.etapa
+            if (etapaFinalizada && etapaMudou && cardEditando.cliente?.telefone) {
+              setEditandoId(null)
+              setConfirmando({
+                card: cardEditando,
+                etapa: retorno.etapa,
+                mensagem: mensagemWhatsApp(cardEditando, retorno.etapa),
+                enviando: false,
+                executar: () => atualizarRetorno(cardEditando.orcamento.id, retorno),
+              })
+            } else {
+              atualizarRetorno(cardEditando.orcamento.id, retorno)
+              setEditandoId(null)
+            }
           }}
         />
       )}
