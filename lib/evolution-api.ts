@@ -11,6 +11,12 @@ function configurada() {
   return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instancia }
 }
 
+// Se WHATSAPP_TEST_RECIPIENT estiver definida, todas as mensagens vão pra
+// esse número — útil pra testar sem enviar pra clientes reais.
+function resolverNumero(numero: string): string {
+  return process.env.WHATSAPP_TEST_RECIPIENT ?? numero
+}
+
 export async function enviarMensagemWhatsapp(numero: string, texto: string): Promise<void> {
   const cfg = configurada()
   if (!cfg) {
@@ -20,7 +26,7 @@ export async function enviarMensagemWhatsapp(numero: string, texto: string): Pro
   const resposta = await fetch(`${cfg.baseUrl}/message/sendText/${cfg.instancia}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: cfg.apiKey },
-    body: JSON.stringify({ number: numero, text: texto }),
+    body: JSON.stringify({ number: resolverNumero(numero), text: texto }),
   })
   if (!resposta.ok) {
     console.error("[whatsapp] Falha ao enviar mensagem:", resposta.status, (await resposta.text().catch(() => "")).slice(0, 500))
@@ -44,7 +50,7 @@ export async function enviarDocumentoWhatsapp(
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: cfg.apiKey },
     body: JSON.stringify({
-      number: numero,
+      number: resolverNumero(numero),
       mediatype: "document",
       mimetype: "application/pdf",
       fileName: nomeArquivo,
@@ -54,6 +60,32 @@ export async function enviarDocumentoWhatsapp(
   })
   if (!resposta.ok) {
     console.error("[whatsapp] Falha ao enviar documento:", resposta.status, (await resposta.text().catch(() => "")).slice(0, 500))
+  }
+}
+
+export async function enviarImagemWhatsapp(
+  numero: string,
+  imagemBase64: string,
+  legenda?: string
+): Promise<void> {
+  const cfg = configurada()
+  if (!cfg) {
+    console.warn("[whatsapp] Evolution API não configurada — imagem não enviada:", { numero })
+    return
+  }
+  const resposta = await fetch(`${cfg.baseUrl}/message/sendMedia/${cfg.instancia}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: cfg.apiKey },
+    body: JSON.stringify({
+      number: resolverNumero(numero),
+      mediatype: "image",
+      mimetype: "image/jpeg",
+      caption: legenda,
+      media: imagemBase64,
+    }),
+  })
+  if (!resposta.ok) {
+    console.error("[whatsapp] Falha ao enviar imagem:", resposta.status, (await resposta.text().catch(() => "")).slice(0, 500))
   }
 }
 

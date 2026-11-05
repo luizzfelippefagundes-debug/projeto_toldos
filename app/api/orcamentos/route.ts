@@ -21,6 +21,7 @@ function rowToOrcamento(r: Record<string, unknown>): Orcamento {
     fechadoEm: (r.fechado_em as string) ?? null,
     validadeDias: r.validade_dias != null ? Number(r.validade_dias) : undefined,
     retorno: (r.retorno as Orcamento["retorno"]) ?? undefined,
+    statusProducao: (r.status_producao as Orcamento["statusProducao"]) ?? undefined,
   }
 }
 

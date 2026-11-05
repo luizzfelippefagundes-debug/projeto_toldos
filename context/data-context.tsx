@@ -108,6 +108,7 @@ export interface DataContextValue {
     dados: Omit<PedidoRapido, "id" | "numero" | "criadoEm">
   ) => PedidoRapido
   moverPedidoRapido: (id: string, status: StatusPedidoRapido) => void
+  moverOrcamentoProducao: (id: string, status: StatusPedidoRapido) => void
   addLancamento: (
     dados: Omit<LancamentoFinanceiro, "id" | "criadoEm">
   ) => LancamentoFinanceiro
@@ -576,7 +577,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const atualizado = {
           ...o,
           retorno: { ...retorno, atualizadoEm: new Date().toISOString() },
+          // Aprovado no retorno → entra direto na produção como "aprovado"
+          statusProducao: retorno.etapa === "aprovado" && !o.statusProducao
+            ? ("aprovado" as const)
+            : o.statusProducao,
         }
+        apiPut(`/api/orcamentos/${id}`, atualizado)
+        return atualizado
+      })
+    )
+  }
+
+  const moverOrcamentoProducao = (id: string, status: import("@/lib/types").StatusPedidoRapido) => {
+    setOrcamentos((atual) =>
+      atual.map((o) => {
+        if (o.id !== id) return o
+        const atualizado = { ...o, statusProducao: status }
         apiPut(`/api/orcamentos/${id}`, atualizado)
         return atualizado
       })
@@ -822,6 +838,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addProdutoRapido,
       addPedidoRapido,
       moverPedidoRapido,
+      moverOrcamentoProducao,
       addLancamento,
       updateLancamento,
       removeLancamento,
