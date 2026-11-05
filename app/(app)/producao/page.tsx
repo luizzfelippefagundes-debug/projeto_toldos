@@ -16,6 +16,16 @@ import { useData } from "@/context/data-context"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import type { Orcamento, Cliente, PedidoRapido, ProdutoRapido, StatusPedidoRapido } from "@/lib/types"
@@ -24,7 +34,27 @@ import {
   obterPrazoEntregaPedido,
   pedidoRapidoEstaAtrasado,
 } from "@/lib/pedidos-rapidos"
-import { RefreshCw, Search, Clock, AlertTriangle, CheckCircle2, Package, UserRound } from "lucide-react"
+import { RefreshCw, Search, Clock, AlertTriangle, CheckCircle2, Package, UserRound, MessageCircle } from "lucide-react"
+
+const STATUS_COM_NOTIFICACAO = new Set<StatusPedidoRapido>(["pronto", "entregue"])
+
+function normalizarTelefone(tel: string): string {
+  const digits = tel.replace(/\D/g, "")
+  if (digits.startsWith("55") && digits.length >= 12) return digits
+  if (digits.length === 11 || digits.length === 10) return `55${digits}`
+  return digits
+}
+
+function mensagemProducao(clienteNome: string, status: StatusPedidoRapido): string {
+  const nome = clienteNome.split(" ")[0] ?? ""
+  if (status === "pronto") {
+    return `Olá${nome ? `, ${nome}` : ""}! 🎉 Seu pedido está *pronto* para retirada/entrega!\n\nQualquer dúvida é só chamar. 😊`
+  }
+  if (status === "entregue") {
+    return `Olá${nome ? `, ${nome}` : ""}! ✅ Confirmamos a entrega do seu pedido.\n\nObrigado pela preferência! Se precisar de algo mais, estamos à disposição. 😊`
+  }
+  return ""
+}
 
 const colunas: {
   status: StatusPedidoRapido
@@ -110,6 +140,14 @@ export default function ProducaoPage() {
   const [busca, setBusca] = useState("")
   const [colunaAtiva, setColunaAtiva] = useState<StatusPedidoRapido | "todas">("todas")
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
+  const [confirmando, setConfirmando] = useState<{
+    clienteNome: string
+    clienteTelefone: string | null
+    novoStatus: StatusPedidoRapido
+    mensagem: string
+    enviando: boolean
+    executar: () => void
+  } | null>(null)
 
   const sensores = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -168,6 +206,44 @@ export default function ProducaoPage() {
     ? orcamentos.find((o) => o.id === arrastandoId.slice(4))
     : null
 
+  function solicitarConfirmacao(
+    clienteNome: string,
+    clienteTelefone: string | null,
+    novoStatus: StatusPedidoRapido,
+    executar: () => void
+  ) {
+    if (STATUS_COM_NOTIFICACAO.has(novoStatus) && clienteTelefone) {
+      setConfirmando({
+        clienteNome,
+        clienteTelefone,
+        novoStatus,
+        mensagem: mensagemProducao(clienteNome, novoStatus),
+        enviando: false,
+        executar,
+      })
+    } else {
+      executar()
+    }
+  }
+
+  async function confirmarMudanca(enviarWhatsApp: boolean) {
+    if (!confirmando) return
+    setConfirmando((c) => c ? { ...c, enviando: true } : null)
+    confirmando.executar()
+    if (enviarWhatsApp && confirmando.clienteTelefone) {
+      await fetch("/api/whatsapp/enviar-notificacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telefone: normalizarTelefone(confirmando.clienteTelefone),
+          mensagem: confirmando.mensagem,
+          clienteNome: confirmando.clienteNome,
+        }),
+      })
+    }
+    setConfirmando(null)
+  }
+
   function handleDragStart(event: DragStartEvent) {
     setArrastandoId(String(event.active.id))
   }
@@ -183,11 +259,22 @@ export default function ProducaoPage() {
       const orcId = activeId.slice(4)
       const orc = orcamentos.find((o) => o.id === orcId)
       if (!orc || orc.statusProducao === novoStatus) return
-      moverOrcamentoProducao(orcId, novoStatus as StatusPedidoRapido)
+      const cli = clientes.find((c) => c.id === orc.clienteId)
+      solicitarConfirmacao(
+        cli?.nome ?? "Cliente",
+        cli?.telefone ?? null,
+        novoStatus as StatusPedidoRapido,
+        () => moverOrcamentoProducao(orcId, novoStatus as StatusPedidoRapido)
+      )
     } else {
       const pedido = pedidosRapidos.find((p) => p.id === activeId)
       if (!pedido || pedido.status === novoStatus) return
-      moverPedidoRapido(activeId, novoStatus as StatusPedidoRapido)
+      solicitarConfirmacao(
+        pedido.clienteNome,
+        pedido.clienteTelefone,
+        novoStatus as StatusPedidoRapido,
+        () => moverPedidoRapido(activeId, novoStatus as StatusPedidoRapido)
+      )
     }
   }
 
@@ -314,7 +401,14 @@ export default function ProducaoPage() {
                     produto={produtoDoPedido(pedido)}
                     atrasado={estaAtrasado(pedido)}
                     coluna={colunaMap[pedido.status]}
-                    onMudarStatus={(status) => moverPedidoRapido(pedido.id, status)}
+                    onMudarStatus={(status) =>
+                      solicitarConfirmacao(
+                        pedido.clienteNome,
+                        pedido.clienteTelefone,
+                        status,
+                        () => moverPedidoRapido(pedido.id, status)
+                      )
+                    }
                   />
                 ))}
                 {pedidosDaColuna.length === 0 && colunaAtiva !== "todas" && (
@@ -331,6 +425,63 @@ export default function ProducaoPage() {
           </p>
         )}
       </div>
+
+      {/* Modal de confirmação ao mover para pronto/entregue */}
+      <Dialog open={!!confirmando} onOpenChange={(open) => { if (!open && !confirmando?.enviando) setConfirmando(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmando?.novoStatus === "pronto" ? "Marcar como Pronto?" : "Marcar como Entregue?"}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmando?.novoStatus === "pronto"
+                ? "Deseja avisar o cliente que o pedido está pronto para retirada/entrega?"
+                : "Deseja enviar uma confirmação de entrega pelo WhatsApp?"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmando?.clienteTelefone && (
+            <div className="flex flex-col gap-2">
+              <Label>Mensagem para {confirmando.clienteNome.split(" ")[0]}</Label>
+              <Textarea
+                rows={4}
+                className="resize-none text-sm"
+                value={confirmando.mensagem}
+                onChange={(e) => setConfirmando((c) => c ? { ...c, mensagem: e.target.value } : null)}
+                disabled={confirmando.enviando}
+              />
+            </div>
+          )}
+
+          {!confirmando?.clienteTelefone && (
+            <p className="text-sm text-muted-foreground">
+              Este cliente não tem telefone cadastrado — não será possível enviar WhatsApp.
+            </p>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmando(null)} disabled={confirmando?.enviando}>
+              Cancelar
+            </Button>
+            {confirmando?.clienteTelefone && (
+              <Button variant="outline" onClick={() => confirmarMudanca(false)} disabled={confirmando?.enviando}>
+                Só mover
+              </Button>
+            )}
+            <Button
+              onClick={() => confirmarMudanca(!!confirmando?.clienteTelefone)}
+              disabled={confirmando?.enviando}
+              className={confirmando?.novoStatus === "pronto" ? "bg-green-600 hover:bg-green-700 text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white"}
+            >
+              {confirmando?.enviando
+                ? "Enviando…"
+                : confirmando?.clienteTelefone
+                  ? <><MessageCircle className="mr-1.5 h-4 w-4" />Confirmar e enviar WhatsApp</>
+                  : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Desktop: kanban com drag-and-drop */}
       <div className="hidden md:block">
@@ -381,7 +532,12 @@ export default function ProducaoPage() {
                           atrasado={estaAtrasado(pedido)}
                           coluna={colunaMap[pedido.status]}
                           onMudarStatus={(status) =>
-                            moverPedidoRapido(pedido.id, status)
+                            solicitarConfirmacao(
+                              pedido.clienteNome,
+                              pedido.clienteTelefone,
+                              status,
+                              () => moverPedidoRapido(pedido.id, status)
+                            )
                           }
                         />
                       </PedidoCardArrastavel>
@@ -394,7 +550,14 @@ export default function ProducaoPage() {
                             orcamento={orc}
                             cliente={cli}
                             coluna={col}
-                            onMudarStatus={(status) => moverOrcamentoProducao(orc.id, status)}
+                            onMudarStatus={(status) =>
+                              solicitarConfirmacao(
+                                cli?.nome ?? "Cliente",
+                                cli?.telefone ?? null,
+                                status,
+                                () => moverOrcamentoProducao(orc.id, status)
+                              )
+                            }
                           />
                         </PedidoCardArrastavel>
                       )
