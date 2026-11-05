@@ -197,12 +197,31 @@ export default function RetornosPage() {
     }
     if (enviarWhatsApp && confirmando.card.cliente?.telefone) {
       const telefone = normalizarTelefone(confirmando.card.cliente.telefone)
+
+      let mensagemFinal = confirmando.mensagem
+      if (confirmando.etapa === "aprovado") {
+        // Gera link de assinatura digital antes de enviar
+        try {
+          const res = await fetch("/api/assinar/criar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orcamentoId: confirmando.card.orcamento.id }),
+          })
+          const json = await res.json()
+          if (json.url) {
+            mensagemFinal = `${mensagemFinal}\n\n🔗 *Link para assinar digitalmente:*\n${json.url}`
+          }
+        } catch {
+          // Segue sem o link se falhar
+        }
+      }
+
       await fetch("/api/whatsapp/enviar-notificacao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           telefone,
-          mensagem: confirmando.mensagem,
+          mensagem: mensagemFinal,
           clienteId: confirmando.card.cliente?.id ?? null,
           clienteNome: confirmando.card.cliente?.nome ?? telefone,
         }),

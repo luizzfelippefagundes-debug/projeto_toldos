@@ -20,7 +20,8 @@ async function imagemBase64(caminhoPublico: string): Promise<string | null> {
 export async function gerarPdfOsServidor(
   orcamento: Orcamento,
   clienteNome: string,
-  clienteTelefone?: string
+  clienteTelefone?: string,
+  assinaturaClienteBase64?: string
 ): Promise<Buffer> {
   const numero = String(orcamento.numero).padStart(4, "0")
   const totalFinal = orcamento.totalFechado ?? 0
@@ -184,6 +185,15 @@ export async function gerarPdfOsServidor(
   // Assinatura do Kaio já inserida no lado da empresa
   if (assinatura) {
     doc.addImage(assinatura, "PNG", meioDir - 33, y - 28, 66, 25)
+  }
+
+  // Assinatura do cliente (se fornecida)
+  if (assinaturaClienteBase64) {
+    try {
+      doc.addImage(assinaturaClienteBase64, "PNG", meioEsq - 33, y - 28, 66, 25)
+    } catch {
+      // Ignora erro de imagem inválida
+    }
   }
 
   doc.setDrawColor(80).setLineWidth(1)

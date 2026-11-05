@@ -3,6 +3,7 @@ import { getSql } from "./db"
 let orcamentosProntos = false
 let lancamentosProntos = false
 let conversasBotProntas = false
+let assinaturasOsProntas = false
 
 // Colunas novas em tabelas que já existem em produção. Também estão em
 // scripts/migrate.sql; rodar aqui (uma vez por instância) evita depender de
@@ -26,6 +27,22 @@ export async function garantirColunasLancamentos() {
 
 // Estado da conversa do bot do WhatsApp, por telefone (negócio único, sem
 // coluna de instância/tenant). Ver lib/bot-conversa.ts.
+export async function garantirTabelaAssinaturasOs() {
+  if (assinaturasOsProntas) return
+  await getSql()`
+    CREATE TABLE IF NOT EXISTS assinaturas_os (
+      id TEXT PRIMARY KEY,
+      orcamento_id TEXT NOT NULL,
+      assinado_em TEXT,
+      assinatura_data TEXT,
+      ip_assinante TEXT,
+      criado_em TEXT NOT NULL,
+      expira_em TEXT NOT NULL
+    )
+  `
+  assinaturasOsProntas = true
+}
+
 export async function garantirTabelaConversasBot() {
   if (conversasBotProntas) return
   await getSql()`
