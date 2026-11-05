@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { useData } from "@/context/data-context"
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Phone, Mail, FileText, TrendingUp, Clock } from "lucide-react"
+import { ArrowLeft, Phone, Mail, FileText, TrendingUp, Clock, ImageIcon, CheckCircle } from "lucide-react"
 import type { StatusOrcamento } from "@/lib/types"
 
 const statusLabel: Record<StatusOrcamento, string> = {
@@ -38,8 +38,30 @@ function totalOrcamento(
 export default function FichaClientePage() {
   const { id } = useParams<{ id: string }>()
   const { clientes, orcamentos, materiais, servicos } = useData()
+  const [enviandoPortfolio, setEnviandoPortfolio] = useState(false)
+  const [portfolioEnviado, setPortfolioEnviado] = useState(false)
 
   const cliente = clientes.find((c) => c.id === id)
+
+  async function enviarPortfolio() {
+    if (!cliente?.telefone) return
+    setEnviandoPortfolio(true)
+    try {
+      await fetch("/api/whatsapp/enviar-portfolio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telefone: `55${cliente.telefone.replace(/\D/g, "")}`,
+          clienteId: cliente.id,
+          clienteNome: cliente.nome,
+        }),
+      })
+      setPortfolioEnviado(true)
+      setTimeout(() => setPortfolioEnviado(false), 4000)
+    } finally {
+      setEnviandoPortfolio(false)
+    }
+  }
 
   const orcamentosCliente = useMemo(() => {
     return orcamentos
@@ -106,6 +128,21 @@ export default function FichaClientePage() {
             )}
             {!cliente.telefone && !cliente.email && (
               <p className="text-sm text-muted-foreground">Sem dados de contato.</p>
+            )}
+            {cliente.telefone && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-1 gap-1.5 text-xs"
+                onClick={enviarPortfolio}
+                disabled={enviandoPortfolio || portfolioEnviado}
+              >
+                {portfolioEnviado ? (
+                  <><CheckCircle className="h-3.5 w-3.5 text-green-500" /> Portfólio enviado!</>
+                ) : (
+                  <><ImageIcon className="h-3.5 w-3.5" /> {enviandoPortfolio ? "Enviando..." : "Enviar Portfólio"}</>
+                )}
+              </Button>
             )}
           </div>
         </div>

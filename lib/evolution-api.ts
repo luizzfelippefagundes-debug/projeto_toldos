@@ -57,6 +57,32 @@ export async function enviarDocumentoWhatsapp(
   }
 }
 
+export async function enviarImagemWhatsapp(
+  numero: string,
+  imagemBase64: string,
+  legenda?: string
+): Promise<void> {
+  const cfg = configurada()
+  if (!cfg) {
+    console.warn("[whatsapp] Evolution API não configurada — imagem não enviada:", { numero })
+    return
+  }
+  const resposta = await fetch(`${cfg.baseUrl}/message/sendMedia/${cfg.instancia}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: cfg.apiKey },
+    body: JSON.stringify({
+      number: numero,
+      mediatype: "image",
+      mimetype: "image/jpeg",
+      caption: legenda,
+      media: imagemBase64,
+    }),
+  })
+  if (!resposta.ok) {
+    console.error("[whatsapp] Falha ao enviar imagem:", resposta.status, (await resposta.text().catch(() => "")).slice(0, 500))
+  }
+}
+
 // Mídia recebida do cliente (foto, áudio) — o payload do webhook só traz
 // metadados; o conteúdo em si precisa ser buscado à parte, com a `key`
 // exatamente como veio no webhook.
