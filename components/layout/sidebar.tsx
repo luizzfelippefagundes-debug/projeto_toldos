@@ -26,6 +26,7 @@ export function Sidebar() {
 
   useEffect(() => {
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCollapsed(localStorage.getItem(STORAGE_KEY) === "1")
     } catch { /* ignorar */ }
     setMontado(true)

@@ -92,7 +92,7 @@ function ClienteFormFields({ cliente, modoEdicao, onFechar }: FieldsProps) {
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           Isso remove o cadastro de <strong>{cliente?.nome}</strong>. Os orçamentos
-          existentes ficam registrados com "Cliente removido".
+          existentes ficam registrados com &ldquo;Cliente removido&rdquo;.
         </p>
         <DialogFooter>
           <Button variant="outline" onClick={() => setConfirmandoExclusao(false)}>

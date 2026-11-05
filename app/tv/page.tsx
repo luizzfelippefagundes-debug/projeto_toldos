@@ -73,6 +73,7 @@ function formatarPrazo(prazo: string | null) {
 function Relogio() {
   const [agora, setAgora] = useState<Date | null>(null)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAgora(new Date())
     const t = setInterval(() => setAgora(new Date()), 1000)
     return () => clearInterval(t)
@@ -138,6 +139,7 @@ export default function TvPage() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     carregar()
     const t = setInterval(carregar, 60_000)
     return () => clearInterval(t)
