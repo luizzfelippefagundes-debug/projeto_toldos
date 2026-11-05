@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { put } from "@vercel/blob"
 import { getSql } from "@/lib/db"
 import { garantirTabelaAssinaturasOs } from "@/lib/migracoes"
 import { gerarPdfOsServidor } from "@/lib/pdf-os-servidor"
@@ -33,6 +34,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   return NextResponse.json({
     assinado: !!reg.assinado_em,
     assinadoEm: reg.assinado_em ?? null,
+    pdfUrl: reg.pdf_url ?? null,
     orcamentoNumero: r.numero,
     orcamentoCriadoEm: r.criado_em,
     clienteNome,
@@ -98,6 +100,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     try {
       const pdf = await gerarPdfOsServidor(orcamento, clienteNome, clienteTelefone, assinaturaData)
       const nomeArquivo = `OS-${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)}-assinada.pdf`
+
+      // Salva o PDF no Vercel Blob para ficar acessível no sistema
+      const blob = await put(`os-assinadas/${nomeArquivo}`, pdf, {
+        access: "public",
+        contentType: "application/pdf",
+      })
+
+      await sql`UPDATE assinaturas_os SET pdf_url = ${blob.url} WHERE id = ${token}`
+
       const numeroEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
       if (numeroEmpresa) {
         await enviarDocumentoWhatsapp(
@@ -108,7 +119,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
         )
       }
     } catch {
-      // Falha no envio não impede o cliente de concluir a assinatura
+      // Falha no upload não impede o cliente de concluir a assinatura
     }
   }
 

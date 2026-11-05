@@ -36,10 +36,12 @@ export async function garantirTabelaAssinaturasOs() {
       assinado_em TEXT,
       assinatura_data TEXT,
       ip_assinante TEXT,
+      pdf_url TEXT,
       criado_em TEXT NOT NULL,
       expira_em TEXT NOT NULL
     )
   `
+  await getSql()`ALTER TABLE assinaturas_os ADD COLUMN IF NOT EXISTS pdf_url TEXT`
   assinaturasOsProntas = true
 }
 

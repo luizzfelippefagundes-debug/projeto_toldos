@@ -45,6 +45,7 @@ import {
   CalendarClock,
   FileText,
   MessageCircle,
+  PenLine,
   Search,
   StickyNote,
   UserRound,
@@ -100,6 +101,8 @@ export default function RetornosPage() {
   const [busca, setBusca] = useState("")
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
   const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [assinaturas, setAssinaturas] = useState<Record<string, { pdfUrl: string | null; assinado: boolean }>>({})
+
   const [confirmando, setConfirmando] = useState<{
     card: CardRetorno
     etapa: EtapaRetorno
@@ -150,6 +153,28 @@ export default function RetornosPage() {
         (a.retorno.proximoContato ?? "9999").localeCompare(b.retorno.proximoContato ?? "9999")
       )
   }, [orcamentos, clientes, busca, hoje])
+
+  useEffect(() => {
+    const aprovados = cards.filter((c) => c.retorno.etapa === "aprovado")
+    if (aprovados.length === 0) return
+    Promise.all(
+      aprovados.map((c) =>
+        fetch(`/api/assinar/por-orcamento/${c.orcamento.id}`)
+          .then((r) => r.json())
+          .then((d: { pdfUrl: string | null; assinado: boolean } | null) =>
+            d ? { id: c.orcamento.id, pdfUrl: d.pdfUrl, assinado: d.assinado } : null
+          )
+          .catch(() => null)
+      )
+    ).then((resultados) => {
+      const mapa: Record<string, { pdfUrl: string | null; assinado: boolean }> = {}
+      for (const r of resultados) {
+        if (r) mapa[r.id] = { pdfUrl: r.pdfUrl, assinado: r.assinado }
+      }
+      setAssinaturas(mapa)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards.map((c) => c.orcamento.id).join(",")])
 
   const paraHoje = cards.filter((c) => c.situacao === "hoje").length
   const atrasados = cards.filter((c) => c.situacao === "atrasado").length
@@ -284,7 +309,7 @@ export default function RetornosPage() {
                 </p>
               ) : (
                 daColuna.map((card) => (
-                  <CardConteudo key={card.orcamento.id} card={card} onAbrir={() => setEditandoId(card.orcamento.id)} />
+                  <CardConteudo key={card.orcamento.id} card={card} assinatura={assinaturas[card.orcamento.id]} onAbrir={() => setEditandoId(card.orcamento.id)} />
                 ))
               )}
             </section>
@@ -309,7 +334,7 @@ export default function RetornosPage() {
                     )}
                     {daColuna.map((card) => (
                       <CardArrastavel key={card.orcamento.id} id={card.orcamento.id}>
-                        <CardConteudo card={card} onAbrir={() => setEditandoId(card.orcamento.id)} />
+                        <CardConteudo card={card} assinatura={assinaturas[card.orcamento.id]} onAbrir={() => setEditandoId(card.orcamento.id)} />
                       </CardArrastavel>
                     ))}
                   </div>
@@ -523,7 +548,15 @@ function BadgeContato({ retorno, situacao }: { retorno: RetornoOrcamento; situac
   )
 }
 
-function CardConteudo({ card, onAbrir }: { card: CardRetorno; onAbrir: () => void }) {
+function CardConteudo({
+  card,
+  assinatura,
+  onAbrir,
+}: {
+  card: CardRetorno
+  assinatura?: { pdfUrl: string | null; assinado: boolean }
+  onAbrir: () => void
+}) {
   return (
     <div
       role="button"
@@ -561,6 +594,32 @@ function CardConteudo({ card, onAbrir }: { card: CardRetorno; onAbrir: () => voi
           <UserRound className="h-3 w-3 shrink-0" />
           {card.retorno.responsavel}
         </span>
+      )}
+
+      {assinatura && (
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {assinatura.assinado && assinatura.pdfUrl ? (
+            <a
+              href={assinatura.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-400"
+            >
+              <PenLine className="h-3 w-3" />
+              OS Assinada
+            </a>
+          ) : assinatura.assinado ? (
+            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+              <PenLine className="h-3 w-3" />
+              OS Assinada
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+              <PenLine className="h-3 w-3" />
+              Aguardando assinatura
+            </span>
+          )}
+        </div>
       )}
     </div>
   )
