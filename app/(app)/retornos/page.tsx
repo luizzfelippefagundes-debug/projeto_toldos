@@ -75,11 +75,24 @@ interface CardRetorno {
   situacao: SituacaoContato | null
 }
 
-function mensagemWhatsApp(card: CardRetorno) {
+function mensagemWhatsApp(card: CardRetorno, etapa: EtapaRetorno) {
   const nome = card.cliente?.nome?.split(" ")[0] ?? ""
   const numero = formatarNumeroOrcamento(card.orcamento.numero, card.orcamento.criadoEm)
   const total = formatarMoeda(card.orcamento.totalFechado ?? 0)
+  if (etapa === "aprovado") {
+    return `Olá${nome ? `, ${nome}` : ""}! 🎉 Ótima notícia — seu orçamento nº ${numero} (${total}) foi aprovado!\n\nJá vamos iniciar a produção. Assim que ficar pronto te avisamos aqui. Qualquer dúvida é só chamar! 😊`
+  }
+  if (etapa === "perdido") {
+    return `Olá${nome ? `, ${nome}` : ""}! Tudo bem?\n\nPassando pra agradecer pelo contato sobre o orçamento nº ${numero}. Se em outro momento precisar de toldos ou comunicação visual, pode contar com a gente! 😊`
+  }
   return `Olá${nome ? `, ${nome}` : ""}! Aqui é da Toldos Print. Passando pra saber se você conseguiu ver o orçamento nº ${numero} (${total}). Ficou alguma dúvida?`
+}
+
+function normalizarTelefone(tel: string): string {
+  const digits = tel.replace(/\D/g, "")
+  if (digits.startsWith("55") && digits.length >= 12) return digits
+  if (digits.length === 11 || digits.length === 10) return `55${digits}`
+  return digits
 }
 
 export default function RetornosPage() {
@@ -87,6 +100,12 @@ export default function RetornosPage() {
   const [busca, setBusca] = useState("")
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
   const [editandoId, setEditandoId] = useState<string | null>(null)
+  const [confirmando, setConfirmando] = useState<{
+    card: CardRetorno
+    etapa: EtapaRetorno
+    mensagem: string
+    enviando: boolean
+  } | null>(null)
 
   const sensores = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -157,7 +176,34 @@ export default function RetornosPage() {
   function handleDragEnd(e: DragEndEvent) {
     setArrastandoId(null)
     const card = cards.find((c) => c.orcamento.id === e.active.id)
-    if (card && e.over) moverPara(card, e.over.id as EtapaRetorno)
+    if (!card || !e.over) return
+    const etapa = e.over.id as EtapaRetorno
+    if (card.retorno.etapa === etapa) return
+    if ((etapa === "aprovado" || etapa === "perdido") && card.cliente?.telefone) {
+      setConfirmando({ card, etapa, mensagem: mensagemWhatsApp(card, etapa), enviando: false })
+    } else {
+      moverPara(card, etapa)
+    }
+  }
+
+  async function confirmarMudanca(enviarWhatsApp: boolean) {
+    if (!confirmando) return
+    setConfirmando((c) => c ? { ...c, enviando: true } : null)
+    moverPara(confirmando.card, confirmando.etapa)
+    if (enviarWhatsApp && confirmando.card.cliente?.telefone) {
+      const telefone = normalizarTelefone(confirmando.card.cliente.telefone)
+      await fetch("/api/whatsapp/enviar-notificacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telefone,
+          mensagem: confirmando.mensagem,
+          clienteId: confirmando.card.cliente?.id ?? null,
+          clienteNome: confirmando.card.cliente?.nome ?? telefone,
+        }),
+      })
+    }
+    setConfirmando(null)
   }
 
   return (
@@ -262,6 +308,67 @@ export default function RetornosPage() {
           }}
         />
       )}
+
+      {/* Modal de confirmação ao mover para aprovado/perdido */}
+      <Dialog open={!!confirmando} onOpenChange={(open) => { if (!open && !confirmando?.enviando) setConfirmando(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmando?.etapa === "aprovado" ? "Mover para Aprovado?" : "Mover para Perdido?"}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmando?.etapa === "aprovado"
+                ? "O orçamento entrará na produção. Deseja enviar uma mensagem de confirmação pelo WhatsApp?"
+                : "Deseja enviar uma mensagem de encerramento pelo WhatsApp?"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmando?.card.cliente?.telefone && (
+            <div className="flex flex-col gap-2">
+              <Label>Mensagem para {confirmando.card.cliente?.nome?.split(" ")[0]}</Label>
+              <Textarea
+                rows={5}
+                className="resize-none text-sm"
+                value={confirmando.mensagem}
+                onChange={(e) => setConfirmando((c) => c ? { ...c, mensagem: e.target.value } : null)}
+                disabled={confirmando.enviando}
+              />
+            </div>
+          )}
+
+          {!confirmando?.card.cliente?.telefone && (
+            <p className="text-sm text-muted-foreground">
+              Este cliente não tem telefone cadastrado — não será possível enviar WhatsApp.
+            </p>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmando(null)} disabled={confirmando?.enviando}>
+              Cancelar
+            </Button>
+            {confirmando?.card.cliente?.telefone && (
+              <Button
+                variant="outline"
+                onClick={() => confirmarMudanca(false)}
+                disabled={confirmando?.enviando}
+              >
+                Só mover
+              </Button>
+            )}
+            <Button
+              onClick={() => confirmarMudanca(!!confirmando?.card.cliente?.telefone)}
+              disabled={confirmando?.enviando}
+              className={confirmando?.etapa === "aprovado" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
+            >
+              {confirmando?.enviando
+                ? "Enviando…"
+                : confirmando?.card.cliente?.telefone
+                  ? "Confirmar e enviar WhatsApp"
+                  : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -373,7 +480,7 @@ function BadgeContato({ retorno, situacao }: { retorno: RetornoOrcamento; situac
 }
 
 function CardConteudo({ card, onAbrir }: { card: CardRetorno; onAbrir: () => void }) {
-  const whatsapp = card.cliente?.telefone ? linkWhatsApp(card.cliente.telefone, mensagemWhatsApp(card)) : null
+  const whatsapp = card.cliente?.telefone ? linkWhatsApp(card.cliente.telefone, mensagemWhatsApp(card, card.retorno.etapa)) : null
 
   return (
     <div
@@ -453,7 +560,7 @@ function EditarRetornoDialog({
     card.retorno.responsavel ?? user?.firstName ?? ""
   )
   const finalizado = etapa === "aprovado" || etapa === "perdido"
-  const whatsapp = card.cliente?.telefone ? linkWhatsApp(card.cliente.telefone, mensagemWhatsApp(card)) : null
+  const whatsapp = card.cliente?.telefone ? linkWhatsApp(card.cliente.telefone, mensagemWhatsApp(card, etapa)) : null
 
   const atalhos: { rotulo: string; dias: number }[] = [
     { rotulo: "Hoje", dias: 0 },
