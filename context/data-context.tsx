@@ -577,9 +577,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const atualizado = {
           ...o,
           retorno: { ...retorno, atualizadoEm: new Date().toISOString() },
-          // Aprovado no retorno → entra na produção em "aguardando"
+          // Aprovado no retorno → entra direto na produção como "aprovado"
           statusProducao: retorno.etapa === "aprovado" && !o.statusProducao
-            ? ("aguardando" as const)
+            ? ("aprovado" as const)
             : o.statusProducao,
         }
         apiPut(`/api/orcamentos/${id}`, atualizado)
