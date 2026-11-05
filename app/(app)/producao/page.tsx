@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
-import type { PedidoRapido, ProdutoRapido, StatusPedidoRapido } from "@/lib/types"
+import type { Orcamento, Cliente, PedidoRapido, ProdutoRapido, StatusPedidoRapido } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
   obterPrazoEntregaPedido,
@@ -106,7 +106,7 @@ function iniciais(nome: string) {
 }
 
 export default function ProducaoPage() {
-  const { pedidosRapidos, produtosRapidos, moverPedidoRapido } = useData()
+  const { pedidosRapidos, produtosRapidos, moverPedidoRapido, orcamentos, clientes, moverOrcamentoProducao } = useData()
   const [busca, setBusca] = useState("")
   const [colunaAtiva, setColunaAtiva] = useState<StatusPedidoRapido | "todas">("todas")
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
@@ -148,8 +148,24 @@ export default function ProducaoPage() {
   const atrasados = pedidosRapidos.filter(estaAtrasado).length
   const prontos = pedidosRapidos.filter((p) => p.status === "pronto").length
 
-  const pedidoArrastando = arrastandoId
+  const orcamentosEmProducao = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    return orcamentos.filter((o) => {
+      if (!o.statusProducao) return false
+      if (!termo) return true
+      const cliente = clientes.find((c) => c.id === o.clienteId)
+      return (
+        (cliente?.nome ?? "").toLowerCase().includes(termo) ||
+        String(o.numero).includes(termo)
+      )
+    })
+  }, [orcamentos, clientes, busca])
+
+  const pedidoArrastando = arrastandoId && !arrastandoId.startsWith("orc-")
     ? pedidosRapidos.find((p) => p.id === arrastandoId)
+    : null
+  const orcamentoArrastando = arrastandoId?.startsWith("orc-")
+    ? orcamentos.find((o) => o.id === arrastandoId.slice(4))
     : null
 
   function handleDragStart(event: DragStartEvent) {
@@ -162,9 +178,17 @@ export default function ProducaoPage() {
     if (!over) return
     const novoStatus = String(over.id)
     if (!statusValidos.has(novoStatus)) return
-    const pedido = pedidosRapidos.find((p) => p.id === active.id)
-    if (!pedido || pedido.status === novoStatus) return
-    moverPedidoRapido(String(active.id), novoStatus as StatusPedidoRapido)
+    const activeId = String(active.id)
+    if (activeId.startsWith("orc-")) {
+      const orcId = activeId.slice(4)
+      const orc = orcamentos.find((o) => o.id === orcId)
+      if (!orc || orc.statusProducao === novoStatus) return
+      moverOrcamentoProducao(orcId, novoStatus as StatusPedidoRapido)
+    } else {
+      const pedido = pedidosRapidos.find((p) => p.id === activeId)
+      if (!pedido || pedido.status === novoStatus) return
+      moverPedidoRapido(activeId, novoStatus as StatusPedidoRapido)
+    }
   }
 
   return (
@@ -320,6 +344,10 @@ export default function ProducaoPage() {
               const pedidosDaColuna = pedidosFiltrados.filter(
                 (p) => p.status === col.status
               )
+              const orcsDaColuna = orcamentosEmProducao.filter(
+                (o) => o.statusProducao === col.status
+              )
+              const total = pedidosDaColuna.length + orcsDaColuna.length
               return (
                 <ColunaDroppable key={col.status} status={col.status} coluna={col}>
                   <div className={cn(
@@ -336,17 +364,17 @@ export default function ProducaoPage() {
                       "rounded-full px-2 py-0.5 text-xs font-bold",
                       col.corFundo, col.corTexto
                     )}>
-                      {pedidosDaColuna.length}
+                      {total}
                     </span>
                   </div>
                   <div className="flex flex-col gap-2 p-2">
-                    {pedidosDaColuna.length === 0 && (
+                    {total === 0 && (
                       <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
                         Vazio
                       </div>
                     )}
                     {pedidosDaColuna.map((pedido) => (
-                      <PedidoCardArrastavel key={pedido.id} pedido={pedido}>
+                      <PedidoCardArrastavel key={pedido.id} id={pedido.id}>
                         <PedidoCardConteudo
                           pedido={pedido}
                           produto={produtoDoPedido(pedido)}
@@ -358,6 +386,19 @@ export default function ProducaoPage() {
                         />
                       </PedidoCardArrastavel>
                     ))}
+                    {orcsDaColuna.map((orc) => {
+                      const cli = clientes.find((c) => c.id === orc.clienteId)
+                      return (
+                        <PedidoCardArrastavel key={`orc-${orc.id}`} id={`orc-${orc.id}`}>
+                          <OrcamentoCardConteudo
+                            orcamento={orc}
+                            cliente={cli}
+                            coluna={col}
+                            onMudarStatus={(status) => moverOrcamentoProducao(orc.id, status)}
+                          />
+                        </PedidoCardArrastavel>
+                      )
+                    })}
                   </div>
                 </ColunaDroppable>
               )
@@ -372,6 +413,15 @@ export default function ProducaoPage() {
                   produto={produtoDoPedido(pedidoArrastando)}
                   atrasado={estaAtrasado(pedidoArrastando)}
                   coluna={colunaMap[pedidoArrastando.status]}
+                  onMudarStatus={() => {}}
+                />
+              </div>
+            ) : orcamentoArrastando ? (
+              <div className="w-56 rotate-2 opacity-90 shadow-xl">
+                <OrcamentoCardConteudo
+                  orcamento={orcamentoArrastando}
+                  cliente={clientes.find((c) => c.id === orcamentoArrastando.clienteId)}
+                  coluna={colunaMap[orcamentoArrastando.statusProducao!]}
                   onMudarStatus={() => {}}
                 />
               </div>
@@ -408,14 +458,14 @@ function ColunaDroppable({
 }
 
 function PedidoCardArrastavel({
-  pedido,
+  id,
   children,
 }: {
-  pedido: PedidoRapido
+  id: string
   children: ReactNode
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: pedido.id,
+    id,
   })
 
   return (
@@ -519,6 +569,85 @@ function PedidoCardConteudo({
               className={cn(
                 "rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
                 pedido.status === c.status
+                  ? `${c.cor} border-transparent text-white`
+                  : "border-border text-muted-foreground hover:bg-accent"
+              )}
+            >
+              {c.titulo}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OrcamentoCardConteudo({
+  orcamento,
+  cliente,
+  coluna,
+  onMudarStatus,
+}: {
+  orcamento: Orcamento
+  cliente: Cliente | undefined
+  coluna: (typeof colunas)[number]
+  onMudarStatus: (status: StatusPedidoRapido) => void
+}) {
+  const { papel } = usePapelAtivo()
+  const nome = cliente?.nome?.trim() || ""
+  const ini = nome ? iniciais(nome) : null
+
+  return (
+    <div className={cn(
+      "flex flex-col gap-3 rounded-lg border bg-card p-3 text-sm shadow-sm",
+      "border-border ring-1 ring-inset ring-violet-400/30"
+    )}>
+      <div className="flex items-start gap-3">
+        <div className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
+          coluna.cor
+        )}>
+          {ini ?? <UserRound className="h-4 w-4" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <span className="text-xs font-bold text-muted-foreground">
+            ORC #{String(orcamento.numero).padStart(4, "0")}
+          </span>
+          <p className="truncate font-medium leading-tight">
+            {nome || <span className="italic text-muted-foreground">Sem cliente</span>}
+          </p>
+        </div>
+      </div>
+
+      <div className={cn("rounded-md px-2 py-1.5 text-xs", coluna.corFundo)}>
+        <p className={cn("font-semibold", coluna.corTexto)}>
+          {orcamento.item.servicoId && orcamento.item.servicoId !== "nenhum"
+            ? "Serviço + material"
+            : "Orçamento de serviço"}
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Clock className="h-3 w-3 shrink-0" />
+          <span>{orcamento.fechadoEm ? formatarData(orcamento.fechadoEm) : "—"}</span>
+        </div>
+        {papel !== "operador" && orcamento.totalFechado != null && (
+          <span className={cn("text-sm font-bold", coluna.corTexto)}>
+            {formatarMoeda(orcamento.totalFechado)}
+          </span>
+        )}
+      </div>
+
+      <div onPointerDown={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap gap-1">
+          {colunas.map((c) => (
+            <button
+              key={c.status}
+              onClick={() => onMudarStatus(c.status)}
+              className={cn(
+                "rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
+                orcamento.statusProducao === c.status
                   ? `${c.cor} border-transparent text-white`
                   : "border-border text-muted-foreground hover:bg-accent"
               )}

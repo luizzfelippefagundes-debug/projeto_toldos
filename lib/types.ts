@@ -159,6 +159,7 @@ export interface Orcamento {
   fechadoEm: string | null
   validadeDias?: number
   retorno?: RetornoOrcamento
+  statusProducao?: StatusPedidoRapido
 }
 
 export interface EntradaEstoque {

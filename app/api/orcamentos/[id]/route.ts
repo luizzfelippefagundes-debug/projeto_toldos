@@ -18,7 +18,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       anexo_nome=${b.anexoNome ?? null}, anexo_url=${b.anexoUrl ?? null},
       status=${b.status}, criado_em=${b.criadoEm}, fechado_em=${b.fechadoEm ?? null},
       validade_dias=${b.validadeDias ?? null},
-      retorno=${b.retorno ? JSON.stringify(b.retorno) : null}
+      retorno=${b.retorno ? JSON.stringify(b.retorno) : null},
+      status_producao=${b.statusProducao ?? null}
     WHERE id=${id}
   `
   return NextResponse.json(b)
