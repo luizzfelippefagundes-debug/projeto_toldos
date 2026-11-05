@@ -74,7 +74,10 @@ export async function gerarPdfOsServidor(
   const dir = 553
   let y = 40
 
-  const [logo] = await Promise.all([imagemBase64("brand/logo-orcamento.png")])
+  const [logo, assinatura] = await Promise.all([
+    imagemBase64("brand/logo-orcamento.png"),
+    imagemBase64("brand/assinatura-kaio.png"),
+  ])
 
   // Cabeçalho
   if (logo) doc.addImage(logo, "PNG", esq, y, 108, 60)
@@ -177,6 +180,11 @@ export async function gerarPdfOsServidor(
   y += 50
   const meioEsq = esq + (dir - esq) / 4
   const meioDir = esq + (3 * (dir - esq)) / 4
+
+  // Assinatura do Kaio já inserida no lado da empresa
+  if (assinatura) {
+    doc.addImage(assinatura, "PNG", meioDir - 33, y - 28, 66, 25)
+  }
 
   doc.setDrawColor(80).setLineWidth(1)
   doc.line(meioEsq - 65, y, meioEsq + 65, y)

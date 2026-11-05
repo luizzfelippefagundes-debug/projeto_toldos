@@ -80,7 +80,7 @@ function mensagemWhatsApp(card: CardRetorno, etapa: EtapaRetorno) {
   const numero = formatarNumeroOrcamento(card.orcamento.numero, card.orcamento.criadoEm)
   const total = formatarMoeda(card.orcamento.totalFechado ?? 0)
   if (etapa === "aprovado") {
-    return `Olá${nome ? `, ${nome}` : ""}! 🎉 Ótima notícia — seu orçamento nº ${numero} (${total}) foi aprovado!\n\nJá vamos iniciar a produção. Assim que ficar pronto te avisamos aqui. Qualquer dúvida é só chamar! 😊`
+    return `Olá${nome ? `, ${nome}` : ""}! 🎉 Ótima notícia — seu orçamento nº ${numero} (${total}) foi aprovado!\n\nEstou enviando a Ordem de Serviço em PDF. Por favor, *assine o documento* e me retorne a foto ou o PDF assinado para darmos início à produção. 📋✍️\n\nQualquer dúvida é só chamar! 😊`
   }
   if (etapa === "perdido") {
     return `Olá${nome ? `, ${nome}` : ""}! Tudo bem?\n\nPassando pra agradecer pelo contato sobre o orçamento nº ${numero}. Se em outro momento precisar de toldos ou comunicação visual, pode contar com a gente! 😊`
