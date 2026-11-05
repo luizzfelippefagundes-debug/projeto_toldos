@@ -480,8 +480,6 @@ function BadgeContato({ retorno, situacao }: { retorno: RetornoOrcamento; situac
 }
 
 function CardConteudo({ card, onAbrir }: { card: CardRetorno; onAbrir: () => void }) {
-  const whatsapp = card.cliente?.telefone ? linkWhatsApp(card.cliente.telefone, mensagemWhatsApp(card, card.retorno.etapa)) : null
-
   return (
     <div
       role="button"
@@ -514,29 +512,12 @@ function CardConteudo({ card, onAbrir }: { card: CardRetorno; onAbrir: () => voi
         </p>
       )}
 
-      <div className="flex items-center justify-between gap-2">
+      {card.retorno.responsavel && (
         <span className="flex min-w-0 items-center gap-1 truncate text-[11px] text-muted-foreground">
-          {card.retorno.responsavel && (
-            <>
-              <UserRound className="h-3 w-3 shrink-0" />
-              {card.retorno.responsavel}
-            </>
-          )}
+          <UserRound className="h-3 w-3 shrink-0" />
+          {card.retorno.responsavel}
         </span>
-        {whatsapp && (
-          <a
-            href={whatsapp}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            WhatsApp
-          </a>
-        )}
-      </div>
+      )}
     </div>
   )
 }
