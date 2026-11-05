@@ -207,6 +207,13 @@ export default function RetornosPage() {
           clienteNome: confirmando.card.cliente?.nome ?? telefone,
         }),
       })
+      if (confirmando.etapa === "aprovado") {
+        await fetch("/api/whatsapp/enviar-os", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orcamentoId: confirmando.card.orcamento.id, telefone }),
+        })
+      }
     }
     setConfirmando(null)
   }
