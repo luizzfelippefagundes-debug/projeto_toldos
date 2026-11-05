@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
 import { enviarDocumentoWhatsapp } from "@/lib/evolution-api"
-import { gerarPdfOrcamentoServidor } from "@/lib/pdf-orcamento-servidor"
+import { gerarPdfOsServidor } from "@/lib/pdf-os-servidor"
 import { formatarNumeroOrcamento } from "@/lib/orcamento-pdf"
 import type { Orcamento } from "@/lib/types"
 
@@ -36,10 +36,11 @@ export async function POST(req: Request) {
     validadeDias: r.validade_dias ?? undefined,
   } as Orcamento
 
-  const clienteRows = await sql`SELECT nome FROM clientes WHERE id = ${orcamento.clienteId} LIMIT 1`
+  const clienteRows = await sql`SELECT nome, telefone FROM clientes WHERE id = ${orcamento.clienteId} LIMIT 1`
   const clienteNome = (clienteRows[0]?.nome as string) ?? "Cliente"
+  const clienteTelefone = (clienteRows[0]?.telefone as string) ?? undefined
 
-  const pdf = await gerarPdfOrcamentoServidor(orcamento, clienteNome)
+  const pdf = await gerarPdfOsServidor(orcamento, clienteNome, clienteTelefone)
   const nomeArquivo = `OS-${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)}.pdf`
 
   await enviarDocumentoWhatsapp(
