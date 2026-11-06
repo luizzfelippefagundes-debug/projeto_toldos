@@ -74,6 +74,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     WHERE id = ${token}
   `
 
+  // Cliente assinou → entra na produção agora
+  await sql`
+    UPDATE orcamentos
+    SET status_producao = 'aprovado'
+    WHERE id = ${reg.orcamento_id} AND status_producao IS NULL
+  `
+
   // Gera PDF com assinatura do cliente e envia para a empresa no WhatsApp
   const orcRows = await sql`SELECT * FROM orcamentos WHERE id = ${reg.orcamento_id} LIMIT 1`
   if (orcRows.length > 0) {

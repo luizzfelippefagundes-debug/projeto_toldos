@@ -215,11 +215,22 @@ export default function RetornosPage() {
   async function confirmarMudanca(enviarWhatsApp: boolean) {
     if (!confirmando) return
     setConfirmando((c) => c ? { ...c, enviando: true } : null)
+
+    const aguardarAssinatura = confirmando.etapa === "aprovado" && enviarWhatsApp && !!confirmando.card.cliente?.telefone
+
     if (confirmando.executar) {
       confirmando.executar()
     } else {
-      moverPara(confirmando.card, confirmando.etapa)
+      if (confirmando.card.retorno.etapa !== confirmando.etapa) {
+        atualizarRetorno(confirmando.card.orcamento.id, {
+          etapa: confirmando.etapa,
+          proximoContato: confirmando.card.retorno.proximoContato,
+          anotacao: confirmando.card.retorno.anotacao,
+          responsavel: confirmando.card.retorno.responsavel,
+        }, { aguardarAssinatura })
+      }
     }
+
     if (enviarWhatsApp && confirmando.card.cliente?.telefone) {
       const telefone = normalizarTelefone(confirmando.card.cliente.telefone)
 
