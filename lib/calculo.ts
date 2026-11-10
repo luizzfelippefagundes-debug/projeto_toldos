@@ -98,7 +98,8 @@ function subtotalAcabamentosDe(
     const acabamento = acabamentosDisponiveis.find(
       (a) => a.id === sel.acabamentoId
     )
-    return acabamento ? soma + acabamento.precoUnitario * sel.quantidade : soma
+    if (!acabamento) return soma
+    return soma + (sel.valorDireto ?? acabamento.precoUnitario * sel.quantidade)
   }, 0)
 }
 

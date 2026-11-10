@@ -125,6 +125,9 @@ export function NovoOrcamentoForm() {
   const [acabamentosQtd, setAcabamentosQtd] = useState<Record<string, string>>(
     {}
   )
+  // "qtd" = quantidade × preço unitário  |  "valor" = valor total direto em R$
+  const [acabamentosModo, setAcabamentosModo] = useState<Record<string, "qtd" | "valor">>({})
+  const [acabamentosValorDireto, setAcabamentosValorDireto] = useState<Record<string, string>>({})
 
   const [instalacaoIncluida, setInstalacaoIncluida] = useState(false)
   const [horasInstalacao, setHorasInstalacao] = useState("")
@@ -175,6 +178,8 @@ export function NovoOrcamentoForm() {
     const acabamentos = orcamentoEditando.item.acabamentos ?? []
     setAcabamentosAtivos(Object.fromEntries(acabamentos.map(({ acabamentoId }) => [acabamentoId, true])))
     setAcabamentosQtd(Object.fromEntries(acabamentos.map(({ acabamentoId, quantidade }) => [acabamentoId, String(quantidade)])))
+    setAcabamentosModo(Object.fromEntries(acabamentos.map(({ acabamentoId, valorDireto }) => [acabamentoId, valorDireto != null ? "valor" : "qtd"])))
+    setAcabamentosValorDireto(Object.fromEntries(acabamentos.filter(a => a.valorDireto != null).map(({ acabamentoId, valorDireto }) => [acabamentoId, String(valorDireto)])))
     const instalacao = orcamentoEditando.item.instalacao
     setInstalacaoIncluida(instalacao?.incluida ?? false)
     setHorasInstalacao(instalacao ? String(instalacao.horas) : "")
@@ -228,6 +233,8 @@ export function NovoOrcamentoForm() {
         ])
       )
     )
+    setAcabamentosModo(Object.fromEntries(acabamentos.map(({ acabamentoId, valorDireto }) => [acabamentoId, valorDireto != null ? "valor" : "qtd"])))
+    setAcabamentosValorDireto(Object.fromEntries(acabamentos.filter(a => a.valorDireto != null).map(({ acabamentoId, valorDireto }) => [acabamentoId, String(valorDireto)])))
 
     const instalacao = rascunho.item.instalacao
     setInstalacaoIncluida(instalacao?.incluida ?? false)
@@ -266,14 +273,15 @@ export function NovoOrcamentoForm() {
       quantidadeUnidades: numeroOuZero(quantidadeUnidades),
       horasEstimadas: numeroOuZero(horasEstimadas),
       acabamentos: acabamentosSeed
-        .filter(
-          (a) =>
-            acabamentosAtivos[a.id] &&
-            isPositiveNumberInput(acabamentosQtd[a.id] ?? "")
-        )
+        .filter((a) => {
+          if (!acabamentosAtivos[a.id]) return false
+          if (acabamentosModo[a.id] === "valor") return isPositiveNumberInput(acabamentosValorDireto[a.id] ?? "")
+          return isPositiveNumberInput(acabamentosQtd[a.id] ?? "")
+        })
         .map((a) => ({
           acabamentoId: a.id,
-          quantidade: numeroOuZero(acabamentosQtd[a.id] ?? ""),
+          quantidade: acabamentosModo[a.id] === "valor" ? 0 : numeroOuZero(acabamentosQtd[a.id] ?? ""),
+          ...(acabamentosModo[a.id] === "valor" ? { valorDireto: numeroOuZero(acabamentosValorDireto[a.id] ?? "") } : {}),
         })),
       instalacao: {
         incluida: instalacaoIncluida,
@@ -369,11 +377,11 @@ export function NovoOrcamentoForm() {
     (valor) =>
       valor.trim() === "" || isNonNegativeNumberInput(valor)
   )
-  const acabamentosValidos = acabamentosSeed.every(
-    (acabamento) =>
-      !acabamentosAtivos[acabamento.id] ||
-      isPositiveNumberInput(acabamentosQtd[acabamento.id] ?? "")
-  )
+  const acabamentosValidos = acabamentosSeed.every((acabamento) => {
+    if (!acabamentosAtivos[acabamento.id]) return true
+    if (acabamentosModo[acabamento.id] === "valor") return isPositiveNumberInput(acabamentosValorDireto[acabamento.id] ?? "")
+    return isPositiveNumberInput(acabamentosQtd[acabamento.id] ?? "")
+  })
   const entradaValida =
     entradaPercent.trim() === "" ||
     (isNonNegativeNumberInput(entradaPercent) && Number(entradaPercent) <= 100)
@@ -983,36 +991,72 @@ export function NovoOrcamentoForm() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
-                {acabamentosSeed.map((acabamento) => (
-                  <div
-                    key={acabamento.id}
-                    className="flex flex-wrap items-center gap-3 rounded-md border border-border px-3 py-2"
-                  >
-                    <div className="min-w-32 flex-1">
-                      <p className="text-sm font-medium">{acabamento.nome}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatarMoeda(acabamento.precoUnitario)} /{" "}
-                        {acabamento.unidade}
-                      </p>
+                {acabamentosSeed.map((acabamento) => {
+                  const ativo = Boolean(acabamentosAtivos[acabamento.id])
+                  const modo = acabamentosModo[acabamento.id] ?? "qtd"
+                  return (
+                    <div
+                      key={acabamento.id}
+                      className="flex flex-wrap items-center gap-3 rounded-md border border-border px-3 py-2"
+                    >
+                      <div className="min-w-32 flex-1">
+                        <p className="text-sm font-medium">{acabamento.nome}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatarMoeda(acabamento.precoUnitario)} /{" "}
+                          {acabamento.unidade}
+                        </p>
+                      </div>
+                      {ativo && (
+                        <button
+                          type="button"
+                          className="rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
+                          onClick={() =>
+                            setAcabamentosModo((prev) => ({
+                              ...prev,
+                              [acabamento.id]: modo === "qtd" ? "valor" : "qtd",
+                            }))
+                          }
+                        >
+                          {modo === "qtd" ? "Qtd" : "R$"}
+                        </button>
+                      )}
+                      {modo === "valor" ? (
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Valor R$"
+                          className="w-28"
+                          value={acabamentosValorDireto[acabamento.id] ?? ""}
+                          onChange={(e) =>
+                            setAcabamentosValorDireto((prev) => ({
+                              ...prev,
+                              [acabamento.id]: e.target.value,
+                            }))
+                          }
+                          disabled={!ativo}
+                        />
+                      ) : (
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Qtd."
+                          className="w-24"
+                          value={acabamentosQtd[acabamento.id] ?? ""}
+                          onChange={(e) =>
+                            setQtdAcabamento(acabamento.id, e.target.value)
+                          }
+                          disabled={!ativo}
+                        />
+                      )}
+                      <Switch
+                        checked={ativo}
+                        onCheckedChange={(v) => toggleAcabamento(acabamento.id, v)}
+                      />
                     </div>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Qtd."
-                      className="w-24"
-                      value={acabamentosQtd[acabamento.id] ?? ""}
-                      onChange={(e) =>
-                        setQtdAcabamento(acabamento.id, e.target.value)
-                      }
-                      disabled={!acabamentosAtivos[acabamento.id]}
-                    />
-                    <Switch
-                      checked={Boolean(acabamentosAtivos[acabamento.id])}
-                      onCheckedChange={(v) => toggleAcabamento(acabamento.id, v)}
-                    />
-                  </div>
-                ))}
+                  )
+                })}
                 {resultado && (
                   <div className="flex justify-between border-t border-border pt-3 text-sm">
                     <span className="text-muted-foreground">

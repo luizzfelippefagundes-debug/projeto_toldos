@@ -54,6 +54,8 @@ export type StatusOrcamento = "aberto" | "fechado" | "cancelado"
 export interface AcabamentoSelecionado {
   acabamentoId: string
   quantidade: number
+  // Quando informado, substitui precoUnitario × quantidade no cálculo.
+  valorDireto?: number
 }
 
 export interface InstalacaoOrcamento {
