@@ -125,6 +125,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
           `✅ ${clienteNome} assinou a OS nº ${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)}!`
         )
       }
+
+      // Envia cópia do contrato assinado para o cliente
+      if (clienteTelefone) {
+        const nomeExibido = clienteNome.split(" ")[0]
+        await enviarDocumentoWhatsapp(
+          clienteTelefone,
+          pdf.toString("base64"),
+          nomeArquivo,
+          `Olá${nomeExibido ? `, ${nomeExibido}` : ""}! 🎉 Obrigado por assinar a Ordem de Serviço!\n\nSegue em anexo sua cópia do contrato assinado para guardar. Em breve daremos início ao serviço. Qualquer dúvida é só chamar! 😊`
+        )
+      }
     } catch {
       // Falha no upload não impede o cliente de concluir a assinatura
     }
