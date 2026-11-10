@@ -78,7 +78,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   await sql`
     UPDATE orcamentos
     SET status_producao = 'aprovado'
-    WHERE id = ${reg.orcamento_id} AND status_producao IS NULL
+    WHERE id = ${reg.orcamento_id} AND (status_producao IS NULL OR status_producao = 'aguardando')
   `
 
   // Gera PDF com assinatura do cliente e envia para a empresa no WhatsApp

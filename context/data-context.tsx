@@ -575,12 +575,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setOrcamentos((atual) =>
       atual.map((o) => {
         if (o.id !== id) return o
+        const agora = new Date().toISOString()
+        const aprovado = retorno.etapa === "aprovado"
         const atualizado = {
           ...o,
-          retorno: { ...retorno, atualizadoEm: new Date().toISOString() },
-          // Aprovado no retorno → entra na produção, a menos que aguarda assinatura do cliente
-          statusProducao: retorno.etapa === "aprovado" && !o.statusProducao && !opcoes?.aguardarAssinatura
-            ? ("aprovado" as const)
+          retorno: { ...retorno, atualizadoEm: agora },
+          osEmitidaEm: aprovado ? (o.osEmitidaEm ?? agora) : o.osEmitidaEm,
+          // Aprovado no retorno → gera a OS e entra na produção. Se a OS foi
+          // enviada pro cliente assinar, fica em "Aguardando" até ele assinar.
+          statusProducao: aprovado && !o.statusProducao
+            ? (opcoes?.aguardarAssinatura ? ("aguardando" as const) : ("aprovado" as const))
             : o.statusProducao,
         }
         apiPut(`/api/orcamentos/${id}`, atualizado)

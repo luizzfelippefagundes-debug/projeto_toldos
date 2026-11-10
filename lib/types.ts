@@ -160,6 +160,7 @@ export interface Orcamento {
   validadeDias?: number
   retorno?: RetornoOrcamento
   statusProducao?: StatusPedidoRapido
+  osEmitidaEm?: string
 }
 
 export interface EntradaEstoque {

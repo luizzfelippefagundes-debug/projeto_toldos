@@ -87,6 +87,16 @@ export function NovoOrcamentoForm() {
     : null
   const modoEdicao = Boolean(orcamentoEditando)
 
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(typeof window !== "undefined" && window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
   const [passoAtual, setPassoAtual] = useState(1)
 
   const [clienteId, setClienteId] = useState("")
@@ -396,6 +406,13 @@ export function NovoOrcamentoForm() {
     Number.isFinite(resultado?.total) &&
     (resultado?.total ?? -1) >= 0
 
+  const temAnexoEtapa6 = Boolean(
+    arquivo ||
+    (orcamentoEditando?.anexoUrl && orcamentoEditando.anexoNome) ||
+    fotos.length > 0
+  )
+  const pendenciaFotoCelular = isMobile && !temAnexoEtapa6 && "anexe a foto ou vídeo do local (obrigatório no celular)"
+
   // Lista do que falta — mostrada perto do botão "Fechar Orçamento" quando
   // ele estiver desabilitado, pra nunca ficar travado sem explicação.
   const pendencias = [
@@ -411,8 +428,9 @@ export function NovoOrcamentoForm() {
     !horasEstimadasValidas && "informe as horas estimadas do serviço",
     !Number.isInteger(Number(numAjudantes)) && "revise o número de ajudantes",
     !isFiniteNumberInput(ajusteManual) && "revise o ajuste manual",
+    pendenciaFotoCelular,
   ].filter((p): p is string => Boolean(p))
-  const podeFechar = dadosValidos
+  const podeFechar = dadosValidos && (!isMobile || temAnexoEtapa6)
 
   // Pendências por etapa: no passo a passo o "Próximo" só libera quando a
   // etapa atual está certa, pra ninguém chegar no fim sem saber o que faltou.
@@ -435,6 +453,7 @@ export function NovoOrcamentoForm() {
       !descontoValido && "o desconto deve ficar entre 0% e 100%",
       !isFiniteNumberInput(ajusteManual) && "revise o ajuste manual",
     ],
+    6: [pendenciaFotoCelular],
   }
   const pendenciasPassoAtual = (pendenciasPorPasso[passoAtual] ?? []).filter(
     (p): p is string => Boolean(p)
@@ -1358,7 +1377,7 @@ export function NovoOrcamentoForm() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  {modoEdicao ? "" : "Etapa 6 de 6 — "}Foto ou vídeo do local (opcional)
+                  {modoEdicao ? "" : "Etapa 6 de 6 — "}Foto ou vídeo do local {isMobile ? "(obrigatório no celular)" : "(opcional no PC)"}
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
@@ -1387,7 +1406,9 @@ export function NovoOrcamentoForm() {
                     <>
                       <Upload className="h-8 w-8 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
-                        Clique para anexar uma foto ou vídeo (opcional)
+                        {isMobile
+                          ? "Toque para anexar uma foto ou vídeo do local"
+                          : "Clique para anexar uma foto ou vídeo (opcional)"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         Máximo 50 MB
@@ -1403,7 +1424,9 @@ export function NovoOrcamentoForm() {
                   onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Obrigatório para fechar o orçamento.
+                  {isMobile
+                    ? "Obrigatório para fechar o orçamento no celular."
+                    : "Opcional no computador."}
                 </p>
               </CardContent>
             </Card>
