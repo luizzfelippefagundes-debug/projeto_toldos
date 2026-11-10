@@ -1464,6 +1464,25 @@ export function NovoOrcamentoForm() {
               <CardContent className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="condicoes">Condições de pagamento</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      "À vista",
+                      "Boleto",
+                      "Débito",
+                      "Cartão de crédito",
+                      "50% entrada + 50% na entrega",
+                      "30% entrada + 70% na entrega",
+                    ].map((opcao) => (
+                      <button
+                        key={opcao}
+                        type="button"
+                        className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                        onClick={() => setCondicoesPagamento(opcao)}
+                      >
+                        {opcao}
+                      </button>
+                    ))}
+                  </div>
                   <Input
                     id="condicoes"
                     value={condicoesPagamento}
