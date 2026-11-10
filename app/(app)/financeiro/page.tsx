@@ -43,7 +43,7 @@ const rotuloFormaPagamento: Record<string, string> = {
 
 export default function FinanceiroPage() {
   const { lancamentos, clientes, orcamentos } = useData()
-  const [filtroTipo, setFiltroTipo] = useState<TipoLancamento | "todos" | "boleto">("todos")
+  const [filtroTipo, setFiltroTipo] = useState<TipoLancamento | "todos" | "boleto" | "fixas">("todos")
   const [filtroCliente, setFiltroCliente] = useState("todos")
   const [soComOs, setSoComOs] = useState(false)
   const [selecionado, setSelecionado] = useState<LancamentoFinanceiro | null>(null)
@@ -76,7 +76,9 @@ export default function FinanceiroPage() {
           ? true
           : filtroTipo === "boleto"
             ? l.formaPagamento === "boleto"
-            : l.tipo === filtroTipo
+            : filtroTipo === "fixas"
+              ? l.despesaFixa === true
+              : l.tipo === filtroTipo
       )
       .filter((l) => filtroCliente === "todos" || l.clienteId === filtroCliente)
       .filter((l) => {
@@ -255,6 +257,7 @@ export default function FinanceiroPage() {
               { valor: "todos", label: "Todos" },
               { valor: "receita", label: "Receitas" },
               { valor: "despesa", label: "Despesas" },
+              { valor: "fixas", label: "Fixas" },
               { valor: "boleto", label: "Boletos" },
             ] as const
           ).map((opcao) => (

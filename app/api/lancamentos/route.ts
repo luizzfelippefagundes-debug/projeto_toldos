@@ -21,6 +21,7 @@ function rowToLancamento(r: Record<string, unknown>): LancamentoFinanceiro {
     numeroBoleto: (r.numero_boleto as string) ?? undefined,
     parcela: (r.parcela as LancamentoFinanceiro["parcela"]) ?? undefined,
     pessoal: r.pessoal === true ? true : undefined,
+    despesaFixa: r.despesa_fixa === true ? true : undefined,
   }
 }
 
@@ -36,12 +37,12 @@ export async function POST(req: Request) {
   await getSql()`
     INSERT INTO lancamentos_financeiros (
       id, descricao, tipo, categoria, valor, vencimento, status, pago_em,
-      origem, origem_id, criado_em, cliente_id, forma_pagamento, numero_boleto, parcela, pessoal
+      origem, origem_id, criado_em, cliente_id, forma_pagamento, numero_boleto, parcela, pessoal, despesa_fixa
     ) VALUES (
       ${b.id}, ${b.descricao}, ${b.tipo}, ${b.categoria}, ${b.valor},
       ${b.vencimento}, ${b.status}, ${b.pagoEm ?? null}, ${b.origem},
       ${b.origemId ?? null}, ${b.criadoEm}, ${b.clienteId ?? null},
-      ${b.formaPagamento ?? null}, ${b.numeroBoleto ?? null}, ${b.parcela ?? null}, ${b.pessoal === true}
+      ${b.formaPagamento ?? null}, ${b.numeroBoleto ?? null}, ${b.parcela ?? null}, ${b.pessoal === true}, ${b.despesaFixa === true}
     )
   `
   return NextResponse.json(b, { status: 201 })

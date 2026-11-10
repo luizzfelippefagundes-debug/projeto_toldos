@@ -121,6 +121,7 @@ function LancamentoFormFields({
   )
   const [numeroBoleto, setNumeroBoleto] = useState(lancamento?.numeroBoleto ?? inicial?.numeroBoleto ?? "")
   const [pessoal, setPessoal] = useState(lancamento?.pessoal ?? false)
+  const [despesaFixa, setDespesaFixa] = useState(lancamento?.despesaFixa ?? false)
   // Só no lançamento novo: gera uma parcela por mês (financiamento, aluguel…).
   const [meses, setMeses] = useState("1")
   // Dessas parcelas, quantas (as primeiras) já foram pagas: entram como pagas.
@@ -165,6 +166,7 @@ function LancamentoFormFields({
           : undefined,
       parcela: lancamento?.parcela,
       pessoal: tipo === "despesa" && pessoal ? true : undefined,
+      despesaFixa: tipo === "despesa" && despesaFixa ? true : undefined,
     }
     if (lancamento) {
       updateLancamento(lancamento.id, dados)
@@ -305,15 +307,26 @@ function LancamentoFormFields({
         )}
 
         {tipo === "despesa" && (
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
-            <Switch checked={pessoal} onCheckedChange={setPessoal} />
-            <span className="text-sm">
-              <span className="font-medium">Despesa pessoal</span>
-              <span className="block text-xs text-muted-foreground">
-                Não entra nos totais do financeiro da empresa (a pagar, saldo, relatórios).
+          <>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
+              <Switch checked={despesaFixa} onCheckedChange={setDespesaFixa} />
+              <span className="text-sm">
+                <span className="font-medium">Despesa fixa</span>
+                <span className="block text-xs text-muted-foreground">
+                  Aluguel, luz, internet, salário etc. Aparece separada na aba Fixas do financeiro.
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
+              <Switch checked={pessoal} onCheckedChange={setPessoal} />
+              <span className="text-sm">
+                <span className="font-medium">Despesa pessoal</span>
+                <span className="block text-xs text-muted-foreground">
+                  Não entra nos totais do financeiro da empresa (a pagar, saldo, relatórios).
+                </span>
+              </span>
+            </label>
+          </>
         )}
 
         <div className="grid grid-cols-2 gap-4">

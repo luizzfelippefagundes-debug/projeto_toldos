@@ -273,4 +273,6 @@ export interface LancamentoFinanceiro {
   parcela?: ParcelaLancamento
   // Despesa pessoal: fica fora dos totais da empresa.
   pessoal?: boolean
+  // Despesa fixa: aluguel, luz, internet etc. Aparece na aba de Fixas.
+  despesaFixa?: boolean
 }
