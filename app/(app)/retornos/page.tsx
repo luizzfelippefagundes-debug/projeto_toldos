@@ -108,7 +108,7 @@ export default function RetornosPage() {
     etapa: EtapaRetorno
     mensagem: string
     enviando: boolean
-    executar?: () => void
+    executar?: (opcoes: { aguardarAssinatura: boolean }) => void
   } | null>(null)
 
   const sensores = useSensors(
@@ -219,7 +219,7 @@ export default function RetornosPage() {
     const aguardarAssinatura = confirmando.etapa === "aprovado" && enviarWhatsApp && !!confirmando.card.cliente?.telefone
 
     if (confirmando.executar) {
-      confirmando.executar()
+      confirmando.executar({ aguardarAssinatura })
     } else {
       if (confirmando.card.retorno.etapa !== confirmando.etapa) {
         atualizarRetorno(confirmando.card.orcamento.id, {
@@ -379,7 +379,7 @@ export default function RetornosPage() {
                 etapa: retorno.etapa,
                 mensagem: mensagemWhatsApp(cardEditando, retorno.etapa),
                 enviando: false,
-                executar: () => atualizarRetorno(cardEditando.orcamento.id, retorno),
+                executar: ({ aguardarAssinatura }) => atualizarRetorno(cardEditando.orcamento.id, retorno, { aguardarAssinatura }),
               })
             } else {
               atualizarRetorno(cardEditando.orcamento.id, retorno)
@@ -568,6 +568,8 @@ function CardConteudo({
   assinatura?: { pdfUrl: string | null; assinado: boolean }
   onAbrir: () => void
 }) {
+  const whatsapp = card.cliente?.telefone ? linkWhatsApp(card.cliente.telefone, mensagemWhatsApp(card, card.retorno.etapa)) : null
+
   return (
     <div
       role="button"
@@ -600,12 +602,30 @@ function CardConteudo({
         </p>
       )}
 
-      {card.retorno.responsavel && (
+      <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1 truncate text-[11px] text-muted-foreground">
-          <UserRound className="h-3 w-3 shrink-0" />
-          {card.retorno.responsavel}
+          {card.retorno.responsavel && (
+            <>
+              <UserRound className="h-3 w-3 shrink-0" />
+              {card.retorno.responsavel}
+            </>
+          )}
         </span>
-      )}
+        {whatsapp && (
+          <a
+            href={whatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="WhatsApp"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            WhatsApp
+          </a>
+        )}
+      </div>
 
       {assinatura && (
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
