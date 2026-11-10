@@ -42,9 +42,10 @@ const rotuloFormaPagamento: Record<string, string> = {
 }
 
 export default function FinanceiroPage() {
-  const { lancamentos, clientes } = useData()
+  const { lancamentos, clientes, orcamentos } = useData()
   const [filtroTipo, setFiltroTipo] = useState<TipoLancamento | "todos" | "boleto">("todos")
   const [filtroCliente, setFiltroCliente] = useState("todos")
+  const [soComOs, setSoComOs] = useState(false)
   const [selecionado, setSelecionado] = useState<LancamentoFinanceiro | null>(null)
   // Despesas pessoais ficam fora dos totais, a não ser que a pessoa queira ver tudo junto.
   const [incluirPessoais, setIncluirPessoais] = useState(false)
@@ -78,8 +79,14 @@ export default function FinanceiroPage() {
             : l.tipo === filtroTipo
       )
       .filter((l) => filtroCliente === "todos" || l.clienteId === filtroCliente)
+      .filter((l) => {
+        if (!soComOs) return true
+        if (l.origem !== "orcamento" || !l.origemId) return false
+        const orc = orcamentos.find((o) => o.id === l.origemId)
+        return Boolean(orc?.osEmitidaEm)
+      })
       .sort((a, b) => new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime())
-  }, [lancamentos, filtroTipo, filtroCliente])
+  }, [lancamentos, filtroTipo, filtroCliente, soComOs, orcamentos])
 
   const itensLista = useMemo(
     () => agruparPagasDaSerie(ordenados, lancamentos, seriesAbertas),
@@ -264,6 +271,17 @@ export default function FinanceiroPage() {
               {opcao.label}
             </button>
           ))}
+          <button
+            onClick={() => setSoComOs((v) => !v)}
+            className={cn(
+              "rounded-full border px-4 py-1.5 text-sm",
+              soComOs
+                ? "border-primary bg-primary/15 font-medium text-foreground"
+                : "border-border text-muted-foreground hover:bg-accent"
+            )}
+          >
+            Só com OS
+          </button>
         </div>
         <Select value={filtroCliente} onValueChange={(v) => setFiltroCliente(v ?? "todos")}>
           <SelectTrigger className="w-48">
