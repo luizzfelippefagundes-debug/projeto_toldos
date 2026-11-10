@@ -105,6 +105,7 @@ export interface DataContextValue {
   duplicarOrcamento: (id: string) => void
   consumirRascunho: () => void
   addProdutoRapido: (dados: Omit<ProdutoRapido, "id">) => ProdutoRapido
+  removeProdutoRapido: (id: string) => void
   addPedidoRapido: (
     dados: Omit<PedidoRapido, "id" | "numero" | "criadoEm">
   ) => PedidoRapido
@@ -670,6 +671,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return novo
   }
 
+  const removeProdutoRapido: DataContextValue["removeProdutoRapido"] = (id) => {
+    setProdutosRapidos((atual) => atual.filter((p) => p.id !== id))
+    apiDelete(`/api/produtos-rapidos/${id}`)
+  }
+
   function registrarMensagemBot(dados: Omit<MensagemBot, "id" | "criadoEm">) {
     const nova: MensagemBot = {
       id: gerarId("msg"),
@@ -841,6 +847,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       duplicarOrcamento,
       consumirRascunho,
       addProdutoRapido,
+      removeProdutoRapido,
       addPedidoRapido,
       moverPedidoRapido,
       moverOrcamentoProducao,

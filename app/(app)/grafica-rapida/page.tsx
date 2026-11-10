@@ -11,7 +11,7 @@ import { ProdutoFormDialog } from "@/components/grafica-rapida/produto-form-dial
 import { formatarMoeda } from "@/lib/format"
 import type { CategoriaProdutoRapido, ProdutoRapido } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { MessageCircle, Save, CheckCircle2, RotateCcw } from "lucide-react"
+import { MessageCircle, Save, CheckCircle2, RotateCcw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 const categorias: CategoriaProdutoRapido[] = [
@@ -27,7 +27,7 @@ const categorias: CategoriaProdutoRapido[] = [
 const acabamentosPadrao = ["Brilho", "Fosco"]
 
 export default function GraficaRapidaPage() {
-  const { produtosRapidos } = useData()
+  const { produtosRapidos, removeProdutoRapido } = useData()
   const [categoriaAtiva, setCategoriaAtiva] = useState<
     CategoriaProdutoRapido | "Todos"
   >("Todos")
@@ -93,7 +93,21 @@ export default function GraficaRapidaPage() {
                 onClick={() => setProdutoSelecionado(produto)}
               >
                 <CardContent className="flex flex-col gap-2">
-                  <p className="font-medium">{produto.nome}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium">{produto.nome}</p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeProdutoRapido(produto.id)
+                        toast.success("Produto removido.")
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {produto.categoria} · Prazo: {produto.prazoDias}{" "}
                     {produto.prazoDias === 1 ? "dia" : "dias"}

@@ -2,6 +2,7 @@
 
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { EMPRESA_ORCAMENTO, type LinhaOrcamento } from "@/lib/orcamento-pdf"
+import { entradaEfetiva } from "@/lib/parcelas"
 import type { FotoOrcamento } from "@/lib/types"
 
 // Orçamento oficial da empresa (modelo Orcamento-0129-25.pdf). As medidas
@@ -41,6 +42,7 @@ export function OrcamentoOficial({
   linhas,
   total,
   condicoes,
+  entradaPercent,
   fotos,
   provisorio,
 }: {
@@ -50,6 +52,7 @@ export function OrcamentoOficial({
   linhas: LinhaOrcamento[]
   total: number
   condicoes: string
+  entradaPercent?: number
   fotos: FotoOrcamento[]
   // Orçamento feito sem internet: ainda não tem número oficial.
   provisorio?: boolean
@@ -201,6 +204,21 @@ export function OrcamentoOficial({
             <span style={{ fontWeight: 700 }}>Condições de Pagamento:</span>{" "}
             <span style={{ fontSize: "7.5pt", color: "#444" }}>{condicoes}</span>
           </div>
+          {(() => {
+            const entrada = entradaEfetiva(entradaPercent)
+            if (!entrada || total <= 0) return null
+            const valorEntrada = Math.round((total * entrada) / 100 * 100) / 100
+            const valorRestante = Math.round((total - valorEntrada) * 100) / 100
+            return (
+              <div style={{ marginTop: "5pt", fontSize: "8pt", color: "#555" }}>
+                <span style={{ fontWeight: 700 }}>Entrada ({entrada}%):</span>{" "}
+                {formatarMoeda(valorEntrada)}
+                {"   "}
+                <span style={{ fontWeight: 700 }}>Restante ({Math.round(100 - entrada)}%):</span>{" "}
+                {formatarMoeda(valorRestante)}
+              </div>
+            )
+          })()}
 
           {fotos.length > 0 && (
             <>

@@ -137,6 +137,7 @@ export default function OrcamentoOficialPage() {
           linhas={linhas}
           total={total}
           condicoes={condicoes}
+          entradaPercent={orcamento.item.entradaPercent}
           fotos={fotos}
         />
       </div>

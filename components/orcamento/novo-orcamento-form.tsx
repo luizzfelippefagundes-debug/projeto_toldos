@@ -21,6 +21,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { ClienteQuickAddDialog } from "@/components/orcamento/cliente-quick-add-dialog"
+import { Combobox } from "@/components/ui/combobox"
 import { Stepper, type StepperStep } from "@/components/orcamento/stepper"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
@@ -761,6 +762,7 @@ export function NovoOrcamentoForm() {
           linhas={linhasPdf}
           total={resultado?.total ?? 0}
           condicoes={condicoesPagamento.trim() || textoCondicoesPagamento(numeroOuZero(entradaPercent))}
+          entradaPercent={numeroOuZero(entradaPercent)}
           fotos={fotosPdf}
           provisorio={offline}
         />
@@ -811,25 +813,14 @@ export function NovoOrcamentoForm() {
               <CardContent className="flex flex-wrap items-end gap-4">
                 <div className="flex min-w-56 flex-col gap-2">
                   <Label>Cliente</Label>
-                  <Select
+                  <Combobox
+                    options={clientes.map((c) => ({ value: c.id, label: c.nome }))}
                     value={clienteId}
-                    onValueChange={(v) => setClienteId(v ?? "")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o cliente">
-                        {(v: string) =>
-                          clientes.find((c) => c.id === v)?.nome ?? "Selecione o cliente"
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientes.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onValueChange={setClienteId}
+                    placeholder="Selecione o cliente"
+                    searchPlaceholder="Buscar cliente..."
+                    emptyText="Nenhum cliente encontrado."
+                  />
                 </div>
                 <ClienteQuickAddDialog onCriado={(c) => setClienteId(c.id)} />
               </CardContent>
@@ -850,26 +841,15 @@ export function NovoOrcamentoForm() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="flex min-w-0 flex-col gap-2">
                     <Label>Material</Label>
-                    <Select
+                    <Combobox
+                      options={materiais.map((m) => ({ value: m.id, label: m.nome }))}
                       value={materialId}
-                      onValueChange={(v) => setMaterialId(v ?? "")}
-                    >
-                      {/* Nome longo de material não pode alargar a tela no celular. */}
-                      <SelectTrigger className="w-full min-w-0">
-                        <SelectValue placeholder="Selecione o material">
-                          {(v: string) =>
-                            materiais.find((m) => m.id === v)?.nome ?? "Selecione o material"
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {materiais.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onValueChange={setMaterialId}
+                      placeholder="Selecione o material"
+                      searchPlaceholder="Buscar material..."
+                      emptyText="Nenhum material encontrado."
+                      className="w-full min-w-0"
+                    />
                   </div>
                   <div className="flex min-w-0 flex-col gap-2">
                     <Label>
