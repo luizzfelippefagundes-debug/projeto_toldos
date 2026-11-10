@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import {
   Command,
   CommandEmpty,
@@ -48,16 +47,14 @@ export function Combobox({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("w-full justify-between font-normal", className)}
-        >
-          <span className="truncate">{selected?.label ?? placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+      <PopoverTrigger
+        className={cn(
+          "flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 font-normal",
+          className
+        )}
+      >
+        <span className="truncate">{selected?.label ?? placeholder}</span>
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command>
