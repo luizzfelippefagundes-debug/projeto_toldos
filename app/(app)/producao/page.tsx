@@ -36,7 +36,7 @@ import {
 } from "@/lib/pedidos-rapidos"
 import { RefreshCw, Search, Clock, AlertTriangle, CheckCircle2, Package, UserRound, MessageCircle } from "lucide-react"
 
-const STATUS_COM_NOTIFICACAO = new Set<StatusPedidoRapido>(["pronto", "entregue"])
+const STATUS_COM_NOTIFICACAO = new Set<StatusPedidoRapido>(["arte", "pronto", "entregue"])
 
 function normalizarTelefone(tel: string): string {
   const digits = tel.replace(/\D/g, "")
@@ -47,6 +47,9 @@ function normalizarTelefone(tel: string): string {
 
 function mensagemProducao(clienteNome: string, status: StatusPedidoRapido): string {
   const nome = clienteNome.split(" ")[0] ?? ""
+  if (status === "arte") {
+    return `Olá${nome ? `, ${nome}` : ""}! 🎨 Sua arte está pronta para aprovação!\n\nPor favor, *confirme se está tudo certo* para darmos início à produção. Se precisar de algum ajuste, é só me falar. 😊`
+  }
   if (status === "pronto") {
     return `Olá${nome ? `, ${nome}` : ""}! 🎉 Seu pedido está *pronto* para retirada/entrega!\n\nQualquer dúvida é só chamar. 😊`
   }
@@ -426,17 +429,19 @@ export default function ProducaoPage() {
         )}
       </div>
 
-      {/* Modal de confirmação ao mover para pronto/entregue */}
+      {/* Modal de confirmação ao mover para arte/pronto/entregue */}
       <Dialog open={!!confirmando} onOpenChange={(open) => { if (!open && !confirmando?.enviando) setConfirmando(null) }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {confirmando?.novoStatus === "pronto" ? "Marcar como Pronto?" : "Marcar como Entregue?"}
+              {confirmando?.novoStatus === "arte" ? "Enviar arte para aprovação?" : confirmando?.novoStatus === "pronto" ? "Marcar como Pronto?" : "Marcar como Entregue?"}
             </DialogTitle>
             <DialogDescription>
-              {confirmando?.novoStatus === "pronto"
-                ? "Deseja avisar o cliente que o pedido está pronto para retirada/entrega?"
-                : "Deseja enviar uma confirmação de entrega pelo WhatsApp?"}
+              {confirmando?.novoStatus === "arte"
+                ? "Deseja enviar uma mensagem ao cliente pedindo aprovação da arte antes de iniciar a produção?"
+                : confirmando?.novoStatus === "pronto"
+                  ? "Deseja avisar o cliente que o pedido está pronto para retirada/entrega?"
+                  : "Deseja enviar uma confirmação de entrega pelo WhatsApp?"}
             </DialogDescription>
           </DialogHeader>
 
