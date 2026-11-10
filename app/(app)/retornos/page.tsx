@@ -86,6 +86,9 @@ function mensagemWhatsApp(card: CardRetorno, etapa: EtapaRetorno) {
   if (etapa === "perdido") {
     return `Olá${nome ? `, ${nome}` : ""}! Tudo bem?\n\nPassando pra agradecer pelo contato sobre o orçamento nº ${numero}. Se em outro momento precisar de toldos ou comunicação visual, pode contar com a gente! 😊`
   }
+  if (etapa === "negociacao") {
+    return `Olá${nome ? `, ${nome}` : ""}! 😊 Aqui é da Toldos Print. Passando pra dar continuidade ao orçamento nº ${numero} (${total}). Ficou alguma dúvida ou podemos fechar?`
+  }
   return `Olá${nome ? `, ${nome}` : ""}! Aqui é da Toldos Print. Passando pra saber se você conseguiu ver o orçamento nº ${numero} (${total}). Ficou alguma dúvida?`
 }
 
@@ -205,7 +208,7 @@ export default function RetornosPage() {
     if (!card || !e.over) return
     const etapa = e.over.id as EtapaRetorno
     if (card.retorno.etapa === etapa) return
-    if ((etapa === "aprovado" || etapa === "perdido") && card.cliente?.telefone) {
+    if ((etapa === "aprovado" || etapa === "perdido" || etapa === "negociacao") && card.cliente?.telefone) {
       setConfirmando({ card, etapa, mensagem: mensagemWhatsApp(card, etapa), enviando: false })
     } else {
       moverPara(card, etapa)
@@ -370,7 +373,7 @@ export default function RetornosPage() {
           hoje={hoje}
           onFechar={() => setEditandoId(null)}
           onSalvar={(retorno) => {
-            const etapaFinalizada = retorno.etapa === "aprovado" || retorno.etapa === "perdido"
+            const etapaFinalizada = retorno.etapa === "aprovado" || retorno.etapa === "perdido" || retorno.etapa === "negociacao"
             const etapaMudou = retorno.etapa !== cardEditando.retorno.etapa
             if (etapaFinalizada && etapaMudou && cardEditando.cliente?.telefone) {
               setEditandoId(null)
@@ -394,12 +397,14 @@ export default function RetornosPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {confirmando?.etapa === "aprovado" ? "Mover para Aprovado?" : "Mover para Perdido?"}
+              {confirmando?.etapa === "aprovado" ? "Mover para Aprovado?" : confirmando?.etapa === "negociacao" ? "Mover para Em negociação?" : "Mover para Perdido?"}
             </DialogTitle>
             <DialogDescription>
               {confirmando?.etapa === "aprovado"
                 ? "O orçamento entrará na produção. Deseja enviar uma mensagem de confirmação pelo WhatsApp?"
-                : "Deseja enviar uma mensagem de encerramento pelo WhatsApp?"}
+                : confirmando?.etapa === "negociacao"
+                  ? "Deseja enviar uma mensagem de follow-up pelo WhatsApp?"
+                  : "Deseja enviar uma mensagem de encerramento pelo WhatsApp?"}
             </DialogDescription>
           </DialogHeader>
 
