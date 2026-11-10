@@ -66,7 +66,7 @@ const colunas: {
 }[] = [
   {
     status: "aguardando",
-    titulo: "Aguardando",
+    titulo: "Ag. Assinatura",
     cor: "bg-slate-500",
     corFundo: "bg-slate-500/10",
     corBorda: "border-slate-500/40",
