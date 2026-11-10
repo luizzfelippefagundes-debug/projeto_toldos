@@ -43,6 +43,7 @@ export function OrcamentoOficial({
   total,
   condicoes,
   entradaPercent,
+  validoAte,
   fotos,
   provisorio,
 }: {
@@ -53,6 +54,7 @@ export function OrcamentoOficial({
   total: number
   condicoes: string
   entradaPercent?: number
+  validoAte?: string
   fotos: FotoOrcamento[]
   // Orçamento feito sem internet: ainda não tem número oficial.
   provisorio?: boolean
@@ -204,6 +206,12 @@ export function OrcamentoOficial({
             <span style={{ fontWeight: 700 }}>Condições de Pagamento:</span>{" "}
             <span style={{ fontSize: "7.5pt", color: "#444" }}>{condicoes}</span>
           </div>
+          {validoAte && (
+            <div style={{ marginTop: "4pt", fontSize: "8pt", color: "#555" }}>
+              <span style={{ fontWeight: 700 }}>Validade do orçamento:</span>{" "}
+              {formatarData(validoAte)}
+            </div>
+          )}
           {(() => {
             const entrada = entradaEfetiva(entradaPercent)
             if (!entrada || total <= 0) return null
