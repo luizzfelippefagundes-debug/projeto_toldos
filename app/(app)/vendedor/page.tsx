@@ -14,6 +14,7 @@ const statusPedido: Record<StatusPedidoRapido, string> = {
   aguardando: "Aguardando",
   aprovado: "Aprovado",
   arte: "Arte",
+  ag_confirmacao: "Arte Enviada",
   impressao: "Impressão",
   acabamento: "Acabamento",
   pronto: "Pronto",

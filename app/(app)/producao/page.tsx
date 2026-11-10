@@ -36,7 +36,7 @@ import {
 } from "@/lib/pedidos-rapidos"
 import { RefreshCw, Search, Clock, AlertTriangle, CheckCircle2, Package, UserRound, MessageCircle } from "lucide-react"
 
-const STATUS_COM_NOTIFICACAO = new Set<StatusPedidoRapido>(["arte", "pronto", "entregue"])
+const STATUS_COM_NOTIFICACAO = new Set<StatusPedidoRapido>(["ag_confirmacao", "pronto", "entregue"])
 
 function normalizarTelefone(tel: string): string {
   const digits = tel.replace(/\D/g, "")
@@ -47,7 +47,7 @@ function normalizarTelefone(tel: string): string {
 
 function mensagemProducao(clienteNome: string, status: StatusPedidoRapido): string {
   const nome = clienteNome.split(" ")[0] ?? ""
-  if (status === "arte") {
+  if (status === "ag_confirmacao") {
     return `Olá${nome ? `, ${nome}` : ""}! 🎨 Sua arte está pronta para aprovação!\n\nPor favor, *confirme se está tudo certo* para darmos início à produção. Se precisar de algum ajuste, é só me falar. 😊`
   }
   if (status === "pronto") {
@@ -90,6 +90,14 @@ const colunas: {
     corFundo: "bg-violet-500/10",
     corBorda: "border-violet-500/40",
     corTexto: "text-violet-500",
+  },
+  {
+    status: "ag_confirmacao",
+    titulo: "Arte Enviada",
+    cor: "bg-pink-500",
+    corFundo: "bg-pink-500/10",
+    corBorda: "border-pink-500/40",
+    corTexto: "text-pink-500",
   },
   {
     status: "impressao",
@@ -184,7 +192,7 @@ export default function ProducaoPage() {
   }, [pedidosRapidos, busca])
 
   const emProducao = pedidosRapidos.filter((p) =>
-    ["aprovado", "arte", "impressao", "acabamento", "pronto"].includes(p.status)
+    ["aprovado", "arte", "ag_confirmacao", "impressao", "acabamento", "pronto"].includes(p.status)
   ).length
   const atrasados = pedidosRapidos.filter(estaAtrasado).length
   const prontos = pedidosRapidos.filter((p) => p.status === "pronto").length
@@ -429,15 +437,15 @@ export default function ProducaoPage() {
         )}
       </div>
 
-      {/* Modal de confirmação ao mover para arte/pronto/entregue */}
+      {/* Modal de confirmação ao mover para ag_confirmacao/pronto/entregue */}
       <Dialog open={!!confirmando} onOpenChange={(open) => { if (!open && !confirmando?.enviando) setConfirmando(null) }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {confirmando?.novoStatus === "arte" ? "Enviar arte para aprovação?" : confirmando?.novoStatus === "pronto" ? "Marcar como Pronto?" : "Marcar como Entregue?"}
+              {confirmando?.novoStatus === "ag_confirmacao" ? "Enviar arte para aprovação?" : confirmando?.novoStatus === "pronto" ? "Marcar como Pronto?" : "Marcar como Entregue?"}
             </DialogTitle>
             <DialogDescription>
-              {confirmando?.novoStatus === "arte"
+              {confirmando?.novoStatus === "ag_confirmacao"
                 ? "Deseja enviar uma mensagem ao cliente pedindo aprovação da arte antes de iniciar a produção?"
                 : confirmando?.novoStatus === "pronto"
                   ? "Deseja avisar o cliente que o pedido está pronto para retirada/entrega?"

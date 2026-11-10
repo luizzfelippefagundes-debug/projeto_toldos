@@ -204,6 +204,7 @@ export type StatusPedidoRapido =
   | "aguardando"
   | "aprovado"
   | "arte"
+  | "ag_confirmacao"
   | "impressao"
   | "acabamento"
   | "pronto"

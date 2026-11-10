@@ -22,6 +22,7 @@ const STATUS_PRODUCAO_LEGIVEL: Record<StatusPedidoRapido, string> = {
   aguardando: "aguardando aprovação",
   aprovado: "aprovado, entrando na fila de produção",
   arte: "em produção (arte)",
+  ag_confirmacao: "aguardando aprovação da arte pelo cliente",
   impressao: "em produção (impressão)",
   acabamento: "em produção (acabamento)",
   pronto: "pronto, aguardando retirada/entrega",
