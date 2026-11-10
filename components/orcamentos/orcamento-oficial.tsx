@@ -42,6 +42,7 @@ export function OrcamentoOficial({
   linhas,
   total,
   condicoes,
+  exibirOpcoesParcelas,
   entradaPercent,
   validoAte,
   fotos,
@@ -53,6 +54,9 @@ export function OrcamentoOficial({
   linhas: LinhaOrcamento[]
   total: number
   condicoes: string
+  // Quando true mostra as caixinhas 1x/2x/3x — só quando não foi escolhida
+  // uma condição específica.
+  exibirOpcoesParcelas?: boolean
   entradaPercent?: number
   validoAte?: string
   fotos: FotoOrcamento[]
@@ -227,7 +231,7 @@ export function OrcamentoOficial({
               </div>
             )
           })()}
-          {total > 0 && (
+          {total > 0 && exibirOpcoesParcelas && (
             <div style={{ marginTop: "8pt" }}>
               <div style={{ fontSize: "8pt", fontWeight: 700, color: "#555", marginBottom: "4pt" }}>
                 Opções de parcelamento (sem juros):

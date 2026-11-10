@@ -138,6 +138,8 @@ export default function OrcamentoOficialPage() {
           total={total}
           condicoes={condicoes}
           entradaPercent={orcamento.item.entradaPercent}
+          exibirOpcoesParcelas={!orcamento.item.condicoesPagamento?.trim()}
+          validoAte={validoAte.toISOString()}
           fotos={fotos}
         />
       </div>

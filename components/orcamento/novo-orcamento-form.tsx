@@ -770,6 +770,7 @@ export function NovoOrcamentoForm() {
           linhas={linhasPdf}
           total={resultado?.total ?? 0}
           condicoes={condicoesPagamento.trim() || textoCondicoesPagamento(numeroOuZero(entradaPercent))}
+          exibirOpcoesParcelas={!condicoesPagamento.trim()}
           entradaPercent={numeroOuZero(entradaPercent)}
           fotos={fotosPdf}
           provisorio={offline}
@@ -1482,6 +1483,22 @@ export function NovoOrcamentoForm() {
                         {opcao}
                       </button>
                     ))}
+                    {resultado && resultado.total > 0 && [1, 2, 3].map((n) => {
+                      const parcela = Math.round((resultado.total / n) * 100) / 100
+                      const texto = n === 1
+                        ? `À vista — ${formatarMoeda(resultado.total)}`
+                        : `${n}x de ${formatarMoeda(parcela)} (sem juros)`
+                      return (
+                        <button
+                          key={`parcela-${n}`}
+                          type="button"
+                          className="rounded-full border border-primary/40 bg-primary/5 px-3 py-1 text-xs text-primary hover:bg-primary/15"
+                          onClick={() => setCondicoesPagamento(texto)}
+                        >
+                          {n}x
+                        </button>
+                      )
+                    })}
                   </div>
                   <Input
                     id="condicoes"
