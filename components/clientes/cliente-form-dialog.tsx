@@ -62,11 +62,12 @@ function ClienteFormFields({ cliente, modoEdicao, onFechar }: FieldsProps) {
   const [nome, setNome] = useState(cliente?.nome ?? "")
   const [telefone, setTelefone] = useState(cliente?.telefone ?? "")
   const [email, setEmail] = useState(cliente?.email ?? "")
+  const [cpf, setCpf] = useState(cliente?.cpf ?? "")
 
   const valido = nome.trim().length > 0
 
   function salvar() {
-    const dados = { nome: nome.trim(), telefone: telefone.trim(), email: email.trim() || undefined }
+    const dados = { nome: nome.trim(), telefone: telefone.trim(), email: email.trim() || undefined, cpf: cpf.trim() || undefined }
     if (modoEdicao && cliente) {
       updateCliente(cliente.id, { ...dados, telefone: dados.telefone })
       toast.success("Cliente atualizado.")
@@ -139,6 +140,15 @@ function ClienteFormFields({ cliente, modoEdicao, onFechar }: FieldsProps) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="email@exemplo.com"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="cpf">CPF</Label>
+          <Input
+            id="cpf"
+            value={cpf}
+            onChange={(e) => setCpf(e.target.value)}
+            placeholder="000.000.000-00"
           />
         </div>
       </div>

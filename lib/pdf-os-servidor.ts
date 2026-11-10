@@ -210,8 +210,20 @@ export async function gerarPdfOsServidor(
   doc.text(clienteNome, meioEsq, y, { align: "center" })
   doc.text(EMPRESA_ORCAMENTO.nome, meioDir, y, { align: "center" })
 
+  // Garantia
+  y += 18
+  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(80)
+  doc.text("Garantia:", esq, y)
+  doc.setFont("helvetica", "normal").setTextColor(100)
+  doc.text(
+    "Este serviço possui garantia de 3 (três) meses contra defeitos de fabricação, contados a partir da data de entrega.",
+    esq + 18,
+    y,
+    { maxWidth: dir - esq - 18 }
+  )
+
   // Rodapé
-  y += 30
+  y += 22
   doc.setDrawColor(200).setLineWidth(0.5).line(esq, y, dir, y)
   y += 12
   doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(60)

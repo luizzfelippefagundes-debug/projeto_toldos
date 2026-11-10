@@ -4,6 +4,7 @@ let orcamentosProntos = false
 let lancamentosProntos = false
 let conversasBotProntas = false
 let assinaturasOsProntas = false
+let clientesCpfPronto = false
 
 // Colunas novas em tabelas que já existem em produção. Também estão em
 // scripts/migrate.sql; rodar aqui (uma vez por instância) evita depender de
@@ -43,6 +44,12 @@ export async function garantirTabelaAssinaturasOs() {
   `
   await getSql()`ALTER TABLE assinaturas_os ADD COLUMN IF NOT EXISTS pdf_url TEXT`
   assinaturasOsProntas = true
+}
+
+export async function garantirCpfClientes() {
+  if (clientesCpfPronto) return
+  await getSql()`ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cpf TEXT`
+  clientesCpfPronto = true
 }
 
 export async function garantirTabelaConversasBot() {

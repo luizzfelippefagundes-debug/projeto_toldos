@@ -33,6 +33,7 @@ export interface Cliente {
   nome: string
   telefone: string
   email?: string
+  cpf?: string
 }
 
 export interface Acabamento {
