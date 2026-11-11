@@ -774,7 +774,7 @@ export function NovoOrcamentoForm() {
           linhas={linhasPdf}
           total={resultado?.total ?? 0}
           condicoes={condicoesPagamento.trim() || textoCondicoesPagamento(numeroOuZero(entradaPercent))}
-          exibirOpcoesParcelas={!condicoesPagamento.trim()}
+          exibirOpcoesParcelas={true}
           entradaPercent={numeroOuZero(entradaPercent)}
           fotos={fotosPdf}
           provisorio={offline}
