@@ -2,10 +2,11 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { jsPDF } from "jspdf"
 import { formatarData, formatarMoeda } from "./format"
-import { EMPRESA_ORCAMENTO } from "./orcamento-pdf"
-import { equipamentosAcessoSeed, acabamentosSeed } from "./seed-data"
+import { EMPRESA_ORCAMENTO, gerarLinhasOrcamento } from "./orcamento-pdf"
+import { calcularOrcamentoSalvo } from "./orcamento-itens"
+import { materiaisSeed, servicosSeed, acabamentosSeed } from "./seed-data"
 import { getSql } from "./db"
-import type { Acabamento, Orcamento } from "./types"
+import type { Acabamento, Material, Orcamento, Servico } from "./types"
 
 async function imagemBase64(caminhoPublico: string): Promise<string | null> {
   try {
@@ -34,59 +35,94 @@ async function buscarAcabamentosDb(): Promise<Acabamento[]> {
   }
 }
 
+async function buscarMateriaisDb(): Promise<Material[]> {
+  try {
+    const sql = getSql()
+    const rows = await sql`SELECT id, nome, tipo, preco_unitario as "precoUnitario", unidade, estoque_minimo as "estoqueMinimo", quantidade_estoque as "quantidadeEstoque" FROM materiais ORDER BY nome`
+    if (rows.length === 0) return materiaisSeed
+    return rows.map((r) => ({
+      id: r.id as string,
+      nome: r.nome as string,
+      tipo: r.tipo as any,
+      precoUnitario: Number(r.precoUnitario),
+      unidade: r.unidade as any,
+      estoqueMinimo: Number(r.estoqueMinimo || 0),
+      quantidadeEstoque: Number(r.quantidadeEstoque || 0),
+    }))
+  } catch {
+    return materiaisSeed
+  }
+}
+
+async function buscarServicosDb(): Promise<Servico[]> {
+  try {
+    const sql = getSql()
+    const rows = await sql`SELECT id, nome, forma_cobranca as "formaCobranca", valor, ferramentas FROM servicos ORDER BY nome`
+    if (rows.length === 0) return servicosSeed
+    return rows.map((r) => ({
+      id: r.id as string,
+      nome: r.nome as string,
+      formaCobranca: (r.formaCobranca as any) || "hora",
+      valor: Number(r.valor || 0),
+      ferramentas: r.ferramentas as string,
+    }))
+  } catch {
+    return servicosSeed
+  }
+}
+
 export async function gerarPdfOsServidor(
   orcamento: Orcamento,
   clienteNome: string,
   clienteTelefone?: string,
   assinaturaClienteBase64?: string
 ): Promise<Buffer> {
-  const acabamentosDb = await buscarAcabamentosDb()
+  const [acabamentosDb, materiaisDb, servicosDb] = await Promise.all([
+    buscarAcabamentosDb(),
+    buscarMateriaisDb(),
+    buscarServicosDb(),
+  ])
+
   const numero = String(orcamento.numero).padStart(4, "0")
   const totalFinal = orcamento.totalFechado ?? 0
   const hoje = new Date()
 
-  const nomeMaterial = orcamento.materialFechado?.nome ?? "Material"
-  const unidade = orcamento.materialFechado?.unidade ?? "un"
-  const consumo = orcamento.materialFechado?.quantidade
+  const material = materiaisDb.find((m) => m.id === orcamento.item.materialId)
+  const nomeMaterial = orcamento.materialFechado?.nome ?? material?.nome ?? "Material"
+  const unidadeMaterial = orcamento.materialFechado?.unidade ?? material?.unidade ?? "un"
 
-  const especMaterial =
-    unidade === "m2" && orcamento.item.largura > 0 && orcamento.item.altura > 0
-      ? `${orcamento.item.largura} × ${orcamento.item.altura} m × ${orcamento.item.quantidadeUnidades ?? 1} un = ${consumo?.toFixed(2) ?? "?"} m²`
-      : consumo != null
-        ? `${consumo} ${unidade}`
-        : ""
+  const resultado = calcularOrcamentoSalvo(orcamento, materiaisDb, servicosDb)
 
-  const nomeServico =
-    orcamento.servicoFechado?.nome ??
-    (orcamento.item.servicoId && orcamento.item.servicoId !== "nenhum" ? "Serviço" : "Nenhum")
+  const adicionaisParaPdf = (orcamento.item.itensAdicionais ?? []).map((extra) => {
+    const materialExtra = materiaisDb.find((m) => m.id === extra.materialId)
+    return {
+      item: extra,
+      nomeMaterial: extra.materialFechado?.nome ?? materialExtra?.nome ?? "Material",
+      unidadeMaterial: (extra.materialFechado?.unidade ?? materialExtra?.unidade ?? "un") as any,
+    }
+  })
 
-  const acabamentos = (orcamento.item.acabamentos ?? [])
-    .map((sel) => {
-      const a = acabamentosDb.find((x) => x.id === sel.acabamentoId)
-      return a ? `${a.nome} (${sel.quantidade} ${a.unidade})` : null
+  const linhas = resultado
+    ? gerarLinhasOrcamento({
+        item: orcamento.item,
+        nomeMaterial,
+        unidadeMaterial: unidadeMaterial as any,
+        acabamentosDisponiveis: acabamentosDb,
+        resultado,
+        total: totalFinal,
+        adicionais: adicionaisParaPdf,
+      })
+    : []
+
+  if (linhas.length === 0) {
+    linhas.push({
+      nome: nomeMaterial,
+      quantidade: orcamento.item.quantidadeUnidades || 1,
+      unidade: unidadeMaterial === "m2" ? "m²" : "un",
+      valorUnitario: totalFinal,
+      valorTotal: totalFinal,
     })
-    .filter(Boolean)
-    .join(", ")
-
-  const instalacao = orcamento.item.instalacao
-  const equipamento = instalacao
-    ? equipamentosAcessoSeed.find((e) => e.id === instalacao.equipamentoId)
-    : null
-  const especInstalacao = instalacao?.incluida
-    ? [
-        `${instalacao.horas}h`,
-        instalacao.numAjudantes > 0 ? `${instalacao.numAjudantes} ajudante(s)` : null,
-        equipamento ? equipamento.nome : null,
-      ]
-        .filter(Boolean)
-        .join(" · ")
-    : null
-
-  const deslocamento = orcamento.item.deslocamento
-  const especDeslocamento =
-    deslocamento?.incluido
-      ? `${deslocamento.distanciaKm} km · Pedágio: ${formatarMoeda(deslocamento.pedagio)}`
-      : null
+  }
 
   const doc = new jsPDF({ unit: "pt", format: "a4" })
   const esq = 42
@@ -150,29 +186,27 @@ export async function gerarPdfOsServidor(
   doc.setFillColor(31, 41, 55)
   doc.rect(esq, y, dir - esq, 20, "F")
   doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(255)
-  doc.text("Item", esq + 8, y + 13)
-  doc.text("Especificação", esq + 110, y + 13)
-  doc.text("Valor", dir - 8, y + 13, { align: "right" })
+  doc.text("Item / Descrição", esq + 8, y + 13)
+  doc.text("Qtd", dir - 150, y + 13, { align: "right" })
+  doc.text("Vl. Unit.", dir - 80, y + 13, { align: "right" })
+  doc.text("Vl. Total", dir - 8, y + 13, { align: "right" })
   y += 20
-
-  const linhas: { item: string; espec: string; valor?: number }[] = [
-    { item: "Material", espec: especMaterial ? `${nomeMaterial}  (${especMaterial})` : nomeMaterial },
-    { item: "Serviço / M.O.", espec: nomeServico },
-  ]
-  if (acabamentos) linhas.push({ item: "Acabamentos", espec: acabamentos })
-  if (especInstalacao) linhas.push({ item: "Instalação", espec: especInstalacao })
-  if (especDeslocamento) linhas.push({ item: "Deslocamento", espec: especDeslocamento })
 
   doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(0)
   for (let i = 0; i < linhas.length; i++) {
+    const l = linhas[i]
     const bg = i % 2 === 0 ? [255, 255, 255] : [249, 250, 251]
     doc.setFillColor(bg[0], bg[1], bg[2])
     doc.rect(esq, y, dir - esq, 18, "F")
     doc.setDrawColor(229).setLineWidth(0.4).line(esq, y + 18, dir, y + 18)
-    doc.setTextColor(100)
-    doc.text(linhas[i].item, esq + 8, y + 12)
-    doc.setTextColor(0)
-    doc.text(linhas[i].espec, esq + 110, y + 12, { maxWidth: dir - esq - 118 })
+    doc.setTextColor(30)
+    doc.text(l.nome, esq + 8, y + 12, { maxWidth: dir - esq - 210 })
+    doc.setTextColor(80)
+    doc.text(`${l.quantidade} ${l.unidade}`, dir - 150, y + 12, { align: "right" })
+    doc.text(formatarMoeda(l.valorUnitario), dir - 80, y + 12, { align: "right" })
+    doc.setFont("helvetica", "bold").setTextColor(0)
+    doc.text(formatarMoeda(l.valorTotal), dir - 8, y + 12, { align: "right" })
+    doc.setFont("helvetica", "normal")
     y += 18
   }
 
@@ -183,17 +217,6 @@ export async function gerarPdfOsServidor(
   doc.text("TOTAL", esq + 8, y + 16)
   doc.text(formatarMoeda(totalFinal), dir - 8, y + 16, { align: "right" })
   y += 24
-
-  if (orcamento.ajusteManual && orcamento.ajusteManual !== 0) {
-    y += 8
-    doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(130)
-    doc.text(
-      `* Inclui ajuste de ${orcamento.ajusteManual > 0 ? "+" : ""}${formatarMoeda(orcamento.ajusteManual)}`,
-      dir,
-      y,
-      { align: "right" }
-    )
-  }
 
   // Assinaturas
   y += 50
@@ -235,9 +258,9 @@ export async function gerarPdfOsServidor(
   doc.setFont("helvetica", "normal").setTextColor(100)
   doc.text(
     "Este serviço possui garantia de 3 (três) meses contra defeitos de fabricação, contados a partir da data de entrega.",
-    esq + 18,
+    esq + 42,
     y,
-    { maxWidth: dir - esq - 18 }
+    { maxWidth: dir - esq - 42 }
   )
 
   // Rodapé
@@ -254,3 +277,4 @@ export async function gerarPdfOsServidor(
 
   return Buffer.from(doc.output("arraybuffer"))
 }
+

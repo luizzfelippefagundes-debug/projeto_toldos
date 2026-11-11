@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { gerarPdfOrcamentoServidor } from "@/lib/pdf-orcamento-servidor"
+import { gerarPdfOsServidor } from "@/lib/pdf-os-servidor"
 import type { Orcamento } from "@/lib/types"
 
 function orcamentoFechadoDeTeste(): Orcamento {
@@ -38,5 +39,25 @@ describe("gerarPdfOrcamentoServidor", () => {
     orcamento.item.itensAdicionais = []
     const buffer = await gerarPdfOrcamentoServidor(orcamento, "Cliente de Teste")
     expect(buffer.subarray(0, 4).toString("ascii")).toBe("%PDF")
+  })
+})
+
+describe("gerarPdfOsServidor", () => {
+  it("gera um PDF de OS válido com total e itens unificados", async () => {
+    const orcamento = orcamentoFechadoDeTeste()
+    orcamento.item.itensAdicionais = [
+      {
+        id: "ad-1",
+        materialId: "mat-1",
+        servicoId: "nenhum",
+        largura: 0.5,
+        altura: 0.3,
+        quantidadeUnidades: 2,
+        horasEstimadas: 0,
+      },
+    ]
+    const buffer = await gerarPdfOsServidor(orcamento, "Cliente Teste OS", "27999999999")
+    expect(buffer.subarray(0, 4).toString("ascii")).toBe("%PDF")
+    expect(buffer.length).toBeGreaterThan(1000)
   })
 })

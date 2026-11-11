@@ -6,13 +6,10 @@ import { toast } from "sonner"
 import { useData } from "@/context/data-context"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/brand/logo"
-import { ItensAdicionaisLista } from "@/components/orcamentos/itens-adicionais-lista"
-import { quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
-import { formatarNumeroOrcamento } from "@/lib/orcamento-pdf"
+import { formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { linkWhatsapp } from "@/lib/whatsapp"
-import { equipamentosAcessoSeed } from "@/lib/seed-data"
 import { ArrowLeft, MessageCircle, Printer } from "lucide-react"
 
 export default function OrdemDeServicoPage() {
@@ -36,46 +33,39 @@ export default function OrdemDeServicoPage() {
 
   const cliente = clientes.find((c) => c.id === orcamento.clienteId)
   const material = materiais.find((m) => m.id === orcamento.item.materialId)
-  const servico = servicos.find((s) => s.id === orcamento.item.servicoId)
 
   const resultado = calcularOrcamentoSalvo(orcamento, materiais, servicos)
 
   const unidadeMaterial = orcamento.materialFechado?.unidade ?? material?.unidade
   const nomeMaterial = orcamento.materialFechado?.nome ?? material?.nome ?? "Material removido"
-  const consumo =
-    orcamento.materialFechado?.quantidade ??
-    (material ? quantidadeMaterialConsumida(orcamento.item, material) : null)
-  const servicoFoiEscolhido = Boolean(
-    orcamento.item.servicoId && orcamento.item.servicoId !== "nenhum"
-  )
-  const nomeServico =
-    orcamento.servicoFechado?.nome ??
-    servico?.nome ??
-    (servicoFoiEscolhido ? "Serviço removido" : "Nenhum")
-  const ferramentas = orcamento.servicoFechado?.ferramentas ?? servico?.ferramentas
-
-  const acabamentosSelecionados = (orcamento.item.acabamentos ?? [])
-    .map((sel) => {
-      const acabamento = acabamentos.find((a) => a.id === sel.acabamentoId)
-      return acabamento ? `${acabamento.nome} (${sel.quantidade} ${acabamento.unidade})` : null
-    })
-    .filter(Boolean)
-
-  const instalacao = orcamento.item.instalacao
-  const equipamento = equipamentosAcessoSeed.find((e) => e.id === instalacao?.equipamentoId)
-  const deslocamento = orcamento.item.deslocamento
   const validadeAte = new Date(orcamento.criadoEm)
   validadeAte.setDate(validadeAte.getDate() + (orcamento.validadeDias ?? 7))
-  const totalDeslocamento = deslocamento?.incluido
-    ? deslocamento.distanciaKm * deslocamento.custoPorKm +
-      deslocamento.pedagio +
-      deslocamento.alimentacao
-    : 0
 
   const totalFinal = orcamento.totalFechado ?? resultado?.total ?? 0
   const hoje = new Date()
   const [enviando, setEnviando] = useState(false)
   const numeroFormatado = formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)
+
+  const adicionaisParaPdf = (orcamento.item.itensAdicionais ?? []).map((extra) => {
+    const materialExtra = materiais.find((m) => m.id === extra.materialId)
+    return {
+      item: extra,
+      nomeMaterial: extra.materialFechado?.nome ?? materialExtra?.nome ?? "Material",
+      unidadeMaterial: (extra.materialFechado?.unidade ?? materialExtra?.unidade ?? "un") as any,
+    }
+  })
+
+  const linhas = resultado
+    ? gerarLinhasOrcamento({
+        item: orcamento.item,
+        nomeMaterial,
+        unidadeMaterial: (unidadeMaterial as any) ?? "un",
+        acabamentosDisponiveis: acabamentos,
+        resultado,
+        total: totalFinal,
+        adicionais: adicionaisParaPdf,
+      })
+    : []
 
   async function handleEnviarWhatsapp() {
     if (!orcamento) return
@@ -232,85 +222,42 @@ export default function OrdemDeServicoPage() {
           <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: "#1f2937", color: "#fff" }}>
-                <th className="px-3 py-2 text-left font-semibold">Item</th>
-                <th className="px-3 py-2 text-left font-semibold">Especificação</th>
-                <th className="px-3 py-2 text-right font-semibold">Valor</th>
+                <th className="px-3 py-2 text-left font-semibold">Item / Descrição</th>
+                <th className="px-3 py-2 text-center font-semibold">Qtd</th>
+                <th className="px-3 py-2 text-right font-semibold">Vl. Unit.</th>
+                <th className="px-3 py-2 text-right font-semibold">Vl. Total</th>
               </tr>
             </thead>
             <tbody>
-              {/* Material */}
-              <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <td className="px-3 py-2 text-gray-500">Material</td>
-                <td className="px-3 py-2 font-medium">
-                  {nomeMaterial}
-                  {consumo !== null && (
-                    <span className="ml-2 text-gray-500">
-                      ({unidadeMaterial === "m2"
-                        ? `${orcamento.item.largura} × ${orcamento.item.altura} m × ${quantidadePecas(orcamento.item)} un = ${consumo.toFixed(2)} m²`
-                        : `${orcamento.item.quantidadeUnidades} un`})
-                    </span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  {resultado ? formatarMoeda(resultado.itens[0].subtotalMaterial) : "—"}
-                </td>
-              </tr>
-
-              {/* Serviço */}
-              <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <td className="px-3 py-2 text-gray-500">Serviço / M.O.</td>
-                <td className="px-3 py-2 font-medium">
-                  {nomeServico}
-                  {ferramentas?.trim() && (
-                    <span className="ml-2 text-gray-400 text-xs">({ferramentas})</span>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  {resultado ? formatarMoeda(resultado.itens[0].subtotalMaoDeObra) : "—"}
-                </td>
-              </tr>
-
-              {/* Acabamentos */}
-              {acabamentosSelecionados.length > 0 && (
+              {linhas.length > 0 ? (
+                linhas.map((l, i) => (
+                  <tr key={`${l.nome}-${i}`} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                    <td className="px-3 py-2 font-medium">
+                      {l.nome}
+                    </td>
+                    <td className="px-3 py-2 text-center text-gray-600">
+                      {l.quantidade} {l.unidade}
+                    </td>
+                    <td className="px-3 py-2 text-right text-gray-600">
+                      {formatarMoeda(l.valorUnitario)}
+                    </td>
+                    <td className="px-3 py-2 text-right font-semibold">
+                      {formatarMoeda(l.valorTotal)}
+                    </td>
+                  </tr>
+                ))
+              ) : (
                 <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td className="px-3 py-2 text-gray-500">Acabamentos</td>
-                  <td className="px-3 py-2 font-medium">{acabamentosSelecionados.join(", ")}</td>
-                  <td className="px-3 py-2 text-right">
-                    {resultado ? formatarMoeda(resultado.itens[0].subtotalAcabamentos) : "—"}
-                  </td>
+                  <td className="px-3 py-2 font-medium">{nomeMaterial}</td>
+                  <td className="px-3 py-2 text-center text-gray-600">1 un</td>
+                  <td className="px-3 py-2 text-right text-gray-600">{formatarMoeda(totalFinal)}</td>
+                  <td className="px-3 py-2 text-right font-semibold">{formatarMoeda(totalFinal)}</td>
                 </tr>
               )}
-
-              {/* Instalação */}
-              {instalacao?.incluida && (
-                <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td className="px-3 py-2 text-gray-500">Instalação</td>
-                  <td className="px-3 py-2 font-medium">
-                    {instalacao.horas}h
-                    {instalacao.numAjudantes > 0 ? ` · ${instalacao.numAjudantes} ajudante(s)` : ""}
-                    {equipamento ? ` · ${equipamento.nome}` : ""}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {resultado ? formatarMoeda(resultado.subtotalInstalacao) : "—"}
-                  </td>
-                </tr>
-              )}
-
-              {/* Deslocamento */}
-              {deslocamento?.incluido && (
-                <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td className="px-3 py-2 text-gray-500">Deslocamento</td>
-                  <td className="px-3 py-2 font-medium">
-                    {deslocamento.distanciaKm} km · Pedágio: {formatarMoeda(deslocamento.pedagio)}
-                  </td>
-                  <td className="px-3 py-2 text-right">{formatarMoeda(totalDeslocamento)}</td>
-                </tr>
-              )}
-
             </tbody>
             <tfoot>
               <tr style={{ backgroundColor: "#1f2937", color: "#fff" }}>
-                <td colSpan={2} className="px-3 py-3 text-base font-bold">
+                <td colSpan={3} className="px-3 py-3 text-base font-bold">
                   TOTAL
                 </td>
                 <td className="px-3 py-3 text-right text-base font-bold">
@@ -319,26 +266,13 @@ export default function OrdemDeServicoPage() {
               </tr>
             </tfoot>
           </table>
-          {/* Só com adicionais: um div vazio com mt-4 mudaria o espaçamento dos orçamentos antigos. */}
-          {(orcamento.item.itensAdicionais?.length ?? 0) > 0 && (
-            <div className="mt-4">
-              <ItensAdicionaisLista
-                itens={orcamento.item.itensAdicionais ?? []}
-                partes={resultado?.itens.slice(1)}
-                materiais={materiais}
-                servicos={servicos}
-                acabamentosDisponiveis={acabamentos}
-              />
-            </div>
-          )}
         </div>
 
-        {/* Ajuste manual */}
-        {orcamento.ajusteManual !== 0 && orcamento.ajusteManual !== undefined && (
-          <p className="mt-1 text-right text-xs text-gray-500">
-            * Inclui ajuste de {orcamento.ajusteManual > 0 ? "+" : ""}{formatarMoeda(orcamento.ajusteManual)}
-          </p>
-        )}
+        {/* ──────────── GARANTIA ──────────── */}
+        <div className="mt-4 rounded-md border border-gray-200 bg-gray-50 p-2.5 text-xs text-gray-600">
+          <span className="font-semibold text-gray-800">Garantia: </span>
+          Este serviço possui garantia de 3 (três) meses contra defeitos de fabricação, contados a partir da data de entrega.
+        </div>
 
         {/* Anexo */}
         {orcamento.anexoNome && (
