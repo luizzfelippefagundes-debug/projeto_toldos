@@ -275,13 +275,14 @@ export function NovoOrcamentoForm() {
       acabamentos: acabamentosSeed
         .filter((a) => {
           if (!acabamentosAtivos[a.id]) return false
-          if (acabamentosModo[a.id] === "valor") return isPositiveNumberInput(acabamentosValorDireto[a.id] ?? "")
-          return isPositiveNumberInput(acabamentosQtd[a.id] ?? "")
+          const temValorDireto = isPositiveNumberInput(acabamentosValorDireto[a.id] ?? "")
+          const temQtd = isPositiveNumberInput(acabamentosQtd[a.id] ?? "")
+          return temValorDireto || temQtd
         })
         .map((a) => ({
           acabamentoId: a.id,
-          quantidade: acabamentosModo[a.id] === "valor" ? 0 : numeroOuZero(acabamentosQtd[a.id] ?? ""),
-          ...(acabamentosModo[a.id] === "valor" ? { valorDireto: numeroOuZero(acabamentosValorDireto[a.id] ?? "") } : {}),
+          quantidade: numeroOuZero(acabamentosQtd[a.id] ?? ""),
+          ...(isPositiveNumberInput(acabamentosValorDireto[a.id] ?? "") ? { valorDireto: numeroOuZero(acabamentosValorDireto[a.id] ?? "") } : {}),
         })),
       instalacao: {
         incluida: instalacaoIncluida,
@@ -379,8 +380,10 @@ export function NovoOrcamentoForm() {
   )
   const acabamentosValidos = acabamentosSeed.every((acabamento) => {
     if (!acabamentosAtivos[acabamento.id]) return true
-    if (acabamentosModo[acabamento.id] === "valor") return isPositiveNumberInput(acabamentosValorDireto[acabamento.id] ?? "")
-    return isPositiveNumberInput(acabamentosQtd[acabamento.id] ?? "")
+    return (
+      isPositiveNumberInput(acabamentosValorDireto[acabamento.id] ?? "") ||
+      isPositiveNumberInput(acabamentosQtd[acabamento.id] ?? "")
+    )
   })
   const entradaValida =
     entradaPercent.trim() === "" ||
@@ -994,7 +997,6 @@ export function NovoOrcamentoForm() {
               <CardContent className="flex flex-col gap-3">
                 {acabamentosSeed.map((acabamento) => {
                   const ativo = Boolean(acabamentosAtivos[acabamento.id])
-                  const modo = acabamentosModo[acabamento.id] ?? "qtd"
                   return (
                     <div
                       key={acabamento.id}
@@ -1007,50 +1009,31 @@ export function NovoOrcamentoForm() {
                           {acabamento.unidade}
                         </p>
                       </div>
-                      {ativo && (
-                        <button
-                          type="button"
-                          className="rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
-                          onClick={() =>
-                            setAcabamentosModo((prev) => ({
-                              ...prev,
-                              [acabamento.id]: modo === "qtd" ? "valor" : "qtd",
-                            }))
-                          }
-                        >
-                          {modo === "qtd" ? "Qtd" : "R$"}
-                        </button>
-                      )}
-                      {modo === "valor" ? (
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Valor R$"
-                          className="w-28"
-                          value={acabamentosValorDireto[acabamento.id] ?? ""}
-                          onChange={(e) =>
-                            setAcabamentosValorDireto((prev) => ({
-                              ...prev,
-                              [acabamento.id]: e.target.value,
-                            }))
-                          }
-                          disabled={!ativo}
-                        />
-                      ) : (
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Qtd."
-                          className="w-24"
-                          value={acabamentosQtd[acabamento.id] ?? ""}
-                          onChange={(e) =>
-                            setQtdAcabamento(acabamento.id, e.target.value)
-                          }
-                          disabled={!ativo}
-                        />
-                      )}
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Qtd."
+                        className="w-20"
+                        value={acabamentosQtd[acabamento.id] ?? ""}
+                        onChange={(e) => setQtdAcabamento(acabamento.id, e.target.value)}
+                        disabled={!ativo}
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Valor R$"
+                        className="w-28"
+                        value={acabamentosValorDireto[acabamento.id] ?? ""}
+                        onChange={(e) =>
+                          setAcabamentosValorDireto((prev) => ({
+                            ...prev,
+                            [acabamento.id]: e.target.value,
+                          }))
+                        }
+                        disabled={!ativo}
+                      />
                       <Switch
                         checked={ativo}
                         onCheckedChange={(v) => toggleAcabamento(acabamento.id, v)}

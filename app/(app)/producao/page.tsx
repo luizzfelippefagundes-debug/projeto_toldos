@@ -34,7 +34,7 @@ import {
   obterPrazoEntregaPedido,
   pedidoRapidoEstaAtrasado,
 } from "@/lib/pedidos-rapidos"
-import { RefreshCw, Search, Clock, AlertTriangle, CheckCircle2, Package, UserRound, MessageCircle } from "lucide-react"
+import { RefreshCw, Search, Clock, AlertTriangle, CheckCircle2, Package, UserRound, MessageCircle, FileCheck } from "lucide-react"
 
 const STATUS_COM_NOTIFICACAO = new Set<StatusPedidoRapido>(["ag_confirmacao", "pronto", "entregue"])
 
@@ -159,6 +159,29 @@ export default function ProducaoPage() {
     enviando: boolean
     executar: () => void
   } | null>(null)
+  const [assinaturas, setAssinaturas] = useState<Record<string, { pdfUrl: string | null; assinado: boolean }>>({})
+
+  useEffect(() => {
+    const orcsComOs = orcamentos.filter((o) => o.statusProducao)
+    if (orcsComOs.length === 0) return
+    Promise.all(
+      orcsComOs.map((o) =>
+        fetch(`/api/assinar/por-orcamento/${o.id}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((d: { pdfUrl: string | null; assinado: boolean } | null) =>
+            d ? { id: o.id, pdfUrl: d.pdfUrl, assinado: d.assinado } : null
+          )
+          .catch(() => null)
+      )
+    ).then((resultados) => {
+      const mapa: Record<string, { pdfUrl: string | null; assinado: boolean }> = {}
+      for (const r of resultados) {
+        if (r) mapa[r.id] = { pdfUrl: r.pdfUrl, assinado: r.assinado }
+      }
+      setAssinaturas(mapa)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orcamentos.length])
 
   const sensores = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -563,6 +586,7 @@ export default function ProducaoPage() {
                             orcamento={orc}
                             cliente={cli}
                             coluna={col}
+                            assinatura={assinaturas[orc.id]}
                             onMudarStatus={(status) =>
                               solicitarConfirmacao(
                                 cli?.nome ?? "Cliente",
@@ -598,6 +622,7 @@ export default function ProducaoPage() {
                   orcamento={orcamentoArrastando}
                   cliente={clientes.find((c) => c.id === orcamentoArrastando.clienteId)}
                   coluna={colunaMap[orcamentoArrastando.statusProducao!]}
+                  assinatura={assinaturas[orcamentoArrastando.id]}
                   onMudarStatus={() => {}}
                 />
               </div>
@@ -762,11 +787,13 @@ function OrcamentoCardConteudo({
   orcamento,
   cliente,
   coluna,
+  assinatura,
   onMudarStatus,
 }: {
   orcamento: Orcamento
   cliente: Cliente | undefined
   coluna: (typeof colunas)[number]
+  assinatura?: { pdfUrl: string | null; assinado: boolean }
   onMudarStatus: (status: StatusPedidoRapido) => void
 }) {
   const { papel } = usePapelAtivo()
@@ -814,6 +841,32 @@ function OrcamentoCardConteudo({
           </span>
         )}
       </div>
+
+      {assinatura && (
+        <div onPointerDown={(e) => e.stopPropagation()}>
+          {assinatura.assinado && assinatura.pdfUrl ? (
+            <a
+              href={assinatura.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-500/20"
+            >
+              <FileCheck className="h-3.5 w-3.5 shrink-0" />
+              OS Assinada
+            </a>
+          ) : assinatura.assinado ? (
+            <span className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-1.5 text-xs font-medium text-emerald-600">
+              <FileCheck className="h-3.5 w-3.5 shrink-0" />
+              OS Assinada
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2 py-1.5 text-xs font-medium text-amber-600">
+              <FileCheck className="h-3.5 w-3.5 shrink-0" />
+              Aguardando assinatura
+            </span>
+          )}
+        </div>
+      )}
 
       <div onPointerDown={(e) => e.stopPropagation()}>
         <div className="flex flex-wrap gap-1">

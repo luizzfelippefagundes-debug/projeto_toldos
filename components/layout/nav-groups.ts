@@ -18,6 +18,7 @@ import {
   Smartphone,
   Images,
   PhoneCall,
+  Radio,
   type LucideIcon,
 } from "lucide-react"
 import type { Papel } from "@/lib/types"
@@ -67,6 +68,7 @@ export const gruposNavegacao: NavGroup[] = [
         papeis: ["producao"],
       },
       { label: "Central do Bot", href: "/bot", icon: Bot },
+      { label: "Transmissão", href: "/transmissao", icon: Radio, donoApenas: true },
       { label: "Clientes", href: "/clientes", icon: Users },
       { label: "Avisos da TV", href: "/avisos-tv", icon: Megaphone, donoApenas: true },
       { label: "Portfólio", href: "/portfolio-fotos", icon: Images, donoApenas: true },

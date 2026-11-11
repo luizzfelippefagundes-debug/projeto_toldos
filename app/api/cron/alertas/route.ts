@@ -15,6 +15,7 @@ export async function GET(req: Request) {
 
   const destino = process.env.ALERT_EMAIL
   if (!destino) return NextResponse.json({ ok: true, skipped: "sem ALERT_EMAIL" })
+  const destinatarios = destino.split(",").map((e) => e.trim()).filter(Boolean)
 
   await garantirColunasOrcamentos()
   const sql = getSql()
@@ -112,7 +113,7 @@ export async function GET(req: Request) {
 
   const { error } = await resend.emails.send({
     from: "Toldos Print <onboarding@resend.dev>",
-    to: [destino],
+    to: destinatarios,
     subject: `Alertas Toldos Print — ${agora.toLocaleDateString("pt-BR")}`,
     html,
   })
