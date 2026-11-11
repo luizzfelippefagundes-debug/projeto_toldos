@@ -5,6 +5,7 @@ import { garantirTabelaAssinaturasOs } from "@/lib/migracoes"
 import { gerarPdfOsServidor } from "@/lib/pdf-os-servidor"
 import { formatarNumeroOrcamento } from "@/lib/orcamento-pdf"
 import { enviarDocumentoWhatsapp } from "@/lib/evolution-api"
+import { registrarMensagemBot } from "@/lib/bot-registro"
 import type { Orcamento } from "@/lib/types"
 
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
@@ -108,13 +109,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       const pdf = await gerarPdfOsServidor(orcamento, clienteNome, clienteTelefone, assinaturaData)
       const nomeArquivo = `OS-${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)}-assinada.pdf`
 
-      // Salva o PDF no Vercel Blob para ficar acessível no sistema
-      const blob = await put(`os-assinadas/${nomeArquivo}`, pdf, {
-        access: "public",
-        contentType: "application/pdf",
-      })
-
-      await sql`UPDATE assinaturas_os SET pdf_url = ${blob.url} WHERE id = ${token}`
+      // Salva o PDF no Vercel Blob para ficar acessível no sistema (se configurado)
+      try {
+        const blob = await put(`os-assinadas/${nomeArquivo}`, pdf, {
+          access: "public",
+          contentType: "application/pdf",
+        })
+        await sql`UPDATE assinaturas_os SET pdf_url = ${blob.url} WHERE id = ${token}`
+      } catch (errBlob) {
+        console.warn("[assinar] upload do blob falhou ou token não configurado:", errBlob)
+      }
 
       const numeroEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
       if (numeroEmpresa) {
@@ -126,18 +130,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
         )
       }
 
-      // Envia cópia do contrato assinado para o cliente
+      // Envia cópia do contrato de serviço assinado para o cliente
       if (clienteTelefone) {
         const nomeExibido = clienteNome.split(" ")[0]
+        const mensagemContrato = `Olá${nomeExibido ? `, ${nomeExibido}` : ""}! 🎉 Obrigado por assinar a Ordem de Serviço!\n\n📄 Segue em anexo o seu *Contrato de Prestação de Serviço assinado digitalmente* para você guardar.\n\nO seu pedido já foi aprovado e encaminhado para a produção! Qualquer dúvida estamos à disposição. 😊`
+
         await enviarDocumentoWhatsapp(
           clienteTelefone,
           pdf.toString("base64"),
           nomeArquivo,
-          `Olá${nomeExibido ? `, ${nomeExibido}` : ""}! 🎉 Obrigado por assinar a Ordem de Serviço!\n\nSegue em anexo sua cópia do contrato assinado para guardar. Em breve daremos início ao serviço. Qualquer dúvida é só chamar! 😊`
+          mensagemContrato
         )
+
+        await registrarMensagemBot({
+          clienteId: r.cliente_id ?? null,
+          clienteNome,
+          telefone: clienteTelefone,
+          texto: `📄 Contrato de serviço assinado enviado ao cliente: ${nomeArquivo}`,
+          origem: "automatica",
+          autor: "bot",
+        })
       }
-    } catch {
-      // Falha no upload não impede o cliente de concluir a assinatura
+    } catch (errPdf) {
+      console.error("[assinar] falha ao gerar/enviar contrato de serviço:", errPdf)
     }
   }
 

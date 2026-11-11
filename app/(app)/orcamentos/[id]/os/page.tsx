@@ -1,15 +1,19 @@
 "use client"
 
+import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { useData } from "@/context/data-context"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/brand/logo"
 import { ItensAdicionaisLista } from "@/components/orcamentos/itens-adicionais-lista"
 import { quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
+import { formatarNumeroOrcamento } from "@/lib/orcamento-pdf"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
+import { linkWhatsapp } from "@/lib/whatsapp"
 import { equipamentosAcessoSeed } from "@/lib/seed-data"
-import { ArrowLeft, Printer } from "lucide-react"
+import { ArrowLeft, MessageCircle, Printer } from "lucide-react"
 
 export default function OrdemDeServicoPage() {
   const { id } = useParams<{ id: string }>()
@@ -70,16 +74,91 @@ export default function OrdemDeServicoPage() {
 
   const totalFinal = orcamento.totalFechado ?? resultado?.total ?? 0
   const hoje = new Date()
+  const [enviando, setEnviando] = useState(false)
+  const numeroFormatado = formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)
+
+  async function handleEnviarWhatsapp() {
+    if (!cliente?.telefone) {
+      toast.error("Cliente não possui telefone cadastrado.")
+      return
+    }
+    setEnviando(true)
+    try {
+      let linkAssinatura = ""
+      try {
+        const resToken = await fetch("/api/assinar/criar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orcamentoId: orcamento.id }),
+        })
+        if (resToken.ok) {
+          const dadosToken = await resToken.json()
+          linkAssinatura = dadosToken.url
+        }
+      } catch (e) {
+        console.warn("Falha gerando token de assinatura:", e)
+      }
+
+      const mensagem = `Olá, ${cliente.nome.split(" ")[0]}! Segue a Ordem de Serviço nº ${numeroFormatado} da Toldos Print.${linkAssinatura ? `\n\nVocê pode assinar digitalmente pelo link abaixo:\n${linkAssinatura}` : ""}`
+
+      // Envia PDF pelo bot
+      await fetch("/api/whatsapp/enviar-os", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orcamentoId: orcamento.id, telefone: cliente.telefone }),
+      }).catch(() => {})
+
+      // Envia notificação com link de assinatura
+      await fetch("/api/whatsapp/enviar-notificacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telefone: cliente.telefone,
+          mensagem,
+          clienteId: cliente.id,
+          clienteNome: cliente.nome,
+        }),
+      }).catch(() => {})
+
+      // Abre WhatsApp web/app
+      const linkWa = linkWhatsapp(cliente.telefone, mensagem)
+      if (linkWa) {
+        window.open(linkWa, "_blank")
+      }
+
+      toast.success("Ordem de Serviço enviada para o WhatsApp!")
+    } catch {
+      toast.error("Erro ao preparar envio da OS.")
+    } finally {
+      setEnviando(false)
+    }
+  }
 
   return (
     <>
       {/* Barra de ações — só na tela, some ao imprimir */}
-      <div className="mb-6 flex items-center justify-between gap-3 print:hidden">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Button variant="ghost" onClick={() => router.push("/orcamentos")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {cliente?.telefone ? (
+            <Button
+              variant="outline"
+              onClick={handleEnviarWhatsapp}
+              disabled={enviando}
+              className="border-emerald-600/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              {enviando ? "Enviando..." : "Enviar OS pelo WhatsApp"}
+            </Button>
+          ) : (
+            <Button variant="outline" disabled title="Cliente sem telefone cadastrado">
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Cliente sem telefone
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => router.push(`/orcamentos/${orcamento.id}/orcamento`)}
