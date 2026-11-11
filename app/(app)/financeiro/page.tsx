@@ -230,6 +230,21 @@ export default function FinanceiroPage() {
             {hoje ? resumo.boletosVencendo7Dias : "—"}
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Despesas fixas pendentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent
+            className={cn(
+              "text-3xl font-bold",
+              resumo.despesasFixas > 0 && "text-destructive"
+            )}
+          >
+            {hoje ? formatarMoeda(resumo.despesasFixas) : "—"}
+          </CardContent>
+        </Card>
       </div>
       {(resumo.pessoalForaDosTotais > 0 || incluirPessoais) && (
         <label className="flex w-fit cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm">

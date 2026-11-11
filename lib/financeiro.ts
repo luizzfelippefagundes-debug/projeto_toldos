@@ -16,6 +16,8 @@ export interface ResumoFinanceiro {
   aPagarMes: number
   // Despesas pessoais pendentes deixadas de fora dos totais acima.
   pessoalForaDosTotais: number
+  // Total de despesas fixas pendentes.
+  despesasFixas: number
 }
 
 function dentroDoPeriodo(
@@ -83,6 +85,7 @@ export function resumirFinanceiro(
     quantidadeVencida: 0,
     aPagarMes: 0,
     pessoalForaDosTotais: 0,
+    despesasFixas: 0,
   }
   const fimDoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59, 999)
 
@@ -103,6 +106,10 @@ export function resumirFinanceiro(
     if (lancamento.status === "pago" && noPeriodo) {
       if (lancamento.tipo === "receita") resumo.recebido += lancamento.valor
       else resumo.pago += lancamento.valor
+    }
+
+    if (lancamento.status === "pendente" && lancamento.despesaFixa && lancamento.tipo === "despesa") {
+      resumo.despesasFixas += lancamento.valor
     }
 
     if (lancamento.status === "pendente" && noPeriodo) {
