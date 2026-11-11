@@ -53,3 +53,58 @@ export function linkWhatsApp(telefone: string, mensagem: string): string | null 
   const numero = digitos.length <= 11 ? `55${digitos}` : digitos
   return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`
 }
+
+export type IntencaoRetorno = "aprovado" | "negociacao" | "perdido"
+
+// Analisa a mensagem do cliente recebida pelo WhatsApp e classifica em
+// intenção de aprovação, negociação/dúvida ou perda/recusa.
+export function identificarIntencaoMensagem(texto: string): IntencaoRetorno | null {
+  if (!texto || typeof texto !== "string") return null
+  const limpo = texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+
+  // 1. Recusa / Perdido (checar antes para evitar falsos positivos de "não aprovei", etc.)
+  const padroesPerdido = [
+    /\b(nao\s+vou\s+querer|nao\s+quero|nao\s+vamos\s+fazer|nao\s+vou\s+fazer)\b/,
+    /\b(muito\s+caro|ficou\s+caro|fora\s+do\s+(orcamento|meu\s+bolso))\b/,
+    /\b(desisti|desistimos|cancelei|cancelar|cancelado)\b/,
+    /\b(fechei\s+com\s+outro|fiz\s+com\s+outro|comprei\s+em\s+outro\s+lugar)\b/,
+    /\b(deixa\s+pra\s+(la|depois)|sem\s+interesse|nao\s+tenho\s+interesse)\b/,
+    /\b(recusado|reprovado)\b/,
+    /\b(nao\s+aprovo|nao\s+aprovei|nao\s+foi\s+aprovado)\b/,
+  ]
+  if (padroesPerdido.some((p) => p.test(limpo))) {
+    return "perdido"
+  }
+
+  // 2. Aprovação
+  const padroesAprovado = [
+    /\b(aprovado|aprovada|aprovo|aprovamos)\b/,
+    /\b(pode\s+(fazer|iniciar|produzir|rodar|mandar|dar\s+inicio|tocar|prosseguir))\b/,
+    /\b(fechado|fechou|vamos\s+fechar|pode\s+fechar)\b/,
+    /\b(ta\s+aprovado|esta\s+aprovado|tudo\s+certo\s+pode\s+fazer)\b/,
+    /\b(confirmado|confirmo|confirmar|autorizado|autorizo)\b/,
+    /\b(manda\s+bala|bora\s+produzir|bora\s+fazer)\b/,
+    /^(sim|ok|beleza|blz|combinado|show|perfeito|positivo|otimo|fechou)[\s!.]*$/,
+    /^(sim|ok|beleza|show|perfeito)\s*,\s*(pode\s+fazer|aprovado|manda\s+bala)/,
+  ]
+  if (padroesAprovado.some((p) => p.test(limpo))) {
+    return "aprovado"
+  }
+
+  // 3. Negociação / Dúvida
+  const padroesNegociacao = [
+    /\b(desconto|consegue\s+melhorar|melhor\s+preco|menor\s+valor|faz\s+por)\b/,
+    /\b(parcela|parcelar|parcelamento|divide|dividir|quantas\s+vezes)\b/,
+    /\b(frete|prazo|entrega|consegue\s+entregar)\b/,
+    /\b(duvida|pergunta|queria\s+saber|alterar|mudar|trocar|medida|tamanho)\b/,
+  ]
+  if (padroesNegociacao.some((p) => p.test(limpo))) {
+    return "negociacao"
+  }
+
+  return null
+}

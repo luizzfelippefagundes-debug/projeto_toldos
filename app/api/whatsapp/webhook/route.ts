@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { garantirTabelaConversasBot, garantirColunasOrcamentos } from "@/lib/migracoes"
 import { buscarClientePorTelefone } from "@/lib/bot-whatsapp"
 import { registrarMensagemBot } from "@/lib/bot-registro"
+import { processarRetornoWhatsapp } from "@/lib/retornos-automatico"
 
 interface ChaveMensagem {
   remoteJid?: string
@@ -85,7 +86,14 @@ export async function POST(request: Request) {
       autor: "cliente",
     })
 
-    // Auto-resposta desativada — bot só envia notificações manuais por enquanto.
+    if (cliente) {
+      await processarRetornoWhatsapp({
+        clienteId: cliente.id,
+        clienteNome: cliente.nome,
+        telefone,
+        texto,
+      })
+    }
   } catch (e) {
     console.error("[whatsapp webhook] erro processando mensagem:", e)
   }
