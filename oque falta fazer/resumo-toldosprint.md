@@ -25,6 +25,8 @@ Gerado em 11/11/2026 · Sistema de gestão gráfica
 | **Filtro Só com OS no Financeiro ajustado** — ativo por padrão para orçamentos sem ocultar despesas normais | `app/(app)/financeiro/page.tsx` |
 | **Formas de pagamento e Acréscimo/Desconto na precificação** — atalhos de À vista, Boleto, Débito, Cartão e campo com indicação de +/- R$ | `components/orcamento/novo-orcamento-form.tsx` |
 | **Exclusão de produto na Gráfica Rápida** — botão de lixeira no card do produto confirmado | `app/(app)/grafica-rapida/page.tsx`, `context/data-context.tsx` |
+| **Retorno automático pelo WhatsApp** — bot identifica resposta do cliente (aprovação/negociação/recusa) e move o card em Retornos e Produção | `app/api/whatsapp/webhook/route.ts`, `lib/retornos.ts`, `lib/retornos-automatico.ts` |
+| **Cliente automático pelo WhatsApp** — bot cria cadastro no banco automaticamente quando pessoa nova manda mensagem | `app/api/whatsapp/webhook/route.ts`, `lib/bot-whatsapp.ts` |
 
 ### Já existia antes (confirmado durante a sessão)
 
@@ -44,10 +46,8 @@ Gerado em 11/11/2026 · Sistema de gestão gráfica
 
 | Funcionalidade | Complexidade | Observação |
 |---|---|---|
-| **QR Code Mercado Pago na OS** | 🟢 Baixa | Aguardando chave Pix / link MP de vocês |
-| **Retorno automático pelo WhatsApp** — bot recebe resposta do cliente e atualiza status do retorno | 🔴 Alta | Precisa de lógica de detecção de intenção no webhook do WhatsApp |
-| **Cliente automático pelo WhatsApp** — bot cria cadastro quando pessoa nova manda mensagem | 🔴 Alta | Integração com webhook + criação automática no banco |
-| **Loja / portfólio online** | ⏳ Fase futura | — |
+| **QR Code Mercado Pago na OS** | 🟢 Baixa | Aguardando chave Pix / link MP |
+| **Loja / portfólio online** | ⏳ Fase futura | Catálogo e vitrine de produtos |
 
 ---
 
