@@ -3,7 +3,7 @@ import path from "node:path"
 import { jsPDF } from "jspdf"
 import { formatarData, formatarMoeda } from "./format"
 import { EMPRESA_ORCAMENTO, formatarNumeroOrcamento } from "./orcamento-pdf"
-import { textoCondicoesPagamento } from "./parcelas"
+import { entradaEfetiva, textoCondicoesPagamento } from "./parcelas"
 import type { Orcamento } from "./types"
 
 // Gera o PDF do orçamento sem precisar de navegador (usado pelo bot do
@@ -127,12 +127,34 @@ export async function gerarPdfOrcamentoServidor(orcamento: Orcamento, clienteNom
   doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(68)
   doc.text("3 (três) meses por serviço contra defeitos de fabricação.", esquerda + 45, y)
 
+  const entrada = entradaEfetiva(orcamento.item.entradaPercent)
+  const valorEntrada = entrada ? Math.round(((total * entrada) / 100) * 100) / 100 : 0
+  const valorRestante = entrada ? Math.round((total - valorEntrada) * 100) / 100 : total
+
   if (total > 0) {
     y += 14
+    if (entrada) {
+      doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(0)
+      doc.text("Entrada:", esquerda, y)
+      doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(68)
+      doc.text(
+        `${formatarMoeda(valorEntrada)} (${entrada}%)   |   Restante: ${formatarMoeda(valorRestante)} (${Math.round(100 - entrada)}%)`,
+        esquerda + 45,
+        y
+      )
+      y += 12
+    }
+
     doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(80)
-    doc.text("Opções de parcelamento (sem juros):", esquerda, y)
+    const ehBoleto = condicoes.toLowerCase().includes("boleto")
+    const titulo = entrada
+      ? (ehBoleto ? "Saldo restante em até 3x no boleto:" : "Saldo restante em até 3x:")
+      : (ehBoleto ? "Opções em até 3x no boleto (sem juros):" : "Opções de parcelamento (sem juros):")
+    doc.text(titulo, esquerda, y)
     y += 10
-    const parcelas = [1, 2, 3].map((n) => `${n}x de ${formatarMoeda(Math.round((total / n) * 100) / 100)}`).join("   |   ")
+    const parcelas = [1, 2, 3]
+      .map((n) => `${n}x de ${formatarMoeda(Math.round((valorRestante / n) * 100) / 100)}`)
+      .join("   |   ")
     doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(50)
     doc.text(parcelas, esquerda, y)
   }

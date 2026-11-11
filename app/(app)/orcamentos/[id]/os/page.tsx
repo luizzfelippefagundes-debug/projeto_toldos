@@ -78,6 +78,7 @@ export default function OrdemDeServicoPage() {
   const numeroFormatado = formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)
 
   async function handleEnviarWhatsapp() {
+    if (!orcamento) return
     if (!cliente?.telefone) {
       toast.error("Cliente não possui telefone cadastrado.")
       return

@@ -36,6 +36,7 @@ export interface ResultadoCalculoCompleto extends ResultadoCalculo {
   subtotalDeslocamento: number
   custoBase: number
   comMargem: number
+  comAcrescimo: number
   comDesconto: number
   valorImposto: number
 }
@@ -195,11 +196,13 @@ export function calcularOrcamentoCompleto(
     subtotalDeslocamento
 
   const margemPercent = item.margemPercent ?? 0
+  const acrescimoPercent = item.acrescimoPercent ?? 0
   const descontoPercent = item.descontoPercent ?? 0
   const impostoPercent = item.impostoPercent ?? 0
 
   const comMargem = custoBase * (1 + margemPercent / 100)
-  const comDesconto = comMargem * (1 - descontoPercent / 100)
+  const comAcrescimo = comMargem * (1 + acrescimoPercent / 100)
+  const comDesconto = comAcrescimo * (1 - descontoPercent / 100)
   const valorImposto = comDesconto * (impostoPercent / 100)
   const total = comDesconto + valorImposto + ajusteManual
 
@@ -213,6 +216,7 @@ export function calcularOrcamentoCompleto(
     subtotalDeslocamento,
     custoBase,
     comMargem,
+    comAcrescimo,
     comDesconto,
     valorImposto,
     total,

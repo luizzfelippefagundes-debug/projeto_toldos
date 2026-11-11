@@ -235,39 +235,49 @@ export function OrcamentoOficial({
               </div>
             )
           })()}
-          {total > 0 && exibirOpcoesParcelas && (
-            <div style={{ marginTop: "8pt" }}>
-              <div style={{ fontSize: "8pt", fontWeight: 700, color: "#555", marginBottom: "4pt" }}>
-                Opções de parcelamento (sem juros):
+          {total > 0 && exibirOpcoesParcelas && (() => {
+            const entrada = entradaEfetiva(entradaPercent)
+            const valorEntrada = entrada ? Math.round((total * entrada) / 100 * 100) / 100 : 0
+            const valorBase = entrada ? Math.round((total - valorEntrada) * 100) / 100 : total
+            const ehBoleto = condicoes.toLowerCase().includes("boleto")
+            const titulo = entrada
+              ? (ehBoleto ? "Saldo restante em até 3x no boleto:" : "Saldo restante em até 3x:")
+              : (ehBoleto ? "Opções em até 3x no boleto (sem juros):" : "Opções de parcelamento (sem juros):")
+
+            return (
+              <div style={{ marginTop: "8pt" }}>
+                <div style={{ fontSize: "8pt", fontWeight: 700, color: "#555", marginBottom: "4pt" }}>
+                  {titulo}
+                </div>
+                <div style={{ display: "flex", gap: "10pt" }}>
+                  {[1, 2, 3].map((n) => {
+                    const parcela = Math.round((valorBase / n) * 100) / 100
+                    return (
+                      <div
+                        key={n}
+                        style={{
+                          border: "1px solid #d9d9d9",
+                          borderRadius: "4pt",
+                          padding: "4pt 8pt",
+                          textAlign: "center",
+                          fontSize: "8pt",
+                          minWidth: "60pt",
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, color: "#444" }}>{n}x</div>
+                        <div style={{ color: "#222" }}>{formatarMoeda(parcela)}</div>
+                        {n > 1 && (
+                          <div style={{ fontSize: "6.5pt", color: "#888" }}>
+                            Total: {formatarMoeda(valorBase)}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-              <div style={{ display: "flex", gap: "10pt" }}>
-                {[1, 2, 3].map((n) => {
-                  const parcela = Math.round((total / n) * 100) / 100
-                  return (
-                    <div
-                      key={n}
-                      style={{
-                        border: "1px solid #d9d9d9",
-                        borderRadius: "4pt",
-                        padding: "4pt 8pt",
-                        textAlign: "center",
-                        fontSize: "8pt",
-                        minWidth: "60pt",
-                      }}
-                    >
-                      <div style={{ fontWeight: 700, color: "#444" }}>{n}x</div>
-                      <div style={{ color: "#222" }}>{formatarMoeda(parcela)}</div>
-                      {n > 1 && (
-                        <div style={{ fontSize: "6.5pt", color: "#888" }}>
-                          Total: {formatarMoeda(total)}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+            )
+          })()}
 
           {fotos.length > 0 && (
             <>

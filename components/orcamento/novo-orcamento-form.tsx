@@ -144,9 +144,11 @@ export function NovoOrcamentoForm() {
   const [alimentacao, setAlimentacao] = useState("")
 
   const [margemPercent, setMargemPercent] = useState("0")
+  const [acrescimoPercent, setAcrescimoPercent] = useState("0")
   const [descontoPercent, setDescontoPercent] = useState("0")
   const [impostoPercent, setImpostoPercent] = useState("6")
   const [validadeDias, setValidadeDias] = useState("7")
+  const [entradaDinheiro, setEntradaDinheiro] = useState("")
 
   // "Válido até" depende de "hoje" (new Date()) — mesmo cuidado do Dashboard
   // e da Produção: calcular isso direto no render travaria a data numa
@@ -195,6 +197,7 @@ export function NovoOrcamentoForm() {
     setPedagio(deslocamento ? String(deslocamento.pedagio) : "")
     setAlimentacao(deslocamento ? String(deslocamento.alimentacao) : "")
     setMargemPercent(String(orcamentoEditando.item.margemPercent ?? 0))
+    setAcrescimoPercent(String(orcamentoEditando.item.acrescimoPercent ?? 0))
     setDescontoPercent(String(orcamentoEditando.item.descontoPercent ?? 0))
     setImpostoPercent(String(orcamentoEditando.item.impostoPercent ?? 0))
     setCondicoesPagamento(orcamentoEditando.item.condicoesPagamento ?? "")
@@ -252,6 +255,7 @@ export function NovoOrcamentoForm() {
     setPedagio(deslocamento ? String(deslocamento.pedagio) : "")
     setAlimentacao(deslocamento ? String(deslocamento.alimentacao) : "")
     setMargemPercent(String(rascunho.item.margemPercent ?? 0))
+    setAcrescimoPercent(String(rascunho.item.acrescimoPercent ?? 0))
     setDescontoPercent(String(rascunho.item.descontoPercent ?? 0))
     setImpostoPercent(String(rascunho.item.impostoPercent ?? 0))
     setCondicoesPagamento(rascunho.item.condicoesPagamento ?? "")
@@ -301,6 +305,7 @@ export function NovoOrcamentoForm() {
         alimentacao: numeroOuZero(alimentacao),
       },
       margemPercent: numeroOuZero(margemPercent),
+      acrescimoPercent: numeroOuZero(acrescimoPercent),
       descontoPercent: numeroOuZero(descontoPercent),
       impostoPercent: numeroOuZero(impostoPercent),
       condicoesPagamento: condicoesPagamento.trim() || undefined,
@@ -329,6 +334,7 @@ export function NovoOrcamentoForm() {
       pedagio,
       alimentacao,
       margemPercent,
+      acrescimoPercent,
       descontoPercent,
       impostoPercent,
       condicoesPagamento,
@@ -364,6 +370,7 @@ export function NovoOrcamentoForm() {
   const camposNaoNegativos = [
     horasEstimadas,
     margemPercent,
+    acrescimoPercent,
     descontoPercent,
     impostoPercent,
     horasInstalacao,
@@ -396,6 +403,8 @@ export function NovoOrcamentoForm() {
   const horasEstimadasValidas =
     servico?.formaCobranca !== "hora" ||
     isPositiveNumberInput(horasEstimadas)
+  const acrescimoValido =
+    Number(acrescimoPercent) >= 0
   const descontoValido =
     Number(descontoPercent) >= 0 && Number(descontoPercent) <= 100
   const pendenciasExtras = extras.flatMap((form, i) =>
@@ -411,6 +420,7 @@ export function NovoOrcamentoForm() {
     extrasValidos &&
     validadeValida &&
     entradaValida &&
+    acrescimoValido &&
     descontoValido &&
     horasEstimadasValidas &&
     Number.isInteger(Number(numAjudantes)) &&
@@ -437,6 +447,7 @@ export function NovoOrcamentoForm() {
     !acabamentosValidos && "informe a quantidade dos acabamentos marcados",
     !validadeValida && "informe a validade do orçamento",
     !entradaValida && "a entrada deve ficar entre 0% e 100%",
+    !acrescimoValido && "o acréscimo não pode ser negativo",
     !descontoValido && "o desconto deve ficar entre 0% e 100%",
     !horasEstimadasValidas && "informe as horas estimadas do serviço",
     !Number.isInteger(Number(numAjudantes)) && "revise o número de ajudantes",
@@ -463,6 +474,7 @@ export function NovoOrcamentoForm() {
     5: [
       !validadeValida && "informe a validade do orçamento",
       !entradaValida && "a entrada deve ficar entre 0% e 100%",
+      !acrescimoValido && "o acréscimo não pode ser negativo",
       !descontoValido && "o desconto deve ficar entre 0% e 100%",
       !isFiniteNumberInput(ajusteManual) && "revise o ajuste manual",
     ],
@@ -1248,18 +1260,23 @@ export function NovoOrcamentoForm() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  {modoEdicao ? "" : "Etapa 5 de 6 — "}Precificação
+                  {modoEdicao ? "" : "Etapa 5 de 6 — "}Precificação e Condições de Pagamento
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <Label>Forma de pagamento</Label>
                   <div className="flex flex-wrap gap-2">
-                    {["À vista", "Boleto", "Débito", "Cartão de crédito"].map((forma) => {
-                      const selecionado = condicoesPagamento.toLowerCase().includes(forma.toLowerCase())
+                    {[
+                      { label: "À vista", cond: "À vista", entrada: "100" },
+                      { label: "Boleto", cond: "Boleto bancário (em até 3x)", entrada: "50" },
+                      { label: "Cartão de crédito", cond: "Cartão de crédito (em até 3x)", entrada: "0" },
+                      { label: "Débito", cond: "Cartão de débito", entrada: "100" },
+                    ].map((forma) => {
+                      const selecionado = condicoesPagamento.toLowerCase().includes(forma.label.toLowerCase())
                       return (
                         <button
-                          key={forma}
+                          key={forma.label}
                           type="button"
                           className={cn(
                             "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors",
@@ -1267,16 +1284,31 @@ export function NovoOrcamentoForm() {
                               ? "border-primary bg-primary text-primary-foreground"
                               : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
                           )}
-                          onClick={() => setCondicoesPagamento(forma)}
+                          onClick={() => {
+                            setCondicoesPagamento(forma.cond)
+                            if (forma.entrada !== undefined) {
+                              setEntradaPercent(forma.entrada)
+                              if (resultado?.total) {
+                                const p = Number(forma.entrada)
+                                setEntradaDinheiro(p > 0 ? ((resultado.total * p) / 100).toFixed(2) : "")
+                              }
+                            }
+                          }}
                         >
-                          {forma}
+                          {forma.label}
                         </button>
                       )
                     })}
                   </div>
+                  <Input
+                    value={condicoesPagamento}
+                    onChange={(e) => setCondicoesPagamento(e.target.value)}
+                    placeholder="Ex: Entrada + 3x no boleto, ou À vista com desconto"
+                    className="mt-1"
+                  />
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-4">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="margem">Margem (%)</Label>
                     <Input
@@ -1285,6 +1317,17 @@ export function NovoOrcamentoForm() {
                       min="0"
                       value={margemPercent}
                       onChange={(e) => setMargemPercent(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="acrescimo">Acréscimo (%)</Label>
+                    <Input
+                      id="acrescimo"
+                      type="number"
+                      min="0"
+                      value={acrescimoPercent}
+                      onChange={(e) => setAcrescimoPercent(e.target.value)}
+                      placeholder="0"
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -1300,7 +1343,7 @@ export function NovoOrcamentoForm() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="ajuste">
-                      Acréscimo / Desconto (R$)
+                      Ajuste em Dinheiro (R$)
                     </Label>
                     <Input
                       id="ajuste"
@@ -1311,7 +1354,7 @@ export function NovoOrcamentoForm() {
                       placeholder="+ acréscimo ou - desconto"
                     />
                     <span className="text-[11px] text-muted-foreground">
-                      Positivo (+) para acréscimo, negativo (-) para desconto
+                      (+) acréscimo ou (-) desconto em R$
                     </span>
                   </div>
                 </div>
@@ -1348,33 +1391,93 @@ export function NovoOrcamentoForm() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 sm:w-1/2">
-                  <Label htmlFor="entrada">Entrada ao fechar (%)</Label>
-                  <Input
-                    id="entrada"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={entradaPercent}
-                    onChange={(e) => setEntradaPercent(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {(() => {
-                      const pct = entradaEfetiva(numeroOuZero(entradaPercent))
-                      const total = resultado?.total ?? 0
-                      if (pct === null) return "Sem entrada: o valor todo fica pra receber em um pagamento só."
-                      const entrada = Math.round(((total * pct) / 100) * 100) / 100
-                      return `Entrada de ${formatarMoeda(entrada)} agora e ${formatarMoeda(Math.round((total - entrada) * 100) / 100)} na entrega. Cada pagamento marcado como pago gera um recibo.`
-                    })()}
-                  </p>
+                <div className="flex flex-col gap-3">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="entrada">Entrada ao fechar (%)</Label>
+                      <Input
+                        id="entrada"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={entradaPercent}
+                        onChange={(e) => {
+                          setEntradaPercent(e.target.value)
+                          const p = Number(e.target.value)
+                          if (!isNaN(p) && resultado?.total) {
+                            setEntradaDinheiro(p > 0 ? ((resultado.total * p) / 100).toFixed(2) : "")
+                          }
+                        }}
+                        placeholder="Ex: 50"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="entradaDinheiro">Entrada em Dinheiro (R$)</Label>
+                      <Input
+                        id="entradaDinheiro"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={entradaDinheiro}
+                        onChange={(e) => {
+                          setEntradaDinheiro(e.target.value)
+                          const v = Number(e.target.value)
+                          if (!isNaN(v) && resultado?.total && resultado.total > 0) {
+                            const p = Math.min(100, Math.max(0, Math.round((v / resultado.total) * 100)))
+                            setEntradaPercent(String(p))
+                          }
+                        }}
+                        placeholder={resultado ? `Ex: ${((resultado.total * 0.5) || 0).toFixed(2)}` : "R$"}
+                      />
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const pct = entradaEfetiva(numeroOuZero(entradaPercent))
+                    const tot = resultado?.total ?? 0
+                    if (tot <= 0) return null
+                    const ehBoleto = condicoesPagamento.toLowerCase().includes("boleto")
+                    if (pct === null) {
+                      return (
+                        <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground border border-border">
+                          <p className="font-semibold text-foreground mb-1">
+                            {ehBoleto ? "Opções em até 3x no Boleto (sem juros):" : "Opções de parcelamento (sem juros):"}
+                          </p>
+                          <div className="flex flex-wrap gap-3 font-medium text-foreground">
+                            <span>1x de {formatarMoeda(tot)}</span>
+                            <span>•</span>
+                            <span>2x de {formatarMoeda(Math.round((tot / 2) * 100) / 100)}</span>
+                            <span>•</span>
+                            <span>3x de {formatarMoeda(Math.round((tot / 3) * 100) / 100)}</span>
+                          </div>
+                        </div>
+                      )
+                    }
+                    const ent = Math.round(((tot * pct) / 100) * 100) / 100
+                    const rest = Math.round((tot - ent) * 100) / 100
+                    return (
+                      <div className="rounded-md bg-muted/40 p-3 text-xs flex flex-col gap-2 border border-border">
+                        <div className="flex justify-between font-medium text-foreground">
+                          <span>Entrada ({pct}%): <strong className="text-primary">{formatarMoeda(ent)}</strong></span>
+                          <span>Restante ({Math.round(100 - pct)}%): <strong className="text-primary">{formatarMoeda(rest)}</strong></span>
+                        </div>
+                        <div className="pt-2 border-t border-border/60">
+                          <span className="font-semibold text-foreground">
+                            {ehBoleto ? "Saldo restante em até 3x no Boleto:" : "Saldo restante parcelado em até 3x:"}
+                          </span>
+                          <div className="flex flex-wrap gap-3 mt-1 font-medium text-foreground">
+                            <span className="bg-background px-2 py-1 rounded border border-border">1x de {formatarMoeda(rest)}</span>
+                            <span className="bg-background px-2 py-1 rounded border border-border">2x de {formatarMoeda(Math.round((rest / 2) * 100) / 100)}</span>
+                            <span className="bg-background px-2 py-1 rounded border border-border">3x de {formatarMoeda(Math.round((rest / 3) * 100) / 100)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Margem e desconto são aplicados sobre o custo total (material
-                  + mão de obra + acabamentos + instalação + logística), o
-                  imposto sobre esse valor já com desconto, e o ajuste manual
-                  em R$ entra por cima, no final. Depois de {validadeDias || 7}{" "}
-                  dias esse orçamento é considerado vencido.
+                  Margem, acréscimo e desconto são calculados sobre o custo, o imposto sobre o subtotal, e o ajuste em dinheiro entra no final. As opções calculadas saem automaticamente no PDF oficial do orçamento.
                 </p>
 
                 {resultado && (
@@ -1391,12 +1494,24 @@ export function NovoOrcamentoForm() {
                       </span>
                       <span>{formatarMoeda(resultado.comMargem)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Com desconto ({descontoPercent || 0}%)
-                      </span>
-                      <span>{formatarMoeda(resultado.comDesconto)}</span>
-                    </div>
+                    {Number(acrescimoPercent) > 0 && (
+                      <div className="flex justify-between text-amber-500">
+                        <span>Acréscimo ({acrescimoPercent}%)</span>
+                        <span>{formatarMoeda(resultado.comAcrescimo)}</span>
+                      </div>
+                    )}
+                    {Number(descontoPercent) > 0 && (
+                      <div className="flex justify-between text-emerald-500">
+                        <span>Com desconto ({descontoPercent}%)</span>
+                        <span>{formatarMoeda(resultado.comDesconto)}</span>
+                      </div>
+                    )}
+                    {Number(ajusteManual) !== 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Ajuste em Dinheiro (R$)</span>
+                        <span>{formatarMoeda(Number(ajusteManual))}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
                         {Number(impostoPercent) > 0 ? `Imposto (${impostoPercent}%)` : "Sem imposto"}
@@ -1500,10 +1615,17 @@ export function NovoOrcamentoForm() {
                       </button>
                     ))}
                     {resultado && resultado.total > 0 && [1, 2, 3].map((n) => {
-                      const parcela = Math.round((resultado.total / n) * 100) / 100
-                      const texto = n === 1
+                      const entrada = entradaEfetiva(numeroOuZero(entradaPercent))
+                      const valorEntrada = entrada ? Math.round(((resultado.total * entrada) / 100) * 100) / 100 : 0
+                      const valorBase = entrada ? Math.round((resultado.total - valorEntrada) * 100) / 100 : resultado.total
+                      const parcela = Math.round((valorBase / n) * 100) / 100
+                      const ehBoleto = condicoesPagamento.toLowerCase().includes("boleto")
+                      const sufixo = ehBoleto ? " no boleto" : ""
+                      const texto = entrada
+                        ? `Entrada de ${formatarMoeda(valorEntrada)} + ${n}x de ${formatarMoeda(parcela)}${sufixo}`
+                        : n === 1
                         ? `À vista — ${formatarMoeda(resultado.total)}`
-                        : `${n}x de ${formatarMoeda(parcela)} (sem juros)`
+                        : `${n}x de ${formatarMoeda(parcela)}${sufixo} (sem juros)`
                       return (
                         <button
                           key={`parcela-${n}`}
@@ -1511,7 +1633,7 @@ export function NovoOrcamentoForm() {
                           className="rounded-full border border-primary/40 bg-primary/5 px-3 py-1 text-xs text-primary hover:bg-primary/15"
                           onClick={() => setCondicoesPagamento(texto)}
                         >
-                          {n}x
+                          {entrada ? `Entrada + ${n}x` : `${n}x`}
                         </button>
                       )
                     })}

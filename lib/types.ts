@@ -114,6 +114,7 @@ export interface OrcamentoItem extends ItemProduto {
   instalacao?: InstalacaoOrcamento
   deslocamento?: DeslocamentoOrcamento
   margemPercent?: number
+  acrescimoPercent?: number
   descontoPercent?: number
   impostoPercent?: number
   // Usados só no PDF oficial; ficam dentro do item (JSONB) pra não precisar de coluna nova.
