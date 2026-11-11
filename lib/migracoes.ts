@@ -5,6 +5,7 @@ let lancamentosProntos = false
 let conversasBotProntas = false
 let assinaturasOsProntas = false
 let clientesCpfPronto = false
+let pedidosRapidosProntos = false
 
 // Colunas novas em tabelas que já existem em produção. Também estão em
 // scripts/migrate.sql; rodar aqui (uma vez por instância) evita depender de
@@ -16,7 +17,16 @@ export async function garantirColunasOrcamentos() {
   // é usado também pelo bot do WhatsApp pra informar o status ao cliente.
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS status_producao TEXT`
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS os_emitida_em TEXT`
+  await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS arte_url TEXT`
+  await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS arte_aprovada_em TEXT`
   orcamentosProntos = true
+}
+
+export async function garantirColunasPedidosRapidos() {
+  if (pedidosRapidosProntos) return
+  await getSql()`ALTER TABLE pedidos_rapidos ADD COLUMN IF NOT EXISTS arte_url TEXT`
+  await getSql()`ALTER TABLE pedidos_rapidos ADD COLUMN IF NOT EXISTS arte_aprovada_em TEXT`
+  pedidosRapidosProntos = true
 }
 
 export async function garantirColunasLancamentos() {

@@ -51,7 +51,7 @@ function bancoFalso(lancamentos: LancamentoFinanceiro[]) {
   return async (url: string, init?: RequestInit) => {
     const tabela = url.split("/")[2]
     const metodo = init?.method ?? "GET"
-    if (metodo === "GET") return Response.json(structuredClone(t[tabela]))
+    if (metodo === "GET") return Response.json(structuredClone(t[tabela] ?? []))
     if (metodo === "POST") t[tabela].push(JSON.parse(init!.body as string))
     return Response.json({ ok: true })
   }

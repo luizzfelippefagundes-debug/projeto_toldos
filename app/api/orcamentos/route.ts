@@ -23,6 +23,8 @@ function rowToOrcamento(r: Record<string, unknown>): Orcamento {
     retorno: (r.retorno as Orcamento["retorno"]) ?? undefined,
     statusProducao: (r.status_producao as Orcamento["statusProducao"]) ?? undefined,
     osEmitidaEm: (r.os_emitida_em as string) ?? undefined,
+    arteUrl: (r.arte_url as string) ?? undefined,
+    arteAprovadaEm: (r.arte_aprovada_em as string) ?? undefined,
   }
 }
 
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
       id, numero, cliente_id, item, quantidade_material_debitada,
       material_fechado, servico_fechado, total_fechado, ajuste_manual,
       anexo_nome, anexo_url, status, criado_em, fechado_em, validade_dias,
-      retorno, status_producao, os_emitida_em
+      retorno, status_producao, os_emitida_em, arte_url, arte_aprovada_em
     ) VALUES (
       ${b.id}, ${b.numero}, ${b.clienteId}, ${JSON.stringify(b.item)},
       ${b.quantidadeMaterialDebitada ?? null},
@@ -52,7 +54,9 @@ export async function POST(req: Request) {
       ${b.validadeDias ?? null},
       ${b.retorno ? JSON.stringify(b.retorno) : null},
       ${b.statusProducao ?? null},
-      ${b.osEmitidaEm ?? null}
+      ${b.osEmitidaEm ?? null},
+      ${b.arteUrl ?? null},
+      ${b.arteAprovadaEm ?? null}
     )
   `
   return NextResponse.json(b, { status: 201 })

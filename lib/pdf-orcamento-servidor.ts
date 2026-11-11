@@ -115,7 +115,29 @@ export async function gerarPdfOrcamentoServidor(orcamento: Orcamento, clienteNom
   doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(68)
   doc.text(condicoes, esquerda + 118, y)
 
-  y += 60
+  y += 14
+  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(0)
+  doc.text("Validade:", esquerda, y)
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(68)
+  doc.text(`${orcamento.validadeDias ?? 7} dias`, esquerda + 45, y)
+
+  y += 12
+  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(0)
+  doc.text("Garantia:", esquerda, y)
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(68)
+  doc.text("3 (três) meses por serviço contra defeitos de fabricação.", esquerda + 45, y)
+
+  if (total > 0) {
+    y += 14
+    doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(80)
+    doc.text("Opções de parcelamento (sem juros):", esquerda, y)
+    y += 10
+    const parcelas = [1, 2, 3].map((n) => `${n}x de ${formatarMoeda(Math.round((total / n) * 100) / 100)}`).join("   |   ")
+    doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(50)
+    doc.text(parcelas, esquerda, y)
+  }
+
+  y += 36
   if (assinatura) doc.addImage(assinatura, "PNG", (esquerda + direita) / 2 - 33, y, 66, 25)
   y += 34
   doc.setDrawColor(153, 153, 153).line((esquerda + direita) / 2 - 65, y, (esquerda + direita) / 2 + 65, y)

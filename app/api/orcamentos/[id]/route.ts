@@ -20,7 +20,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       validade_dias=${b.validadeDias ?? null},
       retorno=${b.retorno ? JSON.stringify(b.retorno) : null},
       status_producao=${b.statusProducao ?? null},
-      os_emitida_em=${b.osEmitidaEm ?? null}
+      os_emitida_em=${b.osEmitidaEm ?? null},
+      arte_url=${b.arteUrl ?? null},
+      arte_aprovada_em=${b.arteAprovadaEm ?? null}
     WHERE id=${id}
   `
   return NextResponse.json(b)

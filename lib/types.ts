@@ -164,6 +164,8 @@ export interface Orcamento {
   retorno?: RetornoOrcamento
   statusProducao?: StatusPedidoRapido
   osEmitidaEm?: string
+  arteUrl?: string
+  arteAprovadaEm?: string
 }
 
 export interface EntradaEstoque {
@@ -226,6 +228,8 @@ export interface PedidoRapido {
   produtoNome?: string
   varianteNome?: string
   prazoEntregaEm?: string
+  arteUrl?: string
+  arteAprovadaEm?: string
 }
 
 export type Papel = "dono" | "producao" | "financeiro" | "operador"

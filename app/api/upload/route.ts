@@ -13,9 +13,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Arquivo maior que ${MAX_MB} MB` }, { status: 413 })
   }
 
-  const blob = await put(`orcamentos/${Date.now()}-${file.name}`, file, {
-    access: "public",
-  })
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const base64 = buffer.toString("base64")
+    const mime = file.type || "application/octet-stream"
+    const dataUrl = `data:${mime};base64,${base64}`
+    return NextResponse.json({ url: dataUrl, nome: file.name })
+  }
 
-  return NextResponse.json({ url: blob.url, nome: file.name })
+  try {
+    const blob = await put(`orcamentos/${Date.now()}-${file.name}`, file, {
+      access: "public",
+    })
+    return NextResponse.json({ url: blob.url, nome: file.name })
+  } catch {
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const base64 = buffer.toString("base64")
+    const mime = file.type || "application/octet-stream"
+    const dataUrl = `data:${mime};base64,${base64}`
+    return NextResponse.json({ url: dataUrl, nome: file.name })
+  }
 }

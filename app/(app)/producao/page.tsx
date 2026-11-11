@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   DndContext,
   DragOverlay,
@@ -34,7 +34,24 @@ import {
   obterPrazoEntregaPedido,
   pedidoRapidoEstaAtrasado,
 } from "@/lib/pedidos-rapidos"
-import { RefreshCw, Search, Clock, AlertTriangle, CheckCircle2, Package, UserRound, MessageCircle, FileCheck } from "lucide-react"
+import {
+  RefreshCw,
+  Search,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  Package,
+  UserRound,
+  MessageCircle,
+  FileCheck,
+  Image as ImageIcon,
+  Upload,
+  Trash2,
+  Copy,
+  Check,
+  ExternalLink,
+} from "lucide-react"
+import { linkWhatsapp } from "@/lib/whatsapp"
 
 const STATUS_COM_NOTIFICACAO = new Set<StatusPedidoRapido>(["ag_confirmacao", "pronto", "entregue"])
 
@@ -45,10 +62,13 @@ function normalizarTelefone(tel: string): string {
   return digits
 }
 
-function mensagemProducao(clienteNome: string, status: StatusPedidoRapido): string {
+function mensagemProducao(clienteNome: string, status: StatusPedidoRapido, idItem?: string): string {
   const nome = clienteNome.split(" ")[0] ?? ""
   if (status === "ag_confirmacao") {
-    return `Olá${nome ? `, ${nome}` : ""}! 🎨 Sua arte está pronta para aprovação!\n\nPor favor, *confirme se está tudo certo* para darmos início à produção. Se precisar de algum ajuste, é só me falar. 😊`
+    const link = idItem && typeof window !== "undefined"
+      ? `${window.location.origin}/arte/${idItem}`
+      : ""
+    return `Olá${nome ? `, ${nome}` : ""}! 🎨 Sua arte está pronta para aprovação!\n\n${link ? `Você pode conferir e aprovar diretamente pelo link:\n${link}\n\n` : ""}Por favor, *confirme se está tudo certo* para darmos início à produção. Se precisar de algum ajuste, é só me falar. 😊`
   }
   if (status === "pronto") {
     return `Olá${nome ? `, ${nome}` : ""}! 🎉 Seu pedido está *pronto* para retirada/entrega!\n\nQualquer dúvida é só chamar. 😊`
@@ -147,7 +167,16 @@ function iniciais(nome: string) {
 }
 
 export default function ProducaoPage() {
-  const { pedidosRapidos, produtosRapidos, moverPedidoRapido, orcamentos, clientes, moverOrcamentoProducao } = useData()
+  const {
+    pedidosRapidos,
+    produtosRapidos,
+    moverPedidoRapido,
+    orcamentos,
+    clientes,
+    moverOrcamentoProducao,
+    salvarArteOrcamento,
+    salvarArtePedidoRapido,
+  } = useData()
   const [busca, setBusca] = useState("")
   const [colunaAtiva, setColunaAtiva] = useState<StatusPedidoRapido | "todas">("todas")
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
@@ -244,14 +273,15 @@ export default function ProducaoPage() {
     clienteNome: string,
     clienteTelefone: string | null,
     novoStatus: StatusPedidoRapido,
-    executar: () => void
+    executar: () => void,
+    idItem?: string
   ) {
     if (STATUS_COM_NOTIFICACAO.has(novoStatus) && clienteTelefone) {
       setConfirmando({
         clienteNome,
         clienteTelefone,
         novoStatus,
-        mensagem: mensagemProducao(clienteNome, novoStatus),
+        mensagem: mensagemProducao(clienteNome, novoStatus, idItem),
         enviando: false,
         executar,
       })
@@ -298,7 +328,8 @@ export default function ProducaoPage() {
         cli?.nome ?? "Cliente",
         cli?.telefone ?? null,
         novoStatus as StatusPedidoRapido,
-        () => moverOrcamentoProducao(orcId, novoStatus as StatusPedidoRapido)
+        () => moverOrcamentoProducao(orcId, novoStatus as StatusPedidoRapido),
+        orcId
       )
     } else {
       const pedido = pedidosRapidos.find((p) => p.id === activeId)
@@ -307,7 +338,8 @@ export default function ProducaoPage() {
         pedido.clienteNome,
         pedido.clienteTelefone,
         novoStatus as StatusPedidoRapido,
-        () => moverPedidoRapido(activeId, novoStatus as StatusPedidoRapido)
+        () => moverPedidoRapido(activeId, novoStatus as StatusPedidoRapido),
+        activeId
       )
     }
   }
@@ -385,10 +417,12 @@ export default function ProducaoPage() {
               : "border-border text-muted-foreground"
           )}
         >
-          Todas ({pedidosFiltrados.length})
+          Todas ({pedidosFiltrados.length + orcamentosEmProducao.length})
         </button>
         {colunas.map((col) => {
-          const qtd = pedidosFiltrados.filter((p) => p.status === col.status).length
+          const qtd =
+            pedidosFiltrados.filter((p) => p.status === col.status).length +
+            orcamentosEmProducao.filter((o) => o.statusProducao === col.status).length
           return (
             <button
               key={col.status}
@@ -414,7 +448,11 @@ export default function ProducaoPage() {
             const pedidosDaColuna = pedidosFiltrados.filter(
               (p) => p.status === col.status
             )
-            if (colunaAtiva === "todas" && pedidosDaColuna.length === 0) return null
+            const orcsDaColuna = orcamentosEmProducao.filter(
+              (o) => o.statusProducao === col.status
+            )
+            const totalColuna = pedidosDaColuna.length + orcsDaColuna.length
+            if (colunaAtiva === "todas" && totalColuna === 0) return null
             return (
               <div key={col.status} className="flex flex-col gap-2">
                 {colunaAtiva === "todas" && (
@@ -424,7 +462,7 @@ export default function ProducaoPage() {
                       {col.titulo}
                     </span>
                     <span className={cn("text-xs font-bold", col.corTexto)}>
-                      {pedidosDaColuna.length}
+                      {totalColuna}
                     </span>
                   </div>
                 )}
@@ -435,27 +473,51 @@ export default function ProducaoPage() {
                     produto={produtoDoPedido(pedido)}
                     atrasado={estaAtrasado(pedido)}
                     coluna={colunaMap[pedido.status]}
+                    onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
                     onMudarStatus={(status) =>
                       solicitarConfirmacao(
                         pedido.clienteNome,
                         pedido.clienteTelefone,
                         status,
-                        () => moverPedidoRapido(pedido.id, status)
+                        () => moverPedidoRapido(pedido.id, status),
+                        pedido.id
                       )
                     }
                   />
                 ))}
-                {pedidosDaColuna.length === 0 && colunaAtiva !== "todas" && (
+                {orcsDaColuna.map((orc) => {
+                  const cli = clientes.find((c) => c.id === orc.clienteId)
+                  return (
+                    <OrcamentoCardConteudo
+                      key={`orc-${orc.id}`}
+                      orcamento={orc}
+                      cliente={cli}
+                      coluna={col}
+                      assinatura={assinaturas[orc.id]}
+                      onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
+                      onMudarStatus={(status) =>
+                        solicitarConfirmacao(
+                          cli?.nome ?? "Cliente",
+                          cli?.telefone ?? null,
+                          status,
+                          () => moverOrcamentoProducao(orc.id, status),
+                          orc.id
+                        )
+                      }
+                    />
+                  )
+                })}
+                {totalColuna === 0 && colunaAtiva !== "todas" && (
                   <p className="py-6 text-center text-sm text-muted-foreground">
-                    Nenhum pedido em {col.titulo}.
+                    Nenhum pedido ou orçamento em {col.titulo}.
                   </p>
                 )}
               </div>
             )
           })}
-        {pedidosFiltrados.length === 0 && (
+        {pedidosFiltrados.length === 0 && orcamentosEmProducao.length === 0 && (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Nenhum pedido encontrado.
+            Nenhum pedido ou orçamento encontrado.
           </p>
         )}
       </div>
@@ -567,12 +629,14 @@ export default function ProducaoPage() {
                           produto={produtoDoPedido(pedido)}
                           atrasado={estaAtrasado(pedido)}
                           coluna={colunaMap[pedido.status]}
+                          onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
                           onMudarStatus={(status) =>
                             solicitarConfirmacao(
                               pedido.clienteNome,
                               pedido.clienteTelefone,
                               status,
-                              () => moverPedidoRapido(pedido.id, status)
+                              () => moverPedidoRapido(pedido.id, status),
+                              pedido.id
                             )
                           }
                         />
@@ -587,12 +651,14 @@ export default function ProducaoPage() {
                             cliente={cli}
                             coluna={col}
                             assinatura={assinaturas[orc.id]}
+                            onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
                             onMudarStatus={(status) =>
                               solicitarConfirmacao(
                                 cli?.nome ?? "Cliente",
                                 cli?.telefone ?? null,
                                 status,
-                                () => moverOrcamentoProducao(orc.id, status)
+                                () => moverOrcamentoProducao(orc.id, status),
+                                orc.id
                               )
                             }
                           />
@@ -614,6 +680,7 @@ export default function ProducaoPage() {
                   atrasado={estaAtrasado(pedidoArrastando)}
                   coluna={colunaMap[pedidoArrastando.status]}
                   onMudarStatus={() => {}}
+                  onSalvarArte={async () => {}}
                 />
               </div>
             ) : orcamentoArrastando ? (
@@ -624,6 +691,7 @@ export default function ProducaoPage() {
                   coluna={colunaMap[orcamentoArrastando.statusProducao!]}
                   assinatura={assinaturas[orcamentoArrastando.id]}
                   onMudarStatus={() => {}}
+                  onSalvarArte={async () => {}}
                 />
               </div>
             ) : null}
@@ -684,18 +752,196 @@ function PedidoCardArrastavel({
   )
 }
 
+function ArteCardWidget({
+  id,
+  arteUrl,
+  arteAprovadaEm,
+  status,
+  clienteNome,
+  clienteTelefone,
+  onSalvarArte,
+}: {
+  id: string
+  arteUrl?: string
+  arteAprovadaEm?: string
+  status: StatusPedidoRapido
+  clienteNome: string
+  clienteTelefone?: string | null
+  onSalvarArte: (url: string | null) => Promise<void>
+}) {
+  const [enviando, setEnviando] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setEnviando(true)
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      const res = await fetch("/api/upload", { method: "POST", body: form })
+      const data = await res.json()
+      if (data.url) {
+        await onSalvarArte(data.url)
+      }
+    } catch (err) {
+      console.error("Erro ao enviar arte:", err)
+    } finally {
+      setEnviando(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
+  function handleCopiarLink() {
+    if (typeof window === "undefined") return
+    const link = `${window.location.origin}/arte/${id}`
+    navigator.clipboard.writeText(link)
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 2000)
+  }
+
+  const linkWhatsappAprovacao = clienteTelefone
+    ? linkWhatsapp(
+        clienteTelefone,
+        mensagemProducao(clienteNome, "ag_confirmacao", id)
+      )
+    : null
+
+  return (
+    <div
+      className="flex flex-col gap-2 rounded-md border border-border/70 bg-muted/20 p-2 text-xs"
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between gap-1">
+        <span className="flex items-center gap-1 font-semibold text-muted-foreground">
+          <ImageIcon className="h-3.5 w-3.5" />
+          Arte
+        </span>
+        {arteAprovadaEm ? (
+          <span className="flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">
+            <CheckCircle2 className="h-3 w-3" /> Aprovada
+          </span>
+        ) : status === "ag_confirmacao" ? (
+          <span className="flex items-center gap-1 rounded bg-pink-500/15 px-1.5 py-0.5 text-[10px] font-bold text-pink-600">
+            <Clock className="h-3 w-3" /> Ag. Aprovação
+          </span>
+        ) : null}
+      </div>
+
+      {arteUrl ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="group relative h-20 w-full overflow-hidden rounded-md border bg-black/5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={arteUrl}
+              alt="Arte anexada"
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+              <a
+                href={arteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full bg-white/90 p-1 text-zinc-900 hover:bg-white"
+                title="Ver arte original"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={enviando}
+                className="rounded-full bg-white/90 p-1 text-zinc-900 hover:bg-white"
+                title="Substituir arte"
+              >
+                <Upload className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onSalvarArte(null)}
+                disabled={enviando}
+                className="rounded-full bg-red-600/90 p-1 text-white hover:bg-red-700"
+                title="Remover arte"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              disabled={enviando}
+              onChange={handleUpload}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1">
+            <button
+              type="button"
+              onClick={handleCopiarLink}
+              className="flex items-center gap-1 rounded border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-foreground hover:bg-accent transition-colors"
+            >
+              {copiado ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+              {copiado ? "Copiado!" : "Link"}
+            </button>
+            {linkWhatsappAprovacao && (
+              <a
+                href={linkWhatsappAprovacao}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white hover:bg-emerald-700 transition-colors"
+              >
+                <MessageCircle className="h-3 w-3" />
+                WhatsApp
+              </a>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div>
+          <label className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-violet-400/50 hover:border-violet-600 bg-violet-500/5 hover:bg-violet-500/10 py-1.5 px-2 text-violet-700 text-xs font-semibold cursor-pointer transition-colors">
+            {enviando ? (
+              <>
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+                <span>Enviando...</span>
+              </>
+            ) : (
+              <>
+                <Upload className="h-3.5 w-3.5" />
+                <span>Anexar Imagem da Arte</span>
+              </>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              disabled={enviando}
+              onChange={handleUpload}
+            />
+          </label>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PedidoCardConteudo({
   pedido,
   produto,
   atrasado,
   coluna,
   onMudarStatus,
+  onSalvarArte,
 }: {
   pedido: PedidoRapido
   produto: ProdutoRapido | undefined
   atrasado: boolean
   coluna: (typeof colunas)[number]
   onMudarStatus: (status: StatusPedidoRapido) => void
+  onSalvarArte: (url: string | null) => Promise<void>
 }) {
   // Funcionário (papel "Produção e TV") vê o pedido, mas não o valor em reais.
   const { papel } = usePapelAtivo()
@@ -760,6 +1006,17 @@ function PedidoCardConteudo({
         )}
       </div>
 
+      {/* Widget de Arte */}
+      <ArteCardWidget
+        id={pedido.id}
+        arteUrl={pedido.arteUrl}
+        arteAprovadaEm={pedido.arteAprovadaEm}
+        status={pedido.status}
+        clienteNome={pedido.clienteNome}
+        clienteTelefone={pedido.clienteTelefone}
+        onSalvarArte={onSalvarArte}
+      />
+
       {/* Select de status — para mobile e como ação rápida no desktop */}
       <div onPointerDown={(e) => e.stopPropagation()}>
         <div className="flex flex-wrap gap-1">
@@ -789,12 +1046,14 @@ function OrcamentoCardConteudo({
   coluna,
   assinatura,
   onMudarStatus,
+  onSalvarArte,
 }: {
   orcamento: Orcamento
   cliente: Cliente | undefined
   coluna: (typeof colunas)[number]
   assinatura?: { pdfUrl: string | null; assinado: boolean }
   onMudarStatus: (status: StatusPedidoRapido) => void
+  onSalvarArte: (url: string | null) => Promise<void>
 }) {
   const { papel } = usePapelAtivo()
   const nome = cliente?.nome?.trim() || ""
@@ -867,6 +1126,17 @@ function OrcamentoCardConteudo({
           )}
         </div>
       )}
+
+      {/* Widget de Arte */}
+      <ArteCardWidget
+        id={orcamento.id}
+        arteUrl={orcamento.arteUrl}
+        arteAprovadaEm={orcamento.arteAprovadaEm}
+        status={orcamento.statusProducao || "arte"}
+        clienteNome={cliente?.nome || "Cliente"}
+        clienteTelefone={cliente?.telefone}
+        onSalvarArte={onSalvarArte}
+      />
 
       <div onPointerDown={(e) => e.stopPropagation()}>
         <div className="flex flex-wrap gap-1">

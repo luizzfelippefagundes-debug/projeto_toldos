@@ -45,7 +45,7 @@ export default function FinanceiroPage() {
   const { lancamentos, clientes, orcamentos } = useData()
   const [filtroTipo, setFiltroTipo] = useState<TipoLancamento | "todos" | "boleto" | "fixas">("todos")
   const [filtroCliente, setFiltroCliente] = useState("todos")
-  const [soComOs, setSoComOs] = useState(false)
+  const [soComOs, setSoComOs] = useState(true)
   const [selecionado, setSelecionado] = useState<LancamentoFinanceiro | null>(null)
   // Despesas pessoais ficam fora dos totais, a não ser que a pessoa queira ver tudo junto.
   const [incluirPessoais, setIncluirPessoais] = useState(false)
@@ -83,9 +83,11 @@ export default function FinanceiroPage() {
       .filter((l) => filtroCliente === "todos" || l.clienteId === filtroCliente)
       .filter((l) => {
         if (!soComOs) return true
-        if (l.origem !== "orcamento" || !l.origemId) return false
-        const orc = orcamentos.find((o) => o.id === l.origemId)
-        return Boolean(orc?.osEmitidaEm)
+        if (l.origem === "orcamento" && l.origemId) {
+          const orc = orcamentos.find((o) => o.id === l.origemId)
+          return Boolean(orc?.osEmitidaEm)
+        }
+        return true
       })
       .sort((a, b) => new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime())
   }, [lancamentos, filtroTipo, filtroCliente, soComOs, orcamentos])

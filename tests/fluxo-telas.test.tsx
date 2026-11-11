@@ -42,7 +42,7 @@ function bancoFalso() {
     const linhas = t[tabela]
     const metodo = init?.method ?? "GET"
     const corpo = init?.body ? JSON.parse(init.body as string) : undefined
-    if (metodo === "GET") return Response.json(structuredClone(linhas))
+    if (metodo === "GET") return Response.json(structuredClone(linhas ?? []))
     if (metodo === "POST") linhas.push(corpo)
     if (metodo === "PUT") {
       const i = linhas.findIndex((l) => l.id === id)

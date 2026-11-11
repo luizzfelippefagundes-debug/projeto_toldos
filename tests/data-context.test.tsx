@@ -29,11 +29,12 @@ function criarBancoFalso() {
     "pedidos-rapidos": structuredClone(pedidosRapidosSeed),
     lancamentos: structuredClone(lancamentosFinanceirosSeed),
     "mensagens-bot": structuredClone(mensagensBotSeed),
+    acabamentos: [],
   } as unknown as Record<string, Registro[]>
 
   return async (url: string, init?: RequestInit) => {
     const [, , tabela, id] = url.split("/")
-    const linhas = tabelas[tabela]
+    const linhas = tabelas[tabela] ?? []
     const metodo = init?.method ?? "GET"
     const corpo = init?.body ? JSON.parse(init.body as string) : undefined
 
@@ -914,5 +915,43 @@ describe("fluxos de dados", () => {
   it("expõe `carregado` verdadeiro depois de carregar os dados do servidor", async () => {
     const { result } = await montar()
     await waitFor(() => expect(result.current.carregado).toBe(true))
+  })
+
+  it("salva arte no pedido rápido e no orçamento", async () => {
+    const { result } = await montar()
+    let pedidoId = ""
+    act(() => {
+      pedidoId = result.current.addPedidoRapido({
+        produtoId: "prod-1",
+        varianteId: "prod-1-a4",
+        acabamento: null,
+        clienteNome: "Cliente arte",
+        clienteTelefone: "(11) 90000-0000",
+        observacao: "",
+        total: 25,
+        status: "arte",
+      }).id
+    })
+
+    await act(async () => {
+      await result.current.salvarArtePedidoRapido(pedidoId, "https://exemplo.com/arte-ped.png")
+    })
+
+    expect(
+      result.current.pedidosRapidos.find((p) => p.id === pedidoId)?.arteUrl
+    ).toBe("https://exemplo.com/arte-ped.png")
+
+    let orcId = ""
+    act(() => {
+      orcId = result.current.fecharOrcamento(criarDadosOrcamento()).id
+    })
+
+    await act(async () => {
+      await result.current.salvarArteOrcamento(orcId, "https://exemplo.com/arte-orc.png")
+    })
+
+    expect(
+      result.current.orcamentos.find((o) => o.id === orcId)?.arteUrl
+    ).toBe("https://exemplo.com/arte-orc.png")
   })
 })

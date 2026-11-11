@@ -216,6 +216,10 @@ export function OrcamentoOficial({
               {formatarData(validoAte)}
             </div>
           )}
+          <div style={{ marginTop: "4pt", fontSize: "8pt", color: "#555" }}>
+            <span style={{ fontWeight: 700 }}>Garantia:</span>{" "}
+            3 (três) meses por serviço contra defeitos de fabricação.
+          </div>
           {(() => {
             const entrada = entradaEfetiva(entradaPercent)
             if (!entrada || total <= 0) return null

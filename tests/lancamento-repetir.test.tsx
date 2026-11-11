@@ -33,7 +33,7 @@ function bancoFalso() {
   return async (url: string, init?: RequestInit) => {
     const tabela = url.split("/")[2]
     const metodo = init?.method ?? "GET"
-    if (metodo === "GET") return Response.json(structuredClone(t[tabela]))
+    if (metodo === "GET") return Response.json(structuredClone(t[tabela] ?? []))
     if (metodo === "POST") t[tabela].push(JSON.parse(init!.body as string))
     return Response.json({ ok: true })
   }
@@ -74,8 +74,9 @@ describe("Novo lançamento repetido por meses", () => {
     fireEvent.change(screen.getByLabelText("Vencimento"), { target: { value: "2026-10-28" } })
     fireEvent.change(screen.getByLabelText("Repetir por quantos meses?"), { target: { value: meses } })
     if (pessoal) {
-      const chave = screen.getByRole("switch")
-      fireEvent.click(chave)
+      const chaves = screen.getAllByRole("switch")
+      // A chave de despesa pessoal é a segunda (a primeira é despesa fixa)
+      fireEvent.click(chaves[1] ?? chaves[0])
     }
   }
 

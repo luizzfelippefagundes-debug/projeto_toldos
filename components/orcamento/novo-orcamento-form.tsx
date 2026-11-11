@@ -824,15 +824,16 @@ export function NovoOrcamentoForm() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap items-end gap-4">
-                <div className="flex min-w-56 flex-col gap-2">
+                <div className="flex flex-1 min-w-[280px] sm:min-w-[400px] flex-col gap-2">
                   <Label>Cliente</Label>
                   <Combobox
                     options={clientes.map((c) => ({ value: c.id, label: c.nome }))}
                     value={clienteId}
                     onValueChange={setClienteId}
                     placeholder="Selecione o cliente"
-                    searchPlaceholder="Buscar cliente..."
+                    searchPlaceholder="Buscar cliente por nome..."
                     emptyText="Nenhum cliente encontrado."
+                    className="w-full"
                   />
                 </div>
                 <ClienteQuickAddDialog onCriado={(c) => setClienteId(c.id)} />
@@ -1251,6 +1252,30 @@ export function NovoOrcamentoForm() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label>Forma de pagamento</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {["À vista", "Boleto", "Débito", "Cartão de crédito"].map((forma) => {
+                      const selecionado = condicoesPagamento.toLowerCase().includes(forma.toLowerCase())
+                      return (
+                        <button
+                          key={forma}
+                          type="button"
+                          className={cn(
+                            "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors",
+                            selecionado
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                          )}
+                          onClick={() => setCondicoesPagamento(forma)}
+                        >
+                          {forma}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="margem">Margem (%)</Label>
@@ -1274,14 +1299,20 @@ export function NovoOrcamentoForm() {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="ajuste">Ajuste manual (R$)</Label>
+                    <Label htmlFor="ajuste">
+                      Acréscimo / Desconto (R$)
+                    </Label>
                     <Input
                       id="ajuste"
                       type="number"
                       step="0.01"
                       value={ajusteManual}
                       onChange={(e) => setAjusteManual(e.target.value)}
+                      placeholder="+ acréscimo ou - desconto"
                     />
+                    <span className="text-[11px] text-muted-foreground">
+                      Positivo (+) para acréscimo, negativo (-) para desconto
+                    </span>
                   </div>
                 </div>
 

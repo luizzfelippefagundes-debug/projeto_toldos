@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
+import { garantirColunasPedidosRapidos } from "@/lib/migracoes"
 import type { PedidoRapido } from "@/lib/types"
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const b: PedidoRapido = await req.json()
+  await garantirColunasPedidosRapidos()
   await getSql()`
     UPDATE pedidos_rapidos SET
       numero=${b.numero}, produto_id=${b.produtoId}, variante_id=${b.varianteId},
@@ -12,7 +14,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       cliente_telefone=${b.clienteTelefone}, observacao=${b.observacao},
       total=${b.total}, status=${b.status}, criado_em=${b.criadoEm},
       vendedor_id=${b.vendedorId ?? null}, produto_nome=${b.produtoNome ?? null},
-      variante_nome=${b.varianteNome ?? null}, prazo_entrega_em=${b.prazoEntregaEm ?? null}
+      variante_nome=${b.varianteNome ?? null}, prazo_entrega_em=${b.prazoEntregaEm ?? null},
+      arte_url=${b.arteUrl ?? null}, arte_aprovada_em=${b.arteAprovadaEm ?? null}
     WHERE id=${id}
   `
   return NextResponse.json(b)
