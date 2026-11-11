@@ -102,8 +102,7 @@ export interface DataContextValue {
   // Etapa/lembrete do quadro Retornos. Não mexe em estoque nem financeiro.
   atualizarRetorno: (
     id: string,
-    retorno: Omit<RetornoOrcamento, "atualizadoEm">,
-    opcoes?: { aguardarAssinatura?: boolean }
+    retorno: Omit<RetornoOrcamento, "atualizadoEm">
   ) => void
   reabrirOrcamento: (id: string) => boolean
   removeOrcamento: (id: string) => void
@@ -603,7 +602,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return true
   }
 
-  const atualizarRetorno: DataContextValue["atualizarRetorno"] = (id, retorno, opcoes) => {
+  const atualizarRetorno: DataContextValue["atualizarRetorno"] = (id, retorno) => {
     setOrcamentos((atual) =>
       atual.map((o) => {
         if (o.id !== id) return o
@@ -613,10 +612,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
           ...o,
           retorno: { ...retorno, atualizadoEm: agora },
           osEmitidaEm: aprovado ? (o.osEmitidaEm ?? agora) : o.osEmitidaEm,
-          // Aprovado no retorno → gera a OS e entra na produção. Se a OS foi
-          // enviada pro cliente assinar, fica em "Aguardando" até ele assinar.
+          // Aprovado no retorno → gera a OS e entra na produção sempre em
+          // "Ag. Assinatura" para o cliente assinar antes de iniciar.
           statusProducao: aprovado && !o.statusProducao
-            ? (opcoes?.aguardarAssinatura ? ("aguardando" as const) : ("aprovado" as const))
+            ? ("aguardando" as const)
             : o.statusProducao,
         }
         apiPut(`/api/orcamentos/${id}`, atualizado)

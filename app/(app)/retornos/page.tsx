@@ -111,7 +111,7 @@ export default function RetornosPage() {
     etapa: EtapaRetorno
     mensagem: string
     enviando: boolean
-    executar?: (opcoes: { aguardarAssinatura: boolean }) => void
+    executar?: () => void
   } | null>(null)
 
   const sensores = useSensors(
@@ -219,10 +219,8 @@ export default function RetornosPage() {
     if (!confirmando) return
     setConfirmando((c) => c ? { ...c, enviando: true } : null)
 
-    const aguardarAssinatura = confirmando.etapa === "aprovado" && enviarWhatsApp && !!confirmando.card.cliente?.telefone
-
     if (confirmando.executar) {
-      confirmando.executar({ aguardarAssinatura })
+      confirmando.executar()
     } else {
       if (confirmando.card.retorno.etapa !== confirmando.etapa) {
         atualizarRetorno(confirmando.card.orcamento.id, {
@@ -230,7 +228,7 @@ export default function RetornosPage() {
           proximoContato: confirmando.card.retorno.proximoContato,
           anotacao: confirmando.card.retorno.anotacao,
           responsavel: confirmando.card.retorno.responsavel,
-        }, { aguardarAssinatura })
+        })
       }
     }
 
@@ -382,7 +380,7 @@ export default function RetornosPage() {
                 etapa: retorno.etapa,
                 mensagem: mensagemWhatsApp(cardEditando, retorno.etapa),
                 enviando: false,
-                executar: ({ aguardarAssinatura }) => atualizarRetorno(cardEditando.orcamento.id, retorno, { aguardarAssinatura }),
+                executar: () => atualizarRetorno(cardEditando.orcamento.id, retorno),
               })
             } else {
               atualizarRetorno(cardEditando.orcamento.id, retorno)
