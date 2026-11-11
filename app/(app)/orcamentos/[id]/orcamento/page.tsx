@@ -9,7 +9,6 @@ import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { ehImagem, formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 import { textoCondicoesPagamento } from "@/lib/parcelas"
 import { OrcamentoOficial } from "@/components/orcamentos/orcamento-oficial"
-import { acabamentosSeed } from "@/lib/seed-data"
 import { ArrowLeft, MessageCircle, Printer } from "lucide-react"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { linkWhatsapp, mensagemOrcamentoWhatsapp } from "@/lib/whatsapp"
@@ -19,7 +18,7 @@ import { compartilharOuBaixarArquivo } from "@/lib/compartilhar"
 export default function OrcamentoOficialPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const { orcamentos, clientes, materiais, servicos } = useData()
+  const { orcamentos, clientes, materiais, servicos, acabamentos } = useData()
   const [enviando, setEnviando] = useState(false)
 
   const orcamento = orcamentos.find((o) => o.id === id)
@@ -50,7 +49,7 @@ export default function OrcamentoOficialPage() {
         item: orcamento.item,
         nomeMaterial,
         unidadeMaterial,
-        acabamentosDisponiveis: acabamentosSeed,
+        acabamentosDisponiveis: acabamentos,
         resultado,
         total,
         adicionais: (orcamento.item.itensAdicionais ?? []).map((extra) => {

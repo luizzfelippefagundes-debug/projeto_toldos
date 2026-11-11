@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
-import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import { equipamentosAcessoSeed } from "@/lib/seed-data"
 import type { Orcamento, StatusOrcamento } from "@/lib/types"
 import { ItensAdicionaisLista } from "./itens-adicionais-lista"
 
@@ -28,7 +28,7 @@ const statusVariant: Record<
 // Conteúdo com todos os dados do orçamento — usado tanto na OS impressa
 // (app/orcamentos/[id]/os) quanto no modal de detalhes do histórico.
 export function OrcamentoDetalhes({ orcamento }: { orcamento: Orcamento }) {
-  const { clientes, materiais, servicos } = useData()
+  const { clientes, materiais, servicos, acabamentos } = useData()
 
   const cliente = clientes.find((c) => c.id === orcamento.clienteId)
   const material = materiais.find((m) => m.id === orcamento.item.materialId)
@@ -53,7 +53,7 @@ export function OrcamentoDetalhes({ orcamento }: { orcamento: Orcamento }) {
 
   const acabamentosSelecionados = (orcamento.item.acabamentos ?? [])
     .map((sel) => {
-      const acabamento = acabamentosSeed.find((a) => a.id === sel.acabamentoId)
+      const acabamento = acabamentos.find((a) => a.id === sel.acabamentoId)
       return acabamento ? `${acabamento.nome} (${sel.quantidade} ${acabamento.unidade})` : null
     })
     .filter(Boolean)
@@ -146,6 +146,7 @@ export function OrcamentoDetalhes({ orcamento }: { orcamento: Orcamento }) {
         partes={resultado?.itens.slice(1)}
         materiais={materiais}
         servicos={servicos}
+        acabamentosDisponiveis={acabamentos}
       />
 
       {instalacao?.incluida && (

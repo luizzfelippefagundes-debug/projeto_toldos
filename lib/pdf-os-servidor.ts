@@ -3,8 +3,9 @@ import path from "node:path"
 import { jsPDF } from "jspdf"
 import { formatarData, formatarMoeda } from "./format"
 import { EMPRESA_ORCAMENTO } from "./orcamento-pdf"
-import { acabamentosSeed, equipamentosAcessoSeed } from "./seed-data"
-import type { Orcamento } from "./types"
+import { equipamentosAcessoSeed, acabamentosSeed } from "./seed-data"
+import { getSql } from "./db"
+import type { Acabamento, Orcamento } from "./types"
 
 async function imagemBase64(caminhoPublico: string): Promise<string | null> {
   try {
@@ -17,12 +18,29 @@ async function imagemBase64(caminhoPublico: string): Promise<string | null> {
   }
 }
 
+async function buscarAcabamentosDb(): Promise<Acabamento[]> {
+  try {
+    const sql = getSql()
+    const rows = await sql`SELECT id, nome, preco_unitario as "precoUnitario", unidade FROM acabamentos ORDER BY nome`
+    if (rows.length === 0) return acabamentosSeed
+    return rows.map((r) => ({
+      id: r.id as string,
+      nome: r.nome as string,
+      precoUnitario: Number(r.precoUnitario),
+      unidade: r.unidade as string,
+    }))
+  } catch {
+    return acabamentosSeed
+  }
+}
+
 export async function gerarPdfOsServidor(
   orcamento: Orcamento,
   clienteNome: string,
   clienteTelefone?: string,
   assinaturaClienteBase64?: string
 ): Promise<Buffer> {
+  const acabamentosDb = await buscarAcabamentosDb()
   const numero = String(orcamento.numero).padStart(4, "0")
   const totalFinal = orcamento.totalFechado ?? 0
   const hoje = new Date()
@@ -44,7 +62,7 @@ export async function gerarPdfOsServidor(
 
   const acabamentos = (orcamento.item.acabamentos ?? [])
     .map((sel) => {
-      const a = acabamentosSeed.find((x) => x.id === sel.acabamentoId)
+      const a = acabamentosDb.find((x) => x.id === sel.acabamentoId)
       return a ? `${a.nome} (${sel.quantidade} ${a.unidade})` : null
     })
     .filter(Boolean)

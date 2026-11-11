@@ -25,7 +25,7 @@ import { Combobox } from "@/components/ui/combobox"
 import { Stepper, type StepperStep } from "@/components/orcamento/stepper"
 import { calcularOrcamentoCompleto, quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
-import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import { equipamentosAcessoSeed } from "@/lib/seed-data"
 import {
   isFiniteNumberInput,
   isNonNegativeNumberInput,
@@ -75,6 +75,7 @@ export function NovoOrcamentoForm() {
     consumirRascunho,
     fecharOrcamento,
     updateOrcamento,
+    acabamentos: acabamentosDisponiveis,
   } = useData()
   const router = useRouter()
   const offline = useModoOffline()
@@ -272,7 +273,7 @@ export function NovoOrcamentoForm() {
       altura: numeroOuZero(altura),
       quantidadeUnidades: numeroOuZero(quantidadeUnidades),
       horasEstimadas: numeroOuZero(horasEstimadas),
-      acabamentos: acabamentosSeed
+      acabamentos: acabamentosDisponiveis
         .filter((a) => {
           if (!acabamentosAtivos[a.id]) return false
           const temValorDireto = isPositiveNumberInput(acabamentosValorDireto[a.id] ?? "")
@@ -343,7 +344,7 @@ export function NovoOrcamentoForm() {
         material,
         servico ?? null,
         Number(ajusteManual) || 0,
-        acabamentosSeed,
+        acabamentosDisponiveis,
         equipamentosAcessoSeed,
         { materiais, servicos }
       )
@@ -378,7 +379,7 @@ export function NovoOrcamentoForm() {
     (valor) =>
       valor.trim() === "" || isNonNegativeNumberInput(valor)
   )
-  const acabamentosValidos = acabamentosSeed.every((acabamento) => {
+  const acabamentosValidos = acabamentosDisponiveis.every((acabamento) => {
     if (!acabamentosAtivos[acabamento.id]) return true
     return (
       isPositiveNumberInput(acabamentosValorDireto[acabamento.id] ?? "") ||
@@ -503,7 +504,7 @@ export function NovoOrcamentoForm() {
           item,
           nomeMaterial: material.nome,
           unidadeMaterial: material.unidade,
-          acabamentosDisponiveis: acabamentosSeed,
+          acabamentosDisponiveis,
           resultado,
           total: resultado.total,
           adicionais: extras.map((form) => {
@@ -961,6 +962,7 @@ export function NovoOrcamentoForm() {
                       form={form}
                       materiais={materiais}
                       servicos={servicos}
+                      acabamentos={acabamentosDisponiveis}
                       onChange={(novo) =>
                         setExtras((atual) => atual.map((f) => (f.id === novo.id ? novo : f)))
                       }
@@ -995,7 +997,7 @@ export function NovoOrcamentoForm() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
-                {acabamentosSeed.map((acabamento) => {
+                {acabamentosDisponiveis.map((acabamento) => {
                   const ativo = Boolean(acabamentosAtivos[acabamento.id])
                   return (
                     <div

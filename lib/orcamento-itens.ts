@@ -5,6 +5,7 @@ import {
 } from "./calculo"
 import { acabamentosSeed, equipamentosAcessoSeed } from "./seed-data"
 import type {
+  Acabamento,
   ItemProduto,
   Material,
   Orcamento,
@@ -115,7 +116,8 @@ export function itemComBaixas(
 export function calcularOrcamentoSalvo(
   orcamento: Orcamento,
   materiais: Material[],
-  servicos: Servico[]
+  servicos: Servico[],
+  acabamentos: Acabamento[] = acabamentosSeed
 ): ResultadoCalculoCompleto | null {
   const material = materiais.find((m) => m.id === orcamento.item.materialId)
   if (!material) return null
@@ -125,7 +127,7 @@ export function calcularOrcamentoSalvo(
     material,
     servico ?? null,
     orcamento.ajusteManual,
-    acabamentosSeed,
+    acabamentos,
     equipamentosAcessoSeed,
     { materiais, servicos }
   )

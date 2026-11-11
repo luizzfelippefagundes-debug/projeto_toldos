@@ -3,6 +3,7 @@ import {
   FilePlus2,
   History,
   Boxes,
+  Scissors,
   Wrench,
   Warehouse,
   Factory,
@@ -81,6 +82,7 @@ export const gruposNavegacao: NavGroup[] = [
     title: "Cadastros",
     items: [
       { label: "Materiais", href: "/materiais", icon: Boxes },
+      { label: "Acabamentos", href: "/acabamentos", icon: Scissors },
       {
         label: "Mão de Obra",
         href: "/mao-de-obra",

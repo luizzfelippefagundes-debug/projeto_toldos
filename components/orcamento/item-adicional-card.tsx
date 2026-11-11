@@ -13,15 +13,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { formatarMoeda } from "@/lib/format"
-import { acabamentosSeed } from "@/lib/seed-data"
 import type { ItemAdicionalForm } from "@/lib/item-adicional-form"
-import type { Material, Servico } from "@/lib/types"
+import type { Acabamento, Material, Servico } from "@/lib/types"
 
 interface ItemAdicionalCardProps {
   numero: number
   form: ItemAdicionalForm
   materiais: Material[]
   servicos: Servico[]
+  acabamentos: Acabamento[]
   onChange: (form: ItemAdicionalForm) => void
   onRemover: () => void
 }
@@ -33,6 +33,7 @@ export function ItemAdicionalCard({
   form,
   materiais,
   servicos,
+  acabamentos,
   onChange,
   onRemover,
 }: ItemAdicionalCardProps) {
@@ -178,7 +179,7 @@ export function ItemAdicionalCard({
           Acabamentos{" "}
           <span className="font-normal text-muted-foreground">(opcional)</span>
         </Label>
-        {acabamentosSeed.map((acabamento) => {
+        {acabamentos.map((acabamento) => {
           const sel = form.acabamentos[acabamento.id] ?? { ativo: false, qtd: "" }
           return (
             <div

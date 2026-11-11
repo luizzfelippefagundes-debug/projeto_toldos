@@ -11,6 +11,7 @@ import {
 } from "react"
 import { toast } from "sonner"
 import type {
+  Acabamento,
   Cliente,
   EntradaEstoque,
   LancamentoFinanceiro,
@@ -25,7 +26,7 @@ import type {
   StatusLancamento,
   StatusPedidoRapido,
 } from "@/lib/types"
-import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import { equipamentosAcessoSeed } from "@/lib/seed-data"
 import { gerarParcelasOrcamento } from "@/lib/parcelas"
 import { calcularOrcamentoCompleto } from "@/lib/calculo"
 import {
@@ -51,6 +52,7 @@ interface RascunhoOrcamento {
 
 export interface DataContextValue {
   materiais: Material[]
+  acabamentos: Acabamento[]
   servicos: Servico[]
   clientes: Cliente[]
   orcamentos: Orcamento[]
@@ -63,6 +65,9 @@ export interface DataContextValue {
   carregado: boolean
   addMaterial: (dados: Omit<Material, "id">) => Material
   updateMaterial: (id: string, dados: Omit<Material, "id">) => void
+  addAcabamento: (dados: Omit<Acabamento, "id">) => Acabamento
+  updateAcabamento: (id: string, dados: Omit<Acabamento, "id">) => void
+  removeAcabamento: (id: string) => void
   addServico: (dados: Omit<Servico, "id">) => Servico
   updateServico: (id: string, dados: Omit<Servico, "id">) => void
   addCliente: (dados: Omit<Cliente, "id">, id?: string) => Cliente
@@ -170,6 +175,7 @@ const mensagemStatusPedido: Partial<Record<StatusPedidoRapido, string>> = {
 
 export function DataProvider({ children }: { children: ReactNode }) {
   const [materiais, setMateriais] = useState<Material[]>([])
+  const [acabamentos, setAcabamentos] = useState<Acabamento[]>([])
   const [servicos, setServicos] = useState<Servico[]>([])
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([])
@@ -190,6 +196,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       try {
         const [
           resMateriais,
+          resAcabamentos,
           resServicos,
           resClientes,
           resOrcamentos,
@@ -200,6 +207,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           resMensagens,
         ] = await Promise.all([
           fetch("/api/materiais"),
+          fetch("/api/acabamentos"),
           fetch("/api/servicos"),
           fetch("/api/clientes"),
           fetch("/api/orcamentos"),
@@ -212,6 +220,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
         const [
           mat,
+          acb,
           srv,
           cli,
           orc,
@@ -222,6 +231,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           msg,
         ] = await Promise.all([
           resMateriais.json() as Promise<Material[]>,
+          resAcabamentos.json() as Promise<Acabamento[]>,
           resServicos.json() as Promise<Servico[]>,
           resClientes.json() as Promise<Cliente[]>,
           resOrcamentos.json() as Promise<Orcamento[]>,
@@ -233,6 +243,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ])
 
         setMateriais(mat)
+        setAcabamentos(acb)
         setServicos(srv)
         setClientes(cli)
         setOrcamentos(orc)
@@ -277,6 +288,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
       atual.map((m) => (m.id === id ? atualizado : m))
     )
     apiPut(`/api/materiais/${id}`, dados)
+  }
+
+  const addAcabamento: DataContextValue["addAcabamento"] = (dados) => {
+    const novo: Acabamento = { id: gerarId("acb"), ...dados }
+    setAcabamentos((atual) => [...atual, novo])
+    apiPost("/api/acabamentos", novo)
+    return novo
+  }
+
+  const updateAcabamento: DataContextValue["updateAcabamento"] = (id, dados) => {
+    const atualizado = { id, ...dados }
+    setAcabamentos((atual) =>
+      atual.map((a) => (a.id === id ? atualizado : a))
+    )
+    apiPut(`/api/acabamentos/${id}`, dados)
+  }
+
+  const removeAcabamento: DataContextValue["removeAcabamento"] = (id) => {
+    setAcabamentos((atual) => atual.filter((a) => a.id !== id))
+    fetch(`/api/acabamentos/${id}`, { method: "DELETE" }).catch(console.error)
   }
 
   const addServico: DataContextValue["addServico"] = (dados) => {
@@ -365,7 +396,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           material,
           servico ?? null,
           dados.ajusteManual,
-          acabamentosSeed,
+          acabamentos,
           equipamentosAcessoSeed,
           { materiais, servicos }
         )
@@ -493,7 +524,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           material,
           servico ?? null,
           dados.ajusteManual,
-          acabamentosSeed,
+          acabamentos,
           equipamentosAcessoSeed,
           { materiais, servicos }
         )
@@ -821,6 +852,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const value = useMemo<DataContextValue>(
     () => ({
       materiais,
+      acabamentos,
       servicos,
       clientes,
       orcamentos,
@@ -833,6 +865,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       carregado,
       addMaterial,
       updateMaterial,
+      addAcabamento,
+      updateAcabamento,
+      removeAcabamento,
       addServico,
       updateServico,
       addCliente,

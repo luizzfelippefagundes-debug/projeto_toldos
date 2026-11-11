@@ -8,13 +8,13 @@ import { ItensAdicionaisLista } from "@/components/orcamentos/itens-adicionais-l
 import { quantidadeMaterialConsumida, quantidadePecas } from "@/lib/calculo"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
-import { acabamentosSeed, equipamentosAcessoSeed } from "@/lib/seed-data"
+import { equipamentosAcessoSeed } from "@/lib/seed-data"
 import { ArrowLeft, Printer } from "lucide-react"
 
 export default function OrdemDeServicoPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const { orcamentos, clientes, materiais, servicos } = useData()
+  const { orcamentos, clientes, materiais, servicos, acabamentos } = useData()
 
   const orcamento = orcamentos.find((o) => o.id === id)
 
@@ -52,7 +52,7 @@ export default function OrdemDeServicoPage() {
 
   const acabamentosSelecionados = (orcamento.item.acabamentos ?? [])
     .map((sel) => {
-      const acabamento = acabamentosSeed.find((a) => a.id === sel.acabamentoId)
+      const acabamento = acabamentos.find((a) => a.id === sel.acabamentoId)
       return acabamento ? `${acabamento.nome} (${sel.quantidade} ${acabamento.unidade})` : null
     })
     .filter(Boolean)
@@ -247,6 +247,7 @@ export default function OrdemDeServicoPage() {
                 partes={resultado?.itens.slice(1)}
                 materiais={materiais}
                 servicos={servicos}
+                acabamentosDisponiveis={acabamentos}
               />
             </div>
           )}

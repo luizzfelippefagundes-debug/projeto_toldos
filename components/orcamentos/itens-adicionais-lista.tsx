@@ -2,8 +2,7 @@
 
 import { quantidadeMaterialConsumida, quantidadePecas, type ResultadoItem } from "@/lib/calculo"
 import { formatarMoeda } from "@/lib/format"
-import { acabamentosSeed } from "@/lib/seed-data"
-import type { ItemAdicional, Material, Servico } from "@/lib/types"
+import type { Acabamento, ItemAdicional, Material, Servico } from "@/lib/types"
 
 interface ItensAdicionaisListaProps {
   itens: ItemAdicional[]
@@ -11,11 +10,12 @@ interface ItensAdicionaisListaProps {
   partes: ResultadoItem[] | undefined
   materiais: Material[]
   servicos: Servico[]
+  acabamentosDisponiveis: Acabamento[]
 }
 
 // Itens a mais de um orçamento salvo (OS e detalhes): nome, medidas, serviço,
 // acabamentos e valor de cada um. Não renderiza nada sem adicionais.
-export function ItensAdicionaisLista({ itens, partes, materiais, servicos }: ItensAdicionaisListaProps) {
+export function ItensAdicionaisLista({ itens, partes, materiais, servicos, acabamentosDisponiveis }: ItensAdicionaisListaProps) {
   if (itens.length === 0) return null
   return (
     <div className="flex flex-col gap-2">
@@ -31,7 +31,7 @@ export function ItensAdicionaisLista({ itens, partes, materiais, servicos }: Ite
         const parte = partes?.[i]
         const acabamentos = (item.acabamentos ?? [])
           .map((sel) => {
-            const a = acabamentosSeed.find((x) => x.id === sel.acabamentoId)
+            const a = acabamentosDisponiveis.find((x) => x.id === sel.acabamentoId)
             return a ? `${a.nome} (${sel.quantidade} ${a.unidade})` : null
           })
           .filter(Boolean)
