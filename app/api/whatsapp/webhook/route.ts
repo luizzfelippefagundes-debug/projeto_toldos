@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto"
 import { NextResponse } from "next/server"
-import { garantirTabelaConversasBot, garantirColunasOrcamentos } from "@/lib/migracoes"
-import { buscarClientePorTelefone } from "@/lib/bot-whatsapp"
+import { garantirTabelaConversasBot, garantirColunasOrcamentos, garantirCpfClientes } from "@/lib/migracoes"
+import { buscarClientePorTelefone, criarClienteAutomaticoSeNaoExistir } from "@/lib/bot-whatsapp"
 import { registrarMensagemBot } from "@/lib/bot-registro"
 import { processarRetornoWhatsapp } from "@/lib/retornos-automatico"
 
@@ -27,10 +27,17 @@ function extrairMensagem(payload: Record<string, unknown>) {
     (mensagemObj?.conversation as string | undefined) ??
     (mensagemObj?.extendedTextMessage as Record<string, unknown> | undefined)?.text
 
+  const pushName =
+    (dados.pushName as string | undefined) ??
+    (dados.verifiedBizName as string | undefined) ??
+    (payload.pushName as string | undefined) ??
+    ""
+
   return {
     remoteJid,
     fromMe: chave?.fromMe ?? false,
     texto: typeof texto === "string" ? texto : null,
+    pushName: typeof pushName === "string" ? pushName.trim() : "",
   }
 }
 
@@ -64,7 +71,7 @@ export async function POST(request: Request) {
   const instancia = payload.instance as string | undefined
   if (!instancia || instancia !== process.env.EVOLUTION_INSTANCE) return NextResponse.json({ ok: true })
 
-  const { remoteJid, fromMe, texto } = extrairMensagem(payload)
+  const { remoteJid, fromMe, texto, pushName } = extrairMensagem(payload)
   if (fromMe || !remoteJid || !texto) return NextResponse.json({ ok: true })
   if (remoteJid.endsWith("@g.us") || remoteJid === "status@broadcast") return NextResponse.json({ ok: true })
 
@@ -73,9 +80,18 @@ export async function POST(request: Request) {
   try {
     await garantirTabelaConversasBot()
     await garantirColunasOrcamentos()
+    await garantirCpfClientes()
 
-    const cliente = await buscarClientePorTelefone(telefone)
-    const nomeExibicao = cliente?.nome ?? telefone
+    // Busca cliente existente pelo telefone ou cadastra automaticamente se for contato novo
+    let cliente = await buscarClientePorTelefone(telefone)
+    if (!cliente) {
+      cliente = await criarClienteAutomaticoSeNaoExistir({
+        telefone,
+        pushName,
+      })
+    }
+
+    const nomeExibicao = cliente?.nome ?? (pushName || telefone)
 
     await registrarMensagemBot({
       clienteId: cliente?.id ?? null,

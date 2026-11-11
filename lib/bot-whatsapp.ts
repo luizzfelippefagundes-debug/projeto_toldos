@@ -59,12 +59,49 @@ export function normalizarTelefone(numero: string): string {
   return numero.replace(/\D/g, "")
 }
 
+export function formatarTelefoneBrasil(tel: string): string {
+  const d = tel.replace(/\D/g, "")
+  const semPais = d.startsWith("55") && d.length >= 12 ? d.slice(2) : d
+  if (semPais.length === 11) {
+    return `(${semPais.slice(0, 2)}) ${semPais.slice(2, 7)}-${semPais.slice(7)}`
+  }
+  if (semPais.length === 10) {
+    return `(${semPais.slice(0, 2)}) ${semPais.slice(2, 6)}-${semPais.slice(6)}`
+  }
+  return tel
+}
+
 export async function buscarClientePorTelefone(telefone: string): Promise<{ id: string; nome: string } | null> {
   const sql = getSql()
   const alvo = normalizarTelefone(telefone)
   const clientes = await sql`SELECT id, nome, telefone FROM clientes`
   const encontrado = clientes.find((c) => normalizarTelefone(c.telefone as string).endsWith(alvo.slice(-8)))
   return encontrado ? { id: encontrado.id as string, nome: encontrado.nome as string } : null
+}
+
+export async function criarClienteAutomaticoSeNaoExistir({
+  telefone,
+  pushName,
+}: {
+  telefone: string
+  pushName?: string
+}): Promise<{ id: string; nome: string; criadoNovo: boolean }> {
+  const clienteExistente = await buscarClientePorTelefone(telefone)
+  if (clienteExistente) {
+    return { ...clienteExistente, criadoNovo: false }
+  }
+
+  const sql = getSql()
+  const id = crypto.randomUUID()
+  const telFormatado = formatarTelefoneBrasil(telefone)
+  const nomeFinal = pushName?.trim() || `Cliente ${telFormatado}`
+
+  await sql`
+    INSERT INTO clientes (id, nome, telefone, email, cpf)
+    VALUES (${id}, ${nomeFinal}, ${telFormatado}, null, null)
+  `
+
+  return { id, nome: nomeFinal, criadoNovo: true }
 }
 
 async function adquirirTrava(conversaInicial: ConversaBot): Promise<{ conversa: ConversaBot; travado: boolean }> {
