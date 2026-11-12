@@ -18,11 +18,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (rows.length === 0) return NextResponse.json(null)
 
   const r = rows[0]
+  const assinado = !!r.assinado_em
   return NextResponse.json({
     token: r.id,
-    assinado: !!r.assinado_em,
+    assinado,
     assinadoEm: r.assinado_em ?? null,
-    pdfUrl: r.pdf_url ?? null,
+    pdfUrl: assinado ? `/api/assinar/${r.id}/pdf` : (r.pdf_url ?? null),
     criadoEm: r.criado_em,
     expiraEm: r.expira_em,
   })

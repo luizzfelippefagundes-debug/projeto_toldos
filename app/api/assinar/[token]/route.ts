@@ -114,6 +114,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
         const blob = await put(`os-assinadas/${nomeArquivo}`, pdf, {
           access: "public",
           contentType: "application/pdf",
+          addRandomSuffix: false,
+          allowOverwrite: true,
         })
         await sql`UPDATE assinaturas_os SET pdf_url = ${blob.url} WHERE id = ${token}`
       } catch (errBlob) {
