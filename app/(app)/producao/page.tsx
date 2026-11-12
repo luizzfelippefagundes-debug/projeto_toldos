@@ -105,7 +105,7 @@ const colunas: {
   },
   {
     status: "arte",
-    titulo: "Arte",
+    titulo: "Produção",
     cor: "bg-violet-500",
     corFundo: "bg-violet-500/10",
     corBorda: "border-violet-500/40",
@@ -349,7 +349,7 @@ export default function ProducaoPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">PCP — Produção</h1>
+          <h1 className="text-2xl font-semibold">Produção</h1>
           <p className="text-sm text-muted-foreground">
             Arraste os cards entre colunas para mover o status.
           </p>

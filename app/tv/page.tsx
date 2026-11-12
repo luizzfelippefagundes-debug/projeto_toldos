@@ -45,7 +45,7 @@ const COR_CLASSE: Record<string, string> = {
 const COLUNAS: { status: StatusPedido; label: string; borda: string; fundo: string }[] = [
   { status: "aguardando",     label: "Ag. Assinatura", borda: "border-slate-600",  fundo: "bg-slate-200 dark:bg-slate-800/70" },
   { status: "aprovado",       label: "Aprovado",       borda: "border-blue-600",   fundo: "bg-blue-100 dark:bg-blue-950/70" },
-  { status: "arte",           label: "Arte",           borda: "border-violet-500", fundo: "bg-violet-100 dark:bg-violet-950/70" },
+  { status: "arte",           label: "Produção",       borda: "border-violet-500", fundo: "bg-violet-100 dark:bg-violet-950/70" },
   { status: "ag_confirmacao", label: "Arte Enviada",   borda: "border-pink-500",   fundo: "bg-pink-100 dark:bg-pink-950/70" },
   { status: "impressao",      label: "Impressão",      borda: "border-amber-500",  fundo: "bg-amber-100 dark:bg-amber-950/70" },
   { status: "acabamento",     label: "Acabamento",     borda: "border-orange-500", fundo: "bg-orange-100 dark:bg-orange-950/70" },

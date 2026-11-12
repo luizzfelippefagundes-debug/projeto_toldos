@@ -13,7 +13,7 @@ import { FilePlus2 } from "lucide-react"
 const statusPedido: Record<StatusPedidoRapido, string> = {
   aguardando: "Aguardando",
   aprovado: "Aprovado",
-  arte: "Arte",
+  arte: "Produção",
   ag_confirmacao: "Arte Enviada",
   impressao: "Impressão",
   acabamento: "Acabamento",

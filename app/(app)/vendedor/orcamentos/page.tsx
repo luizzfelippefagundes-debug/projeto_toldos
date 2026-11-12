@@ -10,7 +10,7 @@ import type { StatusPedidoRapido } from "@/lib/types"
 const statusLabel: Record<StatusPedidoRapido, string> = {
   aguardando: "Aguardando",
   aprovado: "Aprovado",
-  arte: "Arte",
+  arte: "Produção",
   ag_confirmacao: "Arte Enviada",
   impressao: "Impressão",
   acabamento: "Acabamento",
