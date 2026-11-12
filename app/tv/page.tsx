@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useTheme } from "next-themes"
 import { interpretarDataLocal } from "@/lib/date"
 
-type StatusPedido = "aguardando" | "aprovado" | "arte" | "impressao" | "acabamento" | "pronto"
+type StatusPedido = "aguardando" | "aprovado" | "arte" | "ag_confirmacao" | "impressao" | "acabamento" | "pronto"
 
 interface PedidoTV {
   id: string
@@ -20,6 +20,7 @@ interface PedidoTV {
   criado_em: string
   prazo_entrega_em: string | null
   total: number
+  tipo?: "rapido" | "orcamento"
 }
 
 interface AvisoTV {
@@ -42,12 +43,13 @@ const COR_CLASSE: Record<string, string> = {
 }
 
 const COLUNAS: { status: StatusPedido; label: string; borda: string; fundo: string }[] = [
-  { status: "aguardando", label: "Aguardando", borda: "border-slate-600",  fundo: "bg-slate-200 dark:bg-slate-800/70" },
-  { status: "aprovado",   label: "Aprovado",   borda: "border-blue-600",   fundo: "bg-blue-100 dark:bg-blue-950/70" },
-  { status: "arte",       label: "Arte",        borda: "border-violet-500", fundo: "bg-violet-100 dark:bg-violet-950/70" },
-  { status: "impressao",  label: "Impressão",   borda: "border-amber-500",  fundo: "bg-amber-100 dark:bg-amber-950/70" },
-  { status: "acabamento", label: "Acabamento",  borda: "border-orange-500", fundo: "bg-orange-100 dark:bg-orange-950/70" },
-  { status: "pronto",     label: "Pronto ✓",    borda: "border-emerald-500",fundo: "bg-emerald-100 dark:bg-emerald-950/70" },
+  { status: "aguardando",     label: "Ag. Assinatura", borda: "border-slate-600",  fundo: "bg-slate-200 dark:bg-slate-800/70" },
+  { status: "aprovado",       label: "Aprovado",       borda: "border-blue-600",   fundo: "bg-blue-100 dark:bg-blue-950/70" },
+  { status: "arte",           label: "Arte",           borda: "border-violet-500", fundo: "bg-violet-100 dark:bg-violet-950/70" },
+  { status: "ag_confirmacao", label: "Arte Enviada",   borda: "border-pink-500",   fundo: "bg-pink-100 dark:bg-pink-950/70" },
+  { status: "impressao",      label: "Impressão",      borda: "border-amber-500",  fundo: "bg-amber-100 dark:bg-amber-950/70" },
+  { status: "acabamento",     label: "Acabamento",     borda: "border-orange-500", fundo: "bg-orange-100 dark:bg-orange-950/70" },
+  { status: "pronto",         label: "Pronto ✓",       borda: "border-emerald-500",fundo: "bg-emerald-100 dark:bg-emerald-950/70" },
 ]
 
 function inicioDoDia(data: Date) {
@@ -263,9 +265,16 @@ export default function TvPage() {
                       }`}
                     >
                       <div className="flex items-start justify-between gap-1">
-                        <span className="text-[10px] font-bold text-slate-500 sm:text-xs">
-                          #{pedido.numero}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-slate-500 sm:text-xs">
+                            {pedido.tipo === "orcamento" ? `OS #${pedido.numero}` : `#${pedido.numero}`}
+                          </span>
+                          {pedido.tipo === "orcamento" && (
+                            <span className="rounded bg-blue-100 px-1 py-0.2 text-[9px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                              COM. VISUAL
+                            </span>
+                          )}
+                        </div>
                         {atrasado ? (
                           <span className="shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white sm:text-xs">
                             ATRASADO
