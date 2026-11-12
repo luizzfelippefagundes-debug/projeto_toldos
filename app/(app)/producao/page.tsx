@@ -97,19 +97,11 @@ const colunas: {
   },
   {
     status: "aprovado",
-    titulo: "Aprovado",
+    titulo: "Produção",
     cor: "bg-blue-500",
     corFundo: "bg-blue-500/10",
     corBorda: "border-blue-500/40",
     corTexto: "text-blue-500",
-  },
-  {
-    status: "arte",
-    titulo: "Produção",
-    cor: "bg-violet-500",
-    corFundo: "bg-violet-500/10",
-    corBorda: "border-violet-500/40",
-    corTexto: "text-violet-500",
   },
   {
     status: "ag_confirmacao",
@@ -157,6 +149,9 @@ const colunaMap = Object.fromEntries(colunas.map((c) => [c.status, c])) as Recor
   StatusPedidoRapido,
   (typeof colunas)[number]
 >
+if (!colunaMap.arte) {
+  colunaMap.arte = colunaMap.aprovado
+}
 
 const statusValidos = new Set<string>(colunas.map((c) => c.status))
 
@@ -243,12 +238,6 @@ export default function ProducaoPage() {
     })
   }, [pedidosRapidos, busca])
 
-  const emProducao = pedidosRapidos.filter((p) =>
-    ["aprovado", "arte", "ag_confirmacao", "impressao", "acabamento", "pronto"].includes(p.status)
-  ).length
-  const atrasados = pedidosRapidos.filter(estaAtrasado).length
-  const prontos = pedidosRapidos.filter((p) => p.status === "pronto").length
-
   const orcamentosEmProducao = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     return orcamentos.filter((o) => {
@@ -261,6 +250,19 @@ export default function ProducaoPage() {
       )
     })
   }, [orcamentos, clientes, busca])
+
+  const emProducao =
+    pedidosRapidos.filter((p) =>
+      ["aprovado", "arte", "ag_confirmacao", "impressao", "acabamento", "pronto"].includes(p.status)
+    ).length +
+    orcamentosEmProducao.filter((o) =>
+      o.statusProducao &&
+      ["aprovado", "arte", "ag_confirmacao", "impressao", "acabamento", "pronto"].includes(o.statusProducao)
+    ).length
+  const atrasados = pedidosRapidos.filter(estaAtrasado).length
+  const prontos =
+    pedidosRapidos.filter((p) => p.status === "pronto").length +
+    orcamentosEmProducao.filter((o) => o.statusProducao === "pronto").length
 
   const pedidoArrastando = arrastandoId && !arrastandoId.startsWith("orc-")
     ? pedidosRapidos.find((p) => p.id === arrastandoId)
@@ -421,8 +423,8 @@ export default function ProducaoPage() {
         </button>
         {colunas.map((col) => {
           const qtd =
-            pedidosFiltrados.filter((p) => p.status === col.status).length +
-            orcamentosEmProducao.filter((o) => o.statusProducao === col.status).length
+            pedidosFiltrados.filter((p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")).length +
+            orcamentosEmProducao.filter((o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")).length
           return (
             <button
               key={col.status}
@@ -446,10 +448,10 @@ export default function ProducaoPage() {
           .filter((col) => colunaAtiva === "todas" || col.status === colunaAtiva)
           .map((col) => {
             const pedidosDaColuna = pedidosFiltrados.filter(
-              (p) => p.status === col.status
+              (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
             )
             const orcsDaColuna = orcamentosEmProducao.filter(
-              (o) => o.statusProducao === col.status
+              (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
             )
             const totalColuna = pedidosDaColuna.length + orcsDaColuna.length
             if (colunaAtiva === "todas" && totalColuna === 0) return null
@@ -591,10 +593,10 @@ export default function ProducaoPage() {
           <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-4">
             {colunas.map((col) => {
               const pedidosDaColuna = pedidosFiltrados.filter(
-                (p) => p.status === col.status
+                (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
               )
               const orcsDaColuna = orcamentosEmProducao.filter(
-                (o) => o.statusProducao === col.status
+                (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
               )
               const total = pedidosDaColuna.length + orcsDaColuna.length
               return (

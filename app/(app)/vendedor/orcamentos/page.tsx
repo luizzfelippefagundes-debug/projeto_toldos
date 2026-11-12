@@ -8,8 +8,8 @@ import { formatarData, formatarMoeda } from "@/lib/format"
 import type { StatusPedidoRapido } from "@/lib/types"
 
 const statusLabel: Record<StatusPedidoRapido, string> = {
-  aguardando: "Aguardando",
-  aprovado: "Aprovado",
+  aguardando: "Ag. Assinatura",
+  aprovado: "Produção",
   arte: "Produção",
   ag_confirmacao: "Arte Enviada",
   impressao: "Impressão",

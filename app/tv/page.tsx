@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useTheme } from "next-themes"
 import { interpretarDataLocal } from "@/lib/date"
 
-type StatusPedido = "aguardando" | "aprovado" | "arte" | "ag_confirmacao" | "impressao" | "acabamento" | "pronto"
+type StatusPedido = "aguardando" | "aprovado" | "ag_confirmacao" | "impressao" | "acabamento" | "pronto"
 
 interface PedidoTV {
   id: string
@@ -44,8 +44,7 @@ const COR_CLASSE: Record<string, string> = {
 
 const COLUNAS: { status: StatusPedido; label: string; borda: string; fundo: string }[] = [
   { status: "aguardando",     label: "Ag. Assinatura", borda: "border-slate-600",  fundo: "bg-slate-200 dark:bg-slate-800/70" },
-  { status: "aprovado",       label: "Aprovado",       borda: "border-blue-600",   fundo: "bg-blue-100 dark:bg-blue-950/70" },
-  { status: "arte",           label: "Produção",       borda: "border-violet-500", fundo: "bg-violet-100 dark:bg-violet-950/70" },
+  { status: "aprovado",       label: "Produção",       borda: "border-blue-600",   fundo: "bg-blue-100 dark:bg-blue-950/70" },
   { status: "ag_confirmacao", label: "Arte Enviada",   borda: "border-pink-500",   fundo: "bg-pink-100 dark:bg-pink-950/70" },
   { status: "impressao",      label: "Impressão",      borda: "border-amber-500",  fundo: "bg-amber-100 dark:bg-amber-950/70" },
   { status: "acabamento",     label: "Acabamento",     borda: "border-orange-500", fundo: "bg-orange-100 dark:bg-orange-950/70" },
@@ -240,7 +239,7 @@ export default function TvPage() {
         style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))" }}
       >
         {COLUNAS.map(({ status, label, borda, fundo }) => {
-          const colPedidos = pedidos.filter((p) => p.status === status)
+          const colPedidos = pedidos.filter((p) => p.status === status || (status === "aprovado" && (p.status as string) === "arte"))
           return (
             <div key={status} className="flex min-h-0 flex-col gap-2">
               {/* Cabeçalho da coluna */}

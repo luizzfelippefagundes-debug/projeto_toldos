@@ -11,8 +11,8 @@ import type { StatusPedidoRapido } from "@/lib/types"
 import { FilePlus2 } from "lucide-react"
 
 const statusPedido: Record<StatusPedidoRapido, string> = {
-  aguardando: "Aguardando",
-  aprovado: "Aprovado",
+  aguardando: "Ag. Assinatura",
+  aprovado: "Produção",
   arte: "Produção",
   ag_confirmacao: "Arte Enviada",
   impressao: "Impressão",
