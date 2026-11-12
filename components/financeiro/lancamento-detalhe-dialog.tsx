@@ -27,8 +27,16 @@ import { formatarData, formatarMoeda } from "@/lib/format"
 import { estaLancamentoVencido } from "@/lib/financeiro"
 import { resumirSerie } from "@/lib/series"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { LancamentoFinanceiro } from "@/lib/types"
-import { MessageCircle, Pencil, Receipt, Trash2, CheckCircle2, Clock } from "lucide-react"
+import { MessageCircle, Pencil, Receipt, Trash2, CheckCircle2, Clock, DollarSign } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -49,16 +57,144 @@ export function LancamentoDetalheDialog({
   onOpenChange: (open: boolean) => void
   hoje: Date | null
 }) {
-  const { clientes, lancamentos, updateLancamento, marcarLancamentoStatus, removeLancamento, addMensagemBot } = useData()
+  const { clientes, lancamentos, updateLancamento, addLancamento, marcarLancamentoStatus, removeLancamento, addMensagemBot } = useData()
   const router = useRouter()
   const [confirmarRemocao, setConfirmarRemocao] = useState(false)
   const [editAberto, setEditAberto] = useState(false)
   const [quantasPagas, setQuantasPagas] = useState("")
+  const [modoBaixaFlexivel, setModoBaixaFlexivel] = useState(false)
+  const [valorRecebido, setValorRecebido] = useState("")
+  const [formaPagamentoRecebida, setFormaPagamentoRecebida] = useState<string>("pix")
 
   if (!lancamento) return null
 
   const cliente = clientes.find((c) => c.id === lancamento.clienteId)
   const vencido = hoje ? estaLancamentoVencido(lancamento, hoje) : false
+
+  const outrosDoOrcamento =
+    lancamento.origem === "orcamento" && lancamento.origemId
+      ? lancamentos.filter(
+          (l) => l.origem === "orcamento" && l.origemId === lancamento.origemId && l.id !== lancamento.id
+        )
+      : []
+  const outroPendente = outrosDoOrcamento.find((l) => l.status !== "pago")
+
+  function confirmarBaixaFlexivel() {
+    if (!lancamento) return
+    const v = Number(valorRecebido)
+    if (!Number.isFinite(v) || v <= 0) {
+      toast.error("Informe um valor válido maior que zero.")
+      return
+    }
+
+    const agora = new Date().toISOString()
+    const diff = Math.round((v - lancamento.valor) * 100) / 100
+
+    if (outroPendente) {
+      if (diff > 0) {
+        // Pagou mais do que o previsto da entrada
+        if (v >= Math.round((lancamento.valor + outroPendente.valor) * 100) / 100) {
+          // Valor quita integralmente o orçamento!
+          updateLancamento(lancamento.id, {
+            ...lancamento,
+            status: "pago",
+            pagoEm: agora,
+            formaPagamento: formaPagamentoRecebida as any,
+          })
+          updateLancamento(outroPendente.id, {
+            ...outroPendente,
+            status: "pago",
+            pagoEm: agora,
+            formaPagamento: formaPagamentoRecebida as any,
+          })
+          toast.success(`Orçamento quitado integralmente no valor de ${formatarMoeda(v)}!`)
+        } else {
+          // Abate o excesso do restante
+          const novoRestante = Math.round((outroPendente.valor - diff) * 100) / 100
+          updateLancamento(lancamento.id, {
+            ...lancamento,
+            valor: v,
+            status: "pago",
+            pagoEm: agora,
+            formaPagamento: formaPagamentoRecebida as any,
+          })
+          updateLancamento(outroPendente.id, {
+            ...outroPendente,
+            valor: novoRestante,
+          })
+          toast.success(
+            `Recebimento de ${formatarMoeda(v)} registrado! Saldo restante reduzido para ${formatarMoeda(novoRestante)}.`
+          )
+        }
+      } else if (diff < 0) {
+        // Pagou menos do que o previsto da entrada
+        const falta = Math.abs(diff)
+        const novoRestante = Math.round((outroPendente.valor + falta) * 100) / 100
+        updateLancamento(lancamento.id, {
+          ...lancamento,
+          valor: v,
+          status: "pago",
+          pagoEm: agora,
+          formaPagamento: formaPagamentoRecebida as any,
+        })
+        updateLancamento(outroPendente.id, {
+          ...outroPendente,
+          valor: novoRestante,
+        })
+        toast.success(
+          `Recebimento parcial de ${formatarMoeda(v)} registrado! Saldo restante ajustado para ${formatarMoeda(novoRestante)}.`
+        )
+      } else {
+        // Pagou o valor exato
+        updateLancamento(lancamento.id, {
+          ...lancamento,
+          status: "pago",
+          pagoEm: agora,
+          formaPagamento: formaPagamentoRecebida as any,
+        })
+        toast.success(`Pagamento de ${formatarMoeda(v)} registrado.`)
+      }
+    } else {
+      // Parcela única (sem outra parcela vinculada)
+      if (diff < 0) {
+        const restante = Math.round((lancamento.valor - v) * 100) / 100
+        updateLancamento(lancamento.id, {
+          ...lancamento,
+          valor: v,
+          status: "pago",
+          pagoEm: agora,
+          formaPagamento: formaPagamentoRecebida as any,
+        })
+        addLancamento({
+          descricao: `${lancamento.descricao} · Saldo restante`,
+          tipo: "receita",
+          categoria: lancamento.categoria,
+          valor: restante,
+          vencimento: lancamento.vencimento,
+          status: "pendente",
+          clienteId: lancamento.clienteId,
+          origem: lancamento.origem,
+          origemId: lancamento.origemId,
+          formaPagamento: lancamento.formaPagamento,
+        })
+        toast.success(
+          `Recebimento parcial de ${formatarMoeda(v)} registrado! Nova parcela de ${formatarMoeda(restante)} criada para o saldo restante.`
+        )
+      } else {
+        updateLancamento(lancamento.id, {
+          ...lancamento,
+          valor: v,
+          status: "pago",
+          pagoEm: agora,
+          formaPagamento: formaPagamentoRecebida as any,
+        })
+        toast.success(`Recebimento de ${formatarMoeda(v)} registrado com sucesso!`)
+      }
+    }
+
+    setModoBaixaFlexivel(false)
+    onOpenChange(false)
+  }
 
   function alternarStatus() {
     if (!lancamento) return
@@ -279,6 +415,111 @@ export function LancamentoDetalheDialog({
               </div>
             )}
 
+            {/* Bloco de Baixa com Valor Diferente */}
+            {modoBaixaFlexivel && (
+              <div className="flex flex-col gap-3 rounded-lg border border-emerald-500/30 bg-emerald-50/50 p-3.5 text-sm dark:bg-emerald-950/20">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-emerald-800 dark:text-emerald-400">
+                    Dar baixa com valor diferente
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-muted-foreground"
+                    onClick={() => setModoBaixaFlexivel(false)}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="valorRecebido" className="text-xs">
+                      Valor recebido (R$)
+                    </Label>
+                    <Input
+                      id="valorRecebido"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={valorRecebido}
+                      onChange={(e) => setValorRecebido(e.target.value)}
+                      placeholder={String(lancamento.valor)}
+                      className="bg-background"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="formaRecebida" className="text-xs">
+                      Forma de pagamento
+                    </Label>
+                    <Select
+                      value={formaPagamentoRecebida}
+                      onValueChange={(val) => setFormaPagamentoRecebida(val || "pix")}
+                    >
+                      <SelectTrigger id="formaRecebida" className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pix">Pix</SelectItem>
+                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                        <SelectItem value="cartao">Cartão</SelectItem>
+                        <SelectItem value="boleto">Boleto</SelectItem>
+                        <SelectItem value="transferencia">Transferência</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {(() => {
+                  const v = Number(valorRecebido) || 0
+                  const diff = Math.round((v - lancamento.valor) * 100) / 100
+                  if (v <= 0) return null
+                  if (outroPendente) {
+                    if (diff > 0) {
+                      if (v >= Math.round((lancamento.valor + outroPendente.valor) * 100) / 100) {
+                        return (
+                          <div className="rounded bg-emerald-100 p-2 text-xs text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100">
+                            🎉 <strong>Quitação total:</strong> Esse valor cobre tanto esta entrada quanto o saldo restante de {formatarMoeda(outroPendente.valor)}. Ambas as parcelas serão quitadas!
+                          </div>
+                        )
+                      }
+                      const novoRestante = Math.round((outroPendente.valor - diff) * 100) / 100
+                      return (
+                        <div className="rounded bg-emerald-100/70 p-2 text-xs text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100">
+                          ✨ <strong>Abatimento automático:</strong> O cliente pagou +{formatarMoeda(diff)} a mais que o previsto. O saldo restante passará de {formatarMoeda(outroPendente.valor)} para <strong>{formatarMoeda(novoRestante)}</strong>.
+                        </div>
+                      )
+                    }
+                    if (diff < 0) {
+                      const novoRestante = Math.round((outroPendente.valor + Math.abs(diff)) * 100) / 100
+                      return (
+                        <div className="rounded bg-amber-100/70 p-2 text-xs text-amber-900 dark:bg-amber-900/50 dark:text-amber-100">
+                          ⚠️ <strong>Pagamento parcial:</strong> Faltam {formatarMoeda(Math.abs(diff))} desta entrada. Esse valor será somado ao restante, que passará para <strong>{formatarMoeda(novoRestante)}</strong>.
+                        </div>
+                      )
+                    }
+                    return null
+                  }
+                  if (diff < 0) {
+                    return (
+                      <div className="rounded bg-amber-100/70 p-2 text-xs text-amber-900 dark:bg-amber-900/50 dark:text-amber-100">
+                        ⚠️ <strong>Pagamento parcial:</strong> Será criada uma nova parcela pendente de <strong>{formatarMoeda(lancamento.valor - v)}</strong> para o saldo restante.
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
+
+                <Button
+                  onClick={confirmarBaixaFlexivel}
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  Confirmar recebimento de {formatarMoeda(Number(valorRecebido) || 0)}
+                </Button>
+              </div>
+            )}
+
             {/* Ações */}
             <div className="flex flex-wrap gap-2 border-t border-border pt-3">
               <Button variant="outline" size="sm" onClick={alternarStatus}>
@@ -294,6 +535,22 @@ export function LancamentoDetalheDialog({
                   </>
                 )}
               </Button>
+
+              {lancamento.status === "pendente" && lancamento.tipo === "receita" && !modoBaixaFlexivel && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-emerald-600/40 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+                  onClick={() => {
+                    setValorRecebido(String(lancamento.valor))
+                    setFormaPagamentoRecebida(lancamento.formaPagamento ?? "pix")
+                    setModoBaixaFlexivel(true)
+                  }}
+                >
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  Receber outro valor
+                </Button>
+              )}
 
               {lancamento.status === "pago" && lancamento.tipo === "receita" && (
                 <Button
