@@ -71,6 +71,127 @@ function formatarPrazo(prazo: string | null) {
   return data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
 }
 
+function PedidoCard({
+  pedido,
+  tamanhoGrande = true,
+  mostrarColunaBadge = false,
+}: {
+  pedido: PedidoTV
+  tamanhoGrande?: boolean
+  mostrarColunaBadge?: boolean
+}) {
+  const atrasado = estaAtrasado(pedido)
+  const colunaInfo = COLUNAS.find(
+    (c) => c.status === pedido.status || (c.status === "aprovado" && (pedido.status as string) === "arte")
+  )
+
+  return (
+    <div
+      key={pedido.id}
+      className={`shrink-0 rounded-2xl border-2 transition-all p-3 sm:p-3.5 lg:p-4 shadow-sm w-full ${
+        atrasado
+          ? "border-red-500 bg-red-50/95 shadow-md dark:border-red-600 dark:bg-red-950/80"
+          : "border-slate-200/90 bg-white shadow-2xs dark:border-slate-700/80 dark:bg-slate-900/95"
+      }`}
+    >
+      {/* Linha superior: Tag OS / Pedido + Tipo + Prazo/Atrasado + Badge da Etapa */}
+      <div className="flex items-center justify-between gap-1.5 leading-none flex-wrap">
+        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+          <span className="font-black text-xs sm:text-sm lg:text-base text-foreground tracking-tight shrink-0">
+            {pedido.tipo === "orcamento" ? `OS #${pedido.numero}` : `#${pedido.numero}`}
+          </span>
+          {pedido.tipo === "orcamento" ? (
+            <span className="rounded-md bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-blue-700 dark:text-blue-300 uppercase shrink-0">
+              Com. Visual
+            </span>
+          ) : (
+            <span className="rounded-md bg-violet-500/15 border border-violet-500/30 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-violet-700 dark:text-violet-300 uppercase shrink-0">
+              Rápida
+            </span>
+          )}
+
+          {mostrarColunaBadge && colunaInfo && (
+            <span
+              className={`rounded-md border px-1.5 py-0.5 text-[10px] sm:text-xs font-black shrink-0 ${colunaInfo.borda} ${colunaInfo.fundo} text-foreground`}
+            >
+              {colunaInfo.label}
+            </span>
+          )}
+        </div>
+
+        {atrasado ? (
+          <span className="shrink-0 rounded-lg bg-red-600 px-2 py-0.5 text-[10px] sm:text-xs font-black text-white uppercase tracking-wider animate-pulse shadow-xs">
+            Atrasado
+          </span>
+        ) : pedido.prazo_entrega_em ? (
+          <span className="shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-2 py-0.5 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">
+            até {formatarPrazo(pedido.prazo_entrega_em)}
+          </span>
+        ) : null}
+      </div>
+
+      {/* Nome do Cliente em Destaque Grande para ver de longe */}
+      <p
+        className={`mt-1.5 font-black text-foreground tracking-tight leading-tight break-words whitespace-normal ${
+          tamanhoGrande
+            ? "text-base sm:text-lg lg:text-xl xl:text-2xl"
+            : "text-sm sm:text-base lg:text-lg"
+        }`}
+        title={pedido.cliente_nome}
+      >
+        {pedido.cliente_nome}
+      </p>
+
+      {/* Bloco: O QUE É PRA FAZER (Destaque total para a fábrica - NUNCA CORTA) */}
+      <div className="mt-2 flex flex-col gap-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-2.5 sm:p-3.5 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs">
+        {/* Medidas / Quantidade em destaque com badge próprio para bater o olho */}
+        {pedido.variante_nome && (
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 border border-primary/30 px-2.5 py-1 text-xs sm:text-sm font-black text-primary">
+              <span>📏</span>
+              <span>DIMENSÕES: {pedido.variante_nome}</span>
+            </span>
+          </div>
+        )}
+
+        {/* Produto / Serviço com quebra de linha natural (NUNCA CORTA) */}
+        <div>
+          <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
+            Serviço / Produto:
+          </span>
+          <p className="font-black text-foreground text-sm sm:text-base lg:text-lg leading-snug break-words whitespace-normal mt-0.5">
+            {pedido.produto_nome ?? "Item de Produção"}
+          </p>
+        </div>
+
+        {/* Acabamento completo com quebra de linha */}
+        {pedido.acabamento && (
+          <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
+            <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
+              Acabamento:
+            </span>
+            <p className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 break-words whitespace-normal mt-0.5">
+              {pedido.acabamento}
+            </p>
+          </div>
+        )}
+
+        {/* Observação da OS / Pedido completa */}
+        {pedido.observacao && (
+          <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
+            <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
+              Obs:
+            </span>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 italic break-words whitespace-normal mt-0.5">
+              {pedido.observacao}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function TvColuna({
   status,
   label,
@@ -178,7 +299,7 @@ function TvColuna({
   return (
     <div
       id={`tv-coluna-${status}`}
-      className="flex h-full min-h-0 flex-col gap-2 w-[85vw] max-w-[340px] shrink-0 snap-center md:w-auto md:max-w-none md:flex-1 md:min-w-0 md:shrink"
+      className="flex h-full min-h-0 flex-1 flex-col gap-2 min-w-0"
     >
       {/* Cabeçalho da coluna */}
       <div
@@ -204,106 +325,14 @@ function TvColuna({
           ref={containerRef}
           className="flex h-full min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pr-0.5"
         >
-          {pedidos.map((pedido) => {
-            const atrasado = estaAtrasado(pedido)
-            return (
-              <div
-                key={pedido.id}
-                className={`shrink-0 rounded-2xl border-2 transition-all p-3 sm:p-3.5 lg:p-4 shadow-sm ${
-                  atrasado
-                    ? "border-red-500 bg-red-50/95 shadow-md dark:border-red-600 dark:bg-red-950/80"
-                    : "border-slate-200/90 bg-white shadow-2xs dark:border-slate-700/80 dark:bg-slate-900/95"
-                }`}
-              >
-                {/* Linha superior: Tag OS / Pedido + Tipo + Prazo/Atrasado */}
-                <div className="flex items-center justify-between gap-1.5 leading-none">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="font-black text-xs sm:text-sm lg:text-base text-foreground tracking-tight shrink-0">
-                      {pedido.tipo === "orcamento" ? `OS #${pedido.numero}` : `#${pedido.numero}`}
-                    </span>
-                    {pedido.tipo === "orcamento" ? (
-                      <span className="rounded-md bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-blue-700 dark:text-blue-300 uppercase shrink-0">
-                        Com. Visual
-                      </span>
-                    ) : (
-                      <span className="rounded-md bg-violet-500/15 border border-violet-500/30 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-violet-700 dark:text-violet-300 uppercase shrink-0">
-                        Rápida
-                      </span>
-                    )}
-                  </div>
-
-                  {atrasado ? (
-                    <span className="shrink-0 rounded-lg bg-red-600 px-2 py-0.5 text-[10px] sm:text-xs font-black text-white uppercase tracking-wider animate-pulse shadow-xs">
-                      Atrasado
-                    </span>
-                  ) : pedido.prazo_entrega_em ? (
-                    <span className="shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-2 py-0.5 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">
-                      até {formatarPrazo(pedido.prazo_entrega_em)}
-                    </span>
-                  ) : null}
-                </div>
-
-                {/* Nome do Cliente em Destaque Grande para ver de longe */}
-                <p
-                  className={`mt-1.5 font-black text-foreground tracking-tight leading-tight break-words whitespace-normal ${
-                    tamanhoGrande
-                      ? "text-base sm:text-lg lg:text-xl xl:text-2xl"
-                      : "text-sm sm:text-base lg:text-lg"
-                  }`}
-                  title={pedido.cliente_nome}
-                >
-                  {pedido.cliente_nome}
-                </p>
-
-                {/* Bloco: O QUE É PRA FAZER (Destaque total para a fábrica - NUNCA CORTA) */}
-                <div className="mt-2 flex flex-col gap-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-2.5 sm:p-3.5 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs">
-                  {/* Medidas / Quantidade em destaque com badge próprio para bater o olho */}
-                  {pedido.variante_nome && (
-                    <div>
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 border border-primary/30 px-2.5 py-1 text-xs sm:text-sm font-black text-primary">
-                        <span>📏</span>
-                        <span>DIMENSÕES: {pedido.variante_nome}</span>
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Produto / Serviço com quebra de linha natural (NUNCA CORTA) */}
-                  <div>
-                    <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
-                      Serviço / Produto:
-                    </span>
-                    <p className="font-black text-foreground text-sm sm:text-base lg:text-lg leading-snug break-words whitespace-normal mt-0.5">
-                      {pedido.produto_nome ?? "Item de Produção"}
-                    </p>
-                  </div>
-
-                  {/* Acabamento completo com quebra de linha */}
-                  {pedido.acabamento && (
-                    <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
-                      <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
-                        Acabamento:
-                      </span>
-                      <p className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 break-words whitespace-normal mt-0.5">
-                        {pedido.acabamento}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Observação da OS / Pedido completa */}
-                  {pedido.observacao && (
-                    <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
-                      <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
-                        Obs:
-                      </span>
-                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 italic break-words whitespace-normal mt-0.5">
-                        {pedido.observacao}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          {pedidos.map((pedido) => (
+            <PedidoCard
+              key={pedido.id}
+              pedido={pedido}
+              tamanhoGrande={tamanhoGrande}
+              mostrarColunaBadge={false}
+            />
+          ))}
 
           {pedidos.length === 0 && (
             <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 py-8 text-sm text-muted-foreground/40 italic font-semibold">
@@ -387,6 +416,7 @@ function tocarAlarme() {
 export default function TvPage() {
   const [pedidos, setPedidos] = useState<PedidoTV[]>([])
   const [avisos, setAvisos] = useState<AvisoTV[]>([])
+  const [filtroStatusMobile, setFiltroStatusMobile] = useState<string>("todos")
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date | null>(null)
   const [config, setConfig] = useState<{
     statusVisiveis?: string[]
@@ -486,6 +516,13 @@ export default function TvPage() {
 
     return autorizadas
   }, [config?.statusVisiveis, config?.ocultarVazias, pedidos])
+
+  const pedidosMobile = useMemo(() => {
+    if (filtroStatusMobile === "todos") return pedidos
+    return pedidos.filter(
+      (p) => p.status === filtroStatusMobile || (filtroStatusMobile === "aprovado" && (p.status as string) === "arte")
+    )
+  }, [pedidos, filtroStatusMobile])
 
   return (
     <div className="group/tv flex h-screen max-h-screen w-screen overflow-hidden flex-col gap-2.5 sm:gap-3 p-2.5 sm:p-4 bg-background">
@@ -602,43 +639,81 @@ export default function TvPage() {
         <Relogio />
       </header>
 
-      {/* Barra de Navegação Rápida entre Etapas (apenas Mobile para deslizar com 1 toque) */}
-      <div className="flex md:hidden gap-1.5 overflow-x-auto pb-0.5 shrink-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        {colunasFiltradas.map((coluna) => {
-          const colPedidos = pedidos.filter(
-            (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
-          )
-          return (
-            <button
-              key={`nav-${coluna.status}`}
-              type="button"
-              onClick={() => {
-                const el = document.getElementById(`tv-coluna-${coluna.status}`)
-                el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" })
-              }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold shrink-0 border transition-all active:scale-95 ${
-                colPedidos.length > 0
-                  ? "border-primary/50 bg-primary/10 text-primary font-black shadow-2xs"
-                  : "border-border/60 bg-muted/40 text-muted-foreground opacity-60"
+      {/* Visualização MOBILE: SEM formato Kanban! Feed vertical com rolagem fluida e cartões 100% legíveis */}
+      <div className="flex-1 min-h-0 flex flex-col md:hidden overflow-hidden">
+        {/* Pílulas de Filtro por Etapa no Celular */}
+        <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={() => setFiltroStatusMobile("todos")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shrink-0 border transition-all ${
+              filtroStatusMobile === "todos"
+                ? "bg-primary text-primary-foreground border-primary shadow-xs font-black"
+                : "bg-card text-foreground border-border/80 hover:bg-muted"
+            }`}
+          >
+            <span>Todos</span>
+            <span
+              className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                filtroStatusMobile === "todos" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
               }`}
             >
-              <span>{coluna.label}</span>
-              <span
-                className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
-                  colPedidos.length > 0
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
+              {pedidos.length}
+            </span>
+          </button>
+
+          {colunasFiltradas.map((coluna) => {
+            const count = pedidos.filter(
+              (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
+            ).length
+            const ativo = filtroStatusMobile === coluna.status
+            return (
+              <button
+                key={`mobile-tab-${coluna.status}`}
+                type="button"
+                onClick={() => setFiltroStatusMobile(coluna.status)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shrink-0 border transition-all ${
+                  ativo
+                    ? "bg-primary text-primary-foreground border-primary shadow-xs font-black"
+                    : count > 0
+                    ? "bg-card text-foreground border-border/80 hover:bg-muted"
+                    : "bg-muted/30 text-muted-foreground border-transparent opacity-50"
                 }`}
               >
-                {colPedidos.length}
-              </span>
-            </button>
-          )
-        })}
+                <span>{coluna.label}</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                    ativo ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Lista Vertical de Pedidos no Celular */}
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-0.5 pb-2">
+          {pedidosMobile.length > 0 ? (
+            pedidosMobile.map((pedido) => (
+              <PedidoCard
+                key={`mobile-card-${pedido.id}`}
+                pedido={pedido}
+                tamanhoGrande={config?.tamanhoFonte !== "normal"}
+                mostrarColunaBadge={filtroStatusMobile === "todos"}
+              />
+            ))
+          ) : (
+            <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 py-12 text-sm text-muted-foreground font-semibold">
+              Nenhum pedido nesta etapa
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Kanban de Colunas: Em TV/desktop distribui em 1 linha 100% visível; no celular carrossel horizontal suave com snap */}
-      <div className="flex-1 min-h-0 flex flex-row gap-2.5 sm:gap-3 w-full overflow-x-auto md:overflow-hidden snap-x snap-mandatory md:snap-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden px-0.5 md:px-0">
+      {/* Visualização DESKTOP / TV: Kanban lado a lado com auto-scroll infinito */}
+      <div className="flex-1 min-h-0 hidden md:flex flex-row gap-2 sm:gap-3 w-full overflow-hidden">
         {colunasFiltradas.map((coluna) => {
           const colPedidos = pedidos.filter(
             (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
