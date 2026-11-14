@@ -2,17 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useData } from "@/context/data-context"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -33,7 +25,24 @@ import {
 } from "@/lib/financeiro"
 import type { LancamentoFinanceiro, TipoLancamento } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { ChevronRight, FileCheck, Plus, Search } from "lucide-react"
+import {
+  ChevronRight,
+  FileCheck,
+  Plus,
+  Search,
+  Wallet,
+  ArrowDownLeft,
+  ArrowUpRight,
+  AlertTriangle,
+  CheckCircle2,
+  Calendar,
+  User,
+  Tag,
+  CreditCard,
+  ChevronDown,
+  ChevronUp,
+  X,
+} from "lucide-react"
 
 const rotuloFormaPagamento: Record<string, string> = {
   boleto: "Boleto",
@@ -50,10 +59,9 @@ export default function FinanceiroPage() {
   const [busca, setBusca] = useState("")
   const [soComOs, setSoComOs] = useState(true)
   const [selecionado, setSelecionado] = useState<LancamentoFinanceiro | null>(null)
-  // Despesas pessoais ficam fora dos totais, a não ser que a pessoa queira ver tudo junto.
   const [incluirPessoais, setIncluirPessoais] = useState(false)
-  // Séries (financiamento etc.) com as parcelas pagas abertas na lista.
   const [seriesAbertas, setSeriesAbertas] = useState<Set<string>>(new Set())
+  const [expandirMetricas, setExpandirMetricas] = useState(false)
 
   function abrirSerie(chave: string) {
     setSeriesAbertas((atual) => new Set(atual).add(chave))
@@ -121,247 +129,267 @@ export default function FinanceiroPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-col gap-5 sm:gap-6">
+      {/* Cabeçalho */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
         <div>
-          <h1 className="text-2xl font-semibold">Financeiro</h1>
-          <p className="text-sm text-muted-foreground">
-            Contas a pagar e a receber — orçamentos fechados e pedidos
-            aprovados entram aqui automaticamente.
+          <div className="flex items-center gap-2">
+            <Wallet className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-black tracking-tight">Financeiro</h1>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Contas a pagar e a receber — orçamentos fechados e pedidos entram aqui automaticamente.
           </p>
         </div>
-        <LancamentoFormDialog />
+        <div className="shrink-0 flex items-center gap-2">
+          <LancamentoFormDialog
+            trigger={
+              <Button className="w-full sm:w-auto font-bold gap-2">
+                <Plus className="h-4 w-4" />
+                Novo Lançamento
+              </Button>
+            }
+          />
+        </div>
       </div>
 
-      {/* Cards de resumo */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              A receber
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold text-primary">
-            {formatarMoeda(resumo.aReceber)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              A pagar este mês
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-destructive">
-              {hoje ? formatarMoeda(resumo.aPagarMes) : "—"}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Total comprometido (com parcelas futuras): {formatarMoeda(resumo.aPagar)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Recebido no total
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold text-primary">
-            {formatarMoeda(resumo.recebido)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pago no total
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold text-destructive">
-            {formatarMoeda(resumo.pago)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Saldo recebido − pago
-            </CardTitle>
-          </CardHeader>
-          <CardContent
-            className={cn(
-              "text-3xl font-bold",
-              saldo < 0 && "text-destructive"
-            )}
-          >
-            {formatarMoeda(saldo)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Vencido a receber
-            </CardTitle>
-          </CardHeader>
-          <CardContent
-            className={cn(
-              "text-3xl font-bold",
-              resumo.vencidoAReceber > 0 && "text-destructive"
-            )}
-          >
-            {hoje ? formatarMoeda(resumo.vencidoAReceber) : "—"}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Vencido a pagar
-            </CardTitle>
-          </CardHeader>
-          <CardContent
-            className={cn(
-              "text-3xl font-bold",
-              resumo.vencidoAPagar > 0 && "text-destructive"
-            )}
-          >
-            {hoje ? formatarMoeda(resumo.vencidoAPagar) : "—"}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Recebimentos nos próximos 7 dias
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold">
-            {hoje ? resumo.recebiveisVencendo7Dias : "—"}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Boletos nos próximos 7 dias
-            </CardTitle>
-          </CardHeader>
-          <CardContent
-            className={cn(
-              "text-3xl font-bold",
-              resumo.boletosVencendo7Dias > 0 && "text-destructive"
-            )}
-          >
-            {hoje ? resumo.boletosVencendo7Dias : "—"}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Despesas fixas pendentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent
-            className={cn(
-              "text-3xl font-bold",
-              resumo.despesasFixas > 0 && "text-destructive"
-            )}
-          >
-            {hoje ? formatarMoeda(resumo.despesasFixas) : "—"}
-          </CardContent>
-        </Card>
-      </div>
-      {(resumo.pessoalForaDosTotais > 0 || incluirPessoais) && (
-        <label className="flex w-fit cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm">
-          <Switch checked={incluirPessoais} onCheckedChange={setIncluirPessoais} />
-          <span>
-            Incluir despesas pessoais nos totais
-            {!incluirPessoais && (
-              <span className="ml-1 text-muted-foreground">
-                ({formatarMoeda(resumo.pessoalForaDosTotais)} a pagar ficam de fora)
+      {/* DASHBOARD DE MÉTRICAS (Ultra responsivo e intuitivo no celular) */}
+      <div className="flex flex-col gap-2.5">
+        {/* Card Principal: Saldo Atual e Totais */}
+        <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Saldo Atual (Recebido − Pago)
               </span>
-            )}
-          </span>
-        </label>
-      )}
-      <p className="text-xs text-muted-foreground">
-        Valores recebidos e pagos consideram a data da baixa. Registros antigos
-        sem data de baixa usam a data de criação do lançamento.
-      </p>
-
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Categorias / Abas */}
-          <div className="inline-flex items-center rounded-xl bg-muted/60 p-1 border border-border/60 gap-1">
-            {(
-              [
-                { valor: "todos", label: "Todos" },
-                { valor: "receita", label: "Receitas" },
-                { valor: "despesa", label: "Despesas" },
-                { valor: "fixas", label: "Fixas" },
-                { valor: "boleto", label: "Boletos" },
-              ] as const
-            ).map((opcao) => (
-              <button
-                key={opcao.valor}
-                onClick={() => setFiltroTipo(opcao.valor)}
+              <div
                 className={cn(
-                  "rounded-lg px-3.5 py-1.5 text-xs sm:text-sm font-medium transition-all",
-                  filtroTipo === opcao.valor
-                    ? "bg-background text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                  "mt-1 text-2xl sm:text-3xl font-black tracking-tight",
+                  saldo < 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
                 )}
               >
-                {opcao.label}
-              </button>
-            ))}
+                {formatarMoeda(saldo)}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 sm:gap-5 border-t sm:border-t-0 sm:border-l border-border/60 pt-2.5 sm:pt-0 sm:pl-5">
+              <div>
+                <span className="text-[11px] font-semibold text-muted-foreground block">
+                  Total Recebido
+                </span>
+                <span className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatarMoeda(resumo.recebido)}
+                </span>
+              </div>
+              <div className="h-8 w-px bg-border/60" />
+              <div>
+                <span className="text-[11px] font-semibold text-muted-foreground block">
+                  Total Pago
+                </span>
+                <span className="text-sm sm:text-base font-bold text-destructive">
+                  {formatarMoeda(resumo.pago)}
+                </span>
+              </div>
+            </div>
           </div>
+        </div>
 
-          {/* Separador visual */}
-          <div className="hidden h-6 w-px bg-border sm:block" />
-
-          {/* Filtro modificador: Só com OS */}
+        {/* Grid 2x2 com cards principais de ação */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+          {/* A Receber */}
           <button
             type="button"
-            onClick={() => setSoComOs((v) => !v)}
+            onClick={() => setFiltroTipo("receita")}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs sm:text-sm font-medium transition-all",
-              soComOs
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold shadow-xs"
-                : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/20"
+              "flex flex-col rounded-2xl border p-3 sm:p-4 text-left transition-all",
+              filtroTipo === "receita"
+                ? "border-primary bg-primary/5 shadow-xs"
+                : "border-border/80 bg-card hover:bg-muted/40 shadow-2xs"
             )}
-            title="Exibir apenas orçamentos que já possuem Ordem de Serviço emitida"
           >
-            <FileCheck className={cn("h-4 w-4", soComOs ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")} />
-            <span>Apenas com OS</span>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">
+                A Receber
+              </span>
+              <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <span className="mt-1 text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
+              {formatarMoeda(resumo.aReceber)}
+            </span>
+            {resumo.vencidoAReceber > 0 && (
+              <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-destructive">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                {formatarMoeda(resumo.vencidoAReceber)} vencido
+              </span>
+            )}
+          </button>
+
+          {/* A Pagar este mês */}
+          <button
+            type="button"
+            onClick={() => setFiltroTipo("despesa")}
+            className={cn(
+              "flex flex-col rounded-2xl border p-3 sm:p-4 text-left transition-all",
+              filtroTipo === "despesa"
+                ? "border-primary bg-primary/5 shadow-xs"
+                : "border-border/80 bg-card hover:bg-muted/40 shadow-2xs"
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">
+                A Pagar (Mês)
+              </span>
+              <ArrowUpRight className="h-3.5 w-3.5 text-destructive" />
+            </div>
+            <span className="mt-1 text-lg sm:text-xl font-black text-destructive">
+              {hoje ? formatarMoeda(resumo.aPagarMes) : "—"}
+            </span>
+            {resumo.vencidoAPagar > 0 ? (
+              <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-destructive">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                {formatarMoeda(resumo.vencidoAPagar)} atrasado
+              </span>
+            ) : (
+              <span className="mt-1 text-[10px] text-muted-foreground truncate">
+                Total futuro: {formatarMoeda(resumo.aPagar)}
+              </span>
+            )}
+          </button>
+
+          {/* Boletos próximos 7 dias */}
+          <button
+            type="button"
+            onClick={() => setFiltroTipo("boleto")}
+            className={cn(
+              "flex flex-col rounded-2xl border p-3 sm:p-4 text-left transition-all",
+              filtroTipo === "boleto"
+                ? "border-primary bg-primary/5 shadow-xs"
+                : "border-border/80 bg-card hover:bg-muted/40 shadow-2xs"
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">
+                Boletos (7 dias)
+              </span>
+              <CreditCard className="h-3.5 w-3.5 text-primary" />
+            </div>
             <span
               className={cn(
-                "ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                soComOs
-                  ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                  : "bg-muted text-muted-foreground"
+                "mt-1 text-lg sm:text-xl font-black",
+                resumo.boletosVencendo7Dias > 0 ? "text-destructive" : "text-foreground"
               )}
             >
-              {soComOs ? "Ativo" : "Inativo"}
+              {hoje ? resumo.boletosVencendo7Dias : "—"}
+            </span>
+            <span className="mt-1 text-[10px] text-muted-foreground/80">
+              vencem em até uma semana
+            </span>
+          </button>
+
+          {/* Despesas Fixas */}
+          <button
+            type="button"
+            onClick={() => setFiltroTipo("fixas")}
+            className={cn(
+              "flex flex-col rounded-2xl border p-3 sm:p-4 text-left transition-all",
+              filtroTipo === "fixas"
+                ? "border-primary bg-primary/5 shadow-xs"
+                : "border-border/80 bg-card hover:bg-muted/40 shadow-2xs"
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">
+                Fixas Pendentes
+              </span>
+              <Calendar className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <span className="mt-1 text-lg sm:text-xl font-black text-foreground">
+              {hoje ? formatarMoeda(resumo.despesasFixas) : "—"}
+            </span>
+            <span className="mt-1 text-[10px] text-muted-foreground/80">
+              água, luz, internet, etc.
             </span>
           </button>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+        {/* Toggle para métricas detalhadas no mobile */}
+        <div className="flex items-center justify-between pt-1">
+          <button
+            type="button"
+            onClick={() => setExpandirMetricas(!expandirMetricas)}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          >
+            {expandirMetricas ? (
+              <>
+                <ChevronUp className="h-3.5 w-3.5" />
+                Ocultar detalhes extras
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-3.5 w-3.5" />
+                Ver detalhes de vencimentos e prazos
+              </>
+            )}
+          </button>
+
+          {(resumo.pessoalForaDosTotais > 0 || incluirPessoais) && (
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+              <Switch checked={incluirPessoais} onCheckedChange={setIncluirPessoais} />
+              <span className="hidden sm:inline">Incluir despesas pessoais</span>
+              <span className="sm:hidden">Pessoais</span>
+            </label>
+          )}
+        </div>
+
+        {/* Painel de Métricas Detalhadas Expandido */}
+        {expandirMetricas && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 rounded-2xl border border-border/70 bg-muted/20 p-3 text-xs animate-in fade-in duration-200">
+            <div>
+              <span className="text-muted-foreground font-medium block">Vencido a receber:</span>
+              <span className={cn("font-bold text-sm", resumo.vencidoAReceber > 0 ? "text-destructive" : "text-foreground")}>
+                {hoje ? formatarMoeda(resumo.vencidoAReceber) : "—"}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground font-medium block">Vencido a pagar:</span>
+              <span className={cn("font-bold text-sm", resumo.vencidoAPagar > 0 ? "text-destructive" : "text-foreground")}>
+                {hoje ? formatarMoeda(resumo.vencidoAPagar) : "—"}
+              </span>
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <span className="text-muted-foreground font-medium block">Recebimentos próx. 7 dias:</span>
+              <span className="font-bold text-sm text-foreground">
+                {hoje ? resumo.recebiveisVencendo7Dias : "—"} lançamento(s)
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* BARRA DE FILTROS E BUSCA */}
+      <div className="flex flex-col gap-3">
+        {/* Linha de busca e cliente */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Buscar cliente, empresa..."
+              placeholder="Buscar cliente, empresa ou descrição..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="pl-9 pr-7 h-9 text-sm"
+              className="pl-9 pr-9 h-11 rounded-xl bg-card border-border/80 text-sm focus-visible:ring-primary/30"
             />
             {busca && (
               <button
                 type="button"
                 onClick={() => setBusca("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
-                title="Limpar busca"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full"
+                aria-label="Limpar busca"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
+
           <Combobox
             options={[
               { value: "todos", label: "Todos os clientes" },
@@ -372,118 +400,241 @@ export default function FinanceiroPage() {
             placeholder="Todos os clientes"
             searchPlaceholder="Buscar cliente na lista..."
             emptyText="Nenhum cliente encontrado."
-            className="w-56 sm:w-64 h-9 bg-background"
-            contentClassName="min-w-[320px] max-w-[440px]"
+            className="w-full h-11 bg-card border-border/80 rounded-xl text-sm"
+            contentClassName="min-w-[300px] max-w-[420px]"
           />
+        </div>
+
+        {/* Chips de filtro por tipo + modificador "Apenas com OS" */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+          {(
+            [
+              { valor: "todos", label: `Todos (${lancamentos.length})` },
+              { valor: "receita", label: "Receitas" },
+              { valor: "despesa", label: "Despesas" },
+              { valor: "fixas", label: "Fixas" },
+              { valor: "boleto", label: "Boletos" },
+            ] as const
+          ).map((opcao) => (
+            <button
+              key={opcao.valor}
+              type="button"
+              onClick={() => setFiltroTipo(opcao.valor)}
+              className={cn(
+                "px-3 py-1.5 rounded-full font-medium transition-colors shrink-0",
+                filtroTipo === opcao.valor
+                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
+                  : "bg-muted/70 hover:bg-muted text-muted-foreground"
+              )}
+            >
+              {opcao.label}
+            </button>
+          ))}
+
+          {/* Filtro modificador: Só com OS */}
+          <button
+            type="button"
+            onClick={() => setSoComOs((v) => !v)}
+            className={cn(
+              "px-3 py-1.5 rounded-full font-medium transition-all shrink-0 inline-flex items-center gap-1.5",
+              soComOs
+                ? "bg-emerald-600 text-white shadow-2xs font-semibold"
+                : "bg-muted/70 hover:bg-muted text-muted-foreground"
+            )}
+            title="Exibir apenas orçamentos que já possuem Ordem de Serviço emitida"
+          >
+            <FileCheck className="h-3.5 w-3.5" />
+            <span>Apenas com OS</span>
+          </button>
         </div>
       </div>
 
       {seriesAbertas.size > 0 && (
         <button
           onClick={() => setSeriesAbertas(new Set())}
-          className="w-fit text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          className="w-fit text-xs font-semibold text-primary underline underline-offset-4 hover:opacity-80"
         >
           Recolher parcelas pagas
         </button>
       )}
 
-      {/* Mobile: cards */}
-      <div className="flex flex-col gap-2 md:hidden">
+      {/* FEED MOBILE (Cards individuais - block md:hidden) */}
+      <div className="block md:hidden">
         {itensLista.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            Nenhum lançamento encontrado.
-          </p>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 p-8 text-center bg-card/50">
+            <Wallet className="h-10 w-10 text-muted-foreground/50 mb-2" />
+            <p className="font-semibold text-foreground">Nenhum lançamento encontrado</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+              Tente redefinir os filtros de busca ou alterar a categoria selecionada.
+            </p>
+          </div>
         ) : (
-          itensLista.map((item) => {
-            if (item.tipo === "pagas") {
-              return (
-                <button
-                  key={`pagas-${item.chave}`}
-                  onClick={() => abrirSerie(item.chave)}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-muted/30 p-4 text-left text-sm transition-colors hover:bg-accent/50"
-                >
-                  <span className="flex items-center gap-2">
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      <span className="font-medium">{item.nome}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {item.itens.length} parcelas pagas — toque pra ver
+          <div className="flex flex-col gap-2.5">
+            {itensLista.map((item) => {
+              if (item.tipo === "pagas") {
+                return (
+                  <button
+                    key={`pagas-${item.chave}`}
+                    onClick={() => abrirSerie(item.chave)}
+                    className="flex items-center justify-between gap-2 rounded-2xl border border-dashed border-border/80 bg-muted/30 p-3.5 text-left text-sm transition-all hover:bg-muted/50 active:scale-[0.99]"
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="min-w-0">
+                        <span className="font-bold text-foreground block truncate">{item.nome}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {item.itens.length} parcelas pagas — toque pra ver
+                        </span>
                       </span>
                     </span>
-                  </span>
-                  <span className="font-medium text-muted-foreground">{formatarMoeda(item.total)}</span>
-                </button>
-              )
-            }
-            const lancamento = item.lancamento
-            const vencido = hoje ? estaLancamentoVencido(lancamento, hoje) : false
-            return (
-              <button
-                key={lancamento.id}
-                onClick={() => setSelecionado(lancamento)}
-                className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:bg-accent/50 active:bg-accent"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">
-                      {lancamento.descricao}
-                      {lancamento.pessoal && (
-                        <Badge variant="outline" className="ml-2 px-1.5 py-0 text-[10px]">
-                          Pessoal
-                        </Badge>
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{lancamento.categoria}</p>
-                  </div>
-                  <Badge
-                    variant={lancamento.status === "pago" ? "secondary" : "default"}
-                    className="shrink-0"
-                  >
-                    {lancamento.status === "pago" ? "Pago" : "Pendente"}
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-3 gap-2 border-t border-border pt-2 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Vencimento</p>
-                    <p className={cn(vencido && lancamento.status !== "pago" && "font-medium text-destructive")}>
-                      {formatarData(lancamento.vencimento)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Cliente</p>
-                    <p className="truncate">{nomeCliente(lancamento.clienteId)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Valor</p>
-                    <p
+                    <span className="font-bold text-muted-foreground shrink-0">
+                      {formatarMoeda(item.total)}
+                    </span>
+                  </button>
+                )
+              }
+
+              const lancamento = item.lancamento
+              const vencido = hoje ? estaLancamentoVencido(lancamento, hoje) : false
+              const isReceita = lancamento.tipo === "receita"
+
+              return (
+                <button
+                  key={lancamento.id}
+                  onClick={() => setSelecionado(lancamento)}
+                  className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 text-left transition-all hover:border-primary/40 active:scale-[0.99] shadow-2xs"
+                >
+                  {/* Linha superior: Tipo, Descrição e Status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 min-w-0 flex-1">
+                      <div
+                        className={cn(
+                          "mt-0.5 rounded-lg p-1.5 shrink-0",
+                          isReceita
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : "bg-red-500/10 text-red-600 dark:text-red-400"
+                        )}
+                      >
+                        {isReceita ? (
+                          <ArrowDownLeft className="h-3.5 w-3.5" />
+                        ) : (
+                          <ArrowUpRight className="h-3.5 w-3.5" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="font-bold text-sm text-foreground leading-snug break-words">
+                            {lancamento.descricao}
+                          </h3>
+                          {lancamento.pessoal && (
+                            <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                              Pessoal
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground block mt-0.5">
+                          {lancamento.categoria}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Badge
+                      variant={
+                        lancamento.status === "pago"
+                          ? "secondary"
+                          : vencido
+                            ? "destructive"
+                            : "default"
+                      }
                       className={cn(
-                        "font-medium",
-                        lancamento.tipo === "receita" ? "text-primary" : "text-destructive"
+                        "shrink-0 text-[10px] font-semibold",
+                        lancamento.status === "pago" &&
+                          "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
                       )}
                     >
-                      {lancamento.tipo === "receita" ? "+" : "−"}{" "}
-                      {formatarMoeda(lancamento.valor)}
-                    </p>
+                      {lancamento.status === "pago"
+                        ? "Pago"
+                        : vencido
+                          ? "Vencido"
+                          : "Pendente"}
+                    </Badge>
                   </div>
-                </div>
-              </button>
-            )
-          })
+
+                  {/* Informações de Cliente, Forma de Pagamento e Vencimento */}
+                  <div className="mt-3 pt-2.5 border-t border-border/50 flex flex-col gap-1.5 text-xs text-muted-foreground">
+                    {lancamento.clienteId && (
+                      <div className="flex items-center gap-1.5 truncate">
+                        <User className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+                        <span className="truncate">{nomeCliente(lancamento.clienteId)}</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+                        <span
+                          className={cn(
+                            vencido && lancamento.status !== "pago" && "font-bold text-destructive"
+                          )}
+                        >
+                          Vencimento: {formatarData(lancamento.vencimento)}
+                        </span>
+                      </div>
+
+                      {lancamento.formaPagamento && (
+                        <span className="text-[11px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md">
+                          {rotuloFormaPagamento[lancamento.formaPagamento] ?? lancamento.formaPagamento}
+                          {lancamento.numeroBoleto ? ` · Nº ${lancamento.numeroBoleto}` : ""}
+                        </span>
+                      )}
+                    </div>
+
+                    {lancamento.status === "pago" && (
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        {lancamento.pagoEm
+                          ? `Pago em ${formatarData(lancamento.pagoEm)}`
+                          : "Pago"}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Valor em destaque no rodapé */}
+                  <div className="mt-2.5 pt-2 border-t border-border/50 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-muted-foreground">Valor:</span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={cn(
+                          "text-base font-black tracking-tight",
+                          isReceita
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-red-600 dark:text-red-400"
+                        )}
+                      >
+                        {isReceita ? "+ " : "− "}
+                        {formatarMoeda(lancamento.valor)}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
         )}
       </div>
 
-      {/* Desktop: tabela */}
-      <div className="hidden rounded-lg border border-border md:block">
+      {/* TABELA DESKTOP (hidden md:block) */}
+      <div className="hidden rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs md:block">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted/40">
             <TableRow>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Categoria</TableHead>
-              <TableHead>Forma</TableHead>
-              <TableHead>Vencimento</TableHead>
-              <TableHead>Valor</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="font-bold text-foreground">Descrição</TableHead>
+              <TableHead className="font-bold text-foreground">Cliente</TableHead>
+              <TableHead className="font-bold text-foreground">Categoria</TableHead>
+              <TableHead className="font-bold text-foreground">Forma</TableHead>
+              <TableHead className="font-bold text-foreground">Vencimento</TableHead>
+              <TableHead className="font-bold text-foreground">Valor</TableHead>
+              <TableHead className="font-bold text-foreground">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -493,7 +644,7 @@ export default function FinanceiroPage() {
                   <TableRow
                     key={`pagas-${item.chave}`}
                     onClick={() => abrirSerie(item.chave)}
-                    className="cursor-pointer bg-muted/30"
+                    className="cursor-pointer bg-muted/30 hover:bg-muted/50"
                   >
                     <TableCell colSpan={5} className="text-muted-foreground">
                       <span className="flex items-center gap-2">
@@ -502,7 +653,9 @@ export default function FinanceiroPage() {
                         — {item.itens.length} parcelas pagas (clique pra ver uma por uma)
                       </span>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{formatarMoeda(item.total)}</TableCell>
+                    <TableCell className="text-muted-foreground font-semibold">
+                      {formatarMoeda(item.total)}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="secondary">Pagas</Badge>
                     </TableCell>
@@ -515,7 +668,7 @@ export default function FinanceiroPage() {
                 <TableRow
                   key={lancamento.id}
                   onClick={() => setSelecionado(lancamento)}
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:bg-muted/30"
                 >
                   <TableCell className="font-medium">
                     {lancamento.descricao}
@@ -547,7 +700,7 @@ export default function FinanceiroPage() {
                   </TableCell>
                   <TableCell
                     className={
-                      lancamento.tipo === "receita" ? "text-primary" : "text-destructive"
+                      lancamento.tipo === "receita" ? "text-primary font-bold" : "text-destructive font-bold"
                     }
                   >
                     {lancamento.tipo === "receita" ? "+ " : "− "}
@@ -577,17 +730,6 @@ export default function FinanceiroPage() {
             )}
           </TableBody>
         </Table>
-      </div>
-
-      {/* Botão novo lançamento mobile */}
-      <div className="fixed bottom-6 right-6 md:hidden">
-        <LancamentoFormDialog
-          trigger={
-            <Button size="lg" className="rounded-full shadow-lg">
-              <Plus className="h-5 w-5" />
-            </Button>
-          }
-        />
       </div>
 
       <LancamentoDetalheDialog
