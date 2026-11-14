@@ -12,17 +12,12 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Combobox } from "@/components/ui/combobox"
 import { OrcamentoDetalheDialog } from "@/components/orcamentos/orcamento-detalhe-dialog"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import type { StatusOrcamento } from "@/lib/types"
+import { Search } from "lucide-react"
 
 const statusLabel: Record<StatusOrcamento, string> = {
   aberto: "Aberto",
@@ -42,21 +37,40 @@ const statusVariant: Record<
 export default function HistoricoOrcamentosPage() {
   const { orcamentos, clientes, materiais, servicos } = useData()
 
+  const [busca, setBusca] = useState("")
   const [clienteId, setClienteId] = useState<string>("todos")
   const [dataDe, setDataDe] = useState("")
   const [dataAte, setDataAte] = useState("")
   const [detalheId, setDetalheId] = useState<string | null>(null)
 
   const orcamentosFiltrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
     return orcamentos.filter((orcamento) => {
       if (clienteId !== "todos" && orcamento.clienteId !== clienteId)
         return false
       const criado = new Date(orcamento.criadoEm)
       if (dataDe && criado < new Date(dataDe)) return false
       if (dataAte && criado > new Date(`${dataAte}T23:59:59`)) return false
+
+      if (termo) {
+        const cli = clientes.find((c) => c.id === orcamento.clienteId)
+        const cliNome = (cli?.nome ?? "").toLowerCase()
+        const cliCpf = (cli?.cpf ?? "").toLowerCase()
+        const cliTel = (cli?.telefone ?? "").toLowerCase()
+        const num = String(orcamento.numero).toLowerCase()
+        const matNome = (orcamento.materialFechado?.nome ?? "").toLowerCase()
+        const servNome = (orcamento.servicoFechado?.nome ?? "").toLowerCase()
+
+        const matchNum = num.includes(termo) || `#${num}`.includes(termo)
+        const matchCli = cliNome.includes(termo) || cliCpf.includes(termo) || cliTel.includes(termo)
+        const matchMatServ = matNome.includes(termo) || servNome.includes(termo)
+
+        if (!matchNum && !matchCli && !matchMatServ) return false
+      }
+
       return true
     })
-  }, [orcamentos, clienteId, dataDe, dataAte])
+  }, [orcamentos, clienteId, dataDe, dataAte, busca, clientes])
 
   function nomeCliente(id: string) {
     return clientes.find((c) => c.id === id)?.nome ?? "Cliente removido"
@@ -86,49 +100,85 @@ export default function HistoricoOrcamentosPage() {
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
-        <div className="flex flex-col gap-2">
-          <span className="text-xs text-muted-foreground">Cliente</span>
-          <Select
-            value={clienteId}
-            onValueChange={(v) => setClienteId(v ?? "todos")}
-          >
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue>
-                {(v: string) =>
-                  v === "todos" ? "Todos os clientes" : clientes.find((c) => c.id === v)?.nome
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os clientes</SelectItem>
-              {clientes.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Busca com Lupa */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted-foreground">Buscar</span>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nº, cliente, material..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="pl-9 pr-7 h-9 text-sm bg-background"
+            />
+            {busca && (
+              <button
+                type="button"
+                onClick={() => setBusca("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                title="Limpar busca"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex gap-4">
-          <div className="flex flex-1 flex-col gap-2 sm:flex-none">
+
+        {/* Combobox de Cliente */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs text-muted-foreground">Cliente</span>
+          <Combobox
+            options={[
+              { value: "todos", label: "Todos os clientes" },
+              ...clientes.map((c) => ({ value: c.id, label: c.nome })),
+            ]}
+            value={clienteId}
+            onValueChange={setClienteId}
+            placeholder="Todos os clientes"
+            searchPlaceholder="Buscar cliente na lista..."
+            emptyText="Nenhum cliente encontrado."
+            className="w-full sm:w-64 h-9 bg-background"
+            contentClassName="min-w-[320px] max-w-[440px]"
+          />
+        </div>
+
+        {/* Período de Data */}
+        <div className="flex gap-3">
+          <div className="flex flex-1 flex-col gap-1.5 sm:flex-none">
             <span className="text-xs text-muted-foreground">De</span>
             <Input
               type="date"
               value={dataDe}
               onChange={(e) => setDataDe(e.target.value)}
-              className="w-full sm:w-40"
+              className="w-full sm:w-36 h-9 bg-background"
             />
           </div>
-          <div className="flex flex-1 flex-col gap-2 sm:flex-none">
+          <div className="flex flex-1 flex-col gap-1.5 sm:flex-none">
             <span className="text-xs text-muted-foreground">Até</span>
             <Input
               type="date"
               value={dataAte}
               onChange={(e) => setDataAte(e.target.value)}
-              className="w-full sm:w-40"
+              className="w-full sm:w-36 h-9 bg-background"
             />
           </div>
         </div>
+
+        {/* Botão limpar filtros */}
+        {(busca || clienteId !== "todos" || dataDe || dataAte) && (
+          <button
+            type="button"
+            onClick={() => {
+              setBusca("")
+              setClienteId("todos")
+              setDataDe("")
+              setDataAte("")
+            }}
+            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground self-start sm:self-end sm:mb-2"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       {/* Celular: lista de cartões */}
