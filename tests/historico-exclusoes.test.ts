@@ -12,7 +12,15 @@ function criarSql() {
     consultas.push(consulta)
     const resultado = consulta.texto.startsWith("SELECT")
       ? linhaDoRegistro
-        ? [{ dados: linhaDoRegistro }]
+        ? consulta.texto.includes("FROM historico_exclusoes")
+          ? [{
+              id: (linhaDoRegistro.id as string) ?? "exc-1",
+              tabela: (linhaDoRegistro.tabela as string) ?? "orcamentos",
+              registro_id: (linhaDoRegistro.registro_id as string) ?? "orc-1",
+              resumo: (linhaDoRegistro.resumo as string) ?? "Orçamento #1002",
+              dados: (linhaDoRegistro.dados as Record<string, unknown>) ?? linhaDoRegistro,
+            }]
+          : [{ dados: linhaDoRegistro }]
         : []
       : []
     return Object.assign(Promise.resolve(resultado), consulta)
@@ -37,7 +45,7 @@ vi.mock("@clerk/nextjs/server", () => ({
   }),
 }))
 
-import { excluirComHistorico, resumirRegistro } from "@/lib/historico-exclusoes"
+import { excluirComHistorico, resumirRegistro, restaurarExclusao } from "@/lib/historico-exclusoes"
 
 beforeEach(() => {
   consultas.length = 0
@@ -101,5 +109,77 @@ describe("excluirComHistorico", () => {
     linhaDoRegistro = { id: "y", descricao: "Conta", valor: "10" }
     await excluirComHistorico("lancamentos_financeiros", "lan-1")
     expect(transacoes[1][1].texto).toContain("DELETE FROM lancamentos_financeiros")
+  })
+})
+
+describe("restaurarExclusao", () => {
+  it("restaura orçamento de volta para a tabela orcamentos e apaga do histórico em uma transação", async () => {
+    linhaDoRegistro = {
+      id: "exc-123",
+      tabela: "orcamentos",
+      registro_id: "orc-1",
+      resumo: "Orçamento #1002 — R$ 588,30 (fechado)",
+      dados: {
+        id: "orc-1",
+        numero: 1002,
+        cliente_id: "cli-1",
+        item: { nome: "Lona" },
+        status: "fechado",
+        total_fechado: 588.3,
+        criado_em: "2026-11-14T10:00:00.000Z",
+      },
+    }
+
+    const resultado = await restaurarExclusao("exc-123")
+
+    expect(resultado.sucesso).toBe(true)
+    expect(resultado.tabela).toBe("orcamentos")
+    expect(resultado.registroId).toBe("orc-1")
+    expect(transacoes).toHaveLength(1)
+
+    const [restaurar, apagarDoHistorico] = transacoes[0]
+    expect(restaurar.texto).toContain("INSERT INTO orcamentos")
+    expect(restaurar.texto).toContain("ON CONFLICT (id) DO UPDATE")
+    expect(restaurar.valores).toContain("orc-1")
+    expect(restaurar.valores).toContain(1002)
+    expect(apagarDoHistorico.texto).toContain("DELETE FROM historico_exclusoes")
+    expect(apagarDoHistorico.valores).toContain("exc-123")
+  })
+
+  it("restaura cliente de volta para a tabela clientes", async () => {
+    linhaDoRegistro = {
+      id: "exc-cli-1",
+      tabela: "clientes",
+      registro_id: "cli-9",
+      resumo: "Cliente João Silva",
+      dados: {
+        id: "cli-9",
+        nome: "João Silva",
+        telefone: "11999998888",
+        email: "joao@teste.com",
+        cpf: "123.456.789-00",
+        criado_em: "2026-11-14T10:00:00.000Z",
+      },
+    }
+
+    const resultado = await restaurarExclusao("exc-cli-1")
+
+    expect(resultado.sucesso).toBe(true)
+    expect(resultado.tabela).toBe("clientes")
+    expect(transacoes).toHaveLength(1)
+
+    const [restaurar, apagarDoHistorico] = transacoes[0]
+    expect(restaurar.texto).toContain("INSERT INTO clientes")
+    expect(restaurar.valores).toContain("João Silva")
+    expect(apagarDoHistorico.texto).toContain("DELETE FROM historico_exclusoes")
+  })
+
+  it("quando a exclusão não existe, devolve erro sem fazer transação", async () => {
+    linhaDoRegistro = null
+    const resultado = await restaurarExclusao("exc-inexistente")
+
+    expect(resultado.sucesso).toBe(false)
+    expect(resultado.erro).toBe("Registro de exclusão não encontrado.")
+    expect(transacoes).toHaveLength(0)
   })
 })

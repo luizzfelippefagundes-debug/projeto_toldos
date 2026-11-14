@@ -1,5 +1,10 @@
 import { currentUser } from "@clerk/nextjs/server"
 import { getSql } from "./db"
+import {
+  garantirColunasOrcamentos,
+  garantirColunasLancamentos,
+  garantirCpfClientes,
+} from "./migracoes"
 
 // Tabelas em que apagar um registro fica guardado: a cópia completa, quem
 // apagou e quando. Serve pra descobrir (e, se preciso, refazer) o que foi
@@ -140,4 +145,172 @@ export async function listarExclusoes(limite = 200): Promise<ExclusaoRegistrada[
     excluidoPorNome: (r.excluido_por_nome as string | null) ?? null,
     excluidoEm: new Date(r.excluido_em as string).toISOString(),
   }))
+}
+
+/**
+ * Restaura um registro apagado que está no histórico de exclusões.
+ * Insere de volta na tabela original e apaga do histórico de exclusões numa transação atômica.
+ */
+export async function restaurarExclusao(id: string): Promise<{
+  sucesso: boolean
+  erro?: string
+  tabela?: TabelaAuditada
+  registroId?: string
+  resumo?: string
+}> {
+  await garantirTabelaExclusoes()
+  const sql = getSql()
+  const linhas = await sql`
+    SELECT id, tabela, registro_id, resumo, dados
+    FROM historico_exclusoes
+    WHERE id = ${id}
+  `
+  if (!linhas || linhas.length === 0) {
+    return { sucesso: false, erro: "Registro de exclusão não encontrado." }
+  }
+
+  const { tabela, registro_id: registroId, resumo, dados } = linhas[0] as {
+    tabela: TabelaAuditada
+    registro_id: string
+    resumo: string
+    dados: Record<string, unknown>
+  }
+
+  if (tabela === "orcamentos") {
+    await garantirColunasOrcamentos()
+    const itemJson = typeof dados.item === "string" ? dados.item : JSON.stringify(dados.item ?? {})
+    const matFechado = dados.material_fechado
+      ? typeof dados.material_fechado === "string"
+        ? dados.material_fechado
+        : JSON.stringify(dados.material_fechado)
+      : null
+    const servFechado = dados.servico_fechado
+      ? typeof dados.servico_fechado === "string"
+        ? dados.servico_fechado
+        : JSON.stringify(dados.servico_fechado)
+      : null
+    const retornoJson = dados.retorno
+      ? typeof dados.retorno === "string"
+        ? dados.retorno
+        : JSON.stringify(dados.retorno)
+      : null
+
+    const restaurar = sql`
+      INSERT INTO orcamentos (
+        id, numero, cliente_id, item, quantidade_material_debitada,
+        material_fechado, servico_fechado, total_fechado, ajuste_manual,
+        anexo_nome, anexo_url, status, criado_em, fechado_em, validade_dias,
+        retorno, status_producao, os_emitida_em, arte_url, arte_aprovada_em
+      ) VALUES (
+        ${dados.id as string},
+        ${Number(dados.numero)},
+        ${dados.cliente_id as string},
+        ${itemJson}::jsonb,
+        ${dados.quantidade_material_debitada != null ? Number(dados.quantidade_material_debitada) : null},
+        ${matFechado}::jsonb,
+        ${servFechado}::jsonb,
+        ${dados.total_fechado != null ? Number(dados.total_fechado) : null},
+        ${Number(dados.ajuste_manual ?? 0)},
+        ${(dados.anexo_nome as string) ?? null},
+        ${(dados.anexo_url as string) ?? null},
+        ${(dados.status as string) ?? "aberto"},
+        ${dados.criado_em as string},
+        ${(dados.fechado_em as string) ?? null},
+        ${dados.validade_dias != null ? Number(dados.validade_dias) : null},
+        ${retornoJson}::jsonb,
+        ${(dados.status_producao as string) ?? null},
+        ${(dados.os_emitida_em as string) ?? null},
+        ${(dados.arte_url as string) ?? null},
+        ${(dados.arte_aprovada_em as string) ?? null}
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        numero = EXCLUDED.numero,
+        cliente_id = EXCLUDED.cliente_id,
+        item = EXCLUDED.item,
+        quantidade_material_debitada = EXCLUDED.quantidade_material_debitada,
+        material_fechado = EXCLUDED.material_fechado,
+        servico_fechado = EXCLUDED.servico_fechado,
+        total_fechado = EXCLUDED.total_fechado,
+        ajuste_manual = EXCLUDED.ajuste_manual,
+        anexo_nome = EXCLUDED.anexo_nome,
+        anexo_url = EXCLUDED.anexo_url,
+        status = EXCLUDED.status,
+        criado_em = EXCLUDED.criado_em,
+        fechado_em = EXCLUDED.fechado_em,
+        validade_dias = EXCLUDED.validade_dias,
+        retorno = EXCLUDED.retorno,
+        status_producao = EXCLUDED.status_producao,
+        os_emitida_em = EXCLUDED.os_emitida_em,
+        arte_url = EXCLUDED.arte_url,
+        arte_aprovada_em = EXCLUDED.arte_aprovada_em
+    `
+    const apagarDoHistorico = sql`DELETE FROM historico_exclusoes WHERE id = ${id}`
+    await sql.transaction([restaurar, apagarDoHistorico])
+  } else if (tabela === "clientes") {
+    await garantirCpfClientes()
+    const restaurar = sql`
+      INSERT INTO clientes (id, nome, telefone, email, cpf)
+      VALUES (
+        ${dados.id as string},
+        ${dados.nome as string},
+        ${dados.telefone as string},
+        ${(dados.email as string) ?? null},
+        ${(dados.cpf as string) ?? null}
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        nome = EXCLUDED.nome,
+        telefone = EXCLUDED.telefone,
+        email = EXCLUDED.email,
+        cpf = EXCLUDED.cpf
+    `
+    const apagarDoHistorico = sql`DELETE FROM historico_exclusoes WHERE id = ${id}`
+    await sql.transaction([restaurar, apagarDoHistorico])
+  } else if (tabela === "lancamentos_financeiros") {
+    await garantirColunasLancamentos()
+    const restaurar = sql`
+      INSERT INTO lancamentos_financeiros (
+        id, descricao, tipo, categoria, valor, vencimento, status, pago_em,
+        origem, origem_id, criado_em, cliente_id, forma_pagamento, numero_boleto, parcela, pessoal, despesa_fixa
+      ) VALUES (
+        ${dados.id as string},
+        ${dados.descricao as string},
+        ${dados.tipo as string},
+        ${dados.categoria as string},
+        ${Number(dados.valor)},
+        ${dados.vencimento as string},
+        ${(dados.status as string) ?? "pendente"},
+        ${(dados.pago_em as string) ?? null},
+        ${dados.origem as string},
+        ${(dados.origem_id as string) ?? null},
+        ${dados.criado_em as string},
+        ${(dados.cliente_id as string) ?? null},
+        ${(dados.forma_pagamento as string) ?? null},
+        ${(dados.numero_boleto as string) ?? null},
+        ${(dados.parcela as string) ?? null},
+        ${dados.pessoal === true},
+        ${dados.despesaFixa === true || dados.despesa_fixa === true}
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        descricao = EXCLUDED.descricao,
+        tipo = EXCLUDED.tipo,
+        categoria = EXCLUDED.categoria,
+        valor = EXCLUDED.valor,
+        vencimento = EXCLUDED.vencimento,
+        status = EXCLUDED.status,
+        pago_em = EXCLUDED.pago_em,
+        origem = EXCLUDED.origem,
+        origem_id = EXCLUDED.origem_id,
+        criado_em = EXCLUDED.criado_em,
+        cliente_id = EXCLUDED.cliente_id,
+        forma_pagamento = EXCLUDED.forma_pagamento,
+        numero_boleto = EXCLUDED.numero_boleto,
+        parcela = EXCLUDED.parcela,
+        pessoal = EXCLUDED.pessoal,
+        despesa_fixa = EXCLUDED.despesa_fixa
+    `
+    const apagarDoHistorico = sql`DELETE FROM historico_exclusoes WHERE id = ${id}`
+    await sql.transaction([restaurar, apagarDoHistorico])
+  }
+
+  return { sucesso: true, tabela, registroId, resumo }
 }

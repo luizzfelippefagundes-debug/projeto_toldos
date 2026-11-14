@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -124,6 +125,7 @@ export interface DataContextValue {
   removeLancamento: (id: string) => void
   marcarLancamentoStatus: (id: string, status: StatusLancamento) => void
   addMensagemBot: (dados: Omit<MensagemBot, "id" | "criadoEm">) => void
+  recarregarDados?: () => Promise<void>
 }
 
 export const DataContext = createContext<DataContextValue | null>(null)
@@ -191,79 +193,80 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const proximoNumeroRef = useRef(1001)
   const proximoNumeroPedidoRef = useRef(5001)
 
-  // Busca dados do banco na montagem do componente
-  useEffect(() => {
-    async function carregar() {
-      try {
-        const [
-          resMateriais,
-          resAcabamentos,
-          resServicos,
-          resClientes,
-          resOrcamentos,
-          resEntradas,
-          resProdutos,
-          resPedidos,
-          resLancamentos,
-          resMensagens,
-        ] = await Promise.all([
-          fetch("/api/materiais"),
-          fetch("/api/acabamentos"),
-          fetch("/api/servicos"),
-          fetch("/api/clientes"),
-          fetch("/api/orcamentos"),
-          fetch("/api/entradas-estoque"),
-          fetch("/api/produtos-rapidos"),
-          fetch("/api/pedidos-rapidos"),
-          fetch("/api/lancamentos"),
-          fetch("/api/mensagens-bot"),
-        ])
+  // Busca dados do banco na montagem do componente ou quando solicitado
+  const carregar = useCallback(async () => {
+    try {
+      const [
+        resMateriais,
+        resAcabamentos,
+        resServicos,
+        resClientes,
+        resOrcamentos,
+        resEntradas,
+        resProdutos,
+        resPedidos,
+        resLancamentos,
+        resMensagens,
+      ] = await Promise.all([
+        fetch("/api/materiais"),
+        fetch("/api/acabamentos"),
+        fetch("/api/servicos"),
+        fetch("/api/clientes"),
+        fetch("/api/orcamentos"),
+        fetch("/api/entradas-estoque"),
+        fetch("/api/produtos-rapidos"),
+        fetch("/api/pedidos-rapidos"),
+        fetch("/api/lancamentos"),
+        fetch("/api/mensagens-bot"),
+      ])
 
-        const [
-          mat,
-          acb,
-          srv,
-          cli,
-          orc,
-          ent,
-          prod,
-          ped,
-          lan,
-          msg,
-        ] = await Promise.all([
-          resMateriais.json() as Promise<Material[]>,
-          resAcabamentos.json() as Promise<Acabamento[]>,
-          resServicos.json() as Promise<Servico[]>,
-          resClientes.json() as Promise<Cliente[]>,
-          resOrcamentos.json() as Promise<Orcamento[]>,
-          resEntradas.json() as Promise<EntradaEstoque[]>,
-          resProdutos.json() as Promise<ProdutoRapido[]>,
-          resPedidos.json() as Promise<PedidoRapido[]>,
-          resLancamentos.json() as Promise<LancamentoFinanceiro[]>,
-          resMensagens.json() as Promise<MensagemBot[]>,
-        ])
+      const [
+        mat,
+        acb,
+        srv,
+        cli,
+        orc,
+        ent,
+        prod,
+        ped,
+        lan,
+        msg,
+      ] = await Promise.all([
+        resMateriais.json() as Promise<Material[]>,
+        resAcabamentos.json() as Promise<Acabamento[]>,
+        resServicos.json() as Promise<Servico[]>,
+        resClientes.json() as Promise<Cliente[]>,
+        resOrcamentos.json() as Promise<Orcamento[]>,
+        resEntradas.json() as Promise<EntradaEstoque[]>,
+        resProdutos.json() as Promise<ProdutoRapido[]>,
+        resPedidos.json() as Promise<PedidoRapido[]>,
+        resLancamentos.json() as Promise<LancamentoFinanceiro[]>,
+        resMensagens.json() as Promise<MensagemBot[]>,
+      ])
 
-        setMateriais(mat)
-        setAcabamentos(acb)
-        setServicos(srv)
-        setClientes(cli)
-        setOrcamentos(orc)
-        proximoNumeroRef.current =
-          orc.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
-        setEntradasEstoque(ent)
-        setProdutosRapidos(prod)
-        setPedidosRapidos(ped)
-        proximoNumeroPedidoRef.current =
-          ped.reduce((max, p) => Math.max(max, p.numero), 5000) + 1
-        setLancamentos(lan)
-        setMensagensBot(msg)
-        setCarregado(true)
-      } catch {
-        toast.error("Não foi possível carregar os dados do servidor.")
-      }
+      setMateriais(mat)
+      setAcabamentos(acb)
+      setServicos(srv)
+      setClientes(cli)
+      setOrcamentos(orc)
+      proximoNumeroRef.current =
+        orc.reduce((max, o) => Math.max(max, o.numero), 1000) + 1
+      setEntradasEstoque(ent)
+      setProdutosRapidos(prod)
+      setPedidosRapidos(ped)
+      proximoNumeroPedidoRef.current =
+        ped.reduce((max, p) => Math.max(max, p.numero), 5000) + 1
+      setLancamentos(lan)
+      setMensagensBot(msg)
+      setCarregado(true)
+    } catch {
+      toast.error("Não foi possível carregar os dados do servidor.")
     }
-    carregar()
   }, [])
+
+  useEffect(() => {
+    carregar()
+  }, [carregar])
 
   // Guarda uma cópia dos dados que o orçamento usa, pra abrir sem internet.
   // Só depois da primeira carga (senão guardaria listas vazias por cima).
@@ -916,6 +919,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       removeLancamento,
       marcarLancamentoStatus,
       addMensagemBot,
+      recarregarDados: carregar,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
