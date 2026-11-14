@@ -162,6 +162,7 @@ export default function CentralTvPage() {
   const [carregando, setCarregando] = useState(true)
 
   // Formulário de novo aviso
+  const [abaMobile, setAbaMobile] = useState<"config" | "avisos">("config")
   const [mensagem, setMensagem] = useState("")
   const [tipoIdx, setTipoIdx] = useState(0)
   const [som, setSom] = useState(false)
@@ -306,33 +307,35 @@ export default function CentralTvPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-      {/* Cabeçalho Superior */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/80 pb-4">
+      {/* Cabeçalho Superior Adaptável ao Mobile */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs">
-            <Tv2 className="h-6 w-6" />
+          <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs">
+            <Tv2 className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">Central do Painel TV</h1>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground truncate">
+                Central do Telão
+              </h1>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Telão Ativo
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Gerencie em tempo real o letreiro rodapé, colunas e pedidos transmitidos para a TV da fábrica.
+            <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
+              Gerencie em tempo real etapas, filtros, letreiro e visualização da TV da fábrica.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={carregarDados}
             disabled={carregando}
-            className="h-9 gap-1.5 text-xs"
+            className="flex-1 sm:flex-none h-8.5 gap-1.5 text-xs font-semibold"
           >
             <RefreshCw className={cn("h-3.5 w-3.5", carregando && "animate-spin")} />
             <span>Atualizar</span>
@@ -342,7 +345,7 @@ export default function CentralTvPage() {
             size="sm"
             nativeButton={false}
             render={<Link href="/tv" target="_blank" />}
-            className="h-9 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs"
+            className="flex-1 sm:flex-none h-8.5 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-xs"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             <span>Abrir Telão (/tv)</span>
@@ -350,18 +353,18 @@ export default function CentralTvPage() {
         </div>
       </div>
 
-      {/* Grid de 4 Métricas Compactas */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-border bg-card p-3.5 flex items-center gap-3 shadow-2xs">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
+      {/* Grid de 4 Métricas Compactas e Responsivas */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3 shadow-2xs">
+          <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400">
             <Radio className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground truncate">Pedidos no Telão</p>
+            <p className="text-[11px] text-muted-foreground font-medium truncate">Pedidos na TV</p>
             <div className="flex items-center gap-1.5">
-              <p className="text-lg font-bold text-foreground leading-tight">{pedidosTvCount}</p>
+              <p className="text-base sm:text-lg font-black text-foreground leading-tight">{pedidosTvCount}</p>
               {config.apenasRecentes && (
-                <span className="rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.5">
+                <span className="rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.2 shrink-0">
                   5 recentes
                 </span>
               )}
@@ -369,39 +372,39 @@ export default function CentralTvPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-3.5 flex items-center gap-3 shadow-2xs">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3 shadow-2xs">
+          <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
             <Layers className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground truncate">Colunas Exibidas</p>
-            <p className="text-lg font-bold text-foreground leading-tight">
+            <p className="text-[11px] text-muted-foreground font-medium truncate">Colunas Ativas</p>
+            <p className="text-base sm:text-lg font-black text-foreground leading-tight">
               {config.statusVisiveis.length} de {ETAPAS_TV.length}
             </p>
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-3.5 flex items-center gap-3 shadow-2xs">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-3.5 flex items-center gap-2.5 sm:gap-3 shadow-2xs">
+          <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
             <Sparkles className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground truncate">Avisos no Ticker</p>
-            <p className="text-lg font-bold text-foreground leading-tight">
+            <p className="text-[11px] text-muted-foreground font-medium truncate">Avisos no Ticker</p>
+            <p className="text-base sm:text-lg font-black text-foreground leading-tight">
               {totalAtivos}{" "}
-              <span className="text-xs font-normal text-muted-foreground">({avisos.length} total)</span>
+              <span className="text-[10px] font-normal text-muted-foreground">({avisos.length} total)</span>
             </p>
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-3.5 flex items-center justify-between gap-2 shadow-2xs">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-600 dark:text-violet-400">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-3.5 flex items-center justify-between gap-2 shadow-2xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-600 dark:text-violet-400">
               {config.tema === "light" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground truncate">Tema da TV</p>
-              <p className="text-xs font-bold text-foreground capitalize leading-tight">
+              <p className="text-[11px] text-muted-foreground font-medium truncate">Tema da TV</p>
+              <p className="text-xs sm:text-sm font-bold text-foreground capitalize leading-tight truncate">
                 {config.tema === "light" ? "Modo Claro" : "Modo Escuro"}
               </p>
             </div>
@@ -410,19 +413,60 @@ export default function CentralTvPage() {
             variant="outline"
             size="sm"
             onClick={() => salvarConfiguracoes({ tema: config.tema === "light" ? "dark" : "light" })}
-            className="h-7 px-2 text-[11px]"
+            className="h-6.5 px-2 text-[10px] font-bold shrink-0"
           >
             Trocar
           </Button>
         </div>
       </div>
 
+      {/* Alternador de Abas Mobile (Configurações vs Letreiro) */}
+      <div className="flex lg:hidden rounded-xl bg-muted/60 p-1 border border-border/70 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setAbaMobile("config")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all",
+            abaMobile === "config"
+              ? "bg-card text-foreground shadow-xs border border-border/80"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />
+          <span>Configuração da TV</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAbaMobile("avisos")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-bold transition-all",
+            abaMobile === "avisos"
+              ? "bg-card text-foreground shadow-xs border border-border/80"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Zap className="h-3.5 w-3.5 text-amber-500" />
+          <span>Letreiro & Avisos</span>
+          {totalAtivos > 0 && (
+            <span className="rounded-full bg-primary/15 text-primary text-[10px] px-1.5 py-0.2 font-black">
+              {totalAtivos}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Grid Principal em 2 Colunas Lado a Lado (7/5) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* COLUNA ESQUERDA (7 colunas): GESTÃO DO LETREIRO DE AVISOS */}
-        <div className="lg:col-span-7 flex flex-col gap-5">
+        {/* COLUNA ESQUERDA: GESTÃO DO LETREIRO DE AVISOS */}
+        <div
+          className={cn(
+            "lg:col-span-7 flex flex-col gap-4 sm:gap-5 order-2 lg:order-1",
+            abaMobile === "avisos" ? "flex" : "hidden lg:flex"
+          )}
+        >
           {/* Card: Criar Novo Aviso */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col gap-4">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
                 <Plus className="h-4 w-4 text-primary" />
@@ -437,9 +481,9 @@ export default function CentralTvPage() {
             <div className="flex flex-col gap-1.5">
               <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
                 <Zap className="h-3 w-3 text-amber-500" />
-                Modelos prontos (clique para preencher):
+                Modelos prontos (toque para preencher):
               </span>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap [scrollbar-width:none]">
                 {MODELOS_RAPIDOS.map((m) => (
                   <button
                     key={m.titulo}
@@ -647,10 +691,15 @@ export default function CentralTvPage() {
           </div>
         </div>
 
-        {/* COLUNA DIREITA (5 colunas): FILTROS DA TV E SIMULADOR */}
-        <div className="lg:col-span-5 flex flex-col gap-5">
+        {/* COLUNA DIREITA: FILTROS DA TV E SIMULADOR */}
+        <div
+          className={cn(
+            "lg:col-span-5 flex flex-col gap-4 sm:gap-5 order-1 lg:order-2",
+            abaMobile === "config" ? "flex" : "hidden lg:flex"
+          )}
+        >
           {/* Card: Mini Simulador ao Vivo */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-950 text-white p-4 shadow-md flex flex-col gap-3">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950 text-white p-3.5 sm:p-4 shadow-md flex flex-col gap-3">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2 text-xs">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -719,7 +768,7 @@ export default function CentralTvPage() {
           </div>
 
           {/* Card: Filtros do que Mostrar no Telão */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col gap-4">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div>
                 <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
@@ -759,7 +808,7 @@ export default function CentralTvPage() {
             {/* Seletor das 6 Etapas */}
             <div className="flex flex-col gap-2">
               <span className="text-xs font-semibold text-foreground">Etapas / Colunas no Telão:</span>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {ETAPAS_TV.map((etapa) => {
                   const ativa = config.statusVisiveis.includes(etapa.id)
                   return (
@@ -801,7 +850,7 @@ export default function CentralTvPage() {
             {/* Tipos de Pedidos */}
             <div className="flex flex-col gap-2 border-t border-border/50 pt-3">
               <span className="text-xs font-semibold text-foreground">Tipos de Pedidos no Telão:</span>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <label className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background cursor-pointer text-xs">
                   <span className="font-medium text-foreground">Gráfica Rápida</span>
                   <Switch
