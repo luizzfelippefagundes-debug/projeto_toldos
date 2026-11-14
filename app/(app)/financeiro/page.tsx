@@ -33,7 +33,7 @@ import {
 } from "@/lib/financeiro"
 import type { LancamentoFinanceiro, TipoLancamento } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { ChevronRight, Plus, Search } from "lucide-react"
+import { ChevronRight, FileCheck, Plus, Search } from "lucide-react"
 
 const rotuloFormaPagamento: Record<string, string> = {
   boleto: "Boleto",
@@ -285,40 +285,61 @@ export default function FinanceiroPage() {
       </p>
 
       {/* Filtros */}
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              { valor: "todos", label: "Todos" },
-              { valor: "receita", label: "Receitas" },
-              { valor: "despesa", label: "Despesas" },
-              { valor: "fixas", label: "Fixas" },
-              { valor: "boleto", label: "Boletos" },
-            ] as const
-          ).map((opcao) => (
-            <button
-              key={opcao.valor}
-              onClick={() => setFiltroTipo(opcao.valor)}
-              className={cn(
-                "rounded-full border px-4 py-1.5 text-sm",
-                filtroTipo === opcao.valor
-                  ? "border-primary bg-primary/15 font-medium text-foreground"
-                  : "border-border text-muted-foreground hover:bg-accent"
-              )}
-            >
-              {opcao.label}
-            </button>
-          ))}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Categorias / Abas */}
+          <div className="inline-flex items-center rounded-xl bg-muted/60 p-1 border border-border/60 gap-1">
+            {(
+              [
+                { valor: "todos", label: "Todos" },
+                { valor: "receita", label: "Receitas" },
+                { valor: "despesa", label: "Despesas" },
+                { valor: "fixas", label: "Fixas" },
+                { valor: "boleto", label: "Boletos" },
+              ] as const
+            ).map((opcao) => (
+              <button
+                key={opcao.valor}
+                onClick={() => setFiltroTipo(opcao.valor)}
+                className={cn(
+                  "rounded-lg px-3.5 py-1.5 text-xs sm:text-sm font-medium transition-all",
+                  filtroTipo === opcao.valor
+                    ? "bg-background text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                )}
+              >
+                {opcao.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Separador visual */}
+          <div className="hidden h-6 w-px bg-border sm:block" />
+
+          {/* Filtro modificador: Só com OS */}
           <button
+            type="button"
             onClick={() => setSoComOs((v) => !v)}
             className={cn(
-              "rounded-full border px-4 py-1.5 text-sm",
+              "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs sm:text-sm font-medium transition-all",
               soComOs
-                ? "border-primary bg-primary/15 font-medium text-foreground"
-                : "border-border text-muted-foreground hover:bg-accent"
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold shadow-xs"
+                : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/20"
             )}
+            title="Exibir apenas orçamentos que já possuem Ordem de Serviço emitida"
           >
-            Só com OS
+            <FileCheck className={cn("h-4 w-4", soComOs ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")} />
+            <span>Apenas com OS</span>
+            <span
+              className={cn(
+                "ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                soComOs
+                  ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              {soComOs ? "Ativo" : "Inativo"}
+            </span>
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
