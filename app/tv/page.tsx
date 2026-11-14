@@ -126,6 +126,12 @@ export default function TvPage() {
   const [pedidos, setPedidos] = useState<PedidoTV[]>([])
   const [avisos, setAvisos] = useState<AvisoTV[]>([])
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date | null>(null)
+  const [config, setConfig] = useState<{
+    statusVisiveis?: string[]
+    tiposVisiveis?: string[]
+    mostrarAtrasados?: boolean
+    somAlarme?: boolean
+  } | null>(null)
 
   const carregar = useCallback(async () => {
     try {
@@ -134,6 +140,7 @@ export default function TvPage() {
         const data = await res.json()
         setPedidos(data.pedidos ?? data)
         setAvisos(data.avisos ?? [])
+        if (data.config) setConfig(data.config)
         setUltimaAtualizacao(new Date())
       }
     } catch { /* retry on next interval */ }
@@ -176,17 +183,21 @@ export default function TvPage() {
     return () => clearInterval(t)
   }, [])
 
-  // Alarme periódico se houver aviso com som ativado
+  // Alarme periódico se houver aviso com som ativado e somAlarme não desativado
   useEffect(() => {
+    if (config && config.somAlarme === false) return
     const comSom = avisos.some((a) => a.som)
     if (!comSom) return
     tocarAlarme()
     const t = setInterval(tocarAlarme, 30_000)
     return () => clearInterval(t)
-  }, [avisos])
+  }, [avisos, config])
 
   const totalAtivos = pedidos.length
   const totalAtrasados = pedidos.filter((p) => estaAtrasado(p)).length
+  const colunasFiltradas = COLUNAS.filter((c) =>
+    (config?.statusVisiveis ?? COLUNAS.map((col) => col.status)).includes(c.status)
+  )
 
   return (
     <div className="group/tv flex h-screen flex-col gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5">
@@ -218,7 +229,7 @@ export default function TvPage() {
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:gap-3 sm:text-sm dark:text-slate-400">
             <span>{totalAtivos} pedido{totalAtivos !== 1 ? "s" : ""}</span>
-            {totalAtrasados > 0 && (
+            {totalAtrasados > 0 && config?.mostrarAtrasados !== false && (
               <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700 dark:bg-red-900/60 dark:text-red-300">
                 ⚠ {totalAtrasados} atrasado{totalAtrasados !== 1 ? "s" : ""}
               </span>
@@ -236,9 +247,9 @@ export default function TvPage() {
       {/* Kanban grid — auto-fit: encaixa todas as colunas na largura disponível */}
       <div
         className="min-h-0 flex-1 gap-2 sm:gap-3"
-        style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))" }}
+        style={{ display: "grid", gridTemplateColumns: `repeat(${colunasFiltradas.length || 1}, minmax(0, 1fr))` }}
       >
-        {COLUNAS.map(({ status, label, borda, fundo }) => {
+        {colunasFiltradas.map(({ status, label, borda, fundo }) => {
           const colPedidos = pedidos.filter((p) => p.status === status || (status === "aprovado" && (p.status as string) === "arte"))
           return (
             <div key={status} className="flex min-h-0 flex-col gap-2">

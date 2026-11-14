@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
 
-const STATUS_VISIVEIS = [
+const DEFAULT_STATUS_VISIVEIS = [
   "aguardando",
   "aprovado",
-  "arte",
   "ag_confirmacao",
   "impressao",
   "acabamento",
@@ -34,29 +33,69 @@ export async function GET() {
   const hoje = new Date().toISOString().slice(0, 10)
   const sql = getSql()
 
+  // Ler configuração da TV
+  let config = {
+    statusVisiveis: DEFAULT_STATUS_VISIVEIS,
+    tiposVisiveis: ["rapido", "orcamento"],
+    mostrarAtrasados: true,
+    somAlarme: true,
+    tema: "dark",
+  }
+
+  try {
+    const confRows = await sql`SELECT valor FROM configuracoes WHERE chave = 'tv_config'`
+    if (confRows[0]?.valor) {
+      config = { ...config, ...JSON.parse(confRows[0].valor) }
+    }
+  } catch {
+    // usa padrão se não houver tabela ou falhar
+  }
+
+  const statusVisiveis =
+    Array.isArray(config.statusVisiveis) && config.statusVisiveis.length > 0
+      ? config.statusVisiveis
+      : DEFAULT_STATUS_VISIVEIS
+
+  // Se "aprovado" está selecionado, também inclui "arte" que é estágio equivalente
+  const statusComArte = statusVisiveis.includes("aprovado")
+    ? [...statusVisiveis, "arte"]
+    : statusVisiveis
+
+  const podeBuscarRapidos = config.tiposVisiveis.includes("rapido")
+  const podeBuscarOrcamentos = config.tiposVisiveis.includes("orcamento")
+
   const [pedidosRapidosRaw, orcamentosRaw, avisos] = await Promise.all([
+    podeBuscarRapidos
+      ? sql`
+          SELECT id, numero, cliente_nome, produto_nome, variante_nome,
+                 acabamento, observacao, status, criado_em, prazo_entrega_em, total
+          FROM pedidos_rapidos
+          WHERE status = ANY(${statusComArte})
+        `
+      : Promise.resolve([]),
+    podeBuscarOrcamentos
+      ? (sql`
+          SELECT 
+            o.id,
+            o.numero,
+            COALESCE(c.nome, 'Cliente') as cliente_nome,
+            o.material_fechado,
+            o.servico_fechado,
+            o.item,
+            o.status_producao as status,
+            o.criado_em,
+            COALESCE(o.total_fechado, 0) as total
+          FROM orcamentos o
+          LEFT JOIN clientes c ON c.id = o.cliente_id
+          WHERE o.status_producao = ANY(${statusComArte})
+        ` as unknown as Promise<OrcamentoRaw[]>)
+      : Promise.resolve([]),
     sql`
-      SELECT id, numero, cliente_nome, produto_nome, variante_nome,
-             acabamento, observacao, status, criado_em, prazo_entrega_em, total
-      FROM pedidos_rapidos
-      WHERE status = ANY(${STATUS_VISIVEIS})
+      SELECT id, mensagem, cor, icone, som, COALESCE(ativo, true) as ativo 
+      FROM avisos_tv 
+      WHERE COALESCE(ativo, true) = true 
+      ORDER BY criado_em DESC
     `,
-    sql`
-      SELECT 
-        o.id,
-        o.numero,
-        COALESCE(c.nome, 'Cliente') as cliente_nome,
-        o.material_fechado,
-        o.servico_fechado,
-        o.item,
-        o.status_producao as status,
-        o.criado_em,
-        COALESCE(o.total_fechado, 0) as total
-      FROM orcamentos o
-      LEFT JOIN clientes c ON c.id = o.cliente_id
-      WHERE o.status_producao = ANY(${STATUS_VISIVEIS})
-    ` as unknown as Promise<OrcamentoRaw[]>,
-    sql`SELECT id, mensagem, cor, icone, som FROM avisos_tv ORDER BY criado_em DESC`,
   ])
 
   const pedidosRapidos = (pedidosRapidosRaw as Array<{
@@ -130,8 +169,7 @@ export async function GET() {
   })
 
   return NextResponse.json(
-    { pedidos: todos, avisos },
+    { pedidos: todos, avisos, config },
     { headers: { "Cache-Control": "no-store" } }
   )
 }
-
