@@ -72,6 +72,7 @@ function formatarPrazo(prazo: string | null) {
 }
 
 function TvColuna({
+  status,
   label,
   borda,
   fundo,
@@ -175,7 +176,10 @@ function TvColuna({
   }, [temOverflow, pedidos])
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-2 min-w-0">
+    <div
+      id={`tv-coluna-${status}`}
+      className="flex h-full min-h-0 flex-col gap-2 w-[85vw] max-w-[340px] shrink-0 snap-center md:w-auto md:max-w-none md:flex-1 md:min-w-0 md:shrink"
+    >
       {/* Cabeçalho da coluna */}
       <div
         className={`flex shrink-0 items-center justify-between rounded-xl border px-3 py-2 shadow-2xs ${borda} ${fundo}`}
@@ -335,11 +339,16 @@ function Relogio() {
   if (!agora) return null
   return (
     <div className="shrink-0 text-right">
-      <div className="text-3xl font-bold tabular-nums tracking-tight sm:text-4xl lg:text-5xl">
+      <div className="text-xl sm:text-3xl lg:text-5xl font-black tabular-nums tracking-tight text-foreground">
         {agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
       </div>
-      <div className="mt-0.5 text-sm capitalize text-slate-500 sm:text-base dark:text-slate-400">
-        {agora.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+      <div className="mt-0.5 text-[11px] sm:text-sm lg:text-base capitalize text-muted-foreground leading-tight">
+        <span className="sm:hidden">
+          {agora.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" })}
+        </span>
+        <span className="hidden sm:inline">
+          {agora.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+        </span>
       </div>
     </div>
   )
@@ -482,7 +491,7 @@ export default function TvPage() {
     <div className="group/tv flex h-screen max-h-screen w-screen overflow-hidden flex-col gap-2.5 sm:gap-3 p-2.5 sm:p-4 bg-background">
 
       {/* Barra flutuante de utilitários da TV — visível ao passar o mouse ou interagir */}
-      <div className="fixed top-2.5 right-3 z-50 flex items-center gap-2 opacity-0 group-hover/tv:opacity-100 transition-opacity duration-200">
+      <div className="fixed top-2.5 right-3 z-50 flex items-center gap-2 opacity-0 sm:group-hover/tv:opacity-100 transition-opacity duration-200">
         <button
           type="button"
           onClick={() => {
@@ -542,43 +551,49 @@ export default function TvPage() {
         </Link>
       </div>
 
-      {/* Header Compacto de Alta Legibilidade para TV */}
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border/40 pb-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-3">
-            <div className="shrink-0 rounded-xl bg-[#0060a7] px-2.5 py-1.5 dark:bg-transparent dark:p-0">
+      {/* Header Compacto e Responsivo para TV e Celular */}
+      <header className="flex shrink-0 items-center justify-between gap-2 sm:gap-3 border-b border-border/40 pb-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="shrink-0 rounded-xl bg-[#0060a7] px-2 py-1 sm:px-2.5 sm:py-1.5 dark:bg-transparent dark:p-0">
               <Image
                 src="/brand/logo.png"
                 alt="Toldos Print"
                 width={1200}
                 height={394}
                 priority
-                className="h-auto w-36 sm:w-48 lg:w-56"
+                className="h-auto w-28 sm:w-44 lg:w-56"
               />
             </div>
-            <div className="h-6 w-px bg-border/60 hidden sm:block" />
+            <div className="h-5 sm:h-6 w-px bg-border/60 hidden sm:block" />
             <span className="hidden sm:inline text-base sm:text-xl font-black tracking-tight text-foreground/80">
               Painel de Produção
             </span>
+            <Link
+              href="/dashboard"
+              className="sm:hidden ml-auto rounded-lg bg-card/90 px-2 py-1 text-[11px] font-black text-foreground border border-border/80 shadow-2xs"
+            >
+              ← Sair
+            </Link>
           </div>
 
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-muted-foreground">
             <span className="font-bold text-foreground">
               {totalAtivos} pedido{totalAtivos !== 1 ? "s" : ""} ativo{totalAtivos !== 1 ? "s" : ""}
             </span>
             {config?.apenasRecentes && (
-              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-bold text-amber-600 dark:text-amber-400 text-xs">
-                ⚡ 5 Mais Recentes
+              <span className="rounded-full bg-amber-500/15 px-1.5 sm:px-2 py-0.5 font-bold text-amber-600 dark:text-amber-400 text-[10px] sm:text-xs">
+                ⚡ 5 Recentes
               </span>
             )}
             {totalAtrasados > 0 && config?.mostrarAtrasados !== false && (
-              <span className="rounded-full bg-red-500/15 px-2 py-0.5 font-bold text-red-600 dark:text-red-400 text-xs animate-pulse">
+              <span className="rounded-full bg-red-500/15 px-1.5 sm:px-2 py-0.5 font-bold text-red-600 dark:text-red-400 text-[10px] sm:text-xs animate-pulse">
                 ⚠ {totalAtrasados} atrasado{totalAtrasados !== 1 ? "s" : ""}
               </span>
             )}
             {ultimaAtualizacao && (
-              <span className="text-[11px] text-muted-foreground/70">
-                Sincronizado às {ultimaAtualizacao.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              <span className="hidden xs:inline text-[10px] sm:text-[11px] text-muted-foreground/70">
+                Sync {ultimaAtualizacao.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </div>
@@ -587,8 +602,43 @@ export default function TvPage() {
         <Relogio />
       </header>
 
-      {/* Kanban de Colunas: Garantido em 1 única linha horizontal sem quebrar */}
-      <div className="flex-1 min-h-0 flex flex-row gap-2 sm:gap-3 w-full overflow-hidden">
+      {/* Barra de Navegação Rápida entre Etapas (apenas Mobile para deslizar com 1 toque) */}
+      <div className="flex md:hidden gap-1.5 overflow-x-auto pb-0.5 shrink-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        {colunasFiltradas.map((coluna) => {
+          const colPedidos = pedidos.filter(
+            (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
+          )
+          return (
+            <button
+              key={`nav-${coluna.status}`}
+              type="button"
+              onClick={() => {
+                const el = document.getElementById(`tv-coluna-${coluna.status}`)
+                el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" })
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold shrink-0 border transition-all active:scale-95 ${
+                colPedidos.length > 0
+                  ? "border-primary/50 bg-primary/10 text-primary font-black shadow-2xs"
+                  : "border-border/60 bg-muted/40 text-muted-foreground opacity-60"
+              }`}
+            >
+              <span>{coluna.label}</span>
+              <span
+                className={`rounded-full px-1.5 py-0.2 text-[10px] font-black ${
+                  colPedidos.length > 0
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {colPedidos.length}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Kanban de Colunas: Em TV/desktop distribui em 1 linha 100% visível; no celular carrossel horizontal suave com snap */}
+      <div className="flex-1 min-h-0 flex flex-row gap-2.5 sm:gap-3 w-full overflow-x-auto md:overflow-hidden snap-x snap-mandatory md:snap-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden px-0.5 md:px-0">
         {colunasFiltradas.map((coluna) => {
           const colPedidos = pedidos.filter(
             (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
