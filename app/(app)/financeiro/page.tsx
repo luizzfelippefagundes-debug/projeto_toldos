@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
 import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-dialog"
 import { LancamentoDetalheDialog } from "@/components/financeiro/lancamento-detalhe-dialog"
 import { formatarData, formatarMoeda } from "@/lib/format"
@@ -31,7 +32,7 @@ import {
 } from "@/lib/financeiro"
 import type { LancamentoFinanceiro, TipoLancamento } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { ChevronRight, Plus } from "lucide-react"
+import { ChevronRight, Plus, Search } from "lucide-react"
 
 const rotuloFormaPagamento: Record<string, string> = {
   boleto: "Boleto",
@@ -45,6 +46,7 @@ export default function FinanceiroPage() {
   const { lancamentos, clientes, orcamentos } = useData()
   const [filtroTipo, setFiltroTipo] = useState<TipoLancamento | "todos" | "boleto" | "fixas">("todos")
   const [filtroCliente, setFiltroCliente] = useState("todos")
+  const [busca, setBusca] = useState("")
   const [soComOs, setSoComOs] = useState(true)
   const [selecionado, setSelecionado] = useState<LancamentoFinanceiro | null>(null)
   // Despesas pessoais ficam fora dos totais, a não ser que a pessoa queira ver tudo junto.
@@ -70,6 +72,7 @@ export default function FinanceiroPage() {
   const saldo = resumo.recebido - resumo.pago
 
   const ordenados = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
     return lancamentos
       .filter((l) =>
         filtroTipo === "todos"
@@ -82,6 +85,20 @@ export default function FinanceiroPage() {
       )
       .filter((l) => filtroCliente === "todos" || l.clienteId === filtroCliente)
       .filter((l) => {
+        if (!termo) return true
+        const desc = (l.descricao ?? "").toLowerCase()
+        const cli = clientes.find((c) => c.id === l.clienteId)
+        const cliNome = (cli?.nome ?? "").toLowerCase()
+        const cliCpf = (cli?.cpf ?? "").toLowerCase()
+        const cat = (l.categoria ?? "").toLowerCase()
+        return (
+          desc.includes(termo) ||
+          cliNome.includes(termo) ||
+          cliCpf.includes(termo) ||
+          cat.includes(termo)
+        )
+      })
+      .filter((l) => {
         if (!soComOs) return true
         if (l.origem === "orcamento" && l.origemId) {
           const orc = orcamentos.find((o) => o.id === l.origemId)
@@ -90,7 +107,7 @@ export default function FinanceiroPage() {
         return true
       })
       .sort((a, b) => new Date(a.vencimento).getTime() - new Date(b.vencimento).getTime())
-  }, [lancamentos, filtroTipo, filtroCliente, soComOs, orcamentos])
+  }, [lancamentos, filtroTipo, filtroCliente, busca, clientes, soComOs, orcamentos])
 
   const itensLista = useMemo(
     () => agruparPagasDaSerie(ordenados, lancamentos, seriesAbertas),
@@ -303,23 +320,44 @@ export default function FinanceiroPage() {
             Só com OS
           </button>
         </div>
-        <Select value={filtroCliente} onValueChange={(v) => setFiltroCliente(v ?? "todos")}>
-          <SelectTrigger className="w-48">
-            <SelectValue>
-              {(v: string) =>
-                v === "todos" ? "Todos os clientes" : nomeCliente(v)
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos os clientes</SelectItem>
-            {clientes.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar cliente, empresa..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="pl-9 pr-7 h-9 text-sm"
+            />
+            {busca && (
+              <button
+                type="button"
+                onClick={() => setBusca("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                title="Limpar busca"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <Select value={filtroCliente} onValueChange={(v) => setFiltroCliente(v ?? "todos")}>
+            <SelectTrigger className="w-48 h-9">
+              <SelectValue>
+                {(v: string) =>
+                  v === "todos" ? "Todos os clientes" : nomeCliente(v)
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os clientes</SelectItem>
+              {clientes.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {seriesAbertas.size > 0 && (
