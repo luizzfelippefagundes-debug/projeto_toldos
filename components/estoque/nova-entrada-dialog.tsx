@@ -25,10 +25,15 @@ import { isPositiveNumberInput } from "@/lib/number"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
 
-export function NovaEntradaDialog() {
+interface Props {
+  trigger?: React.ReactElement
+  materialIdInicial?: string
+}
+
+export function NovaEntradaDialog({ trigger, materialIdInicial }: Props = {}) {
   const { materiais, addEntradaEstoque } = useData()
   const [aberto, setAberto] = useState(false)
-  const [materialId, setMaterialId] = useState("")
+  const [materialId, setMaterialId] = useState(materialIdInicial ?? "")
   const [quantidade, setQuantidade] = useState("")
   const [fornecedor, setFornecedor] = useState("")
   const [comNotaFiscal, setComNotaFiscal] = useState(false)
@@ -37,7 +42,7 @@ export function NovaEntradaDialog() {
   const valido = materialId !== "" && isPositiveNumberInput(quantidade)
 
   function limpar() {
-    setMaterialId("")
+    setMaterialId(materialIdInicial ?? "")
     setQuantidade("")
     setFornecedor("")
     setComNotaFiscal(false)
@@ -64,12 +69,17 @@ export function NovaEntradaDialog() {
       onOpenChange={(v) => {
         setAberto(v)
         if (!v) limpar()
+        else if (materialIdInicial) setMaterialId(materialIdInicial)
       }}
     >
-      <DialogTrigger render={<Button />}>
-        <Plus className="mr-2 h-4 w-4" />
-        Nova Entrada
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger render={trigger} />
+      ) : (
+        <DialogTrigger render={<Button className="font-bold gap-2" />}>
+          <Plus className="h-4 w-4" />
+          Nova Entrada
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nova entrada de estoque</DialogTitle>

@@ -26,21 +26,24 @@ import { Pencil, Plus, Trash2 } from "lucide-react"
 
 interface Props {
   acabamento?: Acabamento
+  trigger?: React.ReactElement
 }
 
-export function AcabamentoFormDialog({ acabamento }: Props) {
+export function AcabamentoFormDialog({ acabamento, trigger }: Props) {
   const modoEdicao = Boolean(acabamento)
   const [aberto, setAberto] = useState(false)
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
-      {modoEdicao ? (
+      {trigger ? (
+        <DialogTrigger render={trigger} />
+      ) : modoEdicao ? (
         <DialogTrigger render={<Button variant="ghost" size="icon" />}>
           <Pencil className="h-4 w-4" />
         </DialogTrigger>
       ) : (
-        <DialogTrigger render={<Button />}>
-          <Plus className="mr-2 h-4 w-4" />
+        <DialogTrigger render={<Button className="font-bold gap-2" />}>
+          <Plus className="h-4 w-4" />
           Novo Acabamento
         </DialogTrigger>
       )}

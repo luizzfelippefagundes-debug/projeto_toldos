@@ -34,21 +34,24 @@ const formasCobranca: { value: FormaCobranca; label: string; sufixo: string }[] 
 
 interface Props {
   servico?: Servico
+  trigger?: React.ReactElement
 }
 
-export function ServicoFormDialog({ servico }: Props) {
+export function ServicoFormDialog({ servico, trigger }: Props) {
   const modoEdicao = Boolean(servico)
   const [aberto, setAberto] = useState(false)
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
-      {modoEdicao ? (
+      {trigger ? (
+        <DialogTrigger render={trigger} />
+      ) : modoEdicao ? (
         <DialogTrigger render={<Button variant="ghost" size="icon" />}>
           <Pencil className="h-4 w-4" />
         </DialogTrigger>
       ) : (
-        <DialogTrigger render={<Button />}>
-          <Plus className="mr-2 h-4 w-4" />
+        <DialogTrigger render={<Button className="font-bold gap-2" />}>
+          <Plus className="h-4 w-4" />
           Novo Serviço
         </DialogTrigger>
       )}
