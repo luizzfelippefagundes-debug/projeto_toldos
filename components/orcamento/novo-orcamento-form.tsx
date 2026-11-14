@@ -1436,20 +1436,12 @@ export function NovoOrcamentoForm() {
                     const pct = entradaEfetiva(numeroOuZero(entradaPercent))
                     const tot = resultado?.total ?? 0
                     if (tot <= 0) return null
-                    const ehBoleto = condicoesPagamento.toLowerCase().includes("boleto")
                     if (pct === null) {
                       return (
                         <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground border border-border">
-                          <p className="font-semibold text-foreground mb-1">
-                            {ehBoleto ? "Opções em até 3x no Boleto (sem juros):" : "Opções de parcelamento (sem juros):"}
+                          <p className="font-semibold text-foreground">
+                            Pagamento à vista: <strong className="text-primary">{formatarMoeda(tot)}</strong>
                           </p>
-                          <div className="flex flex-wrap gap-3 font-medium text-foreground">
-                            <span>1x de {formatarMoeda(tot)}</span>
-                            <span>•</span>
-                            <span>2x de {formatarMoeda(Math.round((tot / 2) * 100) / 100)}</span>
-                            <span>•</span>
-                            <span>3x de {formatarMoeda(Math.round((tot / 3) * 100) / 100)}</span>
-                          </div>
                         </div>
                       )
                     }
@@ -1461,23 +1453,13 @@ export function NovoOrcamentoForm() {
                           <span>Entrada ({pct}%): <strong className="text-primary">{formatarMoeda(ent)}</strong></span>
                           <span>Restante ({Math.round(100 - pct)}%): <strong className="text-primary">{formatarMoeda(rest)}</strong></span>
                         </div>
-                        <div className="pt-2 border-t border-border/60">
-                          <span className="font-semibold text-foreground">
-                            {ehBoleto ? "Saldo restante em até 3x no Boleto:" : "Saldo restante parcelado em até 3x:"}
-                          </span>
-                          <div className="flex flex-wrap gap-3 mt-1 font-medium text-foreground">
-                            <span className="bg-background px-2 py-1 rounded border border-border">1x de {formatarMoeda(rest)}</span>
-                            <span className="bg-background px-2 py-1 rounded border border-border">2x de {formatarMoeda(Math.round((rest / 2) * 100) / 100)}</span>
-                            <span className="bg-background px-2 py-1 rounded border border-border">3x de {formatarMoeda(Math.round((rest / 3) * 100) / 100)}</span>
-                          </div>
-                        </div>
                       </div>
                     )
                   })()}
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Margem, acréscimo e desconto são calculados sobre o custo, o imposto sobre o subtotal, e o ajuste em dinheiro entra no final. As opções calculadas saem automaticamente no PDF oficial do orçamento.
+                  Margem, acréscimo e desconto são calculados sobre o custo, o imposto sobre o subtotal, e o ajuste em dinheiro entra no final. Os valores de entrada e restante saem automaticamente no PDF oficial do orçamento.
                 </p>
 
                 {resultado && (
