@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
+import { Combobox } from "@/components/ui/combobox"
 import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-dialog"
 import { LancamentoDetalheDialog } from "@/components/financeiro/lancamento-detalhe-dialog"
 import { formatarData, formatarMoeda } from "@/lib/format"
@@ -340,23 +341,19 @@ export default function FinanceiroPage() {
               </button>
             )}
           </div>
-          <Select value={filtroCliente} onValueChange={(v) => setFiltroCliente(v ?? "todos")}>
-            <SelectTrigger className="w-48 h-9">
-              <SelectValue>
-                {(v: string) =>
-                  v === "todos" ? "Todos os clientes" : nomeCliente(v)
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os clientes</SelectItem>
-              {clientes.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Combobox
+            options={[
+              { value: "todos", label: "Todos os clientes" },
+              ...clientes.map((c) => ({ value: c.id, label: c.nome })),
+            ]}
+            value={filtroCliente}
+            onValueChange={setFiltroCliente}
+            placeholder="Todos os clientes"
+            searchPlaceholder="Buscar cliente na lista..."
+            emptyText="Nenhum cliente encontrado."
+            className="w-56 sm:w-64 h-9 bg-background"
+            contentClassName="min-w-[320px] max-w-[440px]"
+          />
         </div>
       </div>
 

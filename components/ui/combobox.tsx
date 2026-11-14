@@ -30,6 +30,7 @@ interface ComboboxProps {
   searchPlaceholder?: string
   emptyText?: string
   className?: string
+  contentClassName?: string
 }
 
 export function Combobox({
@@ -40,6 +41,7 @@ export function Combobox({
   searchPlaceholder = "Buscar...",
   emptyText = "Nenhum resultado.",
   className,
+  contentClassName,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false)
 
@@ -56,10 +58,13 @@ export function Combobox({
         <span className="truncate" title={selected?.label}>{selected?.label ?? placeholder}</span>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+      <PopoverContent
+        className={cn("w-[var(--radix-popover-trigger-width)] min-w-[280px] p-0", contentClassName)}
+        align="start"
+      >
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
+          <CommandList className="max-h-72">
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
@@ -70,14 +75,15 @@ export function Combobox({
                     onValueChange(option.value)
                     setOpen(false)
                   }}
+                  className="cursor-pointer py-2 items-start"
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
+                      "mr-2 h-4 w-4 shrink-0 mt-0.5",
                       value === option.value ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {option.label}
+                  <span className="break-words leading-snug">{option.label}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
