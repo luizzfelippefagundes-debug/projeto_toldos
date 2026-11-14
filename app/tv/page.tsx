@@ -223,15 +223,19 @@ function TvColuna({
       setEstaNoFim(el.scrollTop + el.clientHeight >= el.scrollHeight - 5)
     }
     verificar()
-    const t = setTimeout(verificar, 350)
+    const obs = new ResizeObserver(verificar)
+    obs.observe(el)
     window.addEventListener("resize", verificar)
+    const t = setTimeout(verificar, 300)
     return () => {
       clearTimeout(t)
+      obs.disconnect()
       window.removeEventListener("resize", verificar)
     }
-  }, [pedidos, tamanhoGrande])
+  }, [pedidos.length, tamanhoGrande])
 
-  // Auto-scroll contínuo e cíclico (Desce suavemente -> pausa -> sobe suavemente -> pausa -> repete)
+  // Auto-scroll contínuo e cíclico com acumulador de float para compatibilidade com Smart TVs
+  // NÃO depende de 'pedidos' para não ser reiniciado a cada ciclo de polling de 3 segundos
   useEffect(() => {
     const el = containerRef.current
     if (!el || !temOverflow) return
@@ -240,61 +244,81 @@ function TvColuna({
     let timeoutId: NodeJS.Timeout | null = null
     let direcao = 1 // 1: descendo, -1: subindo
     let pausado = true // Começa pausado no topo para leitura inicial
+    let scrollPos = el.scrollTop // Acumulador de precisão para evitar truncamento em Smart TVs
 
-    // Inicia a rolagem para baixo após 3.5 segundos de pausa no topo
+    // Inicia a rolagem para baixo após 2.5 segundos de pausa inicial
     timeoutId = setTimeout(() => {
       pausado = false
-    }, 3500)
+    }, 2500)
 
     const rolar = () => {
       if (!el) return
       const maxScroll = el.scrollHeight - el.clientHeight
-      if (maxScroll <= 0) return
+      if (maxScroll <= 2) {
+        animId = requestAnimationFrame(rolar)
+        return
+      }
 
       if (!pausado) {
         if (direcao === 1) {
-          // Descendo suavemente
-          el.scrollTop += 0.85
-          setEstaNoTopo(el.scrollTop <= 5)
-          setEstaNoFim(el.scrollTop >= maxScroll - 5)
-
-          if (el.scrollTop >= maxScroll - 1) {
+          // Descendo suavemente: 0.85px por frame
+          scrollPos += 0.85
+          if (scrollPos >= maxScroll) {
+            scrollPos = maxScroll
+            el.scrollTop = maxScroll
+            setEstaNoTopo(false)
+            setEstaNoFim(true)
             pausado = true
-            // Pausa no final para leitura dos últimos pedidos
+            // Pausa no final para leitura dos últimos pedidos antes de subir
             timeoutId = setTimeout(() => {
               direcao = -1
               pausado = false
             }, 3500)
+          } else {
+            el.scrollTop = Math.round(scrollPos)
+            setEstaNoTopo(el.scrollTop <= 5)
+            setEstaNoFim(el.scrollTop >= maxScroll - 5)
           }
         } else {
-          // Subindo suavemente de volta ao topo
-          el.scrollTop -= 1.3
-          setEstaNoTopo(el.scrollTop <= 5)
-          setEstaNoFim(el.scrollTop >= maxScroll - 5)
-
-          if (el.scrollTop <= 1) {
+          // Subindo suavemente de volta ao topo: 1.2px por frame
+          scrollPos -= 1.2
+          if (scrollPos <= 0) {
+            scrollPos = 0
             el.scrollTop = 0
+            setEstaNoTopo(true)
+            setEstaNoFim(false)
             pausado = true
-            // Pausa no topo para nova leitura antes de descer de novo
+            // Pausa no topo antes de descer novamente
             timeoutId = setTimeout(() => {
               direcao = 1
               pausado = false
-            }, 4000)
+            }, 3000)
+          } else {
+            el.scrollTop = Math.round(scrollPos)
+            setEstaNoTopo(el.scrollTop <= 5)
+            setEstaNoFim(el.scrollTop >= maxScroll - 5)
           }
         }
       }
 
-      // IMPORTANTE: Mantém o loop de animação vivo a cada frame sem morrer
       animId = requestAnimationFrame(rolar)
     }
 
     animId = requestAnimationFrame(rolar)
 
+    const sincronizarScroll = () => {
+      if (pausado) {
+        scrollPos = el.scrollTop
+      }
+    }
+    el.addEventListener("scroll", sincronizarScroll, { passive: true })
+
     return () => {
       if (timeoutId) clearTimeout(timeoutId)
       cancelAnimationFrame(animId)
+      el.removeEventListener("scroll", sincronizarScroll)
     }
-  }, [temOverflow, pedidos])
+  }, [temOverflow])
 
   return (
     <div
@@ -434,10 +458,21 @@ export default function TvPage() {
       const res = await fetch("/api/tv/pedidos", { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
-        setPedidos(data.pedidos ?? data)
-        setAvisos(data.avisos ?? [])
+        const novosPedidos = data.pedidos ?? data
+        setPedidos((prev) => {
+          if (JSON.stringify(prev) === JSON.stringify(novosPedidos)) return prev
+          return novosPedidos
+        })
+        const novosAvisos = data.avisos ?? []
+        setAvisos((prev) => {
+          if (JSON.stringify(prev) === JSON.stringify(novosAvisos)) return prev
+          return novosAvisos
+        })
         if (data.config) {
-          setConfig(data.config)
+          setConfig((prev) => {
+            if (JSON.stringify(prev) === JSON.stringify(data.config)) return prev
+            return data.config
+          })
           if (data.config.tema && (data.config.tema === "light" || data.config.tema === "dark")) {
             setThemeRef.current(data.config.tema)
           }
