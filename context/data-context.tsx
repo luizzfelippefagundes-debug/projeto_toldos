@@ -118,6 +118,8 @@ export interface DataContextValue {
   moverOrcamentoProducao: (id: string, status: StatusPedidoRapido) => void
   salvarArteOrcamento: (id: string, arteUrl: string | null) => Promise<void>
   salvarArtePedidoRapido: (id: string, arteUrl: string | null) => Promise<void>
+  salvarObservacaoOrcamento: (id: string, observacao: string) => Promise<void>
+  salvarObservacaoPedidoRapido: (id: string, observacao: string) => Promise<void>
   addLancamento: (
     dados: Omit<LancamentoFinanceiro, "id" | "criadoEm">
   ) => LancamentoFinanceiro
@@ -662,6 +664,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  const salvarObservacaoOrcamento: DataContextValue["salvarObservacaoOrcamento"] = async (id, observacao) => {
+    setOrcamentos((atual) =>
+      atual.map((o) => {
+        if (o.id !== id) return o
+        const atualizado = { ...o, observacao: observacao.trim() || undefined }
+        apiPut(`/api/orcamentos/${id}`, atualizado)
+        return atualizado
+      })
+    )
+  }
+
+  const salvarObservacaoPedidoRapido: DataContextValue["salvarObservacaoPedidoRapido"] = async (id, observacao) => {
+    setPedidosRapidos((atual) =>
+      atual.map((p) => {
+        if (p.id !== id) return p
+        const atualizado = { ...p, observacao: observacao.trim() }
+        apiPut(`/api/pedidos-rapidos/${id}`, atualizado)
+        return atualizado
+      })
+    )
+  }
+
   const reabrirOrcamento: DataContextValue["reabrirOrcamento"] = (id) => {
     const orcamento = orcamentos.find((o) => o.id === id)
     if (!orcamento || orcamento.status === "aberto") return false
@@ -914,6 +938,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       moverOrcamentoProducao,
       salvarArteOrcamento,
       salvarArtePedidoRapido,
+      salvarObservacaoOrcamento,
+      salvarObservacaoPedidoRapido,
       addLancamento,
       updateLancamento,
       removeLancamento,

@@ -63,8 +63,12 @@ import {
   Filter,
   Sparkles,
   EyeOff,
+  FileText,
+  Pencil,
+  Plus,
 } from "lucide-react"
 import { linkWhatsapp } from "@/lib/whatsapp"
+import { toast } from "sonner"
 
 const STATUS_COM_NOTIFICACAO = new Set<StatusPedidoRapido>(["ag_confirmacao", "pronto", "entregue"])
 
@@ -202,6 +206,8 @@ export default function ProducaoPage() {
     moverOrcamentoProducao,
     salvarArteOrcamento,
     salvarArtePedidoRapido,
+    salvarObservacaoOrcamento,
+    salvarObservacaoPedidoRapido,
   } = useData()
   const [busca, setBusca] = useState("")
   const [colunaAtiva, setColunaAtiva] = useState<StatusPedidoRapido | "todas">("todas")
@@ -794,6 +800,7 @@ export default function ProducaoPage() {
                     atrasado={estaAtrasado(pedido)}
                     coluna={colunaMap[pedido.status]}
                     onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
+                    onSalvarObservacao={(obs) => salvarObservacaoPedidoRapido(pedido.id, obs)}
                     onMudarStatus={(status) =>
                       solicitarConfirmacao(
                         pedido.clienteNome,
@@ -815,6 +822,7 @@ export default function ProducaoPage() {
                       coluna={col}
                       assinatura={assinaturas[orc.id]}
                       onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
+                      onSalvarObservacao={(obs) => salvarObservacaoOrcamento(orc.id, obs)}
                       onMudarStatus={(status) =>
                         solicitarConfirmacao(
                           cli?.nome ?? "Cliente",
@@ -1010,6 +1018,7 @@ export default function ProducaoPage() {
                               atrasado={estaAtrasado(pedido)}
                               coluna={colunaMap[pedido.status]}
                               onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
+                              onSalvarObservacao={(obs) => salvarObservacaoPedidoRapido(pedido.id, obs)}
                               onMudarStatus={(status) =>
                                 solicitarConfirmacao(
                                   pedido.clienteNome,
@@ -1032,6 +1041,7 @@ export default function ProducaoPage() {
                                 coluna={col}
                                 assinatura={assinaturas[orc.id]}
                                 onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
+                                onSalvarObservacao={(obs) => salvarObservacaoOrcamento(orc.id, obs)}
                                 onMudarStatus={(status) =>
                                   solicitarConfirmacao(
                                     cli?.nome ?? "Cliente",
@@ -1311,6 +1321,112 @@ function ArteCardWidget({
   )
 }
 
+function ObservacaoProducaoWidget({
+  observacaoInicial,
+  onSalvar,
+}: {
+  observacaoInicial?: string
+  onSalvar: (texto: string) => Promise<void>
+}) {
+  const [editando, setEditando] = useState(false)
+  const [texto, setTexto] = useState(observacaoInicial || "")
+  const [salvando, setSalvando] = useState(false)
+
+  useEffect(() => {
+    setTexto(observacaoInicial || "")
+  }, [observacaoInicial])
+
+  async function handleSalvar() {
+    setSalvando(true)
+    try {
+      await onSalvar(texto)
+      setEditando(false)
+      toast.success("Instrução de produção salva!")
+    } catch {
+      toast.error("Erro ao salvar instrução")
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  return (
+    <div
+      className="flex flex-col text-xs"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {editando ? (
+        <div className="flex flex-col gap-1.5 rounded-xl border border-amber-500/50 bg-amber-500/10 dark:bg-amber-950/30 p-2 shadow-xs">
+          <div className="flex items-center justify-between text-[11px] font-bold text-amber-700 dark:text-amber-400">
+            <span className="flex items-center gap-1">
+              <FileText className="h-3 w-3" />
+              Instrução pra Fábrica / TV:
+            </span>
+          </div>
+          <textarea
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="Ex: favor fazer estrutura metálica para pintar na cor preta..."
+            rows={2}
+            className="w-full rounded-lg border border-border/80 bg-background p-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
+            autoFocus
+          />
+          <div className="flex items-center justify-end gap-1.5 pt-0.5">
+            <button
+              type="button"
+              disabled={salvando}
+              onClick={() => {
+                setTexto(observacaoInicial || "")
+                setEditando(false)
+              }}
+              className="px-2 py-0.5 rounded text-[11px] font-medium text-muted-foreground hover:bg-muted"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={salvando}
+              onClick={handleSalvar}
+              className="px-2.5 py-0.5 rounded bg-amber-600 text-white hover:bg-amber-700 text-[11px] font-bold shadow-2xs transition-colors"
+            >
+              {salvando ? "Salvando..." : "Salvar"}
+            </button>
+          </div>
+        </div>
+      ) : observacaoInicial ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20 p-2 text-xs flex flex-col gap-1 shadow-2xs group">
+          <div className="flex items-center justify-between text-[11px] font-bold text-amber-700 dark:text-amber-400">
+            <span className="flex items-center gap-1">
+              <FileText className="h-3 w-3 shrink-0" />
+              <span>Instrução / Obs Fábrica:</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setEditando(true)}
+              className="opacity-70 group-hover:opacity-100 hover:text-amber-900 dark:hover:text-amber-200 transition-opacity p-0.5"
+              title="Editar instrução"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          </div>
+          <p className="text-foreground/90 font-medium break-words whitespace-pre-wrap leading-tight text-xs">
+            {observacaoInicial}
+          </p>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditando(true)}
+          className="w-full flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg border border-dashed border-border/80 hover:border-amber-500/60 bg-muted/20 hover:bg-amber-500/5 text-[11px] font-medium text-muted-foreground hover:text-amber-700 dark:hover:text-amber-400 transition-colors"
+        >
+          <Plus className="h-3 w-3 shrink-0" />
+          <span>+ Obs / Instrução pra Fábrica</span>
+        </button>
+      )}
+    </div>
+  )
+}
+
 function PedidoCardConteudo({
   pedido,
   produto,
@@ -1318,6 +1434,7 @@ function PedidoCardConteudo({
   coluna,
   onMudarStatus,
   onSalvarArte,
+  onSalvarObservacao,
 }: {
   pedido: PedidoRapido
   produto: ProdutoRapido | undefined
@@ -1325,6 +1442,7 @@ function PedidoCardConteudo({
   coluna: (typeof colunas)[number]
   onMudarStatus: (status: StatusPedidoRapido) => void
   onSalvarArte: (url: string | null) => Promise<void>
+  onSalvarObservacao?: (obs: string) => Promise<void>
 }) {
   // Funcionário (papel "Produção e TV") vê o pedido, mas não o valor em reais.
   const { papel } = usePapelAtivo()
@@ -1403,6 +1521,14 @@ function PedidoCardConteudo({
         onSalvarArte={onSalvarArte}
       />
 
+      {/* Widget de Observação / Instrução para Fábrica e TV */}
+      {onSalvarObservacao && (
+        <ObservacaoProducaoWidget
+          observacaoInicial={pedido.observacao}
+          onSalvar={onSalvarObservacao}
+        />
+      )}
+
       {/* Status Bar: Dropdown + Avançar */}
       <div
         className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/60 text-xs"
@@ -1456,6 +1582,7 @@ function OrcamentoCardConteudo({
   assinatura,
   onMudarStatus,
   onSalvarArte,
+  onSalvarObservacao,
 }: {
   orcamento: Orcamento
   cliente: Cliente | undefined
@@ -1463,6 +1590,7 @@ function OrcamentoCardConteudo({
   assinatura?: { pdfUrl: string | null; assinado: boolean }
   onMudarStatus: (status: StatusPedidoRapido) => void
   onSalvarArte: (url: string | null) => Promise<void>
+  onSalvarObservacao?: (obs: string) => Promise<void>
 }) {
   const { papel } = usePapelAtivo()
   const nome = cliente?.nome?.trim() || ""
@@ -1564,6 +1692,14 @@ function OrcamentoCardConteudo({
         clienteTelefone={cliente?.telefone}
         onSalvarArte={onSalvarArte}
       />
+
+      {/* Widget de Observação / Instrução para Fábrica e TV */}
+      {onSalvarObservacao && (
+        <ObservacaoProducaoWidget
+          observacaoInicial={orcamento.observacao}
+          onSalvar={onSalvarObservacao}
+        />
+      )}
 
       {/* Status Bar: Dropdown + Avançar */}
       <div

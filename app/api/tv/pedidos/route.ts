@@ -24,6 +24,7 @@ interface OrcamentoRaw {
   material_fechado: { nome?: string } | null
   servico_fechado: { nome?: string } | null
   item: PedidoItemRaw | null
+  observacao?: string | null
   status: string
   criado_em: string
   total: number | string
@@ -86,6 +87,7 @@ export async function GET() {
             o.material_fechado,
             o.servico_fechado,
             o.item,
+            o.observacao,
             o.status_producao as status,
             o.criado_em,
             COALESCE(o.total_fechado, 0) as total
@@ -148,7 +150,7 @@ export async function GET() {
       produto_nome: mat?.nome || "Orçamento de Comunicação Visual",
       variante_nome: variante_nome || null,
       acabamento: serv?.nome || null,
-      observacao: item.observacoes || "",
+      observacao: o.observacao || item.observacoes || "",
       status: o.status === "arte" ? "aprovado" : o.status,
       criado_em: o.criado_em,
       prazo_entrega_em: null,

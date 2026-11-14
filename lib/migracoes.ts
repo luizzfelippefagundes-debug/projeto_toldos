@@ -19,6 +19,7 @@ export async function garantirColunasOrcamentos() {
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS os_emitida_em TEXT`
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS arte_url TEXT`
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS arte_aprovada_em TEXT`
+  await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS observacao TEXT`
   orcamentosProntos = true
 }
 

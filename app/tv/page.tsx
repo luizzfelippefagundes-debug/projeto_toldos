@@ -176,15 +176,17 @@ function PedidoCard({
           </div>
         )}
 
-        {/* Observação da OS / Pedido completa */}
+        {/* Observação / Instrução de Produção em Alto Destaque */}
         {pedido.observacao && (
-          <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
-            <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
-              Obs:
-            </span>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 italic break-words whitespace-normal mt-0.5">
-              {pedido.observacao}
-            </p>
+          <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60">
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2 sm:p-2.5 text-amber-950 dark:text-amber-100 shadow-2xs">
+              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block text-amber-700 dark:text-amber-400">
+                ⚠️ Instrução de Produção:
+              </span>
+              <p className="text-xs sm:text-sm lg:text-base font-bold break-words whitespace-normal mt-0.5 leading-snug">
+                {pedido.observacao}
+              </p>
+            </div>
           </div>
         )}
       </div>

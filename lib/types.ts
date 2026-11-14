@@ -167,6 +167,7 @@ export interface Orcamento {
   osEmitidaEm?: string
   arteUrl?: string
   arteAprovadaEm?: string
+  observacao?: string
 }
 
 export interface EntradaEstoque {
