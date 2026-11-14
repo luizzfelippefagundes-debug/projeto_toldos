@@ -43,7 +43,7 @@ export async function GET() {
     apenasRecentes: false,
     densidade: "normal",
     tamanhoFonte: "grande",
-    ocultarVazias: false,
+    ocultarVazias: true,
   }
 
   try {

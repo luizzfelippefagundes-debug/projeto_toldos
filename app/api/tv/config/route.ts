@@ -23,7 +23,7 @@ export const DEFAULT_TV_CONFIG: TvConfig = {
   apenasRecentes: false,
   densidade: "normal",
   tamanhoFonte: "grande",
-  ocultarVazias: false,
+  ocultarVazias: true,
 }
 
 async function garantirTabela(sql: ReturnType<typeof getSql>) {

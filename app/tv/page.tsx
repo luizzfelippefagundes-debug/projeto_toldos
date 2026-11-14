@@ -241,7 +241,7 @@ function TvColuna({
 
                 {/* Nome do Cliente em Destaque Grande para ver de longe */}
                 <p
-                  className={`mt-1.5 font-black text-foreground tracking-tight leading-tight truncate ${
+                  className={`mt-1.5 font-black text-foreground tracking-tight leading-tight break-words ${
                     tamanhoGrande
                       ? "text-base sm:text-lg lg:text-xl xl:text-2xl"
                       : "text-sm sm:text-base lg:text-lg"
@@ -251,33 +251,40 @@ function TvColuna({
                   {pedido.cliente_nome}
                 </p>
 
-                {/* Produto + Medida/Variante Grande e Nítido */}
-                <p
-                  className={`mt-1 text-muted-foreground truncate leading-snug ${
-                    tamanhoGrande
-                      ? "text-xs sm:text-sm lg:text-base"
-                      : "text-xs sm:text-sm"
-                  }`}
-                >
-                  <span className="font-bold text-foreground/90">{pedido.produto_nome ?? "Item"}</span>
-                  {pedido.variante_nome && (
-                    <span className="font-medium text-muted-foreground"> · {pedido.variante_nome}</span>
+                {/* Bloco: O QUE É PRA FAZER (Destaque total para a fábrica - NUNCA CORTA) */}
+                <div className="mt-2 flex flex-col gap-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-2.5 sm:p-3 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs">
+                  {/* Produto / Serviço + Medidas */}
+                  <div className="flex flex-wrap items-start justify-between gap-1.5">
+                    <p className="font-extrabold text-foreground text-sm sm:text-base lg:text-lg leading-snug break-words flex-1 min-w-[140px]">
+                      {pedido.produto_nome ?? "Item de Produção"}
+                    </p>
+
+                    {/* Medidas / Quantidade em destaque com badge próprio */}
+                    {pedido.variante_nome && (
+                      <span className="shrink-0 rounded-lg bg-primary/15 border border-primary/30 px-2 py-0.5 text-xs sm:text-sm font-black text-primary">
+                        📏 {pedido.variante_nome}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Acabamento completo (sem cortes) */}
+                  {pedido.acabamento && (
+                    <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 break-words flex items-baseline gap-1 pt-0.5 border-t border-slate-200/60 dark:border-slate-700/50">
+                      <span className="text-[11px] sm:text-xs text-muted-foreground uppercase font-bold tracking-wider shrink-0">
+                        Acabamento:
+                      </span>
+                      <span>{pedido.acabamento}</span>
+                    </p>
                   )}
-                </p>
 
-                {/* Acabamento se houver */}
-                {pedido.acabamento && (
-                  <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground/80 font-medium truncate">
-                    {pedido.acabamento}
-                  </p>
-                )}
-
-                {/* Observação curta se houver */}
-                {pedido.observacao && (
-                  <p className="mt-1.5 line-clamp-2 rounded-lg bg-muted/70 px-2 py-1 text-xs italic text-muted-foreground">
-                    {pedido.observacao}
-                  </p>
-                )}
+                  {/* Observação da OS / Pedido (sem cortes) */}
+                  {pedido.observacao && (
+                    <p className="text-xs text-slate-600 dark:text-slate-300 italic break-words pt-0.5 border-t border-slate-200/60 dark:border-slate-700/50">
+                      <span className="font-bold not-italic text-foreground/80">Obs: </span>
+                      {pedido.observacao}
+                    </p>
+                  )}
+                </div>
               </div>
             )
           })}
