@@ -21,6 +21,7 @@ import {
   Radio,
   Clock,
   Zap,
+  Minimize2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,6 +46,7 @@ interface TvConfig {
   somAlarme: boolean
   tema: "light" | "dark"
   apenasRecentes?: boolean
+  densidade?: "normal" | "compacto"
 }
 
 const DEFAULT_TV_CONFIG: TvConfig = {
@@ -54,6 +56,7 @@ const DEFAULT_TV_CONFIG: TvConfig = {
   somAlarme: true,
   tema: "dark",
   apenasRecentes: false,
+  densidade: "compacto",
 }
 
 const TIPOS = [
@@ -833,6 +836,24 @@ export default function CentralTvPage() {
             <div className="flex flex-col gap-2 border-t border-border/50 pt-3">
               <span className="text-xs font-semibold text-foreground">Comportamento do Telão:</span>
               <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background text-xs">
+                  <div className="flex items-center gap-2">
+                    <Minimize2 className="h-4 w-4 text-primary shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground block">Modo Compacto de Cards</span>
+                      <span className="text-[11px] text-muted-foreground block">
+                        Otimiza altura para caber mais pedidos na tela da TV sem cortar
+                      </span>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={config.densidade !== "normal"}
+                    onCheckedChange={(checked) =>
+                      salvarConfiguracoes({ densidade: checked ? "compacto" : "normal" })
+                    }
+                  />
+                </div>
+
                 <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background text-xs">
                   <div className="flex items-center gap-2">
                     <Zap className="h-4 w-4 text-amber-500 shrink-0" />

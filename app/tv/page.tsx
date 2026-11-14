@@ -43,12 +43,12 @@ const COR_CLASSE: Record<string, string> = {
 }
 
 const COLUNAS: { status: StatusPedido; label: string; borda: string; fundo: string }[] = [
-  { status: "aguardando",     label: "Ag. Assinatura", borda: "border-slate-600",  fundo: "bg-slate-200 dark:bg-slate-800/70" },
-  { status: "aprovado",       label: "Produção",       borda: "border-blue-600",   fundo: "bg-blue-100 dark:bg-blue-950/70" },
-  { status: "ag_confirmacao", label: "Arte Enviada",   borda: "border-pink-500",   fundo: "bg-pink-100 dark:bg-pink-950/70" },
-  { status: "impressao",      label: "Impressão",      borda: "border-amber-500",  fundo: "bg-amber-100 dark:bg-amber-950/70" },
-  { status: "acabamento",     label: "Acabamento",     borda: "border-orange-500", fundo: "bg-orange-100 dark:bg-orange-950/70" },
-  { status: "pronto",         label: "Pronto ✓",       borda: "border-emerald-500",fundo: "bg-emerald-100 dark:bg-emerald-950/70" },
+  { status: "aguardando",     label: "Ag. Assinatura", borda: "border-slate-500/80",  fundo: "bg-slate-200/90 dark:bg-slate-900/80" },
+  { status: "aprovado",       label: "Produção",       borda: "border-blue-500/80",   fundo: "bg-blue-100/90 dark:bg-blue-950/70" },
+  { status: "ag_confirmacao", label: "Arte Enviada",   borda: "border-pink-500/80",   fundo: "bg-pink-100/90 dark:bg-pink-950/70" },
+  { status: "impressao",      label: "Impressão",      borda: "border-amber-500/80",  fundo: "bg-amber-100/90 dark:bg-amber-950/70" },
+  { status: "acabamento",     label: "Acabamento",     borda: "border-orange-500/80", fundo: "bg-orange-100/90 dark:bg-orange-950/70" },
+  { status: "pronto",         label: "Pronto ✓",       borda: "border-emerald-500/80",fundo: "bg-emerald-100/90 dark:bg-emerald-950/70" },
 ]
 
 function inicioDoDia(data: Date) {
@@ -69,6 +69,227 @@ function formatarPrazo(prazo: string | null) {
   const data = interpretarDataLocal(prazo)
   if (!Number.isFinite(data.getTime())) return null
   return data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+}
+
+function TvColuna({
+  label,
+  borda,
+  fundo,
+  pedidos,
+  compacto,
+}: {
+  status: StatusPedido
+  label: string
+  borda: string
+  fundo: string
+  pedidos: PedidoTV[]
+  compacto: boolean
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [temOverflow, setTemOverflow] = useState(false)
+  const [estaNoFim, setEstaNoFim] = useState(false)
+  const [estaNoTopo, setEstaNoTopo] = useState(true)
+
+  // Detecta se a coluna transborda a altura da tela da TV
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const verificar = () => {
+      const transborda = el.scrollHeight > el.clientHeight + 6
+      setTemOverflow(transborda)
+      setEstaNoTopo(el.scrollTop <= 5)
+      setEstaNoFim(el.scrollTop + el.clientHeight >= el.scrollHeight - 5)
+    }
+    verificar()
+    const t = setTimeout(verificar, 300)
+    window.addEventListener("resize", verificar)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener("resize", verificar)
+    }
+  }, [pedidos, compacto])
+
+  // Auto-scroll suave e contínuo para Smart TVs (onde não há mouse nem toque)
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || !temOverflow) return
+
+    let animId: number
+    let timeoutId: NodeJS.Timeout
+    let direcao = 1 // 1: descendo, -1: subindo
+    let pausado = false
+
+    const rolar = () => {
+      if (pausado) return
+      const maxScroll = el.scrollHeight - el.clientHeight
+      if (maxScroll <= 0) return
+
+      if (direcao === 1) {
+        el.scrollTop += 0.8
+        setEstaNoTopo(el.scrollTop <= 5)
+        setEstaNoFim(el.scrollTop >= maxScroll - 5)
+
+        if (el.scrollTop >= maxScroll - 1) {
+          pausado = true
+          timeoutId = setTimeout(() => {
+            direcao = -1
+            pausado = false
+          }, 3500)
+        }
+      } else {
+        el.scrollTop -= 1.2
+        setEstaNoTopo(el.scrollTop <= 5)
+        setEstaNoFim(el.scrollTop >= maxScroll - 5)
+
+        if (el.scrollTop <= 0) {
+          pausado = true
+          timeoutId = setTimeout(() => {
+            direcao = 1
+            pausado = false
+          }, 4000)
+        }
+      }
+
+      animId = requestAnimationFrame(rolar)
+    }
+
+    timeoutId = setTimeout(() => {
+      animId = requestAnimationFrame(rolar)
+    }, 3500)
+
+    return () => {
+      clearTimeout(timeoutId)
+      cancelAnimationFrame(animId)
+    }
+  }, [temOverflow, pedidos])
+
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-1.5 sm:gap-2 min-w-0">
+      {/* Cabeçalho da coluna */}
+      <div
+        className={`flex shrink-0 items-center justify-between rounded-lg border px-2 sm:px-2.5 py-1.5 shadow-2xs ${borda} ${fundo}`}
+      >
+        <span className="text-xs font-bold tracking-tight sm:text-sm truncate">
+          {label}
+        </span>
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-black ${
+            pedidos.length > 0
+              ? "bg-foreground/15 text-foreground"
+              : "bg-black/5 dark:bg-white/5 text-muted-foreground opacity-50"
+          }`}
+        >
+          {pedidos.length}
+        </span>
+      </div>
+
+      {/* Container de cards com auto-scroll suave e sem barras de rolagem cortando */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
+        <div
+          ref={containerRef}
+          className="flex h-full min-h-0 flex-1 flex-col gap-1.5 sm:gap-2 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pr-0.5"
+        >
+          {pedidos.map((pedido) => {
+            const atrasado = estaAtrasado(pedido)
+            return (
+              <div
+                key={pedido.id}
+                className={`shrink-0 rounded-xl border transition-all ${
+                  compacto ? "p-2 sm:p-2.5" : "p-2.5 sm:p-3"
+                } ${
+                  atrasado
+                    ? "border-red-500/80 bg-red-50/90 shadow-sm dark:bg-red-950/70"
+                    : "border-slate-200/90 bg-white/95 shadow-2xs dark:border-slate-800 dark:bg-slate-900/90"
+                }`}
+              >
+                {/* Linha superior: Tag OS / Pedido + Tipo + Prazo/Atrasado */}
+                <div className="flex items-center justify-between gap-1 leading-none">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-extrabold text-[11px] sm:text-xs text-foreground tracking-tight shrink-0">
+                      {pedido.tipo === "orcamento" ? `OS #${pedido.numero}` : `#${pedido.numero}`}
+                    </span>
+                    {pedido.tipo === "orcamento" ? (
+                      <span className="rounded bg-blue-500/15 px-1 py-0.5 text-[9px] font-bold text-blue-700 dark:text-blue-300 uppercase shrink-0">
+                        Com. Visual
+                      </span>
+                    ) : (
+                      <span className="rounded bg-violet-500/15 px-1 py-0.5 text-[9px] font-bold text-violet-700 dark:text-violet-300 uppercase shrink-0">
+                        Rápida
+                      </span>
+                    )}
+                  </div>
+
+                  {atrasado ? (
+                    <span className="shrink-0 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-black text-white uppercase tracking-wider animate-pulse">
+                      Atrasado
+                    </span>
+                  ) : pedido.prazo_entrega_em ? (
+                    <span className="shrink-0 rounded-md bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                      até {formatarPrazo(pedido.prazo_entrega_em)}
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* Nome do Cliente em Destaque Forte */}
+                <p
+                  className={`mt-1 font-extrabold text-foreground leading-snug truncate ${
+                    compacto ? "text-xs sm:text-sm" : "text-sm sm:text-base"
+                  }`}
+                  title={pedido.cliente_nome}
+                >
+                  {pedido.cliente_nome}
+                </p>
+
+                {/* Produto + Medida/Variante */}
+                <p
+                  className={`mt-0.5 text-muted-foreground truncate leading-tight ${
+                    compacto ? "text-[11px] sm:text-xs" : "text-xs sm:text-sm"
+                  }`}
+                >
+                  <span className="font-semibold text-foreground/90">{pedido.produto_nome ?? "Item"}</span>
+                  {pedido.variante_nome && (
+                    <span className="text-muted-foreground"> · {pedido.variante_nome}</span>
+                  )}
+                </p>
+
+                {/* Acabamento se houver */}
+                {pedido.acabamento && (
+                  <p className="mt-0.5 text-[10px] sm:text-[11px] text-muted-foreground/80 truncate">
+                    {pedido.acabamento}
+                  </p>
+                )}
+
+                {/* Observação curta se houver */}
+                {pedido.observacao && (
+                  <p className="mt-1 line-clamp-1 rounded bg-muted/60 px-1.5 py-0.5 text-[10px] italic text-muted-foreground">
+                    {pedido.observacao}
+                  </p>
+                )}
+              </div>
+            )
+          })}
+
+          {pedidos.length === 0 && (
+            <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border/40 py-6 text-xs text-muted-foreground/40 italic">
+              Vazio
+            </div>
+          )}
+        </div>
+
+        {/* Indicador de auto-scroll para a equipe na fábrica */}
+        {temOverflow && !estaNoFim && (
+          <div className="pointer-events-none absolute bottom-0 inset-x-0 h-6 bg-gradient-to-t from-background via-background/80 to-transparent flex items-end justify-center pb-0.5">
+            <span className="text-[9px] font-bold text-primary/80 animate-bounce">
+              ↓ rolando ({pedidos.length} pedidos)
+            </span>
+          </div>
+        )}
+        {temOverflow && !estaNoTopo && (
+          <div className="pointer-events-none absolute top-0 inset-x-0 h-4 bg-gradient-to-b from-background to-transparent" />
+        )}
+      </div>
+    </div>
+  )
 }
 
 function Relogio() {
@@ -132,6 +353,7 @@ export default function TvPage() {
     mostrarAtrasados?: boolean
     somAlarme?: boolean
     apenasRecentes?: boolean
+    densidade?: "normal" | "compacto"
   } | null>(null)
 
   const carregar = useCallback(async () => {
@@ -201,159 +423,117 @@ export default function TvPage() {
   )
 
   return (
-    <div className="group/tv flex h-screen flex-col gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5">
+    <div className="group/tv flex h-screen max-h-screen w-screen overflow-hidden flex-col gap-2.5 sm:gap-3 p-2.5 sm:p-4 bg-background">
 
-      {/* Botão voltar — visível só ao passar o mouse */}
-      <Link
-        href="/dashboard"
-        className="fixed top-3 right-3 z-50 rounded-lg bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-600 opacity-0 shadow-sm backdrop-blur transition-opacity hover:text-slate-900 group-hover/tv:opacity-100 dark:bg-slate-800/80 dark:text-slate-400 dark:shadow-none dark:hover:text-white"
-      >
-        ← Voltar
-      </Link>
+      {/* Barra flutuante de utilitários da TV — visível ao passar o mouse ou interagir */}
+      <div className="fixed top-2.5 right-3 z-50 flex items-center gap-2 opacity-0 group-hover/tv:opacity-100 transition-opacity duration-200">
+        <button
+          type="button"
+          onClick={() => {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen().catch(() => {})
+            } else {
+              document.exitFullscreen().catch(() => {})
+            }
+          }}
+          className="rounded-lg bg-card/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm border border-border/80 backdrop-blur hover:bg-muted"
+        >
+          ⛶ Tela Cheia
+        </button>
 
-      {/* Header */}
-      <header className="flex shrink-0 items-start justify-between gap-4">
+        <Link
+          href="/dashboard"
+          className="rounded-lg bg-card/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm border border-border/80 backdrop-blur hover:bg-muted"
+        >
+          ← Voltar ao Sistema
+        </Link>
+      </div>
+
+      {/* Header Compacto de Alta Legibilidade para TV */}
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border/40 pb-2">
         <div className="min-w-0">
-          <div className="flex items-center gap-3 sm:gap-4">
-            {/* O logo tem letras brancas: no claro vai sobre o azul da marca. */}
-            <div className="shrink-0 rounded-xl bg-[#0060a7] px-3 py-2 dark:bg-transparent dark:p-0">
+          <div className="flex items-center gap-3">
+            <div className="shrink-0 rounded-xl bg-[#0060a7] px-2.5 py-1.5 dark:bg-transparent dark:p-0">
               <Image
                 src="/brand/logo.png"
                 alt="Toldos Print"
                 width={1200}
                 height={394}
                 priority
-                className="h-auto w-40 sm:w-56 lg:w-72"
+                className="h-auto w-36 sm:w-48 lg:w-56"
               />
             </div>
-            <span className="hidden text-slate-500 sm:inline sm:text-lg lg:text-2xl dark:text-slate-400">Produção</span>
+            <div className="h-6 w-px bg-border/60 hidden sm:block" />
+            <span className="hidden sm:inline text-base sm:text-xl font-black tracking-tight text-foreground/80">
+              Painel de Produção
+            </span>
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:gap-3 sm:text-sm dark:text-slate-400">
-            <span>{totalAtivos} pedido{totalAtivos !== 1 ? "s" : ""}</span>
+
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-bold text-foreground">
+              {totalAtivos} pedido{totalAtivos !== 1 ? "s" : ""} ativo{totalAtivos !== 1 ? "s" : ""}
+            </span>
             {config?.apenasRecentes && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
+              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 font-bold text-amber-600 dark:text-amber-400 text-xs">
                 ⚡ 5 Mais Recentes
               </span>
             )}
             {totalAtrasados > 0 && config?.mostrarAtrasados !== false && (
-              <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700 dark:bg-red-900/60 dark:text-red-300">
+              <span className="rounded-full bg-red-500/15 px-2 py-0.5 font-bold text-red-600 dark:text-red-400 text-xs animate-pulse">
                 ⚠ {totalAtrasados} atrasado{totalAtrasados !== 1 ? "s" : ""}
               </span>
             )}
             {ultimaAtualizacao && (
-              <span className="text-slate-400 dark:text-slate-600">
-                {ultimaAtualizacao.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              <span className="text-[11px] text-muted-foreground/70">
+                Sincronizado às {ultimaAtualizacao.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </div>
         </div>
+
         <Relogio />
       </header>
 
-      {/* Kanban grid — auto-fit: encaixa todas as colunas na largura disponível */}
-      <div
-        className="min-h-0 flex-1 gap-2 sm:gap-3"
-        style={{ display: "grid", gridTemplateColumns: `repeat(${colunasFiltradas.length || 1}, minmax(0, 1fr))` }}
-      >
-        {colunasFiltradas.map(({ status, label, borda, fundo }) => {
-          const colPedidos = pedidos.filter((p) => p.status === status || (status === "aprovado" && (p.status as string) === "arte"))
+      {/* Kanban de Colunas: Garantido em 1 única linha horizontal sem quebrar */}
+      <div className="flex-1 min-h-0 flex flex-row gap-2 sm:gap-3 w-full overflow-hidden">
+        {colunasFiltradas.map((coluna) => {
+          const colPedidos = pedidos.filter(
+            (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
+          )
           return (
-            <div key={status} className="flex min-h-0 flex-col gap-2">
-              {/* Cabeçalho da coluna */}
-              <div className={`flex shrink-0 items-center justify-between rounded-lg border px-2 py-1.5 sm:px-3 sm:py-2 ${borda} ${fundo}`}>
-                <span className="text-xs font-semibold tracking-wide sm:text-sm">{label}</span>
-                <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-xs font-bold sm:px-2 dark:bg-white/10">
-                  {colPedidos.length}
-                </span>
-              </div>
-
-              {/* Cards com scroll interno */}
-              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-0.5">
-                {colPedidos.map((pedido) => {
-                  const atrasado = estaAtrasado(pedido)
-                  return (
-                    <div
-                      key={pedido.id}
-                      className={`shrink-0 rounded-xl border p-2.5 sm:p-3 ${
-                        atrasado
-                          ? "border-red-500 bg-red-50 dark:bg-red-950/60"
-                          : "border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800/80 dark:shadow-none"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-bold text-slate-500 sm:text-xs">
-                            {pedido.tipo === "orcamento" ? `OS #${pedido.numero}` : `#${pedido.numero}`}
-                          </span>
-                          {pedido.tipo === "orcamento" && (
-                            <span className="rounded bg-blue-100 px-1 py-0.2 text-[9px] font-bold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                              COM. VISUAL
-                            </span>
-                          )}
-                        </div>
-                        {atrasado ? (
-                          <span className="shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-bold text-white sm:text-xs">
-                            ATRASADO
-                          </span>
-                        ) : pedido.prazo_entrega_em ? (
-                          <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-                            até {formatarPrazo(pedido.prazo_entrega_em)}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <p className="mt-1 text-sm font-bold leading-tight sm:text-base lg:text-lg">
-                        {pedido.cliente_nome}
-                      </p>
-
-                      <p className="mt-0.5 text-xs text-slate-600 sm:text-sm dark:text-slate-300">
-                        {pedido.produto_nome ?? "—"}
-                        {pedido.variante_nome ? ` · ${pedido.variante_nome}` : ""}
-                      </p>
-
-                      {pedido.acabamento && (
-                        <p className="mt-0.5 text-[10px] text-slate-500 sm:text-xs dark:text-slate-400">
-                          {pedido.acabamento}
-                        </p>
-                      )}
-
-                      {pedido.observacao && (
-                        <p className="mt-1.5 line-clamp-2 rounded-md bg-slate-100 px-2 py-1 text-[10px] italic text-slate-600 sm:text-xs dark:bg-slate-900/60 dark:text-slate-400">
-                          {pedido.observacao}
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {colPedidos.length === 0 && (
-                  <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-slate-300 py-6 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-700">
-                    vazio
-                  </div>
-                )}
-              </div>
-            </div>
+            <TvColuna
+              key={coluna.status}
+              status={coluna.status}
+              label={coluna.label}
+              borda={coluna.borda}
+              fundo={coluna.fundo}
+              pedidos={colPedidos}
+              compacto={config?.densidade !== "normal"}
+            />
           )
         })}
       </div>
 
       {pedidos.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center text-xl font-semibold text-slate-400 sm:text-2xl dark:text-slate-700">
+        <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-muted-foreground/40 sm:text-2xl pointer-events-none">
           Nenhum pedido em andamento no momento
         </div>
       )}
 
-      {/* Ticker de avisos */}
-      {avisos.length > 0 && (
-        <div className="shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:shadow-none">
+      {/* Ticker de avisos rodapé */}
+      {avisos.filter((a) => (a as { ativo?: boolean }).ativo !== false).length > 0 && (
+        <div className="shrink-0 overflow-hidden rounded-xl border border-border/80 bg-card py-2 shadow-xs">
           <div
             className="ticker-track"
             style={{ animationDuration: `${Math.max(avisos.length * 10, 20)}s` }}
           >
-            {[...avisos, ...avisos].map((aviso, i) => (
+            {[
+              ...avisos.filter((a) => (a as { ativo?: boolean }).ativo !== false),
+              ...avisos.filter((a) => (a as { ativo?: boolean }).ativo !== false),
+            ].map((aviso, i) => (
               <span
                 key={`${aviso.id}-${i}`}
-                className={`text-sm font-semibold sm:text-base ${COR_CLASSE[aviso.cor ?? "azul"] ?? COR_CLASSE.azul}`}
+                className={`text-sm font-bold sm:text-base ${COR_CLASSE[aviso.cor ?? "azul"] ?? COR_CLASSE.azul}`}
               >
                 {aviso.icone ?? "📢"} {aviso.mensagem}
               </span>

@@ -41,6 +41,7 @@ export async function GET() {
     somAlarme: true,
     tema: "dark",
     apenasRecentes: false,
+    densidade: "compacto",
   }
 
   try {
