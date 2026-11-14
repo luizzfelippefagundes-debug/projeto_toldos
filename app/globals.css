@@ -49,37 +49,37 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.965 0.006 250);
+  --foreground: oklch(0.18 0.02 250);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.18 0.02 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.623 0.214 259.815);
+  --popover-foreground: oklch(0.18 0.02 250);
+  --primary: oklch(0.52 0.22 260);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.623 0.214 259.815);
+  --secondary: oklch(0.92 0.01 250);
+  --secondary-foreground: oklch(0.20 0.01 250);
+  --muted: oklch(0.93 0.008 250);
+  --muted-foreground: oklch(0.42 0.02 250);
+  --accent: oklch(0.92 0.01 250);
+  --accent-foreground: oklch(0.20 0.01 250);
+  --destructive: oklch(0.55 0.22 27);
+  --border: oklch(0.85 0.015 250);
+  --input: oklch(0.85 0.015 250);
+  --ring: oklch(0.52 0.22 260);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar: oklch(0.985 0.003 250);
+  --sidebar-foreground: oklch(0.18 0.02 250);
+  --sidebar-primary: oklch(0.20 0.01 250);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-accent: oklch(0.92 0.01 250);
+  --sidebar-accent-foreground: oklch(0.20 0.01 250);
+  --sidebar-border: oklch(0.85 0.015 250);
   --sidebar-ring: oklch(0.708 0 0);
 }
 
@@ -127,6 +127,21 @@
   html {
     @apply font-sans;
   }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
 }
 /* Rolagem de painel: barra fina e arredondada na cor do tema, que só
    ganha destaque quando o mouse está em cima, e um esmaecido nas bordas

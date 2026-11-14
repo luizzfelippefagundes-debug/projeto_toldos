@@ -94,62 +94,70 @@ const colunas: {
   corFundo: string
   corBorda: string
   corTexto: string
+  badgeFundo: string
 }[] = [
   {
     status: "aguardando",
     titulo: "Ag. Assinatura",
-    cor: "bg-slate-500",
-    corFundo: "bg-slate-500/10",
-    corBorda: "border-slate-500/40",
-    corTexto: "text-slate-500",
+    cor: "bg-slate-600",
+    corFundo: "bg-slate-100/90 dark:bg-slate-800/40",
+    corBorda: "border-slate-300 dark:border-slate-700/60",
+    corTexto: "text-slate-800 dark:text-slate-200",
+    badgeFundo: "bg-slate-200/90 dark:bg-slate-700/60",
   },
   {
     status: "aprovado",
     titulo: "Produção",
-    cor: "bg-blue-500",
-    corFundo: "bg-blue-500/10",
-    corBorda: "border-blue-500/40",
-    corTexto: "text-blue-500",
+    cor: "bg-blue-600",
+    corFundo: "bg-blue-50/90 dark:bg-blue-950/40",
+    corBorda: "border-blue-200 dark:border-blue-800/60",
+    corTexto: "text-blue-900 dark:text-blue-200",
+    badgeFundo: "bg-blue-100 dark:bg-blue-900/60",
   },
   {
     status: "ag_confirmacao",
     titulo: "Arte Enviada",
-    cor: "bg-pink-500",
-    corFundo: "bg-pink-500/10",
-    corBorda: "border-pink-500/40",
-    corTexto: "text-pink-500",
+    cor: "bg-pink-600",
+    corFundo: "bg-pink-50/90 dark:bg-pink-950/40",
+    corBorda: "border-pink-200 dark:border-pink-800/60",
+    corTexto: "text-pink-900 dark:text-pink-200",
+    badgeFundo: "bg-pink-100 dark:bg-pink-900/60",
   },
   {
     status: "impressao",
     titulo: "Impressão",
-    cor: "bg-orange-500",
-    corFundo: "bg-orange-500/10",
-    corBorda: "border-orange-500/40",
-    corTexto: "text-orange-500",
+    cor: "bg-orange-600",
+    corFundo: "bg-orange-50/90 dark:bg-orange-950/40",
+    corBorda: "border-orange-200 dark:border-orange-800/60",
+    corTexto: "text-orange-950 dark:text-orange-200",
+    badgeFundo: "bg-orange-100 dark:bg-orange-900/60",
   },
   {
     status: "acabamento",
     titulo: "Acabamento",
-    cor: "bg-yellow-500",
-    corFundo: "bg-yellow-500/10",
-    corBorda: "border-yellow-500/40",
-    corTexto: "text-yellow-600",
+    cor: "bg-amber-500",
+    corFundo: "bg-amber-50/90 dark:bg-amber-950/40",
+    corBorda: "border-amber-200 dark:border-amber-800/60",
+    corTexto: "text-amber-950 dark:text-amber-200",
+    badgeFundo: "bg-amber-100 dark:bg-amber-900/60",
   },
   {
     status: "pronto",
     titulo: "Pronto",
-    cor: "bg-green-500",
-    corFundo: "bg-green-500/10",
-    corBorda: "border-green-500/40",
-    corTexto: "text-green-600",
+    cor: "bg-emerald-600",
+    corFundo: "bg-emerald-50/90 dark:bg-emerald-950/40",
+    corBorda: "border-emerald-200 dark:border-emerald-800/60",
+    corTexto: "text-emerald-950 dark:text-emerald-200",
+    badgeFundo: "bg-emerald-100 dark:bg-emerald-900/60",
   },
   {
     status: "entregue",
     titulo: "Entregue",
-    cor: "bg-emerald-600",
-    corFundo: "bg-emerald-600/10",
-    corBorda: "border-emerald-600/40",
-    corTexto: "text-emerald-600",
+    cor: "bg-teal-600",
+    corFundo: "bg-teal-50/90 dark:bg-teal-950/40",
+    corBorda: "border-teal-200 dark:border-teal-800/60",
+    corTexto: "text-teal-950 dark:text-teal-200",
+    badgeFundo: "bg-teal-100 dark:bg-teal-900/60",
   },
 ]
 
@@ -515,14 +523,14 @@ export default function ProducaoPage() {
             if (colunaAtiva === "todas" && totalColuna === 0) return null
             return (
               <div key={col.status} className="flex flex-col gap-2.5">
-                <div className={cn("flex items-center justify-between rounded-lg px-3 py-1.5", col.corFundo)}>
+                <div className={cn("flex items-center justify-between rounded-lg px-3 py-1.5 border", col.corFundo, col.corBorda)}>
                   <div className="flex items-center gap-2">
-                    <div className={cn("h-2.5 w-2.5 rounded-full shrink-0", col.cor)} />
+                    <div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-2xs", col.cor)} />
                     <span className={cn("text-xs font-bold uppercase tracking-wide", col.corTexto)}>
                       {col.titulo}
                     </span>
                   </div>
-                  <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", col.corFundo, col.corTexto)}>
+                  <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold shadow-2xs", col.badgeFundo, col.corTexto)}>
                     {totalColuna}
                   </span>
                 </div>
@@ -641,132 +649,151 @@ export default function ProducaoPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Desktop: kanban com drag-and-drop e rolagem independente por coluna */}
-      <div className="hidden md:flex flex-col flex-1 h-[calc(100vh-240px)] min-h-[520px]">
-        <DndContext
-          sensors={sensores}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex flex-1 gap-3 overflow-x-auto pb-2 min-h-0 items-start">
-            {colunas
-              .filter((col) => !ocultarEntregues || col.status !== "entregue")
-              .map((col) => {
-                const pedidosDaColuna = pedidosFiltrados.filter(
-                  (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
-                )
-                const orcsDaColuna = orcamentosEmProducao.filter(
-                  (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
-                )
-                const total = pedidosDaColuna.length + orcsDaColuna.length
-                return (
-                  <ColunaDroppable key={col.status} status={col.status} coluna={col}>
-                    {/* Header fixo da coluna */}
-                    <div
-                      className={cn(
-                        "shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-border/50",
-                        col.corFundo
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={cn("h-2.5 w-2.5 rounded-full shrink-0", col.cor)} />
-                        <span className={cn("text-xs font-bold uppercase tracking-wide", col.corTexto)}>
-                          {col.titulo}
-                        </span>
-                      </div>
-                      <span
+      {/* Desktop: Caixa fixa do Kanban com rolagem interna bi-direcional */}
+      <div className="hidden md:flex flex-col rounded-2xl border border-border/80 bg-muted/20 dark:bg-card/30 shadow-xs overflow-hidden">
+        {/* Barra superior de status/info da caixa do Kanban */}
+        <div className="flex items-center justify-between border-b border-border/60 bg-card/60 px-4 py-2.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-foreground">Quadro de Produção</span>
+            <span>•</span>
+            <span>
+              {pedidosFiltrados.length + orcamentosEmProducao.length}{" "}
+              {pedidosFiltrados.length + orcamentosEmProducao.length === 1 ? "item" : "itens"} no total
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-[11px]">
+            <span>Arraste os cards para mover de coluna</span>
+          </div>
+        </div>
+
+        {/* Área interna de rolagem horizontal e vertical */}
+        <div className="h-[calc(100vh-290px)] min-h-[500px] max-h-[740px] w-full overflow-auto p-4 custom-scrollbar">
+          <DndContext
+            sensors={sensores}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex gap-3.5 h-full min-w-max items-start">
+              {colunas
+                .filter((col) => !ocultarEntregues || col.status !== "entregue")
+                .map((col) => {
+                  const pedidosDaColuna = pedidosFiltrados.filter(
+                    (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
+                  )
+                  const orcsDaColuna = orcamentosEmProducao.filter(
+                    (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
+                  )
+                  const total = pedidosDaColuna.length + orcsDaColuna.length
+                  return (
+                    <ColunaDroppable key={col.status} status={col.status} coluna={col}>
+                      {/* Header fixo da coluna */}
+                      <div
                         className={cn(
-                          "rounded-full px-2 py-0.5 text-xs font-bold",
+                          "shrink-0 flex items-center justify-between px-3 py-2.5 border-b",
                           col.corFundo,
-                          col.corTexto
+                          col.corBorda
                         )}
                       >
-                        {total}
-                      </span>
-                    </div>
-
-                    {/* Lista de cartões com rolagem independente */}
-                    <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2.5 min-h-0">
-                      {total === 0 && (
-                        <div className="rounded-lg border border-dashed border-border/70 p-4 text-center text-xs text-muted-foreground">
-                          Vazio
+                        <div className="flex items-center gap-2">
+                          <div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-2xs", col.cor)} />
+                          <span className={cn("text-xs font-bold uppercase tracking-wide", col.corTexto)}>
+                            {col.titulo}
+                          </span>
                         </div>
-                      )}
-                      {pedidosDaColuna.map((pedido) => (
-                        <PedidoCardArrastavel key={pedido.id} id={pedido.id}>
-                          <PedidoCardConteudo
-                            pedido={pedido}
-                            produto={produtoDoPedido(pedido)}
-                            atrasado={estaAtrasado(pedido)}
-                            coluna={colunaMap[pedido.status]}
-                            onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
-                            onMudarStatus={(status) =>
-                              solicitarConfirmacao(
-                                pedido.clienteNome,
-                                pedido.clienteTelefone,
-                                status,
-                                () => moverPedidoRapido(pedido.id, status),
-                                pedido.id
-                              )
-                            }
-                          />
-                        </PedidoCardArrastavel>
-                      ))}
-                      {orcsDaColuna.map((orc) => {
-                        const cli = clientes.find((c) => c.id === orc.clienteId)
-                        return (
-                          <PedidoCardArrastavel key={`orc-${orc.id}`} id={`orc-${orc.id}`}>
-                            <OrcamentoCardConteudo
-                              orcamento={orc}
-                              cliente={cli}
-                              coluna={col}
-                              assinatura={assinaturas[orc.id]}
-                              onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-xs font-bold shadow-2xs",
+                            col.badgeFundo,
+                            col.corTexto
+                          )}
+                        >
+                          {total}
+                        </span>
+                      </div>
+
+                      {/* Lista de cartões com rolagem independente */}
+                      <div className="flex-1 overflow-y-auto p-2.5 flex flex-col gap-2.5 min-h-0 custom-scrollbar">
+                        {total === 0 && (
+                          <div className="rounded-lg border border-dashed border-border/70 p-4 text-center text-xs text-muted-foreground">
+                            Vazio
+                          </div>
+                        )}
+                        {pedidosDaColuna.map((pedido) => (
+                          <PedidoCardArrastavel key={pedido.id} id={pedido.id}>
+                            <PedidoCardConteudo
+                              pedido={pedido}
+                              produto={produtoDoPedido(pedido)}
+                              atrasado={estaAtrasado(pedido)}
+                              coluna={colunaMap[pedido.status]}
+                              onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
                               onMudarStatus={(status) =>
                                 solicitarConfirmacao(
-                                  cli?.nome ?? "Cliente",
-                                  cli?.telefone ?? null,
+                                  pedido.clienteNome,
+                                  pedido.clienteTelefone,
                                   status,
-                                  () => moverOrcamentoProducao(orc.id, status),
-                                  orc.id
+                                  () => moverPedidoRapido(pedido.id, status),
+                                  pedido.id
                                 )
                               }
                             />
                           </PedidoCardArrastavel>
-                        )
-                      })}
-                    </div>
-                  </ColunaDroppable>
-                )
-              })}
-          </div>
+                        ))}
+                        {orcsDaColuna.map((orc) => {
+                          const cli = clientes.find((c) => c.id === orc.clienteId)
+                          return (
+                            <PedidoCardArrastavel key={`orc-${orc.id}`} id={`orc-${orc.id}`}>
+                              <OrcamentoCardConteudo
+                                orcamento={orc}
+                                cliente={cli}
+                                coluna={col}
+                                assinatura={assinaturas[orc.id]}
+                                onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
+                                onMudarStatus={(status) =>
+                                  solicitarConfirmacao(
+                                    cli?.nome ?? "Cliente",
+                                    cli?.telefone ?? null,
+                                    status,
+                                    () => moverOrcamentoProducao(orc.id, status),
+                                    orc.id
+                                  )
+                                }
+                              />
+                            </PedidoCardArrastavel>
+                          )
+                        })}
+                      </div>
+                    </ColunaDroppable>
+                  )
+                })}
+            </div>
 
-          <DragOverlay>
-            {pedidoArrastando ? (
-              <div className="w-64 rotate-2 opacity-95 shadow-2xl">
-                <PedidoCardConteudo
-                  pedido={pedidoArrastando}
-                  produto={produtoDoPedido(pedidoArrastando)}
-                  atrasado={estaAtrasado(pedidoArrastando)}
-                  coluna={colunaMap[pedidoArrastando.status]}
-                  onMudarStatus={() => {}}
-                  onSalvarArte={async () => {}}
-                />
-              </div>
-            ) : orcamentoArrastando ? (
-              <div className="w-64 rotate-2 opacity-95 shadow-2xl">
-                <OrcamentoCardConteudo
-                  orcamento={orcamentoArrastando}
-                  cliente={clientes.find((c) => c.id === orcamentoArrastando.clienteId)}
-                  coluna={colunaMap[orcamentoArrastando.statusProducao!]}
-                  assinatura={assinaturas[orcamentoArrastando.id]}
-                  onMudarStatus={() => {}}
-                  onSalvarArte={async () => {}}
-                />
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+            <DragOverlay>
+              {pedidoArrastando ? (
+                <div className="w-64 rotate-2 opacity-95 shadow-2xl">
+                  <PedidoCardConteudo
+                    pedido={pedidoArrastando}
+                    produto={produtoDoPedido(pedidoArrastando)}
+                    atrasado={estaAtrasado(pedidoArrastando)}
+                    coluna={colunaMap[pedidoArrastando.status]}
+                    onMudarStatus={() => {}}
+                    onSalvarArte={async () => {}}
+                  />
+                </div>
+              ) : orcamentoArrastando ? (
+                <div className="w-64 rotate-2 opacity-95 shadow-2xl">
+                  <OrcamentoCardConteudo
+                    orcamento={orcamentoArrastando}
+                    cliente={clientes.find((c) => c.id === orcamentoArrastando.clienteId)}
+                    coluna={colunaMap[orcamentoArrastando.statusProducao!]}
+                    assinatura={assinaturas[orcamentoArrastando.id]}
+                    onMudarStatus={() => {}}
+                    onSalvarArte={async () => {}}
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        </div>
       </div>
     </div>
   )
@@ -787,7 +814,7 @@ function ColunaDroppable({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex w-64 xl:w-72 shrink-0 flex-col max-h-full rounded-xl border border-border/80 bg-muted/20 shadow-2xs overflow-hidden transition-colors",
+        "flex w-64 xl:w-72 shrink-0 flex-col h-full rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden transition-colors",
         isOver && `${coluna.corFundo} ring-2 ring-inset ${coluna.corBorda}`
       )}
     >
