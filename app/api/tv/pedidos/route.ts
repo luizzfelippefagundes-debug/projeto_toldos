@@ -40,6 +40,7 @@ export async function GET() {
     mostrarAtrasados: true,
     somAlarme: true,
     tema: "dark",
+    apenasRecentes: false,
   }
 
   try {
@@ -153,20 +154,27 @@ export async function GET() {
     }
   })
 
-  const todos = [...pedidosRapidos, ...orcamentos].sort((a, b) => {
-    const atrasadoA = a.status !== "pronto" && a.prazo_entrega_em && a.prazo_entrega_em < hoje
-    const atrasadoB = b.status !== "pronto" && b.prazo_entrega_em && b.prazo_entrega_em < hoje
-    if (atrasadoA && !atrasadoB) return -1
-    if (!atrasadoA && atrasadoB) return 1
+  let todos = [...pedidosRapidos, ...orcamentos]
 
-    if (a.prazo_entrega_em && b.prazo_entrega_em) {
-      return a.prazo_entrega_em.localeCompare(b.prazo_entrega_em)
-    }
-    if (a.prazo_entrega_em) return -1
-    if (b.prazo_entrega_em) return 1
+  if (config.apenasRecentes) {
+    todos.sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime())
+    todos = todos.slice(0, 5)
+  } else {
+    todos.sort((a, b) => {
+      const atrasadoA = a.status !== "pronto" && a.prazo_entrega_em && a.prazo_entrega_em < hoje
+      const atrasadoB = b.status !== "pronto" && b.prazo_entrega_em && b.prazo_entrega_em < hoje
+      if (atrasadoA && !atrasadoB) return -1
+      if (!atrasadoA && atrasadoB) return 1
 
-    return new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime()
-  })
+      if (a.prazo_entrega_em && b.prazo_entrega_em) {
+        return a.prazo_entrega_em.localeCompare(b.prazo_entrega_em)
+      }
+      if (a.prazo_entrega_em) return -1
+      if (b.prazo_entrega_em) return 1
+
+      return new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime()
+    })
+  }
 
   return NextResponse.json(
     { pedidos: todos, avisos, config },

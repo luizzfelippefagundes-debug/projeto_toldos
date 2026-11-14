@@ -8,6 +8,7 @@ export interface TvConfig {
   mostrarAtrasados: boolean
   somAlarme: boolean
   tema: "light" | "dark"
+  apenasRecentes?: boolean
 }
 
 export const DEFAULT_TV_CONFIG: TvConfig = {
@@ -16,6 +17,7 @@ export const DEFAULT_TV_CONFIG: TvConfig = {
   mostrarAtrasados: true,
   somAlarme: true,
   tema: "dark",
+  apenasRecentes: false,
 }
 
 async function garantirTabela(sql: ReturnType<typeof getSql>) {
@@ -61,6 +63,7 @@ export async function POST(req: Request) {
       mostrarAtrasados: corpo.mostrarAtrasados ?? true,
       somAlarme: corpo.somAlarme ?? true,
       tema: corpo.tema === "light" ? "light" : "dark",
+      apenasRecentes: corpo.apenasRecentes ?? false,
     }
 
     await sql`

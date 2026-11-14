@@ -44,6 +44,7 @@ interface TvConfig {
   mostrarAtrasados: boolean
   somAlarme: boolean
   tema: "light" | "dark"
+  apenasRecentes?: boolean
 }
 
 const DEFAULT_TV_CONFIG: TvConfig = {
@@ -52,6 +53,7 @@ const DEFAULT_TV_CONFIG: TvConfig = {
   mostrarAtrasados: true,
   somAlarme: true,
   tema: "dark",
+  apenasRecentes: false,
 }
 
 const TIPOS = [
@@ -347,7 +349,14 @@ export default function CentralTvPage() {
           </div>
           <div className="min-w-0">
             <p className="text-[11px] text-muted-foreground truncate">Pedidos no Telão</p>
-            <p className="text-lg font-bold text-foreground leading-tight">{pedidosTvCount}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-lg font-bold text-foreground leading-tight">{pedidosTvCount}</p>
+              {config.apenasRecentes && (
+                <span className="rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold px-1.5 py-0.5">
+                  5 recentes
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -639,6 +648,11 @@ export default function CentralTvPage() {
                 <span className="font-bold uppercase tracking-wider text-[10px] text-slate-300">
                   Telão em Tempo Real
                 </span>
+                {config.apenasRecentes && (
+                  <span className="rounded-full bg-amber-400/20 text-amber-300 px-1.5 py-0.5 text-[9px] font-bold">
+                    ⚡ 5 Recentes
+                  </span>
+                )}
               </div>
               <Link
                 href="/tv"
@@ -815,14 +829,35 @@ export default function CentralTvPage() {
               </div>
             </div>
 
-            {/* Preferências de Alarme e Atrasados */}
+            {/* Preferências de Alarme, Atrasados e Filtro de Recentes */}
             <div className="flex flex-col gap-2 border-t border-border/50 pt-3">
               <span className="text-xs font-semibold text-foreground">Comportamento do Telão:</span>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background text-xs">
                   <div className="flex items-center gap-2">
-                    <Volume2 className="h-4 w-4 text-amber-500" />
-                    <span className="font-medium text-foreground">Alarme Sonoro da TV</span>
+                    <Zap className="h-4 w-4 text-amber-500 shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground block">Apenas 5 Mais Recentes</span>
+                      <span className="text-[11px] text-muted-foreground block">
+                        Limita a TV aos últimos 5 pedidos que entraram no sistema
+                      </span>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={config.apenasRecentes ?? false}
+                    onCheckedChange={(checked) => salvarConfiguracoes({ apenasRecentes: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background text-xs">
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="h-4 w-4 text-amber-500 shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground block">Alarme Sonoro da TV</span>
+                      <span className="text-[11px] text-muted-foreground block">
+                        Toca bipe se houver aviso com sirene ativa
+                      </span>
+                    </div>
                   </div>
                   <Switch
                     checked={config.somAlarme}
@@ -832,8 +867,13 @@ export default function CentralTvPage() {
 
                 <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background text-xs">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-destructive" />
-                    <span className="font-medium text-foreground">Destacar Pedidos Atrasados</span>
+                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground block">Destacar Pedidos Atrasados</span>
+                      <span className="text-[11px] text-muted-foreground block">
+                        Prioriza e alerta prazos vencidos no topo
+                      </span>
+                    </div>
                   </div>
                   <Switch
                     checked={config.mostrarAtrasados}

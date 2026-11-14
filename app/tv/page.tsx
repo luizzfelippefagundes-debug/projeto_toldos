@@ -131,6 +131,7 @@ export default function TvPage() {
     tiposVisiveis?: string[]
     mostrarAtrasados?: boolean
     somAlarme?: boolean
+    apenasRecentes?: boolean
   } | null>(null)
 
   const carregar = useCallback(async () => {
@@ -229,6 +230,11 @@ export default function TvPage() {
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:gap-3 sm:text-sm dark:text-slate-400">
             <span>{totalAtivos} pedido{totalAtivos !== 1 ? "s" : ""}</span>
+            {config?.apenasRecentes && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800 dark:bg-amber-900/60 dark:text-amber-200">
+                ⚡ 5 Mais Recentes
+              </span>
+            )}
             {totalAtrasados > 0 && config?.mostrarAtrasados !== false && (
               <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700 dark:bg-red-900/60 dark:text-red-300">
                 ⚠ {totalAtrasados} atrasado{totalAtrasados !== 1 ? "s" : ""}
