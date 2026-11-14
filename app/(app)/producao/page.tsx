@@ -41,6 +41,7 @@ import {
   obterPrazoEntregaPedido,
   pedidoRapidoEstaAtrasado,
 } from "@/lib/pedidos-rapidos"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   RefreshCw,
   Search,
@@ -58,6 +59,10 @@ import {
   Check,
   ExternalLink,
   ChevronRight,
+  SlidersHorizontal,
+  Filter,
+  Sparkles,
+  EyeOff,
 } from "lucide-react"
 import { linkWhatsapp } from "@/lib/whatsapp"
 
@@ -201,6 +206,9 @@ export default function ProducaoPage() {
   const [busca, setBusca] = useState("")
   const [colunaAtiva, setColunaAtiva] = useState<StatusPedidoRapido | "todas">("todas")
   const [ocultarEntregues, setOcultarEntregues] = useState(false)
+  const [colunasVisiveis, setColunasVisiveis] = useState<string[]>(() => colunas.map((c) => c.status))
+  const [filtroPreset, setFiltroPreset] = useState<"todos" | "recentes_5" | "os" | "rapida" | "atrasados">("todos")
+  const [ocultarVazias, setOcultarVazias] = useState(false)
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
   const [confirmando, setConfirmando] = useState<{
     clienteNome: string
@@ -254,21 +262,46 @@ export default function ProducaoPage() {
     return pedidoRapidoEstaAtrasado(pedido, produto?.prazoDias, hoje)
   }
 
+  // Lista unificada ordenada decrescente para cálculo de recentes
+  const idsUltimos5Recentes = useMemo(() => {
+    const lista: { id: string; tipo: "pedido" | "orcamento"; dataTs: number }[] = []
+    for (const p of pedidosRapidos) {
+      const ts = p.criadoEm ? new Date(p.criadoEm).getTime() : 0
+      lista.push({ id: p.id, tipo: "pedido", dataTs: ts })
+    }
+    for (const o of orcamentos) {
+      if (!o.statusProducao) continue
+      const dataStr = o.fechadoEm || o.criadoEm || ""
+      const ts = dataStr ? new Date(dataStr).getTime() : 0
+      lista.push({ id: o.id, tipo: "orcamento", dataTs: ts })
+    }
+    lista.sort((a, b) => b.dataTs - a.dataTs)
+    return new Set(lista.slice(0, 5).map((item) => (item.tipo === "pedido" ? item.id : `orc-${item.id}`)))
+  }, [pedidosRapidos, orcamentos])
+
   const pedidosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     return pedidosRapidos.filter((pedido) => {
+      if (filtroPreset === "os") return false
+      if (filtroPreset === "atrasados" && !estaAtrasado(pedido)) return false
+      if (filtroPreset === "recentes_5" && !idsUltimos5Recentes.has(pedido.id)) return false
+
       if (!termo) return true
       return (
         pedido.clienteNome.toLowerCase().includes(termo) ||
         String(pedido.numero).includes(termo)
       )
     })
-  }, [pedidosRapidos, busca])
+  }, [pedidosRapidos, busca, filtroPreset, idsUltimos5Recentes, hoje, produtosRapidos])
 
   const orcamentosEmProducao = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     return orcamentos.filter((o) => {
       if (!o.statusProducao) return false
+      if (filtroPreset === "rapida") return false
+      if (filtroPreset === "atrasados") return false
+      if (filtroPreset === "recentes_5" && !idsUltimos5Recentes.has(`orc-${o.id}`)) return false
+
       if (!termo) return true
       const cliente = clientes.find((c) => c.id === o.clienteId)
       return (
@@ -276,7 +309,24 @@ export default function ProducaoPage() {
         String(o.numero).includes(termo)
       )
     })
-  }, [orcamentos, clientes, busca])
+  }, [orcamentos, clientes, busca, filtroPreset, idsUltimos5Recentes])
+
+  const colunasRenderizadas = useMemo(() => {
+    return colunas.filter((col) => {
+      if (!colunasVisiveis.includes(col.status)) return false
+      if (ocultarEntregues && col.status === "entregue") return false
+      if (ocultarVazias) {
+        const pCount = pedidosFiltrados.filter(
+          (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
+        ).length
+        const oCount = orcamentosEmProducao.filter(
+          (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
+        ).length
+        if (pCount + oCount === 0) return false
+      }
+      return true
+    })
+  }, [colunasVisiveis, ocultarEntregues, ocultarVazias, pedidosFiltrados, orcamentosEmProducao])
 
   const emProducao =
     pedidosRapidos.filter((p) =>
@@ -427,45 +477,248 @@ export default function ProducaoPage() {
         </div>
       </div>
 
-      {/* Busca e Ações Rápidas */}
-      <div className="flex flex-wrap items-center gap-2.5">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por cliente ou número..."
-            className="pl-9 pr-7 h-9 text-sm bg-background"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-          />
-          {busca && (
+      {/* Busca e Barra de Ferramentas com Filtros */}
+      <div className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Campo de Busca */}
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por cliente ou número..."
+              className="pl-9 pr-7 h-9 text-sm bg-background"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+            {busca && (
+              <button
+                type="button"
+                onClick={() => setBusca("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                title="Limpar busca"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Seletor de Colunas Visíveis */}
+          <Popover>
+            <PopoverTrigger
+              className={cn(
+                "inline-flex items-center justify-center rounded-lg border border-border bg-background px-3 h-9 text-xs font-medium gap-1.5 shrink-0 transition-colors hover:bg-muted cursor-pointer",
+                colunasVisiveis.length < colunas.length && "border-primary text-primary font-semibold bg-primary/5"
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span>Colunas ({colunasVisiveis.length}/{colunas.length})</span>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64 p-3 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <span className="text-xs font-bold text-foreground">Colunas Visíveis</span>
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setColunasVisiveis(colunas.map((c) => c.status))}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    Todas
+                  </button>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const colunasComCards = colunas
+                        .filter((c) => {
+                          const count =
+                            pedidosRapidos.filter((p) => p.status === c.status || (c.status === "aprovado" && p.status === "arte")).length +
+                            orcamentos.filter((o) => o.statusProducao === c.status || (c.status === "aprovado" && o.statusProducao === "arte")).length
+                          return count > 0
+                        })
+                        .map((c) => c.status)
+                      setColunasVisiveis(colunasComCards.length > 0 ? colunasComCards : colunas.map((c) => c.status))
+                    }}
+                    className="text-muted-foreground hover:text-foreground font-medium"
+                  >
+                    Só com cards
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
+                {colunas.map((c) => {
+                  const marcada = colunasVisiveis.includes(c.status)
+                  const totalCards =
+                    pedidosRapidos.filter((p) => p.status === c.status || (c.status === "aprovado" && p.status === "arte")).length +
+                    orcamentos.filter((o) => o.statusProducao === c.status || (c.status === "aprovado" && o.statusProducao === "arte")).length
+
+                  return (
+                    <label
+                      key={c.status}
+                      className="flex items-center justify-between p-1.5 rounded-md hover:bg-muted/50 cursor-pointer text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={marcada}
+                          onChange={() => {
+                            setColunasVisiveis((atuais) => {
+                              if (atuais.includes(c.status)) {
+                                if (atuais.length === 1) return atuais
+                                return atuais.filter((s) => s !== c.status)
+                              } else {
+                                return [...atuais, c.status]
+                              }
+                            })
+                          }}
+                          className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                        />
+                        <div className="flex items-center gap-1.5">
+                          <span className={cn("h-2 w-2 rounded-full", c.cor)} />
+                          <span className={marcada ? "font-medium text-foreground" : "text-muted-foreground"}>
+                            {c.titulo}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground font-semibold px-1 rounded bg-muted">
+                        {totalCards}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Botão Ocultar Entregues */}
+          <button
+            type="button"
+            onClick={() => setOcultarEntregues((v) => !v)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg border px-3 h-9 text-xs font-medium transition-all shrink-0",
+              ocultarEntregues
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold"
+                : "border-border bg-background text-muted-foreground hover:text-foreground"
+            )}
+            title="Ocultar coluna de pedidos já entregues"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span>{ocultarEntregues ? "Entregues Ocultos" : "Ocultar Entregues"}</span>
+            <span className="rounded-full bg-muted/80 px-1.5 py-0.2 text-[10px]">
+              {totalEntregues}
+            </span>
+          </button>
+        </div>
+
+        {/* Linha de Pílulas Rápidas de Filtro */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs font-semibold text-muted-foreground mr-1 flex items-center gap-1">
+            <Filter className="h-3 w-3" /> Filtros:
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setFiltroPreset("todos")}
+            className={cn(
+              "rounded-lg px-2.5 py-1 text-xs font-semibold transition-all shadow-2xs",
+              filtroPreset === "todos"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted/70 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Todos ({pedidosRapidos.length + orcamentos.filter((o) => o.statusProducao).length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFiltroPreset(filtroPreset === "recentes_5" ? "todos" : "recentes_5")}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all shadow-2xs",
+              filtroPreset === "recentes_5"
+                ? "bg-amber-600 text-white"
+                : "bg-muted/70 text-muted-foreground hover:text-foreground"
+            )}
+            title="Ver os 5 cards mais recentes que chegaram"
+          >
+            <Sparkles className="h-3 w-3" />
+            <span>Últimos 5 recentes</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFiltroPreset(filtroPreset === "os" ? "todos" : "os")}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all shadow-2xs",
+              filtroPreset === "os"
+                ? "bg-violet-600 text-white"
+                : "bg-muted/70 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <FileCheck className="h-3 w-3" />
+            <span>Só OS / Orçamento</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFiltroPreset(filtroPreset === "rapida" ? "todos" : "rapida")}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all shadow-2xs",
+              filtroPreset === "rapida"
+                ? "bg-blue-600 text-white"
+                : "bg-muted/70 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Package className="h-3 w-3" />
+            <span>Só Gráfica Rápida</span>
+          </button>
+
+          {atrasados > 0 && (
             <button
               type="button"
-              onClick={() => setBusca("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
-              title="Limpar busca"
+              onClick={() => setFiltroPreset(filtroPreset === "atrasados" ? "todos" : "atrasados")}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all shadow-2xs",
+                filtroPreset === "atrasados"
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-destructive/10 text-destructive hover:bg-destructive/20"
+              )}
             >
-              ✕
+              <AlertTriangle className="h-3 w-3" />
+              <span>Atrasados ({atrasados})</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setOcultarVazias((v) => !v)}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all shadow-2xs border",
+              ocultarVazias
+                ? "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                : "border-border bg-background text-muted-foreground hover:text-foreground"
+            )}
+            title="Ocultar colunas sem nenhum card"
+          >
+            <EyeOff className="h-3 w-3" />
+            <span>{ocultarVazias ? "Colunas vazias ocultas" : "Ocultar vazias"}</span>
+          </button>
+
+          {/* Botão Limpar / Ver tudo */}
+          {(filtroPreset !== "todos" || busca || colunasVisiveis.length < colunas.length || ocultarVazias || ocultarEntregues) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFiltroPreset("todos")
+                setBusca("")
+                setColunasVisiveis(colunas.map((c) => c.status))
+                setOcultarVazias(false)
+                setOcultarEntregues(false)
+              }}
+              className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-bold text-foreground hover:bg-muted transition-all shadow-2xs"
+            >
+              ✕ Ver tudo (Limpar)
             </button>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={() => setOcultarEntregues((v) => !v)}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-lg border px-3 h-9 text-xs font-medium transition-all shrink-0",
-            ocultarEntregues
-              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold"
-              : "border-border bg-background text-muted-foreground hover:text-foreground"
-          )}
-          title="Ocultar coluna de pedidos já entregues"
-        >
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          <span>{ocultarEntregues ? "Entregues Ocultos" : "Ocultar Entregues"}</span>
-          <span className="rounded-full bg-muted/80 px-1.5 py-0.2 text-[10px]">
-            {totalEntregues}
-          </span>
-        </button>
       </div>
 
       {/* Mobile: Navegação fixa por abas de estágio */}
@@ -481,7 +734,7 @@ export default function ProducaoPage() {
         >
           Todas ({pedidosFiltrados.length + orcamentosEmProducao.length})
         </button>
-        {colunas.map((col) => {
+        {colunasRenderizadas.map((col) => {
           const qtd =
             pedidosFiltrados.filter((p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")).length +
             orcamentosEmProducao.filter((o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")).length
@@ -506,10 +759,9 @@ export default function ProducaoPage() {
 
       {/* Mobile: lista de cards em coluna única */}
       <div className="flex flex-col gap-4 md:hidden">
-        {colunas
+        {colunasRenderizadas
           .filter((col) => {
             if (colunaAtiva !== "todas") return col.status === colunaAtiva
-            if (ocultarEntregues && col.status === "entregue") return false
             return true
           })
           .map((col) => {
@@ -583,9 +835,14 @@ export default function ProducaoPage() {
               </div>
             )
           })}
-        {pedidosFiltrados.length === 0 && orcamentosEmProducao.length === 0 && (
+        {colunasRenderizadas.length === 0 && (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Nenhum pedido ou orçamento encontrado.
+            Nenhuma coluna selecionada nos filtros.
+          </p>
+        )}
+        {colunasRenderizadas.length > 0 && pedidosFiltrados.length === 0 && orcamentosEmProducao.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Nenhum pedido ou orçamento encontrado com os filtros atuais.
           </p>
         )}
       </div>
@@ -653,13 +910,23 @@ export default function ProducaoPage() {
       <div className="hidden md:flex flex-col rounded-2xl border border-border/80 bg-muted/20 dark:bg-card/30 shadow-xs overflow-hidden">
         {/* Barra superior de status/info da caixa do Kanban */}
         <div className="flex items-center justify-between border-b border-border/60 bg-card/60 px-4 py-2.5 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-foreground">Quadro de Produção</span>
             <span>•</span>
             <span>
               {pedidosFiltrados.length + orcamentosEmProducao.length}{" "}
-              {pedidosFiltrados.length + orcamentosEmProducao.length === 1 ? "item" : "itens"} no total
+              {pedidosFiltrados.length + orcamentosEmProducao.length === 1 ? "item" : "itens"} visíveis
             </span>
+            {filtroPreset === "recentes_5" && (
+              <span className="rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 font-semibold px-2 py-0.5 text-[11px] flex items-center gap-1">
+                <Sparkles className="h-3 w-3" /> 5 mais recentes
+              </span>
+            )}
+            {colunasVisiveis.length < colunas.length && (
+              <span className="rounded bg-blue-500/15 text-blue-800 dark:text-blue-300 font-semibold px-2 py-0.5 text-[11px]">
+                {colunasRenderizadas.length}/{colunas.length} colunas
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 text-[11px]">
             <span>Arraste os cards para mover de coluna</span>
@@ -673,10 +940,27 @@ export default function ProducaoPage() {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="flex gap-3.5 h-full min-w-max items-start">
-              {colunas
-                .filter((col) => !ocultarEntregues || col.status !== "entregue")
-                .map((col) => {
+            {colunasRenderizadas.length === 0 ? (
+              <div className="flex flex-col items-center justify-center w-full h-full p-12 text-center text-muted-foreground gap-3">
+                <Filter className="h-10 w-10 opacity-30" />
+                <p className="text-sm font-medium">Nenhuma coluna visível com os filtros atuais.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setColunasVisiveis(colunas.map((c) => c.status))
+                    setOcultarVazias(false)
+                    setOcultarEntregues(false)
+                    setFiltroPreset("todos")
+                    setBusca("")
+                  }}
+                >
+                  Restaurar todas as colunas
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-3.5 h-full min-w-max items-start">
+                {colunasRenderizadas.map((col) => {
                   const pedidosDaColuna = pedidosFiltrados.filter(
                     (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
                   )
@@ -765,7 +1049,8 @@ export default function ProducaoPage() {
                     </ColunaDroppable>
                   )
                 })}
-            </div>
+              </div>
+            )}
 
             <DragOverlay>
               {pedidoArrastando ? (
