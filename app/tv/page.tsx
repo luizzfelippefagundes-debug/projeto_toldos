@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useTheme } from "next-themes"
@@ -76,14 +76,14 @@ function TvColuna({
   borda,
   fundo,
   pedidos,
-  compacto,
+  tamanhoGrande = true,
 }: {
   status: StatusPedido
   label: string
   borda: string
   fundo: string
   pedidos: PedidoTV[]
-  compacto: boolean
+  tamanhoGrande?: boolean
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [temOverflow, setTemOverflow] = useState(false)
@@ -95,173 +95,186 @@ function TvColuna({
     const el = containerRef.current
     if (!el) return
     const verificar = () => {
-      const transborda = el.scrollHeight > el.clientHeight + 6
+      const transborda = el.scrollHeight > el.clientHeight + 4
       setTemOverflow(transborda)
       setEstaNoTopo(el.scrollTop <= 5)
       setEstaNoFim(el.scrollTop + el.clientHeight >= el.scrollHeight - 5)
     }
     verificar()
-    const t = setTimeout(verificar, 300)
+    const t = setTimeout(verificar, 350)
     window.addEventListener("resize", verificar)
     return () => {
       clearTimeout(t)
       window.removeEventListener("resize", verificar)
     }
-  }, [pedidos, compacto])
+  }, [pedidos, tamanhoGrande])
 
-  // Auto-scroll suave e contínuo para Smart TVs (onde não há mouse nem toque)
+  // Auto-scroll contínuo e cíclico (Desce suavemente -> pausa -> sobe suavemente -> pausa -> repete)
   useEffect(() => {
     const el = containerRef.current
     if (!el || !temOverflow) return
 
     let animId: number
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: NodeJS.Timeout | null = null
     let direcao = 1 // 1: descendo, -1: subindo
-    let pausado = false
+    let pausado = true // Começa pausado no topo para leitura inicial
+
+    // Inicia a rolagem para baixo após 3.5 segundos de pausa no topo
+    timeoutId = setTimeout(() => {
+      pausado = false
+    }, 3500)
 
     const rolar = () => {
-      if (pausado) return
+      if (!el) return
       const maxScroll = el.scrollHeight - el.clientHeight
       if (maxScroll <= 0) return
 
-      if (direcao === 1) {
-        el.scrollTop += 0.8
-        setEstaNoTopo(el.scrollTop <= 5)
-        setEstaNoFim(el.scrollTop >= maxScroll - 5)
+      if (!pausado) {
+        if (direcao === 1) {
+          // Descendo suavemente
+          el.scrollTop += 0.85
+          setEstaNoTopo(el.scrollTop <= 5)
+          setEstaNoFim(el.scrollTop >= maxScroll - 5)
 
-        if (el.scrollTop >= maxScroll - 1) {
-          pausado = true
-          timeoutId = setTimeout(() => {
-            direcao = -1
-            pausado = false
-          }, 3500)
-        }
-      } else {
-        el.scrollTop -= 1.2
-        setEstaNoTopo(el.scrollTop <= 5)
-        setEstaNoFim(el.scrollTop >= maxScroll - 5)
+          if (el.scrollTop >= maxScroll - 1) {
+            pausado = true
+            // Pausa no final para leitura dos últimos pedidos
+            timeoutId = setTimeout(() => {
+              direcao = -1
+              pausado = false
+            }, 3500)
+          }
+        } else {
+          // Subindo suavemente de volta ao topo
+          el.scrollTop -= 1.3
+          setEstaNoTopo(el.scrollTop <= 5)
+          setEstaNoFim(el.scrollTop >= maxScroll - 5)
 
-        if (el.scrollTop <= 0) {
-          pausado = true
-          timeoutId = setTimeout(() => {
-            direcao = 1
-            pausado = false
-          }, 4000)
+          if (el.scrollTop <= 1) {
+            el.scrollTop = 0
+            pausado = true
+            // Pausa no topo para nova leitura antes de descer de novo
+            timeoutId = setTimeout(() => {
+              direcao = 1
+              pausado = false
+            }, 4000)
+          }
         }
       }
 
+      // IMPORTANTE: Mantém o loop de animação vivo a cada frame sem morrer
       animId = requestAnimationFrame(rolar)
     }
 
-    timeoutId = setTimeout(() => {
-      animId = requestAnimationFrame(rolar)
-    }, 3500)
+    animId = requestAnimationFrame(rolar)
 
     return () => {
-      clearTimeout(timeoutId)
+      if (timeoutId) clearTimeout(timeoutId)
       cancelAnimationFrame(animId)
     }
   }, [temOverflow, pedidos])
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-1.5 sm:gap-2 min-w-0">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-2 min-w-0">
       {/* Cabeçalho da coluna */}
       <div
-        className={`flex shrink-0 items-center justify-between rounded-lg border px-2 sm:px-2.5 py-1.5 shadow-2xs ${borda} ${fundo}`}
+        className={`flex shrink-0 items-center justify-between rounded-xl border px-3 py-2 shadow-2xs ${borda} ${fundo}`}
       >
-        <span className="text-xs font-bold tracking-tight sm:text-sm truncate">
+        <span className="text-sm sm:text-base lg:text-lg font-black tracking-tight truncate text-foreground">
           {label}
         </span>
         <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-black ${
+          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs sm:text-sm font-black ${
             pedidos.length > 0
-              ? "bg-foreground/15 text-foreground"
-              : "bg-black/5 dark:bg-white/5 text-muted-foreground opacity-50"
+              ? "bg-foreground/20 text-foreground"
+              : "bg-black/5 dark:bg-white/5 text-muted-foreground opacity-40"
           }`}
         >
           {pedidos.length}
         </span>
       </div>
 
-      {/* Container de cards com auto-scroll suave e sem barras de rolagem cortando */}
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
+      {/* Container de cards com auto-scroll suave infinito */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl">
         <div
           ref={containerRef}
-          className="flex h-full min-h-0 flex-1 flex-col gap-1.5 sm:gap-2 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pr-0.5"
+          className="flex h-full min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pr-0.5"
         >
           {pedidos.map((pedido) => {
             const atrasado = estaAtrasado(pedido)
             return (
               <div
                 key={pedido.id}
-                className={`shrink-0 rounded-xl border transition-all ${
-                  compacto ? "p-2 sm:p-2.5" : "p-2.5 sm:p-3"
-                } ${
+                className={`shrink-0 rounded-2xl border-2 transition-all p-3 sm:p-3.5 lg:p-4 shadow-sm ${
                   atrasado
-                    ? "border-red-500/80 bg-red-50/90 shadow-sm dark:bg-red-950/70"
-                    : "border-slate-200/90 bg-white/95 shadow-2xs dark:border-slate-800 dark:bg-slate-900/90"
+                    ? "border-red-500 bg-red-50/95 shadow-md dark:border-red-600 dark:bg-red-950/80"
+                    : "border-slate-200/90 bg-white shadow-2xs dark:border-slate-700/80 dark:bg-slate-900/95"
                 }`}
               >
                 {/* Linha superior: Tag OS / Pedido + Tipo + Prazo/Atrasado */}
-                <div className="flex items-center justify-between gap-1 leading-none">
+                <div className="flex items-center justify-between gap-1.5 leading-none">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="font-extrabold text-[11px] sm:text-xs text-foreground tracking-tight shrink-0">
+                    <span className="font-black text-xs sm:text-sm lg:text-base text-foreground tracking-tight shrink-0">
                       {pedido.tipo === "orcamento" ? `OS #${pedido.numero}` : `#${pedido.numero}`}
                     </span>
                     {pedido.tipo === "orcamento" ? (
-                      <span className="rounded bg-blue-500/15 px-1 py-0.5 text-[9px] font-bold text-blue-700 dark:text-blue-300 uppercase shrink-0">
+                      <span className="rounded-md bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-blue-700 dark:text-blue-300 uppercase shrink-0">
                         Com. Visual
                       </span>
                     ) : (
-                      <span className="rounded bg-violet-500/15 px-1 py-0.5 text-[9px] font-bold text-violet-700 dark:text-violet-300 uppercase shrink-0">
+                      <span className="rounded-md bg-violet-500/15 border border-violet-500/30 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-violet-700 dark:text-violet-300 uppercase shrink-0">
                         Rápida
                       </span>
                     )}
                   </div>
 
                   {atrasado ? (
-                    <span className="shrink-0 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-black text-white uppercase tracking-wider animate-pulse">
+                    <span className="shrink-0 rounded-lg bg-red-600 px-2 py-0.5 text-[10px] sm:text-xs font-black text-white uppercase tracking-wider animate-pulse shadow-xs">
                       Atrasado
                     </span>
                   ) : pedido.prazo_entrega_em ? (
-                    <span className="shrink-0 rounded-md bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                    <span className="shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-2 py-0.5 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">
                       até {formatarPrazo(pedido.prazo_entrega_em)}
                     </span>
                   ) : null}
                 </div>
 
-                {/* Nome do Cliente em Destaque Forte */}
+                {/* Nome do Cliente em Destaque Grande para ver de longe */}
                 <p
-                  className={`mt-1 font-extrabold text-foreground leading-snug truncate ${
-                    compacto ? "text-xs sm:text-sm" : "text-sm sm:text-base"
+                  className={`mt-1.5 font-black text-foreground tracking-tight leading-tight truncate ${
+                    tamanhoGrande
+                      ? "text-base sm:text-lg lg:text-xl xl:text-2xl"
+                      : "text-sm sm:text-base lg:text-lg"
                   }`}
                   title={pedido.cliente_nome}
                 >
                   {pedido.cliente_nome}
                 </p>
 
-                {/* Produto + Medida/Variante */}
+                {/* Produto + Medida/Variante Grande e Nítido */}
                 <p
-                  className={`mt-0.5 text-muted-foreground truncate leading-tight ${
-                    compacto ? "text-[11px] sm:text-xs" : "text-xs sm:text-sm"
+                  className={`mt-1 text-muted-foreground truncate leading-snug ${
+                    tamanhoGrande
+                      ? "text-xs sm:text-sm lg:text-base"
+                      : "text-xs sm:text-sm"
                   }`}
                 >
-                  <span className="font-semibold text-foreground/90">{pedido.produto_nome ?? "Item"}</span>
+                  <span className="font-bold text-foreground/90">{pedido.produto_nome ?? "Item"}</span>
                   {pedido.variante_nome && (
-                    <span className="text-muted-foreground"> · {pedido.variante_nome}</span>
+                    <span className="font-medium text-muted-foreground"> · {pedido.variante_nome}</span>
                   )}
                 </p>
 
                 {/* Acabamento se houver */}
                 {pedido.acabamento && (
-                  <p className="mt-0.5 text-[10px] sm:text-[11px] text-muted-foreground/80 truncate">
+                  <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground/80 font-medium truncate">
                     {pedido.acabamento}
                   </p>
                 )}
 
                 {/* Observação curta se houver */}
                 {pedido.observacao && (
-                  <p className="mt-1 line-clamp-1 rounded bg-muted/60 px-1.5 py-0.5 text-[10px] italic text-muted-foreground">
+                  <p className="mt-1.5 line-clamp-2 rounded-lg bg-muted/70 px-2 py-1 text-xs italic text-muted-foreground">
                     {pedido.observacao}
                   </p>
                 )}
@@ -270,22 +283,22 @@ function TvColuna({
           })}
 
           {pedidos.length === 0 && (
-            <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border/40 py-6 text-xs text-muted-foreground/40 italic">
+            <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 py-8 text-sm text-muted-foreground/40 italic font-semibold">
               Vazio
             </div>
           )}
         </div>
 
-        {/* Indicador de auto-scroll para a equipe na fábrica */}
+        {/* Indicador suave de rolagem */}
         {temOverflow && !estaNoFim && (
-          <div className="pointer-events-none absolute bottom-0 inset-x-0 h-6 bg-gradient-to-t from-background via-background/80 to-transparent flex items-end justify-center pb-0.5">
-            <span className="text-[9px] font-bold text-primary/80 animate-bounce">
+          <div className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-background via-background/80 to-transparent flex items-end justify-center pb-1">
+            <span className="text-[10px] font-black text-primary animate-bounce">
               ↓ rolando ({pedidos.length} pedidos)
             </span>
           </div>
         )}
         {temOverflow && !estaNoTopo && (
-          <div className="pointer-events-none absolute top-0 inset-x-0 h-4 bg-gradient-to-b from-background to-transparent" />
+          <div className="pointer-events-none absolute top-0 inset-x-0 h-5 bg-gradient-to-b from-background to-transparent" />
         )}
       </div>
     </div>
@@ -354,6 +367,8 @@ export default function TvPage() {
     somAlarme?: boolean
     apenasRecentes?: boolean
     densidade?: "normal" | "compacto"
+    tamanhoFonte?: "normal" | "grande"
+    ocultarVazias?: boolean
   } | null>(null)
 
   const carregar = useCallback(async () => {
@@ -418,15 +433,68 @@ export default function TvPage() {
 
   const totalAtivos = pedidos.length
   const totalAtrasados = pedidos.filter((p) => estaAtrasado(p)).length
-  const colunasFiltradas = COLUNAS.filter((c) =>
-    (config?.statusVisiveis ?? COLUNAS.map((col) => col.status)).includes(c.status)
-  )
+
+  // Se ocultarVazias estiver ativo, expande as colunas com pedidos para ocupar a tela toda
+  const colunasFiltradas = useMemo(() => {
+    const autorizadas = COLUNAS.filter((c) =>
+      (config?.statusVisiveis ?? COLUNAS.map((col) => col.status)).includes(c.status)
+    )
+
+    if (config?.ocultarVazias) {
+      const comPedidos = autorizadas.filter((c) => {
+        const count = pedidos.filter(
+          (p) => p.status === c.status || (c.status === "aprovado" && (p.status as string) === "arte")
+        ).length
+        return count > 0
+      })
+      return comPedidos.length > 0 ? comPedidos : autorizadas
+    }
+
+    return autorizadas
+  }, [config?.statusVisiveis, config?.ocultarVazias, pedidos])
 
   return (
     <div className="group/tv flex h-screen max-h-screen w-screen overflow-hidden flex-col gap-2.5 sm:gap-3 p-2.5 sm:p-4 bg-background">
 
       {/* Barra flutuante de utilitários da TV — visível ao passar o mouse ou interagir */}
       <div className="fixed top-2.5 right-3 z-50 flex items-center gap-2 opacity-0 group-hover/tv:opacity-100 transition-opacity duration-200">
+        <button
+          type="button"
+          onClick={() => {
+            const novo = !config?.ocultarVazias
+            setConfig((prev) => (prev ? { ...prev, ocultarVazias: novo } : prev))
+            fetch("/api/tv/config", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...config, ocultarVazias: novo }),
+            }).catch(() => {})
+          }}
+          className={`rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm border backdrop-blur transition-colors ${
+            config?.ocultarVazias
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card/90 text-foreground border-border/80 hover:bg-muted"
+          }`}
+          title="Oculta etapas sem pedidos para dar foco total e espaço gigante para os pedidos ativos"
+        >
+          {config?.ocultarVazias ? "✓ Expandir Ativas (Ocultar Vazias)" : "Ocultar Vazias"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            const novo = config?.tamanhoFonte === "normal" ? "grande" : "normal"
+            setConfig((prev) => (prev ? { ...prev, tamanhoFonte: novo } : prev))
+            fetch("/api/tv/config", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...config, tamanhoFonte: novo }),
+            }).catch(() => {})
+          }}
+          className="rounded-lg bg-card/90 px-2.5 py-1 text-xs font-bold text-foreground shadow-sm border border-border/80 backdrop-blur hover:bg-muted"
+        >
+          {config?.tamanhoFonte === "normal" ? "Fonte: Normal" : "Fonte: Grande (TV)"}
+        </button>
+
         <button
           type="button"
           onClick={() => {
@@ -508,7 +576,7 @@ export default function TvPage() {
               borda={coluna.borda}
               fundo={coluna.fundo}
               pedidos={colPedidos}
-              compacto={config?.densidade !== "normal"}
+              tamanhoGrande={config?.tamanhoFonte !== "normal"}
             />
           )
         })}

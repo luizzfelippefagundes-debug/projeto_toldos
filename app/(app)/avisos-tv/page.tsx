@@ -22,6 +22,8 @@ import {
   Clock,
   Zap,
   Minimize2,
+  Maximize2,
+  Eye,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,6 +49,8 @@ interface TvConfig {
   tema: "light" | "dark"
   apenasRecentes?: boolean
   densidade?: "normal" | "compacto"
+  tamanhoFonte?: "normal" | "grande"
+  ocultarVazias?: boolean
 }
 
 const DEFAULT_TV_CONFIG: TvConfig = {
@@ -56,7 +60,9 @@ const DEFAULT_TV_CONFIG: TvConfig = {
   somAlarme: true,
   tema: "dark",
   apenasRecentes: false,
-  densidade: "compacto",
+  densidade: "normal",
+  tamanhoFonte: "grande",
+  ocultarVazias: false,
 }
 
 const TIPOS = [
@@ -838,18 +844,34 @@ export default function CentralTvPage() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background text-xs">
                   <div className="flex items-center gap-2">
-                    <Minimize2 className="h-4 w-4 text-primary shrink-0" />
+                    <Maximize2 className="h-4 w-4 text-emerald-500 shrink-0" />
                     <div>
-                      <span className="font-medium text-foreground block">Modo Compacto de Cards</span>
+                      <span className="font-medium text-foreground block">Expandir Ativas (Ocultar Vazias)</span>
                       <span className="text-[11px] text-muted-foreground block">
-                        Otimiza altura para caber mais pedidos na tela da TV sem cortar
+                        Oculta colunas sem pedidos para que as com trabalho ocupem a tela inteira em destaque
                       </span>
                     </div>
                   </div>
                   <Switch
-                    checked={config.densidade !== "normal"}
+                    checked={config.ocultarVazias ?? false}
+                    onCheckedChange={(checked) => salvarConfiguracoes({ ocultarVazias: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background text-xs">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-blue-500 shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground block">Fonte Grande (Leitura de Longe)</span>
+                      <span className="text-[11px] text-muted-foreground block">
+                        Aumenta os nomes dos clientes e pedidos para visualização nítida a metros de distância
+                      </span>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={config.tamanhoFonte !== "normal"}
                     onCheckedChange={(checked) =>
-                      salvarConfiguracoes({ densidade: checked ? "compacto" : "normal" })
+                      salvarConfiguracoes({ tamanhoFonte: checked ? "grande" : "normal" })
                     }
                   />
                 </div>
