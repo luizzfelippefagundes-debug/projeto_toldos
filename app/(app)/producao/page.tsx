@@ -26,6 +26,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import type { Orcamento, Cliente, PedidoRapido, ProdutoRapido, StatusPedidoRapido } from "@/lib/types"
@@ -50,6 +57,7 @@ import {
   Copy,
   Check,
   ExternalLink,
+  ChevronRight,
 } from "lucide-react"
 import { linkWhatsapp } from "@/lib/whatsapp"
 
@@ -153,6 +161,16 @@ if (!colunaMap.arte) {
   colunaMap.arte = colunaMap.aprovado
 }
 
+const PROXIMO_STATUS: Partial<Record<StatusPedidoRapido, StatusPedidoRapido>> = {
+  aguardando: "aprovado",
+  aprovado: "ag_confirmacao",
+  arte: "ag_confirmacao",
+  ag_confirmacao: "impressao",
+  impressao: "acabamento",
+  acabamento: "pronto",
+  pronto: "entregue",
+}
+
 const statusValidos = new Set<string>(colunas.map((c) => c.status))
 
 function iniciais(nome: string) {
@@ -174,6 +192,7 @@ export default function ProducaoPage() {
   } = useData()
   const [busca, setBusca] = useState("")
   const [colunaAtiva, setColunaAtiva] = useState<StatusPedidoRapido | "todas">("todas")
+  const [ocultarEntregues, setOcultarEntregues] = useState(false)
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
   const [confirmando, setConfirmando] = useState<{
     clienteNome: string
@@ -263,6 +282,9 @@ export default function ProducaoPage() {
   const prontos =
     pedidosRapidos.filter((p) => p.status === "pronto").length +
     orcamentosEmProducao.filter((o) => o.statusProducao === "pronto").length
+  const totalEntregues =
+    pedidosFiltrados.filter((p) => p.status === "entregue").length +
+    orcamentosEmProducao.filter((o) => o.statusProducao === "entregue").length
 
   const pedidoArrastando = arrastandoId && !arrastandoId.startsWith("orc-")
     ? pedidosRapidos.find((p) => p.id === arrastandoId)
@@ -347,13 +369,13 @@ export default function ProducaoPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 sm:gap-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Produção</h1>
           <p className="text-sm text-muted-foreground">
-            Arraste os cards entre colunas para mover o status.
+            Acompanhe o fluxo de pedidos e ordens de serviço.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
@@ -362,61 +384,91 @@ export default function ProducaoPage() {
         </Button>
       </div>
 
-      {/* Métricas */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15">
-            <Package className="h-4 w-4 text-blue-500" />
+      {/* Métricas compactas */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 rounded-xl border border-border bg-card px-2.5 sm:px-4 py-2 sm:py-3">
+          <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15">
+            <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500" />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Em produção</p>
-            <p className="text-xl font-bold">{emProducao}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Em produção</p>
+            <p className="text-base sm:text-xl font-bold leading-tight">{emProducao}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-500/15">
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+        <div className="flex items-center gap-2 sm:gap-3 rounded-xl border border-border bg-card px-2.5 sm:px-4 py-2 sm:py-3">
+          <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-red-500/15">
+            <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Atrasados</p>
-            <p className={cn("text-xl font-bold", atrasados > 0 && "text-destructive")}>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Atrasados</p>
+            <p className={cn("text-base sm:text-xl font-bold leading-tight", atrasados > 0 && "text-destructive")}>
               {hoje ? atrasados : "—"}
             </p>
           </div>
         </div>
-        <div className="col-span-2 flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 sm:col-span-1">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-500/15">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
+        <div className="flex items-center gap-2 sm:gap-3 rounded-xl border border-border bg-card px-2.5 sm:px-4 py-2 sm:py-3">
+          <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-green-500/15">
+            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Prontos p/ entrega</p>
-            <p className={cn("text-xl font-bold", prontos > 0 && "text-green-600")}>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Prontos</p>
+            <p className={cn("text-base sm:text-xl font-bold leading-tight", prontos > 0 && "text-green-600")}>
               {prontos}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Busca */}
-      <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por cliente ou número..."
-          className="pl-9"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
+      {/* Busca e Ações Rápidas */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por cliente ou número..."
+            className="pl-9 pr-7 h-9 text-sm bg-background"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+          {busca && (
+            <button
+              type="button"
+              onClick={() => setBusca("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+              title="Limpar busca"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setOcultarEntregues((v) => !v)}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-lg border px-3 h-9 text-xs font-medium transition-all shrink-0",
+            ocultarEntregues
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold"
+              : "border-border bg-background text-muted-foreground hover:text-foreground"
+          )}
+          title="Ocultar coluna de pedidos já entregues"
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          <span>{ocultarEntregues ? "Entregues Ocultos" : "Ocultar Entregues"}</span>
+          <span className="rounded-full bg-muted/80 px-1.5 py-0.2 text-[10px]">
+            {totalEntregues}
+          </span>
+        </button>
       </div>
 
-      {/* Filtro de coluna — visível só no mobile */}
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:hidden">
+      {/* Mobile: Navegação fixa por abas de estágio */}
+      <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-md border-b border-border/60 flex items-center gap-1.5 overflow-x-auto md:hidden">
         <button
           onClick={() => setColunaAtiva("todas")}
           className={cn(
-            "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+            "shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all",
             colunaAtiva === "todas"
-              ? "border-primary bg-primary/15 text-foreground"
-              : "border-border text-muted-foreground"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "bg-muted/70 text-muted-foreground hover:text-foreground"
           )}
         >
           Todas ({pedidosFiltrados.length + orcamentosEmProducao.length})
@@ -430,22 +482,28 @@ export default function ProducaoPage() {
               key={col.status}
               onClick={() => setColunaAtiva(col.status)}
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all",
                 colunaAtiva === col.status
-                  ? `${col.cor} border-transparent text-white`
-                  : "border-border text-muted-foreground"
+                  ? `${col.cor} text-white shadow-xs`
+                  : "bg-muted/70 text-muted-foreground hover:text-foreground"
               )}
             >
-              {col.titulo} ({qtd})
+              <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", colunaAtiva === col.status ? "bg-white" : col.cor)} />
+              <span>{col.titulo}</span>
+              <span className="opacity-80 text-[11px]">({qtd})</span>
             </button>
           )
         })}
       </div>
 
       {/* Mobile: lista de cards em coluna única */}
-      <div className="flex flex-col gap-3 md:hidden">
+      <div className="flex flex-col gap-4 md:hidden">
         {colunas
-          .filter((col) => colunaAtiva === "todas" || col.status === colunaAtiva)
+          .filter((col) => {
+            if (colunaAtiva !== "todas") return col.status === colunaAtiva
+            if (ocultarEntregues && col.status === "entregue") return false
+            return true
+          })
           .map((col) => {
             const pedidosDaColuna = pedidosFiltrados.filter(
               (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
@@ -456,18 +514,18 @@ export default function ProducaoPage() {
             const totalColuna = pedidosDaColuna.length + orcsDaColuna.length
             if (colunaAtiva === "todas" && totalColuna === 0) return null
             return (
-              <div key={col.status} className="flex flex-col gap-2">
-                {colunaAtiva === "todas" && (
+              <div key={col.status} className="flex flex-col gap-2.5">
+                <div className={cn("flex items-center justify-between rounded-lg px-3 py-1.5", col.corFundo)}>
                   <div className="flex items-center gap-2">
-                    <div className={cn("h-2 w-2 rounded-full", col.cor)} />
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <div className={cn("h-2.5 w-2.5 rounded-full shrink-0", col.cor)} />
+                    <span className={cn("text-xs font-bold uppercase tracking-wide", col.corTexto)}>
                       {col.titulo}
                     </span>
-                    <span className={cn("text-xs font-bold", col.corTexto)}>
-                      {totalColuna}
-                    </span>
                   </div>
-                )}
+                  <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", col.corFundo, col.corTexto)}>
+                    {totalColuna}
+                  </span>
+                </div>
                 {pedidosDaColuna.map((pedido) => (
                   <PedidoCardConteudo
                     key={pedido.id}
@@ -583,99 +641,109 @@ export default function ProducaoPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Desktop: kanban com drag-and-drop */}
-      <div className="hidden md:block">
+      {/* Desktop: kanban com drag-and-drop e rolagem independente por coluna */}
+      <div className="hidden md:flex flex-col flex-1 h-[calc(100vh-240px)] min-h-[520px]">
         <DndContext
           sensors={sensores}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-4">
-            {colunas.map((col) => {
-              const pedidosDaColuna = pedidosFiltrados.filter(
-                (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
-              )
-              const orcsDaColuna = orcamentosEmProducao.filter(
-                (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
-              )
-              const total = pedidosDaColuna.length + orcsDaColuna.length
-              return (
-                <ColunaDroppable key={col.status} status={col.status} coluna={col}>
-                  <div className={cn(
-                    "flex items-center justify-between rounded-t-lg px-3 py-2",
-                    col.corFundo
-                  )}>
-                    <div className="flex items-center gap-2">
-                      <div className={cn("h-2 w-2 rounded-full", col.cor)} />
-                      <span className={cn("text-xs font-bold uppercase tracking-wide", col.corTexto)}>
-                        {col.titulo}
+          <div className="flex flex-1 gap-3 overflow-x-auto pb-2 min-h-0 items-start">
+            {colunas
+              .filter((col) => !ocultarEntregues || col.status !== "entregue")
+              .map((col) => {
+                const pedidosDaColuna = pedidosFiltrados.filter(
+                  (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
+                )
+                const orcsDaColuna = orcamentosEmProducao.filter(
+                  (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
+                )
+                const total = pedidosDaColuna.length + orcsDaColuna.length
+                return (
+                  <ColunaDroppable key={col.status} status={col.status} coluna={col}>
+                    {/* Header fixo da coluna */}
+                    <div
+                      className={cn(
+                        "shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-border/50",
+                        col.corFundo
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={cn("h-2.5 w-2.5 rounded-full shrink-0", col.cor)} />
+                        <span className={cn("text-xs font-bold uppercase tracking-wide", col.corTexto)}>
+                          {col.titulo}
+                        </span>
+                      </div>
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-xs font-bold",
+                          col.corFundo,
+                          col.corTexto
+                        )}
+                      >
+                        {total}
                       </span>
                     </div>
-                    <span className={cn(
-                      "rounded-full px-2 py-0.5 text-xs font-bold",
-                      col.corFundo, col.corTexto
-                    )}>
-                      {total}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2 p-2">
-                    {total === 0 && (
-                      <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                        Vazio
-                      </div>
-                    )}
-                    {pedidosDaColuna.map((pedido) => (
-                      <PedidoCardArrastavel key={pedido.id} id={pedido.id}>
-                        <PedidoCardConteudo
-                          pedido={pedido}
-                          produto={produtoDoPedido(pedido)}
-                          atrasado={estaAtrasado(pedido)}
-                          coluna={colunaMap[pedido.status]}
-                          onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
-                          onMudarStatus={(status) =>
-                            solicitarConfirmacao(
-                              pedido.clienteNome,
-                              pedido.clienteTelefone,
-                              status,
-                              () => moverPedidoRapido(pedido.id, status),
-                              pedido.id
-                            )
-                          }
-                        />
-                      </PedidoCardArrastavel>
-                    ))}
-                    {orcsDaColuna.map((orc) => {
-                      const cli = clientes.find((c) => c.id === orc.clienteId)
-                      return (
-                        <PedidoCardArrastavel key={`orc-${orc.id}`} id={`orc-${orc.id}`}>
-                          <OrcamentoCardConteudo
-                            orcamento={orc}
-                            cliente={cli}
-                            coluna={col}
-                            assinatura={assinaturas[orc.id]}
-                            onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
+
+                    {/* Lista de cartões com rolagem independente */}
+                    <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2.5 min-h-0">
+                      {total === 0 && (
+                        <div className="rounded-lg border border-dashed border-border/70 p-4 text-center text-xs text-muted-foreground">
+                          Vazio
+                        </div>
+                      )}
+                      {pedidosDaColuna.map((pedido) => (
+                        <PedidoCardArrastavel key={pedido.id} id={pedido.id}>
+                          <PedidoCardConteudo
+                            pedido={pedido}
+                            produto={produtoDoPedido(pedido)}
+                            atrasado={estaAtrasado(pedido)}
+                            coluna={colunaMap[pedido.status]}
+                            onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
                             onMudarStatus={(status) =>
                               solicitarConfirmacao(
-                                cli?.nome ?? "Cliente",
-                                cli?.telefone ?? null,
+                                pedido.clienteNome,
+                                pedido.clienteTelefone,
                                 status,
-                                () => moverOrcamentoProducao(orc.id, status),
-                                orc.id
+                                () => moverPedidoRapido(pedido.id, status),
+                                pedido.id
                               )
                             }
                           />
                         </PedidoCardArrastavel>
-                      )
-                    })}
-                  </div>
-                </ColunaDroppable>
-              )
-            })}
+                      ))}
+                      {orcsDaColuna.map((orc) => {
+                        const cli = clientes.find((c) => c.id === orc.clienteId)
+                        return (
+                          <PedidoCardArrastavel key={`orc-${orc.id}`} id={`orc-${orc.id}`}>
+                            <OrcamentoCardConteudo
+                              orcamento={orc}
+                              cliente={cli}
+                              coluna={col}
+                              assinatura={assinaturas[orc.id]}
+                              onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
+                              onMudarStatus={(status) =>
+                                solicitarConfirmacao(
+                                  cli?.nome ?? "Cliente",
+                                  cli?.telefone ?? null,
+                                  status,
+                                  () => moverOrcamentoProducao(orc.id, status),
+                                  orc.id
+                                )
+                              }
+                            />
+                          </PedidoCardArrastavel>
+                        )
+                      })}
+                    </div>
+                  </ColunaDroppable>
+                )
+              })}
           </div>
 
           <DragOverlay>
             {pedidoArrastando ? (
-              <div className="w-56 rotate-2 opacity-90 shadow-xl">
+              <div className="w-64 rotate-2 opacity-95 shadow-2xl">
                 <PedidoCardConteudo
                   pedido={pedidoArrastando}
                   produto={produtoDoPedido(pedidoArrastando)}
@@ -686,7 +754,7 @@ export default function ProducaoPage() {
                 />
               </div>
             ) : orcamentoArrastando ? (
-              <div className="w-56 rotate-2 opacity-90 shadow-xl">
+              <div className="w-64 rotate-2 opacity-95 shadow-2xl">
                 <OrcamentoCardConteudo
                   orcamento={orcamentoArrastando}
                   cliente={clientes.find((c) => c.id === orcamentoArrastando.clienteId)}
@@ -719,7 +787,7 @@ function ColunaDroppable({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex w-56 shrink-0 flex-col rounded-lg border border-border bg-muted/30 transition-colors",
+        "flex w-64 xl:w-72 shrink-0 flex-col max-h-full rounded-xl border border-border/80 bg-muted/20 shadow-2xs overflow-hidden transition-colors",
         isOver && `${coluna.corFundo} ring-2 ring-inset ${coluna.corBorda}`
       )}
     >
@@ -812,107 +880,108 @@ function ArteCardWidget({
 
   return (
     <div
-      className="flex flex-col gap-2 rounded-md border border-border/70 bg-muted/20 p-2 text-xs"
+      className="flex flex-col gap-1.5 rounded-lg border border-border/60 bg-muted/20 p-2 text-xs"
       onPointerDown={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between gap-1">
-        <span className="flex items-center gap-1 font-semibold text-muted-foreground">
-          <ImageIcon className="h-3.5 w-3.5" />
+        <span className="flex items-center gap-1 font-semibold text-muted-foreground text-[11px]">
+          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
           Arte
         </span>
         {arteAprovadaEm ? (
-          <span className="flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">
+          <span className="flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-3 w-3" /> Aprovada
           </span>
         ) : status === "ag_confirmacao" ? (
-          <span className="flex items-center gap-1 rounded bg-pink-500/15 px-1.5 py-0.5 text-[10px] font-bold text-pink-600">
+          <span className="flex items-center gap-1 rounded bg-pink-500/15 px-1.5 py-0.5 text-[10px] font-bold text-pink-500">
             <Clock className="h-3 w-3" /> Ag. Aprovação
           </span>
         ) : null}
       </div>
 
       {arteUrl ? (
-        <div className="flex flex-col gap-1.5">
-          <div className="group relative h-20 w-full overflow-hidden rounded-md border bg-black/5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={arteUrl}
-              alt="Arte anexada"
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="group relative h-9 w-9 shrink-0 overflow-hidden rounded border bg-black/5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={arteUrl} alt="Arte" className="h-full w-full object-cover" />
               <a
                 href={arteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full bg-white/90 p-1 text-zinc-900 hover:bg-white"
-                title="Ver arte original"
+                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity text-white"
+                title="Abrir imagem"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={enviando}
-                className="rounded-full bg-white/90 p-1 text-zinc-900 hover:bg-white"
-                title="Substituir arte"
-              >
-                <Upload className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onSalvarArte(null)}
-                disabled={enviando}
-                className="rounded-full bg-red-600/90 p-1 text-white hover:bg-red-700"
-                title="Remover arte"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,application/pdf"
-              className="hidden"
-              disabled={enviando}
-              onChange={handleUpload}
-            />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[11px] font-medium text-foreground truncate">Arte anexada</span>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={handleCopiarLink}
+                  className="hover:text-foreground underline underline-offset-2 flex items-center gap-0.5"
+                >
+                  {copiado ? <Check className="h-2.5 w-2.5 text-emerald-600" /> : <Copy className="h-2.5 w-2.5" />}
+                  {copiado ? "Copiado" : "Link"}
+                </button>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={enviando}
+                  className="hover:text-foreground underline underline-offset-2"
+                  title="Trocar imagem"
+                >
+                  Trocar
+                </button>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={() => onSalvarArte(null)}
+                  disabled={enviando}
+                  className="text-destructive/80 hover:text-destructive"
+                  title="Remover arte"
+                >
+                  Remover
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-1">
-            <button
-              type="button"
-              onClick={handleCopiarLink}
-              className="flex items-center gap-1 rounded border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-foreground hover:bg-accent transition-colors"
+          {linkWhatsappAprovacao && (
+            <a
+              href={linkWhatsappAprovacao}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-emerald-700 transition-colors shrink-0"
+              title="Enviar para aprovação no WhatsApp"
             >
-              {copiado ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-              {copiado ? "Copiado!" : "Link"}
-            </button>
-            {linkWhatsappAprovacao && (
-              <a
-                href={linkWhatsappAprovacao}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-white hover:bg-emerald-700 transition-colors"
-              >
-                <MessageCircle className="h-3 w-3" />
-                WhatsApp
-              </a>
-            )}
-          </div>
+              <MessageCircle className="h-3 w-3" />
+              WhatsApp
+            </a>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,application/pdf"
+            className="hidden"
+            disabled={enviando}
+            onChange={handleUpload}
+          />
         </div>
       ) : (
         <div>
-          <label className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-violet-400/50 hover:border-violet-600 bg-violet-500/5 hover:bg-violet-500/10 py-1.5 px-2 text-violet-700 text-xs font-semibold cursor-pointer transition-colors">
+          <label className="flex items-center justify-center gap-1.5 rounded border border-dashed border-border hover:border-violet-500 bg-background/50 hover:bg-violet-500/5 py-1 px-2 text-muted-foreground hover:text-violet-600 dark:hover:text-violet-400 text-[11px] font-medium cursor-pointer transition-colors">
             {enviando ? (
               <>
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+                <div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 <span>Enviando...</span>
               </>
             ) : (
               <>
-                <Upload className="h-3.5 w-3.5" />
-                <span>Anexar Imagem da Arte</span>
+                <Upload className="h-3 w-3" />
+                <span>Anexar Arte</span>
               </>
             )}
             <input
@@ -950,62 +1019,65 @@ function PedidoCardConteudo({
   const prazo = obterPrazoEntregaPedido(pedido, produto?.prazoDias)
   const nome = pedido.clienteNome?.trim() || ""
   const ini = nome ? iniciais(nome) : null
+  const proximoStatus = PROXIMO_STATUS[pedido.status]
+  const proximo = proximoStatus ? colunaMap[proximoStatus] : null
 
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-lg border bg-card p-3 text-sm shadow-sm",
-        atrasado ? "border-destructive/50" : "border-border"
+        "flex flex-col gap-2.5 rounded-xl border bg-card p-3 text-sm shadow-2xs transition-shadow hover:shadow-md",
+        atrasado ? "border-destructive/60 ring-1 ring-destructive/30" : "border-border/80"
       )}
     >
-      {/* Topo: avatar + número + badge atrasado */}
-      <div className="flex items-start gap-3">
-        <div
-          className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
-            coluna.cor
-          )}
-        >
-          {ini ?? <UserRound className="h-4 w-4" />}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-1">
-            <span className="text-xs font-bold text-muted-foreground">
-              #{pedido.numero}
-            </span>
-            {atrasado && (
-              <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
-                Atrasado
-              </Badge>
+      {/* Topo: avatar + número + preço */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            className={cn(
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
+              coluna.cor
             )}
+          >
+            {ini ?? <UserRound className="h-3.5 w-3.5" />}
           </div>
-          <p className="truncate font-medium leading-tight">
-            {nome || <span className="italic text-muted-foreground">Sem cliente</span>}
-          </p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-foreground">
+                #{pedido.numero}
+              </span>
+              <span className="rounded bg-muted px-1.5 py-0.2 text-[10px] font-semibold text-muted-foreground">
+                Rápida
+              </span>
+              {atrasado && (
+                <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
+                  Atrasado
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Produto */}
-      <div className={cn("rounded-md px-2 py-1.5 text-xs", coluna.corFundo)}>
-        <p className={cn("font-semibold", coluna.corTexto)}>
-          {pedido.produtoNome ?? produto?.nome ?? "Produto removido"}
-        </p>
-        {pedido.varianteNome && (
-          <p className="mt-0.5 text-muted-foreground">{pedido.varianteNome}</p>
-        )}
-      </div>
-
-      {/* Prazo + valor */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3 shrink-0" />
-          <span>{prazo ? formatarData(prazo.toISOString()) : "Sem prazo"}</span>
-        </div>
         {papel !== "operador" && (
-          <span className={cn("text-sm font-bold", coluna.corTexto)}>
+          <span className={cn("text-xs font-bold shrink-0", coluna.corTexto)}>
             {formatarMoeda(pedido.total)}
           </span>
         )}
+      </div>
+
+      {/* Cliente */}
+      <p className="font-semibold text-foreground truncate text-xs leading-tight">
+        {nome || <span className="italic text-muted-foreground font-normal">Sem cliente</span>}
+      </p>
+
+      {/* Produto + Prazo */}
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[150px]", coluna.corFundo, coluna.corTexto)}>
+          {pedido.produtoNome ?? produto?.nome ?? "Produto"}
+        </span>
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+          <Clock className="h-3 w-3" />
+          <span>{prazo ? formatarData(prazo.toISOString()) : "Sem prazo"}</span>
+        </div>
       </div>
 
       {/* Widget de Arte */}
@@ -1019,24 +1091,47 @@ function PedidoCardConteudo({
         onSalvarArte={onSalvarArte}
       />
 
-      {/* Select de status — para mobile e como ação rápida no desktop */}
-      <div onPointerDown={(e) => e.stopPropagation()}>
-        <div className="flex flex-wrap gap-1">
-          {colunas.map((c) => (
-            <button
-              key={c.status}
-              onClick={() => onMudarStatus(c.status)}
-              className={cn(
-                "rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
-                pedido.status === c.status
-                  ? `${c.cor} border-transparent text-white`
-                  : "border-border text-muted-foreground hover:bg-accent"
-              )}
-            >
-              {c.titulo}
-            </button>
-          ))}
-        </div>
+      {/* Status Bar: Dropdown + Avançar */}
+      <div
+        className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/60 text-xs"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <Select
+          value={pedido.status}
+          onValueChange={(val) => onMudarStatus(val as StatusPedidoRapido)}
+        >
+          <SelectTrigger className="h-7 text-xs font-medium px-2 py-0 w-auto min-w-[125px] border-border/80 bg-background/80">
+            <div className="flex items-center gap-1.5 truncate">
+              <span className={cn("h-2 w-2 rounded-full shrink-0", coluna.cor)} />
+              <span className="truncate">{coluna.titulo}</span>
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            {colunas.map((c) => (
+              <SelectItem key={c.status} value={c.status} className="text-xs">
+                <div className="flex items-center gap-2">
+                  <span className={cn("h-2 w-2 rounded-full shrink-0", c.cor)} />
+                  <span>{c.titulo}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {proximo && (
+          <button
+            type="button"
+            onClick={() => onMudarStatus(proximo.status)}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-white shadow-2xs transition-all shrink-0 hover:opacity-90 active:scale-95",
+              proximo.cor
+            )}
+            title={`Avançar para ${proximo.titulo}`}
+          >
+            <span>Avançar</span>
+            <ChevronRight className="h-3 w-3" />
+          </button>
+        )}
       </div>
     </div>
   )
@@ -1060,103 +1155,145 @@ function OrcamentoCardConteudo({
   const { papel } = usePapelAtivo()
   const nome = cliente?.nome?.trim() || ""
   const ini = nome ? iniciais(nome) : null
+  const statusAtual = (orcamento.statusProducao as StatusPedidoRapido) || "aprovado"
+  const proximoStatus = PROXIMO_STATUS[statusAtual]
+  const proximo = proximoStatus ? colunaMap[proximoStatus] : null
 
   return (
-    <div className={cn(
-      "flex flex-col gap-3 rounded-lg border bg-card p-3 text-sm shadow-sm",
-      "border-border ring-1 ring-inset ring-violet-400/30"
-    )}>
-      <div className="flex items-start gap-3">
-        <div className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white",
-          coluna.cor
-        )}>
-          {ini ?? <UserRound className="h-4 w-4" />}
+    <div
+      className={cn(
+        "flex flex-col gap-2.5 rounded-xl border bg-card p-3 text-sm shadow-2xs transition-shadow hover:shadow-md",
+        "border-border/80 ring-1 ring-inset ring-violet-500/20"
+      )}
+    >
+      {/* Topo: avatar + número + preço */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            className={cn(
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white",
+              coluna.cor
+            )}
+          >
+            {ini ?? <UserRound className="h-3.5 w-3.5" />}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-foreground">
+                ORC #{String(orcamento.numero).padStart(4, "0")}
+              </span>
+              <span className="rounded bg-violet-500/15 text-violet-700 dark:text-violet-300 px-1.5 py-0.2 text-[10px] font-semibold">
+                OS
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <span className="text-xs font-bold text-muted-foreground">
-            ORC #{String(orcamento.numero).padStart(4, "0")}
-          </span>
-          <p className="truncate font-medium leading-tight">
-            {nome || <span className="italic text-muted-foreground">Sem cliente</span>}
-          </p>
-        </div>
-      </div>
 
-      <div className={cn("rounded-md px-2 py-1.5 text-xs", coluna.corFundo)}>
-        <p className={cn("font-semibold", coluna.corTexto)}>
-          {orcamento.item.servicoId && orcamento.item.servicoId !== "nenhum"
-            ? "Serviço + material"
-            : "Orçamento de serviço"}
-        </p>
-      </div>
-
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3 shrink-0" />
-          <span>{orcamento.fechadoEm ? formatarData(orcamento.fechadoEm) : "—"}</span>
-        </div>
         {papel !== "operador" && orcamento.totalFechado != null && (
-          <span className={cn("text-sm font-bold", coluna.corTexto)}>
+          <span className={cn("text-xs font-bold shrink-0", coluna.corTexto)}>
             {formatarMoeda(orcamento.totalFechado)}
           </span>
         )}
       </div>
 
-      {assinatura && (
-        <div onPointerDown={(e) => e.stopPropagation()}>
-          {assinatura.assinado && assinatura.pdfUrl ? (
-            <a
-              href={assinatura.pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-500/20"
-            >
-              <FileCheck className="h-3.5 w-3.5 shrink-0" />
-              OS Assinada
-            </a>
-          ) : assinatura.assinado ? (
-            <span className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-1.5 text-xs font-medium text-emerald-600">
-              <FileCheck className="h-3.5 w-3.5 shrink-0" />
-              OS Assinada
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2 py-1.5 text-xs font-medium text-amber-600">
-              <FileCheck className="h-3.5 w-3.5 shrink-0" />
-              Aguardando assinatura
-            </span>
+      {/* Cliente */}
+      <p className="font-semibold text-foreground truncate text-xs leading-tight">
+        {nome || <span className="italic text-muted-foreground font-normal">Sem cliente</span>}
+      </p>
+
+      {/* Descrição + Data + Assinatura */}
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[150px]", coluna.corFundo, coluna.corTexto)}>
+          {orcamento.item.servicoId && orcamento.item.servicoId !== "nenhum"
+            ? "Serviço + material"
+            : "Orçamento de serviço"}
+        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {assinatura && (
+            <div onPointerDown={(e) => e.stopPropagation()}>
+              {assinatura.assinado && assinatura.pdfUrl ? (
+                <a
+                  href={assinatura.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/25"
+                  title="OS Assinada - Ver PDF"
+                >
+                  <FileCheck className="h-3 w-3" />
+                  Assinada
+                </a>
+              ) : assinatura.assinado ? (
+                <span className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">
+                  <FileCheck className="h-3 w-3" />
+                  Assinada
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">
+                  <FileCheck className="h-3 w-3" />
+                  Ag. Assinatura
+                </span>
+              )}
+            </div>
           )}
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>{orcamento.fechadoEm ? formatarData(orcamento.fechadoEm) : "—"}</span>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Widget de Arte */}
       <ArteCardWidget
         id={orcamento.id}
         arteUrl={orcamento.arteUrl}
         arteAprovadaEm={orcamento.arteAprovadaEm}
-        status={orcamento.statusProducao || "arte"}
+        status={statusAtual}
         clienteNome={cliente?.nome || "Cliente"}
         clienteTelefone={cliente?.telefone}
         onSalvarArte={onSalvarArte}
       />
 
-      <div onPointerDown={(e) => e.stopPropagation()}>
-        <div className="flex flex-wrap gap-1">
-          {colunas.map((c) => (
-            <button
-              key={c.status}
-              onClick={() => onMudarStatus(c.status)}
-              className={cn(
-                "rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
-                orcamento.statusProducao === c.status
-                  ? `${c.cor} border-transparent text-white`
-                  : "border-border text-muted-foreground hover:bg-accent"
-              )}
-            >
-              {c.titulo}
-            </button>
-          ))}
-        </div>
+      {/* Status Bar: Dropdown + Avançar */}
+      <div
+        className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/60 text-xs"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <Select
+          value={statusAtual}
+          onValueChange={(val) => onMudarStatus(val as StatusPedidoRapido)}
+        >
+          <SelectTrigger className="h-7 text-xs font-medium px-2 py-0 w-auto min-w-[125px] border-border/80 bg-background/80">
+            <div className="flex items-center gap-1.5 truncate">
+              <span className={cn("h-2 w-2 rounded-full shrink-0", coluna.cor)} />
+              <span className="truncate">{coluna.titulo}</span>
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            {colunas.map((c) => (
+              <SelectItem key={c.status} value={c.status} className="text-xs">
+                <div className="flex items-center gap-2">
+                  <span className={cn("h-2 w-2 rounded-full shrink-0", c.cor)} />
+                  <span>{c.titulo}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {proximo && (
+          <button
+            type="button"
+            onClick={() => onMudarStatus(proximo.status)}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-white shadow-2xs transition-all shrink-0 hover:opacity-90 active:scale-95",
+              proximo.cor
+            )}
+            title={`Avançar para ${proximo.titulo}`}
+          >
+            <span>Avançar</span>
+            <ChevronRight className="h-3 w-3" />
+          </button>
+        )}
       </div>
     </div>
   )
