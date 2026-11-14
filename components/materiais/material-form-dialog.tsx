@@ -38,15 +38,18 @@ const tipos: TipoMaterial[] = [
 
 interface Props {
   material?: Material
+  trigger?: React.ReactElement
 }
 
-export function MaterialFormDialog({ material }: Props) {
+export function MaterialFormDialog({ material, trigger }: Props) {
   const modoEdicao = Boolean(material)
   const [aberto, setAberto] = useState(false)
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>
-      {modoEdicao ? (
+      {trigger ? (
+        <DialogTrigger render={trigger} />
+      ) : modoEdicao ? (
         <DialogTrigger render={<Button variant="ghost" size="icon" />}>
           <Pencil className="h-4 w-4" />
         </DialogTrigger>
