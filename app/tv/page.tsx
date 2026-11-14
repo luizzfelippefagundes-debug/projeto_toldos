@@ -241,7 +241,7 @@ function TvColuna({
 
                 {/* Nome do Cliente em Destaque Grande para ver de longe */}
                 <p
-                  className={`mt-1.5 font-black text-foreground tracking-tight leading-tight break-words ${
+                  className={`mt-1.5 font-black text-foreground tracking-tight leading-tight break-words whitespace-normal ${
                     tamanhoGrande
                       ? "text-base sm:text-lg lg:text-xl xl:text-2xl"
                       : "text-sm sm:text-base lg:text-lg"
@@ -252,37 +252,49 @@ function TvColuna({
                 </p>
 
                 {/* Bloco: O QUE É PRA FAZER (Destaque total para a fábrica - NUNCA CORTA) */}
-                <div className="mt-2 flex flex-col gap-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-2.5 sm:p-3 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs">
-                  {/* Produto / Serviço + Medidas */}
-                  <div className="flex flex-wrap items-start justify-between gap-1.5">
-                    <p className="font-extrabold text-foreground text-sm sm:text-base lg:text-lg leading-snug break-words flex-1 min-w-[140px]">
-                      {pedido.produto_nome ?? "Item de Produção"}
-                    </p>
-
-                    {/* Medidas / Quantidade em destaque com badge próprio */}
-                    {pedido.variante_nome && (
-                      <span className="shrink-0 rounded-lg bg-primary/15 border border-primary/30 px-2 py-0.5 text-xs sm:text-sm font-black text-primary">
-                        📏 {pedido.variante_nome}
+                <div className="mt-2 flex flex-col gap-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-2.5 sm:p-3.5 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs">
+                  {/* Medidas / Quantidade em destaque com badge próprio para bater o olho */}
+                  {pedido.variante_nome && (
+                    <div>
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 border border-primary/30 px-2.5 py-1 text-xs sm:text-sm font-black text-primary">
+                        <span>📏</span>
+                        <span>DIMENSÕES: {pedido.variante_nome}</span>
                       </span>
-                    )}
-                  </div>
-
-                  {/* Acabamento completo (sem cortes) */}
-                  {pedido.acabamento && (
-                    <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 break-words flex items-baseline gap-1 pt-0.5 border-t border-slate-200/60 dark:border-slate-700/50">
-                      <span className="text-[11px] sm:text-xs text-muted-foreground uppercase font-bold tracking-wider shrink-0">
-                        Acabamento:
-                      </span>
-                      <span>{pedido.acabamento}</span>
-                    </p>
+                    </div>
                   )}
 
-                  {/* Observação da OS / Pedido (sem cortes) */}
-                  {pedido.observacao && (
-                    <p className="text-xs text-slate-600 dark:text-slate-300 italic break-words pt-0.5 border-t border-slate-200/60 dark:border-slate-700/50">
-                      <span className="font-bold not-italic text-foreground/80">Obs: </span>
-                      {pedido.observacao}
+                  {/* Produto / Serviço com quebra de linha natural (NUNCA CORTA) */}
+                  <div>
+                    <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
+                      Serviço / Produto:
+                    </span>
+                    <p className="font-black text-foreground text-sm sm:text-base lg:text-lg leading-snug break-words whitespace-normal mt-0.5">
+                      {pedido.produto_nome ?? "Item de Produção"}
                     </p>
+                  </div>
+
+                  {/* Acabamento completo com quebra de linha */}
+                  {pedido.acabamento && (
+                    <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
+                      <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
+                        Acabamento:
+                      </span>
+                      <p className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 break-words whitespace-normal mt-0.5">
+                        {pedido.acabamento}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Observação da OS / Pedido completa */}
+                  {pedido.observacao && (
+                    <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
+                      <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
+                        Obs:
+                      </span>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 italic break-words whitespace-normal mt-0.5">
+                        {pedido.observacao}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -385,7 +397,12 @@ export default function TvPage() {
         const data = await res.json()
         setPedidos(data.pedidos ?? data)
         setAvisos(data.avisos ?? [])
-        if (data.config) setConfig(data.config)
+        if (data.config) {
+          setConfig(data.config)
+          if (data.config.tema && (data.config.tema === "light" || data.config.tema === "dark")) {
+            setThemeRef.current(data.config.tema)
+          }
+        }
         setUltimaAtualizacao(new Date())
       }
     } catch { /* retry on next interval */ }
@@ -394,7 +411,8 @@ export default function TvPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     carregar()
-    const t = setInterval(carregar, 60_000)
+    // Atualiza automaticamente a cada 3 segundos: qualquer mudança na Central da TV aparece na hora na TV!
+    const t = setInterval(carregar, 3_000)
     return () => clearInterval(t)
   }, [carregar])
 
