@@ -17,7 +17,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       forma_pagamento=${b.formaPagamento ?? null}, numero_boleto=${b.numeroBoleto ?? null},
       parcela=${b.parcela ?? null},
       pessoal=${b.pessoal === true},
-      despesa_fixa=${b.despesaFixa === true}
+      despesa_fixa=${b.despesaFixa === true},
+      observacoes=${b.observacoes ?? null},
+      pix_copia_cola=${b.pixCopiaECola ?? null}
     WHERE id=${id}
   `
   return NextResponse.json(b)

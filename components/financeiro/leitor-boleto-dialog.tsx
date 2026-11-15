@@ -38,6 +38,17 @@ function montarDescricao(campos?: CamposLidos): string {
   return nome.toLowerCase().startsWith("boleto") ? nome : `Boleto — ${nome}`
 }
 
+function montarObservacoes(campos?: CamposLidos): string {
+  if (!campos) return ""
+  const itens: string[] = []
+  if (campos.mesReferencia) itens.push(`Competência/Mês: ${campos.mesReferencia}`)
+  if (campos.numeroDocumento) itens.push(`Nº do Documento/Fatura: ${campos.numeroDocumento}`)
+  if (campos.cnpjCpfBeneficiario) itens.push(`CNPJ/CPF Beneficiário: ${campos.cnpjCpfBeneficiario}`)
+  if (campos.pagador) itens.push(`Pagador: ${campos.pagador}`)
+  if (campos.instrucoes) itens.push(`Instruções: ${campos.instrucoes}`)
+  return itens.join("\n")
+}
+
 interface Leitura {
   campos: CamposLidos
   avisos: string[]
@@ -279,6 +290,8 @@ export function LeitorBoletoDialog() {
             formaPagamento: "boleto",
             numeroBoleto: campos.numeroBoleto,
             despesaFixa: classificacao.despesaFixa,
+            observacoes: montarObservacoes(campos),
+            pixCopiaECola: campos.pixCopiaECola,
           }}
         />
       )}

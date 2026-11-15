@@ -59,6 +59,8 @@ interface InicialLancamento {
   formaPagamento?: string
   numeroBoleto?: string
   despesaFixa?: boolean
+  observacoes?: string
+  pixCopiaECola?: string
 }
 
 export function LancamentoFormDialog({
@@ -145,6 +147,13 @@ function LancamentoFormFields({
   const [meses, setMeses] = useState("1")
   const [jaPagas, setJaPagas] = useState("0")
   const [copiado, setCopiado] = useState(false)
+  const [observacoes, setObservacoes] = useState(
+    lancamento?.observacoes ?? inicial?.observacoes ?? ""
+  )
+  const [pixCopiaECola, setPixCopiaECola] = useState(
+    lancamento?.pixCopiaECola ?? inicial?.pixCopiaECola ?? ""
+  )
+  const [pixCopiado, setPixCopiado] = useState(false)
 
   const quantidadeMeses = Number(meses)
   const mesesValidos =
@@ -175,6 +184,14 @@ function LancamentoFormFields({
     setTimeout(() => setCopiado(false), 2000)
   }
 
+  function copiarPix() {
+    if (!pixCopiaECola) return
+    navigator.clipboard.writeText(pixCopiaECola.trim())
+    setPixCopiado(true)
+    toast.success("Código Pix Copia e Cola copiado!")
+    setTimeout(() => setPixCopiado(false), 2000)
+  }
+
   function salvar() {
     const dados = {
       descricao: descricao.trim(),
@@ -195,6 +212,8 @@ function LancamentoFormFields({
       parcela: lancamento?.parcela,
       pessoal: tipo === "despesa" && pessoal ? true : undefined,
       despesaFixa: tipo === "despesa" && despesaFixa ? true : undefined,
+      observacoes: observacoes.trim() || undefined,
+      pixCopiaECola: pixCopiaECola.trim() || undefined,
     }
     if (lancamento) {
       updateLancamento(lancamento.id, dados)
@@ -390,6 +409,59 @@ function LancamentoFormFields({
             </p>
           </div>
         )}
+
+        {(pixCopiaECola || formaPagamento === "pix") && !repetir && (
+          <div className="flex flex-col gap-2 p-3.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/60">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="pixCopiaECola" className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                Código Pix Copia e Cola
+              </Label>
+              {pixCopiaECola && (
+                <button
+                  type="button"
+                  onClick={copiarPix}
+                  className="flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 bg-emerald-100/80 dark:bg-emerald-900/60 px-2.5 py-1 rounded-lg border border-emerald-300/60 dark:border-emerald-700/60 cursor-pointer active:scale-95 transition-all"
+                >
+                  {pixCopiado ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copiar Pix</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+            <Input
+              id="pixCopiaECola"
+              value={pixCopiaECola}
+              onChange={(e) => setPixCopiaECola(e.target.value)}
+              placeholder="Cole ou leia a chave Pix Copia e Cola aqui..."
+              className="h-10 font-mono text-xs"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Para pagar escaneando ou colando o código Pix no app do banco.
+            </p>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="observacoes" className="text-xs font-semibold text-foreground">
+            Observações / Detalhes (opcional)
+          </Label>
+          <textarea
+            id="observacoes"
+            value={observacoes}
+            onChange={(e) => setObservacoes(e.target.value)}
+            placeholder="Ex: Ref: 10/2026, Fatura #984521, CNPJ 00.000.000/0001-00, juros de 1%..."
+            rows={2}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-2xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+          />
+        </div>
 
         {tipo === "despesa" && (
           <div className="flex flex-col gap-2.5 pt-1">

@@ -35,6 +35,8 @@ export async function garantirColunasLancamentos() {
   await getSql()`ALTER TABLE lancamentos_financeiros ADD COLUMN IF NOT EXISTS parcela TEXT`
   await getSql()`ALTER TABLE lancamentos_financeiros ADD COLUMN IF NOT EXISTS pessoal BOOLEAN NOT NULL DEFAULT FALSE`
   await getSql()`ALTER TABLE lancamentos_financeiros ADD COLUMN IF NOT EXISTS despesa_fixa BOOLEAN NOT NULL DEFAULT FALSE`
+  await getSql()`ALTER TABLE lancamentos_financeiros ADD COLUMN IF NOT EXISTS observacoes TEXT`
+  await getSql()`ALTER TABLE lancamentos_financeiros ADD COLUMN IF NOT EXISTS pix_copia_cola TEXT`
   lancamentosProntos = true
 }
 

@@ -270,7 +270,8 @@ export async function restaurarExclusao(id: string): Promise<{
     const restaurar = sql`
       INSERT INTO lancamentos_financeiros (
         id, descricao, tipo, categoria, valor, vencimento, status, pago_em,
-        origem, origem_id, criado_em, cliente_id, forma_pagamento, numero_boleto, parcela, pessoal, despesa_fixa
+        origem, origem_id, criado_em, cliente_id, forma_pagamento, numero_boleto, parcela, pessoal, despesa_fixa,
+        observacoes, pix_copia_cola
       ) VALUES (
         ${dados.id as string},
         ${dados.descricao as string},
@@ -288,7 +289,9 @@ export async function restaurarExclusao(id: string): Promise<{
         ${(dados.numero_boleto as string) ?? null},
         ${(dados.parcela as string) ?? null},
         ${dados.pessoal === true},
-        ${dados.despesaFixa === true || dados.despesa_fixa === true}
+        ${dados.despesaFixa === true || dados.despesa_fixa === true},
+        ${(dados.observacoes as string) ?? null},
+        ${(dados.pix_copia_cola as string) ?? (dados.pixCopiaECola as string) ?? null}
       )
       ON CONFLICT (id) DO UPDATE SET
         descricao = EXCLUDED.descricao,
@@ -306,7 +309,9 @@ export async function restaurarExclusao(id: string): Promise<{
         numero_boleto = EXCLUDED.numero_boleto,
         parcela = EXCLUDED.parcela,
         pessoal = EXCLUDED.pessoal,
-        despesa_fixa = EXCLUDED.despesa_fixa
+        despesa_fixa = EXCLUDED.despesa_fixa,
+        observacoes = EXCLUDED.observacoes,
+        pix_copia_cola = EXCLUDED.pix_copia_cola
     `
     const apagarDoHistorico = sql`DELETE FROM historico_exclusoes WHERE id = ${id}`
     await sql.transaction([restaurar, apagarDoHistorico])

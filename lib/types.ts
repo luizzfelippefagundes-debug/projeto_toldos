@@ -282,4 +282,8 @@ export interface LancamentoFinanceiro {
   pessoal?: boolean
   // Despesa fixa: aluguel, luz, internet etc. Aparece na aba de Fixas.
   despesaFixa?: boolean
+  // Detalhes extras, instruções de juros/multa, fatura, etc.
+  observacoes?: string
+  // Código Pix Copia e Cola quando lido de fatura/boleto
+  pixCopiaECola?: string
 }

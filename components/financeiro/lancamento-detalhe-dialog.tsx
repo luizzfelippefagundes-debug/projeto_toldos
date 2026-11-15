@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { LancamentoFinanceiro } from "@/lib/types"
-import { MessageCircle, Pencil, Receipt, Trash2, CheckCircle2, Clock, DollarSign } from "lucide-react"
+import { MessageCircle, Pencil, Receipt, Trash2, CheckCircle2, Clock, DollarSign, Copy, Check } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -65,6 +65,8 @@ export function LancamentoDetalheDialog({
   const [modoBaixaFlexivel, setModoBaixaFlexivel] = useState(false)
   const [valorRecebido, setValorRecebido] = useState("")
   const [formaPagamentoRecebida, setFormaPagamentoRecebida] = useState<string>("pix")
+  const [copiadoBoleto, setCopiadoBoleto] = useState(false)
+  const [copiadoPix, setCopiadoPix] = useState(false)
 
   if (!lancamento) return null
 
@@ -346,9 +348,72 @@ export function LancamentoDetalheDialog({
                 </div>
               )}
               {lancamento.numeroBoleto && (
-                <div className="col-span-2">
-                  <p className="text-xs text-muted-foreground">Número do boleto</p>
-                  <p className="font-mono text-xs">{lancamento.numeroBoleto}</p>
+                <div className="col-span-2 flex flex-col gap-1 p-2.5 rounded-lg bg-muted/40 border border-border">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-muted-foreground">Linha digitável / Código de barras</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const limpo = lancamento.numeroBoleto?.replace(/\D/g, "") ?? ""
+                        navigator.clipboard.writeText(limpo)
+                        setCopiadoBoleto(true)
+                        toast.success("Código de barras copiado!")
+                        setTimeout(() => setCopiadoBoleto(false), 2000)
+                      }}
+                      className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      {copiadoBoleto ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          <span className="text-emerald-500">Copiado</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copiar</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="font-mono text-xs break-all text-foreground">{lancamento.numeroBoleto}</p>
+                </div>
+              )}
+              {lancamento.pixCopiaECola && (
+                <div className="col-span-2 flex flex-col gap-1 p-2.5 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/60">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Pix Copia e Cola</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(lancamento.pixCopiaECola ?? "")
+                        setCopiadoPix(true)
+                        toast.success("Pix Copia e Cola copiado!")
+                        setTimeout(() => setCopiadoPix(false), 2000)
+                      }}
+                      className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:underline cursor-pointer"
+                    >
+                      {copiadoPix ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          <span className="text-emerald-600">Copiado</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copiar Pix</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="font-mono text-xs break-all text-foreground">{lancamento.pixCopiaECola}</p>
+                </div>
+              )}
+              {lancamento.observacoes && (
+                <div className="col-span-2 flex flex-col gap-1">
+                  <p className="text-xs text-muted-foreground font-semibold">Observações / Detalhes</p>
+                  <p className="text-xs whitespace-pre-line text-foreground/90 bg-muted/30 p-2.5 rounded-lg border border-border/60">
+                    {lancamento.observacoes}
+                  </p>
                 </div>
               )}
               {lancamento.pessoal && (
