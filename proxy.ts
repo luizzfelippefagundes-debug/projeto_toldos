@@ -9,6 +9,7 @@ declare global {
 }
 
 const rotaPublica = createRouteMatcher([
+  "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/tv(.*)",
@@ -18,7 +19,7 @@ const rotaPublica = createRouteMatcher([
   "/icon(.*)",
   "/apple-icon(.*)",
   "/manifest(.*)",
-  "/portfolio",
+  "/portfolio(.*)",
   "/api/tv(.*)",
   "/api/portfolio",
   // Página pública de assinatura digital de OS (cliente recebe link por WhatsApp).
