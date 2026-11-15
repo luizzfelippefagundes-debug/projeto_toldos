@@ -10,409 +10,495 @@
 endobj
 4 0 obj
 <<
-/Length 8682
+/Length 9229
 >>
 stream
 0.200025 w
 0 G
 q
-100. 0 0 48. 40. 753.8899999999999864 cm
+110. 0 0 52. 40. 749.8899999999999864 cm
 /I0 Do
 Q
 BT
-/F2 14 Tf
-16.0999999999999979 TL
+/F2 15 Tf
+17.25 TL
 0.059 0.09 0.165 rg
-283.67999999999995 785.8899999999999864 Td
-(RELATÓRIO DE ENTREGAS & DEPLOYS) Tj
+219.1499999999999773 783.8899999999999864 Td
+(GUIA PRÁTICO DAS MELHORIAS DO SISTEMA) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.278 0.333 0.412 rg
-419.4599999999999227 771.8899999999999864 Td
-(Período: 01/11/2026 a 15/11/2026) Tj
+323.6999999999998749 769.8899999999999864 Td
+(Resumo simples e direto de tudo que foi feito e como usar) Tj
 ET
 BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.278 0.333 0.412 rg
-355.6499999999999773 759.8899999999999864 Td
-(Status: 100% Concluído e em Produção na Vercel) Tj
+419.9099999999999682 757.8899999999999864 Td
+(Atualizado em Novembro de 2026) Tj
 ET
 0.06 0.09 0.16 RG
 1.5 w
-40. 745.8899999999999864 m
-555. 745.8899999999999864 l
+40. 739.8899999999999864 m
+555. 739.8899999999999864 l
 S
 0.06 0.73 0.51 rg
-40. 727.8899999999999864 515. -18. re
+40. 721.8899999999999864 515. -24. re
 f
+BT
+/F2 10 Tf
+11.5 TL
+1. g
+48. 707.8899999999999864 Td
+(PARTE 1: TUDO O QUE VOCÊ PEDIU NA LISTA ORIGINAL) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+1. g
+484.0749999999999886 707.8899999999999864 Td
+(Entregue e testado) Tj
+ET
 BT
 /F2 9.5 Tf
 10.9249999999999989 TL
-1. g
-46. 715.8899999999999864 Td
-(PARTE 1 — ITENS SOLICITADOS NA LISTA \(100% ENTREGUES\)) Tj
+0.059 0.09 0.165 rg
+44. 689.8899999999999864 Td
+(1. Arraste nos Retornos vai direto para a Produção) Tj
 ET
 BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 703.8899999999999864 Td
-(1. Fluxo de Produção: Mudança de Aguardando para Ag. Assinatura e Produção) Tj
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 676.8899999999999864 Td
+(Como era:) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 692.8899999999999864 Td
-(Substituição da etapa antiga pelo status 'Ag. Assinatura'. Quando aprovado nos retornos, cai direto na produção.) Tj
+0.275 g
+105. 676.8899999999999864 Td
+(Antes ficava confuso com a coluna 'Aguardando' e não integrava sozinho com a oficina.) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 682.8899999999999864 Td
-(Ref / Deploy: commits 0f115a5, 0215385, d04a4d9) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 667.8899999999999864 Td
-(2. Retornos integrados ao WhatsApp com avanço automático) Tj
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 664.3899999999999864 Td
+(Como ficou:) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 656.8899999999999864 Td
-(Notificações no WhatsApp ao mover entre etapas nos Retornos, além de Webhook inteligente para leitura de respostas do cliente.) Tj
+0.078 g
+105. 664.3899999999999864 Td
+(Ao arrastar o orçamento nos Retornos para 'Aprovado', ele gera a Ordem de Serviço na hora e já cria o cartão lá no quadro) Tj
+T* (da Produção.) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 646.8899999999999864 Td
-(Ref / Deploy: commits 847fb15, 1c3a824, 2ba8c1b) Tj
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 642.3899999999999864 Td
+(Na prática:) Tj
 ET
 BT
-/F2 8.5 Tf
-9.7749999999999986 TL
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 642.3899999999999864 Td
+(Você fechou a venda, arrastou o card e os meninos da oficina já veem o serviço na hora sem você ter que recadastrar nada.) Tj
+ET
+0.9 G
+0.5 w
+48. 626.8899999999999864 m
+547. 626.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
 0.059 0.09 0.165 rg
-46. 631.8899999999999864 Td
-(3. Envio e Aprovação de Arte com Link Público) Tj
+44. 616.8899999999999864 Td
+(2. Retornos com WhatsApp Automático) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 603.8899999999999864 Td
+(Como era:) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 620.8899999999999864 Td
-(Coluna 'Arte Enviada' na produção, upload de imagem da arte e link público no WhatsApp para o cliente aprovar ou solicitar ajustes com 1) Tj
-T* (clique.) Tj
+0.275 g
+105. 603.8899999999999864 Td
+(Tinha que abrir o celular e digitar manualmente mensagens cobrando resposta do cliente.) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 600.8899999999999864 Td
-(Ref / Deploy: commits 3f3df43, 70fb51e, 3fdfe8e) Tj
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 591.3899999999999864 Td
+(Como ficou:) Tj
 ET
 BT
-/F2 8.5 Tf
-9.7749999999999986 TL
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 591.3899999999999864 Td
+(O sistema manda mensagem no WhatsApp quando você move de etapa e lê a resposta do cliente. Se o cliente responde que) Tj
+T* (aprovou, o sistema já avisa você.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 569.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 569.3899999999999864 Td
+(Menos tempo digitando no celular e acompanhamento mais rápido das vendas.) Tj
+ET
+0.9 G
+0.5 w
+48. 553.8899999999999864 m
+547. 553.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
 0.059 0.09 0.165 rg
-46. 585.8899999999999864 Td
+44. 543.8899999999999864 Td
+(3. Envio de Arte e Confirmação do Cliente pelo Celular) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 530.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 530.8899999999999864 Td
+(Tinha que mandar a foto solta no WhatsApp e torcer para o cliente confirmar direito.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 518.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 518.3899999999999864 Td
+(Criada a coluna 'Arte Enviada' na Produção. Você anexa a foto da arte no card e o cliente recebe um link exclusivo. Ele abre,) Tj
+T* (dá zoom e clica em 'Aprovar Arte'.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 496.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 496.3899999999999864 Td
+(Assim que o cliente clica em Aprovar, o card avança sozinho para 'Impressão' e você tem certeza formal de que a arte foi) Tj
+T* (autorizada.) Tj
+ET
+0.9 G
+0.5 w
+48. 471.3899999999999864 m
+547. 471.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 461.3899999999999864 Td
 (4. Filtro 'Só com OS' no Financeiro) Tj
 ET
 BT
-/F1 8 Tf
+/F2 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 574.8899999999999864 Td
-(Botão de filtro no Financeiro que isola apenas os lançamentos vinculados a ordens de serviço já geradas.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 564.8899999999999864 Td
-(Ref / Deploy: commits e5e3c10, e7dd7ec) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 549.8899999999999864 Td
-(5. E-mail Oficial da Empresa no Cabeçalho do Orçamento) Tj
+0.725 0.11 0.11 rg
+52. 448.3899999999999864 Td
+(Como era:) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 538.8899999999999864 Td
-(Inclusão do e-mail oficial contato@toldosprint.com.br no cabeçalho institucional dos documentos gerados.) Tj
+0.275 g
+105. 448.3899999999999864 Td
+(O financeiro misturava orçamentos que ainda eram propostas com serviços fechados de verdade.) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 528.8899999999999864 Td
-(Ref / Deploy: lib/orcamento-pdf.ts) Tj
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 435.8899999999999864 Td
+(Como ficou:) Tj
 ET
 BT
-/F2 8.5 Tf
-9.7749999999999986 TL
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 435.8899999999999864 Td
+(Criado um botão no topo do Financeiro chamado 'Só com OS'.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 423.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 423.3899999999999864 Td
+(Com 1 clique você limpa a tela e enxerga apenas o dinheiro dos serviços reais fechados com Ordem de Serviço.) Tj
+ET
+0.9 G
+0.5 w
+48. 407.8899999999999864 m
+547. 407.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
 0.059 0.09 0.165 rg
-46. 513.8899999999999864 Td
+44. 397.8899999999999864 Td
+(5. E-mail da Empresa no PDF do Orçamento) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 384.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 384.8899999999999864 Td
+(Aparecia e-mail pessoal ou dados desencontrados.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 372.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 372.3899999999999864 Td
+(Agora sai padronizado e profissional com o e-mail oficial da Toldos Print \(contato@toldosprint.com.br\).) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 359.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 359.8899999999999864 Td
+(Transmite credibilidade de empresa séria para qualquer cliente ou órgão que receber o PDF.) Tj
+ET
+0.9 G
+0.5 w
+48. 344.3899999999999864 m
+547. 344.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 334.3899999999999864 Td
 (6. Validade do Orçamento de 7 Dias no PDF) Tj
 ET
 BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 321.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
 /F1 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 502.8899999999999864 Td
-(Cálculo e impressão automática da data de validade de 7 dias no rodapé do orçamento.) Tj
+0.275 g
+105. 321.3899999999999864 Td
+(O cliente podia querer fechar um orçamento meses depois com preço desatualizado.) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 492.8899999999999864 Td
-(Ref / Deploy: commit af3e7d6) Tj
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 308.8899999999999864 Td
+(Como ficou:) Tj
 ET
 BT
-/F2 8.5 Tf
-9.7749999999999986 TL
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 308.8899999999999864 Td
+(O PDF agora calcula e escreve no rodapé: 'Válido por 7 dias \(até dd/mm/aaaa\)'.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 296.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 296.3899999999999864 Td
+(Segurança jurídica para você reajustar valores caso os materiais subam após 7 dias.) Tj
+ET
+0.9 G
+0.5 w
+48. 280.8899999999999864 m
+547. 280.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
 0.059 0.09 0.165 rg
-46. 477.8899999999999864 Td
-(7. Garantia de 3 Meses estampada na OS e no Contrato) Tj
+44. 270.8899999999999864 Td
+(7. Garantia de 3 Meses por Serviço no PDF) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 257.8899999999999864 Td
+(Como era:) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 466.8899999999999864 Td
-(Cláusula expressa de garantia contratual de 3 meses para fabricação e fixação.) Tj
+0.275 g
+105. 257.8899999999999864 Td
+(Não ficava claro no papel o tempo e as regras da garantia.) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 456.8899999999999864 Td
-(Ref / Deploy: commits 192b5b4, d4dd460) Tj
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 245.3899999999999864 Td
+(Como ficou:) Tj
 ET
 BT
-/F2 8.5 Tf
-9.7749999999999986 TL
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 245.3899999999999864 Td
+(Agora sai impresso na OS e no Contrato a garantia de 3 meses de fabricação e fixação.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 232.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 232.8899999999999864 Td
+(O cliente sabe exatamente o que cobre e você fica protegido contra trincas na parede de terceiros.) Tj
+ET
+0.9 G
+0.5 w
+48. 217.3899999999999864 m
+547. 217.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
 0.059 0.09 0.165 rg
-46. 441.8899999999999864 Td
-(8. Envio Automático do Contrato Assinado via WhatsApp) Tj
+44. 207.3899999999999864 Td
+(8. Contrato de Serviço Enviado Automático após Assinatura) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 194.3899999999999864 Td
+(Como era:) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 430.8899999999999864 Td
-(Assim que o cliente assina digitalmente a OS, o robô gera e envia o PDF oficial do Contrato de Prestação de Serviços assinado.) Tj
+0.275 g
+105. 194.3899999999999864 Td
+(O cliente assinava no celular e recebia apenas a folha resumida da OS.) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 420.8899999999999864 Td
-(Ref / Deploy: commits 10e6a84, d2dddd8) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 405.8899999999999864 Td
-(9. Botão de Envio de OS no WhatsApp com Link de Assinatura) Tj
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 181.8899999999999864 Td
+(Como ficou:) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 394.8899999999999864 Td
-(Mesmo padrão do orçamento: dispara a OS em PDF e o link exclusivo para assinatura com o dedo no celular.) Tj
+0.078 g
+105. 181.8899999999999864 Td
+(Agora o sistema gera o Contrato Jurídico Oficial de 8 Cláusulas com a assinatura dele e manda o arquivo em PDF direto no) Tj
+T* (WhatsApp dele para guardar.) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 384.8899999999999864 Td
-(Ref / Deploy: commits baa35b0, 4e2023f) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 369.8899999999999864 Td
-(10. Opção de Excluir Produto na Gráfica Rápida) Tj
-ET
-BT
-/F1 8 Tf
+/F2 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 358.8899999999999864 Td
-(Botão de lixeira com confirmação para remover produtos e modelos cadastrados na Gráfica Rápida.) Tj
+0.118 0.251 0.686 rg
+52. 159.8899999999999864 Td
+(Na prática:) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 348.8899999999999864 Td
-(Ref / Deploy: commit a4da8bd) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 333.8899999999999864 Td
-(11. Lupa de Pesquisa e Nome Completo nos Clientes do Orçamento) Tj
-ET
-BT
-/F1 8 Tf
+/F3 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 322.8899999999999864 Td
-(Combobox com busca instantânea com lupa, exibindo nomes longos completos sem cortes nos orçamentos e financeiro.) Tj
+0.196 g
+105. 159.8899999999999864 Td
+(O cliente recebe o contrato completo assinado sem você precisar gerar nada manualmente.) Tj
 ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 312.8899999999999864 Td
-(Ref / Deploy: commits cd1df2e, 34ff49c) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 297.8899999999999864 Td
-(12. Campos de CPF e E-mail não obrigatórios no Cliente) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 286.8899999999999864 Td
-(Campos opcionais adicionados no formulário de cliente para emissão de boleto e contrato.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 276.8899999999999864 Td
-(Ref / Deploy: commit 192b5b4) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 261.8899999999999864 Td
-(13. Lupa de Pesquisa nos Materiais) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 250.8899999999999864 Td
-(Filtro por nome e tipo de material com campo de busca e lupa.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 240.8899999999999864 Td
-(Ref / Deploy: commit a4da8bd) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 225.8899999999999864 Td
-(14. Edição de Acabamentos com Valor Digitado em R$) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 214.8899999999999864 Td
-(Possibilidade de informar diretamente o valor monetário do acabamento no orçamento.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 204.8899999999999864 Td
-(Ref / Deploy: commits 05eae3a, 7fd5674) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 189.8899999999999864 Td
-(15. Condições de Pagamento e Parcelas no PDF do Orçamento) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 178.8899999999999864 Td
-(Opções de Boleto, À vista, Débito e Cartão, com cálculo de entrada e divisão das parcelas impressas no PDF.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 168.8899999999999864 Td
-(Ref / Deploy: commits 5e81fc2, a856821, 575bd32) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 153.8899999999999864 Td
-(16. Bloqueio da Etapa 6 \(Foto do Local\) Apenas no Celular) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 142.8899999999999864 Td
-(Exigência de foto obrigatória apenas no celular/mobile; no desktop o avanço é livre.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 132.8899999999999864 Td
-(Ref / Deploy: commit 659bcf5) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 117.8899999999999864 Td
-(17. Central do Bot e Lista de Transmissão) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 106.8899999999999864 Td
-(Telas /bot \(monitoramento de conversas e atendimento\) e /transmissao \(envio em lote para múltiplos clientes\).) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 96.8899999999999864 Td
-(Ref / Deploy: commits 413fe89, 135ad48) Tj
-ET
+0.9 G
+0.5 w
+48. 144.3899999999999864 m
+547. 144.3899999999999864 l
+S
 endstream
 endobj
 5 0 obj
@@ -425,344 +511,1344 @@ endobj
 endobj
 6 0 obj
 <<
-/Length 7223
+/Length 10456
 >>
 stream
-1.5 w
-0.06 0.09 0.16 RG
+0.5 w
+0.9 G
 BT
 /F2 8 Tf
 9.1999999999999993 TL
-0.51 g
+0.471 g
 40. 801.8899999999999864 Td
-(TOLDOS PRINT — RELATÓRIO EXECUTIVO DE ENTREGAS & DEPLOYS) Tj
+(TOLDOS PRINT — GUIA COMPLETO DAS MELHORIAS DO SISTEMA) Tj
 ET
 BT
 /F2 8 Tf
 9.1999999999999993 TL
-0.51 g
+0.471 g
 522.2799999999999727 801.8899999999999864 Td
 (Página 2) Tj
 ET
-0.78 G
+0.86 G
 0.5 w
 40. 789.8899999999999864 m
 555. 789.8899999999999864 l
 S
 BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 773.8899999999999864 Td
+(9. Botão de Enviar OS com Assinatura Digital pelo WhatsApp) Tj
+ET
+BT
 /F2 8 Tf
 9.1999999999999993 TL
-0.51 g
-46. 773.8899999999999864 Td
-(18. Cadastro Automático de Clientes pelo WhatsApp) Tj
+0.725 0.11 0.11 rg
+52. 760.8899999999999864 Td
+(Como era:) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 762.8899999999999864 Td
-(Novo contato que envia mensagem no WhatsApp é cadastrado automaticamente com nome e telefone.) Tj
+0.275 g
+105. 760.8899999999999864 Td
+(Tinha que imprimir a folha de papel para o cliente assinar presencialmente com caneta.) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 752.8899999999999864 Td
-(Ref / Deploy: commit 0963f15) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 737.8899999999999864 Td
-(19. Portfólio Online Público) Tj
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 748.3899999999999864 Td
+(Como ficou:) Tj
 ET
 BT
 /F1 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 726.8899999999999864 Td
-(Página pública /portfolio para visualização de trabalhos realizados e tela /portfolio-fotos para gestão.) Tj
+0.078 g
+105. 748.3899999999999864 Td
+(Você clica no botão de WhatsApp e o cliente recebe um link seguro para assinar com o próprio dedo na tela do celular.) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 716.8899999999999864 Td
-(Ref / Deploy: commit b0581d5) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 701.8899999999999864 Td
-(20. Despesas Fixas com Card Separado no Financeiro) Tj
-ET
-BT
-/F1 8 Tf
+/F2 8 Tf
 9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 690.8899999999999864 Td
-(Checkbox 'Despesa Fixa' nos lançamentos e card de acompanhamento no topo do financeiro.) Tj
+0.118 0.251 0.686 rg
+52. 735.8899999999999864 Td
+(Na prática:) Tj
 ET
 BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 680.8899999999999864 Td
-(Ref / Deploy: commits 47bd846, a27374f) Tj
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 735.8899999999999864 Td
+(Agilidade máxima: você fecha o negócio mesmo se o cliente estiver longe ou na empresa dele.) Tj
 ET
-0.05 0.45 0.56 rg
-40. 665.8899999999999864 515. -18. re
-f
+0.9 G
+0.5 w
+48. 720.3899999999999864 m
+547. 720.3899999999999864 l
+S
 BT
 /F2 9.5 Tf
 10.9249999999999989 TL
-1. g
-46. 653.8899999999999864 Td
-(PARTE 2 — RECURSOS EXTRAS IMPLEMENTADOS FORA DA LISTA) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
 0.059 0.09 0.165 rg
-46. 641.8899999999999864 Td
-(21. Central do Telão & Painel Smart TV com Auto-Scroll Fluido) Tj
+44. 710.3899999999999864 Td
+(10. Excluir Produto na Gráfica Rápida) Tj
 ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 630.8899999999999864 Td
-(Redesenho completo para Smart TVs \(LG WebOS, Samsung Tizen\) com rolagem vertical suave desvinculada do polling, layout de alta) Tj
-T* (legibilidade, métricas sem corte e sincronização a cada 3s.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 610.8899999999999864 Td
-(Ref / Deploy: commits 9fee369, fae6f9c, f5a5571, cfdf808) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 595.8899999999999864 Td
-(22. Filtro dos 5 Pedidos Mais Recentes no Painel TV) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 584.8899999999999864 Td
-(Seletor rápido para focar apenas nas últimas 5 ordens em andamento no telão da oficina.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 574.8899999999999864 Td
-(Ref / Deploy: commit 07ff5bf) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 559.8899999999999864 Td
-(23. Módulo de Lixeira e Recuperação de Exclusões \(/exclusoes\)) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 548.8899999999999864 Td
-(Histórico de segurança que grava quem apagou, data e hora, permitindo recuperar clientes, orçamentos e lançamentos com 1 clique.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 538.8899999999999864 Td
-(Ref / Deploy: commit cf91ca2) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 523.8899999999999864 Td
-(24. Contrato Oficial de Prestação de Serviços \(8 Cláusulas A4\)) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 512.8899999999999864 Td
-(Página dedicada /orcamentos/[id]/contrato com diagramação executiva A4, logo da empresa, dados das partes, valores, prazos, garantias e) Tj
-T* (assinatura digital do cliente estampada.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 492.8899999999999864 Td
-(Ref / Deploy: commits d4dd460, d2dddd8) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 477.8899999999999864 Td
-(25. Botão 'Ver Contrato' nos Cards da Produção) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 466.8899999999999864 Td
-(Acesso direto e instantâneo ao contrato de qualquer pedido através dos cards do quadro de produção.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 456.8899999999999864 Td
-(Ref / Deploy: commit d2dddd8) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 441.8899999999999864 Td
-(26. Logo Oficial da Toldos Print na Assinatura e Aprovação de Arte) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 430.8899999999999864 Td
-(Substituição de marcas genéricas pela identidade visual oficial da empresa com logo colorido.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 420.8899999999999864 Td
-(Ref / Deploy: commits dfd60ae, 3fdfe8e) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 405.8899999999999864 Td
-(27. Redesign Responsivo Mobile Completo de Todas as Telas) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 394.8899999999999864 Td
-(Reformulação das telas de Relatórios, Financeiro, Acabamentos, Mão de Obra e Estoque com cards touch para celular.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 384.8899999999999864 Td
-(Ref / Deploy: commits 4f7485a, d66fc7d, b9112e3, 8982e68) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 369.8899999999999864 Td
-(28. Novo Módulo de Relatórios com Filtros por Mês e Situação) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 358.8899999999999864 Td
-(Seletor unificado de ano, grid com os 12 meses, filtros de Pagos/Concluídos vs Pendentes e exportação Excel profissional \(.xlsx\) com) Tj
-T* (múltiplas abas.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 338.8899999999999864 Td
-(Ref / Deploy: commits 92f4b88, 65beb97) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 323.8899999999999864 Td
-(29. Eliminação de Faixas Pretas e Tema Executivo na Impressão A4) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 312.8899999999999864 Td
-(Correção do vazamento de modo escuro para impressão, garantindo relatórios 100% claros, limpos e sem zebrado preto.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 302.8899999999999864 Td
-(Ref / Deploy: commits c46ed7c, 8e8b6ab) Tj
-ET
-BT
-/F2 8.5 Tf
-9.7749999999999986 TL
-0.059 0.09 0.165 rg
-46. 287.8899999999999864 Td
-(30. Modo Offline PWA com Sincronização Automática) Tj
-ET
-BT
-/F1 8 Tf
-9.1999999999999993 TL
-0.2 0.255 0.333 rg
-52. 276.8899999999999864 Td
-(Suporte a abertura sem internet, armazenamento local de orçamentos e sincronização automática quando a rede retorna.) Tj
-ET
-BT
-/F3 7 Tf
-8.0499999999999989 TL
-0.392 0.455 0.545 rg
-52. 266.8899999999999864 Td
-(Ref / Deploy: commits e6a1aa6, 61250a2) Tj
-ET
-0.78 G
-0.5 w
-40. 251.8899999999999864 m
-555. 251.8899999999999864 l
-S
 BT
 /F2 8 Tf
 9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 697.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
 0.275 g
-142.5000000000000284 239.8899999999999864 Td
+105. 697.3899999999999864 Td
+(Produtos ou modelos de testes ficavam presos sem ter como apagar.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 684.8899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 684.8899999999999864 Td
+(Colocamos o botão de lixeira com confirmação para excluir qualquer item indesejado.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 672.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 672.3899999999999864 Td
+(O catálogo fica sempre limpo só com o que você realmente vende.) Tj
+ET
+0.9 G
+0.5 w
+48. 656.8899999999999864 m
+547. 656.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 646.8899999999999864 Td
+(11. Lupa de Pesquisa nos Clientes e Nomes Sem Corte) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 633.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 633.8899999999999864 Td
+(Ao selecionar cliente, nomes de empresas grandes apareciam cortados no meio.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 621.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 621.3899999999999864 Td
+(Agora tem campo de pesquisa com lupa instantânea e os nomes aparecem completos e nítidos.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 608.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 608.8899999999999864 Td
+(Fácil de achar qualquer cliente em 2 segundos mesmo se tiver centenas cadastrados.) Tj
+ET
+0.9 G
+0.5 w
+48. 593.3899999999999864 m
+547. 593.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 583.3899999999999864 Td
+(12. CPF e E-mail não obrigatórios no Cadastro de Cliente) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 570.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 570.3899999999999864 Td
+(Se você não tivesse o CPF da pessoa na hora, o cadastro travava ou não deixava avançar.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 557.8899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 557.8899999999999864 Td
+(Agora CPF e E-mail são opcionais. Você cadastra só o nome e telefone para orçar rápido e preenche CPF depois se for) Tj
+T* (parcelar no boleto ou assinar contrato.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 535.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 535.8899999999999864 Td
+(Atendimento muito mais rápido no balcão e no WhatsApp.) Tj
+ET
+0.9 G
+0.5 w
+48. 520.3899999999999864 m
+547. 520.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 510.3899999999999864 Td
+(13. Lupa de Pesquisa nos Materiais) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 497.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 497.3899999999999864 Td
+(Tinha que rolar uma lista enorme procurando lonas, ACM ou metalon.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 484.8899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 484.8899999999999864 Td
+(Adicionada a barra de pesquisa rápida com lupa.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 472.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 472.3899999999999864 Td
+(Você digita 'Lona' ou 'ACM' e ele filtra na hora os materiais disponíveis.) Tj
+ET
+0.9 G
+0.5 w
+48. 456.8899999999999864 m
+547. 456.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 446.8899999999999864 Td
+(14. Editar Valor dos Acabamentos Direto em R$) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 433.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 433.8899999999999864 Td
+(O acabamento usava só preço fixo de tabela, sem permitir ajuste manual.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 421.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 421.3899999999999864 Td
+(Agora você pode digitar o valor em reais \(R$\) diretamente no item do orçamento.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 408.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 408.8899999999999864 Td
+(Facilidade para você negociar ou aplicar um valor especial para aquele cliente.) Tj
+ET
+0.9 G
+0.5 w
+48. 393.3899999999999864 m
+547. 393.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 383.3899999999999864 Td
+(15. Precificação com Boleto, Cartão e Parcelas Calculadas no PDF) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 370.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 370.3899999999999864 Td
+(O PDF só mostrava o valor total à vista, sem detalhar parcelas.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 357.8899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 357.8899999999999864 Td
+(O sistema calcula a entrada \(ex: 50%\) e as parcelas \(ex: 3x no boleto ou cartão\) com acréscimo ou desconto, e imprime a) Tj
+T* (conta toda mastigada no PDF.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 335.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 335.8899999999999864 Td
+(O cliente abre o orçamento e já vê: 'Entrada de R$ X + 3x de R$ Y no boleto'.) Tj
+ET
+0.9 G
+0.5 w
+48. 320.3899999999999864 m
+547. 320.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 310.3899999999999864 Td
+(16. Foto do Local \(Etapa 6\) Obrigatória apenas no Celular) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 297.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 297.3899999999999864 Td
+(Quem estava no computador de mesa era obrigado a anexar foto do local para fechar.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 284.8899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 284.8899999999999864 Td
+(A obrigatoriedade foi programada apenas para quem usa no celular \(onde tem câmera na mão\). No computador o botão) Tj
+T* (avança direto.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 262.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 262.8899999999999864 Td
+(Quem está no escritório fecha orçamentos rapidamente sem travar.) Tj
+ET
+0.9 G
+0.5 w
+48. 247.3899999999999864 m
+547. 247.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 237.3899999999999864 Td
+(17. Central do Bot e Lista de Transmissão) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 224.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 224.3899999999999864 Td
+(Não havia como acompanhar o que o robô falava nem mandar aviso para vários clientes.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 211.8899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 211.8899999999999864 Td
+(Criada a tela /bot para acompanhar as conversas e a tela /transmissao para disparar comunicados em massa.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 199.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 199.3899999999999864 Td
+(Você tem controle total sobre o WhatsApp da empresa e pode fazer pós-venda em lote.) Tj
+ET
+0.9 G
+0.5 w
+48. 183.8899999999999864 m
+547. 183.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 173.8899999999999864 Td
+(18. Cadastro Automático de Clientes que chamam no WhatsApp) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 160.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 160.8899999999999864 Td
+(Toda nova pessoa que mandava mensagem tinha que ser cadastrada à mão.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 148.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 148.3899999999999864 Td
+(O sistema agora cria a ficha do cliente sozinho assim que ele manda um 'Oi' no WhatsApp.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 135.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 135.8899999999999864 Td
+(Banco de clientes cresce automaticamente sem retrabalho da sua equipe.) Tj
+ET
+0.9 G
+0.5 w
+48. 120.3899999999999864 m
+547. 120.3899999999999864 l
+S
+endstream
+endobj
+7 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 8 0 R
+>>
+endobj
+8 0 obj
+<<
+/Length 10127
+>>
+stream
+0.5 w
+0.9 G
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.471 g
+40. 801.8899999999999864 Td
+(TOLDOS PRINT — GUIA COMPLETO DAS MELHORIAS DO SISTEMA) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.471 g
+522.2799999999999727 801.8899999999999864 Td
+(Página 3) Tj
+ET
+0.86 G
+0.5 w
+40. 789.8899999999999864 m
+555. 789.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 773.8899999999999864 Td
+(19. Vitrine do Portfólio Online \(/portfolio\)) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 760.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 760.8899999999999864 Td
+(Tinha que ficar mandando várias fotos soltas para o cliente escolher o que queria.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 748.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 748.3899999999999864 Td
+(Criada a página pública grafica-flax.vercel.app/portfolio com fotos de toldos, placas e banners.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 735.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 735.8899999999999864 Td
+(Você manda um único link bonito para o cliente olhar os modelos e escolher.) Tj
+ET
+0.9 G
+0.5 w
+48. 720.3899999999999864 m
+547. 720.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 710.3899999999999864 Td
+(20. Despesas Fixas com Card Separado no Financeiro) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 697.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 697.3899999999999864 Td
+(Contas de aluguel, luz e água ficavam misturadas com gastos soltos de materiais.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 684.8899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 684.8899999999999864 Td
+(Agora você marca 'Despesa Fixa' no cadastro e tem um card exclusivo no topo do Financeiro mostrando o total dessas) Tj
+T* (despesas.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 662.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 662.8899999999999864 Td
+(Visão clara de quanto a empresa precisa faturar todo mês só para pagar os custos fixos.) Tj
+ET
+0.9 G
+0.5 w
+48. 647.3899999999999864 m
+547. 647.3899999999999864 l
+S
+0.05 0.45 0.56 rg
+40. 637.3899999999999864 515. -24. re
+f
+BT
+/F2 10 Tf
+11.5 TL
+1. g
+48. 623.3899999999999864 Td
+(PARTE 2: TUDO O QUE FIZEMOS A MAIS POR FORA DA LISTA \(BÔNUS\)) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+1. g
+359.4249999999999545 623.3899999999999864 Td
+(Melhorias que deixaram o sistema nível empresa grande) Tj
+ET
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 605.3899999999999864 Td
+(21. Painel da Smart TV da Fábrica com Rolagem Suave sem Travamentos) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 592.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 592.3899999999999864 Td
+(O painel da TV dava solavancos, cortava texto de serviços e travava em Smart TVs da LG e Samsung.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 579.8899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 579.8899999999999864 Td
+(Refizemos toda a engenharia do auto-scroll. Ele desce e sobe de forma contínua e suave, atualiza em tempo real a cada 3s e) Tj
+T* (tem letras grandes que dá para ler de longe.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 557.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 557.8899999999999864 Td
+(A TV na oficina funciona o dia todo sozinha como uma esteira de produção profissional.) Tj
+ET
+0.9 G
+0.5 w
+48. 542.3899999999999864 m
+547. 542.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 532.3899999999999864 Td
+(22. Filtro dos 5 Pedidos Recentes na TV) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 519.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 519.3899999999999864 Td
+(A TV ficava cheia de pedidos antigos poluindo a visão dos funcionários.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 506.8899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 506.8899999999999864 Td
+(Colocamos um botão rápido que filtra e mostra na TV apenas os 5 trabalhos mais recentes que chegaram.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 494.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 494.3899999999999864 Td
+(A fábrica foca imediatamente no que precisa ser produzido primeiro.) Tj
+ET
+0.9 G
+0.5 w
+48. 478.8899999999999864 m
+547. 478.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 468.8899999999999864 Td
+(23. Módulo de Lixeira e Recuperação de Exclusões \(/exclusoes\)) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 455.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 455.8899999999999864 Td
+(Se alguém clicasse em apagar sem querer em um orçamento ou cliente, o dado sumia para sempre.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 443.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 443.3899999999999864 Td
+(Criamos uma Lixeira de Segurança que guarda o que foi apagado, quem apagou, data e hora, com botão de 'Restaurar em 1) Tj
+T* (clique'.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 421.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 421.3899999999999864 Td
+(Paz de espírito total: nada se perde por engano no sistema.) Tj
+ET
+0.9 G
+0.5 w
+48. 405.8899999999999864 m
+547. 405.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 395.8899999999999864 Td
+(24. Contrato Completo de Prestação de Serviços \(8 Cláusulas Jurídicas\)) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 382.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 382.8899999999999864 Td
+(O modelo de contrato estava esquecido em um arquivo Word \(.docx\) no computador.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 370.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 370.3899999999999864 Td
+(Transformamos o contrato em uma tela oficial \(/contrato\) com diagramação executiva A4, logo da Toldos Print, regras do) Tj
+T* (Código de Defesa do Consumidor e carimbo digital.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 348.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 348.3899999999999864 Td
+(Documento com valor jurídico formal pronto para imprimir ou mandar por PDF.) Tj
+ET
+0.9 G
+0.5 w
+48. 332.8899999999999864 m
+547. 332.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 322.8899999999999864 Td
+(25. Botão 'Ver Contrato' nos Cards da Produção) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 309.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 309.8899999999999864 Td
+(Não havia atalho rápido para abrir o contrato enquanto acompanhava o serviço na oficina.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 297.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 297.3899999999999864 Td
+(Colocamos o botão verde 'Ver Contrato' em todos os cards de orçamento na tela de Produção.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 284.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 284.8899999999999864 Td
+(Com um clique no card da produção você já abre e confere o contrato assinado do cliente.) Tj
+ET
+0.9 G
+0.5 w
+48. 269.3899999999999864 m
+547. 269.3899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 259.3899999999999864 Td
+(26. Logo Oficial da Toldos Print em Todas as Telas de Assinatura e Arte) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 246.3899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 246.3899999999999864 Td
+(Aparecia um quadrado preto com 'TP' genérico que parecia site de teste.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 233.8899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 233.8899999999999864 Td
+(Substituímos pelo logo oficial colorido da Toldos Print e colocamos o WhatsApp oficial de atendimento \(27\) 99748-9714.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 221.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 221.3899999999999864 Td
+(O cliente que abre o link de assinatura no celular vê a marca bonita e profissional da sua gráfica.) Tj
+ET
+0.9 G
+0.5 w
+48. 205.8899999999999864 m
+547. 205.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 195.8899999999999864 Td
+(27. Telas de Relatórios, Estoque, Acabamentos e Mão de Obra 100% no Celular) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 182.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 182.8899999999999864 Td
+(No celular ficava tudo espremido, tabelas quebrando e botões impossíveis de clicar.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 170.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 170.3899999999999864 Td
+(Redesenhamos todas as tabelas para virarem cartões confortáveis de tocar com o polegar.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 157.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 157.8899999999999864 Td
+(Você consegue olhar relatórios, dar baixa em estoque ou ver custos deitado no sofá pelo celular.) Tj
+ET
+0.9 G
+0.5 w
+48. 142.3899999999999864 m
+547. 142.3899999999999864 l
+S
+endstream
+endobj
+9 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 10 0 R
+>>
+endobj
+10 0 obj
+<<
+/Length 3885
+>>
+stream
+0.5 w
+0.9 G
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.471 g
+40. 801.8899999999999864 Td
+(TOLDOS PRINT — GUIA COMPLETO DAS MELHORIAS DO SISTEMA) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.471 g
+522.2799999999999727 801.8899999999999864 Td
+(Página 4) Tj
+ET
+0.86 G
+0.5 w
+40. 789.8899999999999864 m
+555. 789.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 773.8899999999999864 Td
+(28. Relatórios com Filtro por Ano, Meses e Exportação para Excel \(.xlsx\)) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 760.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 760.8899999999999864 Td
+(O relatório não permitia filtrar mês a mês e a planilha de Excel saía simples demais.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 748.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 748.3899999999999864 Td
+(Criamos seletor de ano, botões dos 12 meses, separação de Pagos vs Pendentes e exportação para Excel com abas e cores) Tj
+T* (corporativas.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 726.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 726.3899999999999864 Td
+(Se o seu contador pedir o fechamento de qualquer mês, você gera em 2 segundos.) Tj
+ET
+0.9 G
+0.5 w
+48. 710.8899999999999864 m
+547. 710.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 700.8899999999999864 Td
+(29. Fim das Linhas Pretas na Impressão do PDF) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 687.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 687.8899999999999864 Td
+(Ao tentar imprimir o relatório no modo escuro, saíam faixas pretas grossas parecendo código de barras.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 675.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 675.3899999999999864 Td
+(Reescrevemos o código de impressão: agora o documento sai 100% branco limpo, com cabeçalhos cinza suave e texto) Tj
+T* (escuro nítido.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 653.3899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 653.3899999999999864 Td
+(Gasta pouquíssima tinta de impressora e tem acabamento executivo de diretoria.) Tj
+ET
+0.9 G
+0.5 w
+48. 637.8899999999999864 m
+547. 637.8899999999999864 l
+S
+BT
+/F2 9.5 Tf
+10.9249999999999989 TL
+0.059 0.09 0.165 rg
+44. 627.8899999999999864 Td
+(30. Sistema Funciona Mesmo Sem Internet \(Modo Offline PWA\)) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.725 0.11 0.11 rg
+52. 614.8899999999999864 Td
+(Como era:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.275 g
+105. 614.8899999999999864 Td
+(Se caísse a internet na rua ou na oficina, você não conseguia abrir nem orçar.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.063 0.471 0.235 rg
+52. 602.3899999999999864 Td
+(Como ficou:) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.078 g
+105. 602.3899999999999864 Td
+(Implementamos tecnologia offline que guarda dados no aparelho e envia tudo sozinho assim que a internet volta.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.118 0.251 0.686 rg
+52. 589.8899999999999864 Td
+(Na prática:) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.196 g
+105. 589.8899999999999864 Td
+(O vendedor pode fazer orçamento no meio do pasto ou na obra sem sinal.) Tj
+ET
+0.9 G
+0.5 w
+48. 574.3899999999999864 m
+547. 574.3899999999999864 l
+S
+0.78 G
+0.5 w
+40. 564.3899999999999864 m
+555. 564.3899999999999864 l
+S
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.059 0.09 0.165 rg
+123.1250000000000284 550.3899999999999864 Td
 (TOLDOS PRINT & COMUNICAÇÃO VISUAL — SISTEMA INTEGRADO DE GESTÃO) Tj
 ET
 BT
-/F1 7 Tf
-8.0499999999999989 TL
-0.471 g
-200.6899999999999409 229.8899999999999864 Td
-(Documento gerado automaticamente em 14/11/2026, 23:50:06) Tj
+/F1 8 Tf
+9.1999999999999993 TL
+0.392 g
+199.019999999999925 539.3899999999999864 Td
+(Relatório explicativo gerado em 14/11/2026 às 23:57:06) Tj
 ET
 endstream
 endobj
 1 0 obj
 <</Type /Pages
-/Kids [3 0 R 5 0 R ]
-/Count 2
+/Kids [3 0 R 5 0 R 7 0 R 9 0 R ]
+/Count 4
 >>
 endobj
-7 0 obj
+11 0 obj
 <<
 /Type /Font
 /BaseFont /Helvetica
@@ -772,7 +1858,7 @@ endobj
 /LastChar 255
 >>
 endobj
-8 0 obj
+12 0 obj
 <<
 /Type /Font
 /BaseFont /Helvetica-Bold
@@ -782,7 +1868,7 @@ endobj
 /LastChar 255
 >>
 endobj
-9 0 obj
+13 0 obj
 <<
 /Type /Font
 /BaseFont /Helvetica-Oblique
@@ -792,7 +1878,7 @@ endobj
 /LastChar 255
 >>
 endobj
-10 0 obj
+14 0 obj
 <<
 /Type /Font
 /BaseFont /Helvetica-BoldOblique
@@ -802,7 +1888,7 @@ endobj
 /LastChar 255
 >>
 endobj
-11 0 obj
+15 0 obj
 <<
 /Type /Font
 /BaseFont /Courier
@@ -812,7 +1898,7 @@ endobj
 /LastChar 255
 >>
 endobj
-12 0 obj
+16 0 obj
 <<
 /Type /Font
 /BaseFont /Courier-Bold
@@ -822,7 +1908,7 @@ endobj
 /LastChar 255
 >>
 endobj
-13 0 obj
+17 0 obj
 <<
 /Type /Font
 /BaseFont /Courier-Oblique
@@ -832,7 +1918,7 @@ endobj
 /LastChar 255
 >>
 endobj
-14 0 obj
+18 0 obj
 <<
 /Type /Font
 /BaseFont /Courier-BoldOblique
@@ -842,7 +1928,7 @@ endobj
 /LastChar 255
 >>
 endobj
-15 0 obj
+19 0 obj
 <<
 /Type /Font
 /BaseFont /Times-Roman
@@ -852,7 +1938,7 @@ endobj
 /LastChar 255
 >>
 endobj
-16 0 obj
+20 0 obj
 <<
 /Type /Font
 /BaseFont /Times-Bold
@@ -862,7 +1948,7 @@ endobj
 /LastChar 255
 >>
 endobj
-17 0 obj
+21 0 obj
 <<
 /Type /Font
 /BaseFont /Times-Italic
@@ -872,7 +1958,7 @@ endobj
 /LastChar 255
 >>
 endobj
-18 0 obj
+22 0 obj
 <<
 /Type /Font
 /BaseFont /Times-BoldItalic
@@ -882,7 +1968,7 @@ endobj
 /LastChar 255
 >>
 endobj
-19 0 obj
+23 0 obj
 <<
 /Type /Font
 /BaseFont /ZapfDingbats
@@ -891,7 +1977,7 @@ endobj
 /LastChar 255
 >>
 endobj
-20 0 obj
+24 0 obj
 <<
 /Type /Font
 /BaseFont /Symbol
@@ -900,7 +1986,7 @@ endobj
 /LastChar 255
 >>
 endobj
-21 0 obj
+25 0 obj
 <<
 /Type /XObject
 /Subtype /Image
@@ -417919,33 +419005,33 @@ endobj
 <<
 /ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
 /Font <<
-/F1 7 0 R
-/F2 8 0 R
-/F3 9 0 R
-/F4 10 0 R
-/F5 11 0 R
-/F6 12 0 R
-/F7 13 0 R
-/F8 14 0 R
-/F9 15 0 R
-/F10 16 0 R
-/F11 17 0 R
-/F12 18 0 R
-/F13 19 0 R
-/F14 20 0 R
+/F1 11 0 R
+/F2 12 0 R
+/F3 13 0 R
+/F4 14 0 R
+/F5 15 0 R
+/F6 16 0 R
+/F7 17 0 R
+/F8 18 0 R
+/F9 19 0 R
+/F10 20 0 R
+/F11 21 0 R
+/F12 22 0 R
+/F13 23 0 R
+/F14 24 0 R
 >>
 /XObject <<
-/I0 21 0 R
+/I0 25 0 R
 >>
 >>
 endobj
-22 0 obj
+26 0 obj
 <<
 /Producer (jsPDF 4.2.1)
-/CreationDate (D:20261114235006-03'00')
+/CreationDate (D:20261114235706-03'00')
 >>
 endobj
-23 0 obj
+27 0 obj
 <<
 /Type /Catalog
 /Pages 1 0 R
@@ -417954,38 +419040,42 @@ endobj
 >>
 endobj
 xref
-0 24
+0 28
 0000000000 65535 f 
-0000016298 00000 n 
-0001763173 00000 n 
+0000034472 00000 n 
+0001781362 00000 n 
 0000000015 00000 n 
 0000000152 00000 n 
-0000008886 00000 n 
-0000009023 00000 n 
-0000016361 00000 n 
-0000016486 00000 n 
-0000016616 00000 n 
-0000016749 00000 n 
-0000016887 00000 n 
-0000017011 00000 n 
-0000017140 00000 n 
-0000017272 00000 n 
-0000017408 00000 n 
-0000017536 00000 n 
-0000017663 00000 n 
-0000017792 00000 n 
-0000017925 00000 n 
-0000018027 00000 n 
-0000018123 00000 n 
-0001763434 00000 n 
-0001763520 00000 n 
+0000009433 00000 n 
+0000009570 00000 n 
+0000020079 00000 n 
+0000020216 00000 n 
+0000030396 00000 n 
+0000030534 00000 n 
+0000034547 00000 n 
+0000034673 00000 n 
+0000034804 00000 n 
+0000034938 00000 n 
+0000035076 00000 n 
+0000035200 00000 n 
+0000035329 00000 n 
+0000035461 00000 n 
+0000035597 00000 n 
+0000035725 00000 n 
+0000035852 00000 n 
+0000035981 00000 n 
+0000036114 00000 n 
+0000036216 00000 n 
+0000036312 00000 n 
+0001781626 00000 n 
+0001781712 00000 n 
 trailer
 <<
-/Size 24
-/Root 23 0 R
-/Info 22 0 R
-/ID [ <57D18815634546687F432FCE305B438E> <57D18815634546687F432FCE305B438E> ]
+/Size 28
+/Root 27 0 R
+/Info 26 0 R
+/ID [ <B35955574373E2FC387D58E8B82FA743> <B35955574373E2FC387D58E8B82FA743> ]
 >>
 startxref
-1763624
+1781816
 %%EOF
