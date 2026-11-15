@@ -80,6 +80,49 @@ export function vencimentoPeloFator(
   return formatarData(new Date(melhor))
 }
 
+export function codigoBarrasParaLinhaBancaria(cb: string): string {
+  if (cb.length !== 44) return ""
+  const c1SemDv = cb.slice(0, 4) + cb.slice(19, 24)
+  const dv1 = modulo10(c1SemDv)
+  const c1 = c1SemDv + dv1
+
+  const c2SemDv = cb.slice(24, 34)
+  const dv2 = modulo10(c2SemDv)
+  const c2 = c2SemDv + dv2
+
+  const c3SemDv = cb.slice(34, 44)
+  const dv3 = modulo10(c3SemDv)
+  const c3 = c3SemDv + dv3
+
+  const dvGeral = cb[4]
+  const fatorCentavos = cb.slice(5, 19)
+
+  return c1 + c2 + c3 + dvGeral + fatorCentavos
+}
+
+export function codigoBarrasParaLinhaConcessionaria(cb: string): string {
+  if (cb.length !== 44) return ""
+  const identificador = cb[2]
+  const usaMod10 = identificador === "6" || identificador === "7"
+  const dv = usaMod10 ? modulo10 : modulo11Arrecadacao
+  const b1 = cb.slice(0, 11)
+  const b2 = cb.slice(11, 22)
+  const b3 = cb.slice(22, 33)
+  const b4 = cb.slice(33, 44)
+  return b1 + dv(b1) + b2 + dv(b2) + b3 + dv(b3) + b4 + dv(b4)
+}
+
+export function formatarLinhaDigitavel(texto: string): string {
+  const d = apenasDigitos(texto)
+  if (d.length === 47) {
+    return `${d.slice(0, 5)}.${d.slice(5, 10)} ${d.slice(10, 15)}.${d.slice(15, 21)} ${d.slice(21, 26)}.${d.slice(26, 32)} ${d.slice(32, 33)} ${d.slice(33, 47)}`
+  }
+  if (d.length === 48) {
+    return `${d.slice(0, 12)} ${d.slice(12, 24)} ${d.slice(24, 36)} ${d.slice(36, 48)}`
+  }
+  return texto
+}
+
 function interpretarBancario(
   digitos: string,
   hoje: Date
@@ -119,7 +162,7 @@ function interpretarBancario(
     tipo: "bancario",
     valido: camposValidos && dvGeralOk,
     codigoBarras,
-    linhaDigitavel: digitos.length === 47 ? digitos : "",
+    linhaDigitavel: digitos.length === 47 ? digitos : codigoBarrasParaLinhaBancaria(codigoBarras),
     valor: centavos > 0 ? centavos / 100 : undefined,
     vencimento: vencimentoPeloFator(fator, hoje),
     banco: codigoBarras.slice(0, 3),
@@ -154,7 +197,7 @@ function interpretarConcessionaria(digitos: string): BoletoInterpretado | null {
     tipo: "concessionaria",
     valido: blocosValidos && dvGeralOk,
     codigoBarras,
-    linhaDigitavel: digitos.length === 48 ? digitos : "",
+    linhaDigitavel: digitos.length === 48 ? digitos : codigoBarrasParaLinhaConcessionaria(codigoBarras),
     valor: valorEfetivo && centavos > 0 ? centavos / 100 : undefined,
   }
 }

@@ -156,7 +156,8 @@ function LancamentoFormFields({
 
   function copiarCodigo() {
     if (!numeroBoleto) return
-    navigator.clipboard.writeText(numeroBoleto)
+    const limpo = numeroBoleto.replace(/\D/g, "")
+    navigator.clipboard.writeText(limpo)
     setCopiado(true)
     toast.success("Código de barras copiado!")
     setTimeout(() => setCopiado(false), 2000)

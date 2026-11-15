@@ -4,7 +4,7 @@ import { openai } from "@ai-sdk/openai"
 import { generateText, Output } from "ai"
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { apenasDigitos, interpretarBoleto } from "@/lib/boleto"
+import { apenasDigitos, formatarLinhaDigitavel, interpretarBoleto } from "@/lib/boleto"
 
 // Lê um boleto (PDF ou foto). A IA multimodal (Google Gemini, OpenAI GPT-4o ou Claude)
 // extrai os campos do documento e a linha digitável é decodificada e validada
@@ -23,14 +23,16 @@ const schema = z.object({
   linhaDigitavel: z
     .string()
     .nullable()
-    .describe("Linha digitável ou código de barras numérico, só os dígitos (47 ou 48 dígitos)"),
+    .describe(
+      "A linha digitável numérica exata (47 dígitos para boleto bancário ou 48 dígitos para concessionárias de luz/água/telefone), copiada dígito a dígito."
+    ),
   beneficiario: z
     .string()
     .nullable()
     .describe("Nome de quem recebe o pagamento (beneficiário/cedente)"),
   cnpjCpfBeneficiario: z.string().nullable(),
-  valor: z.number().nullable().describe("Valor do documento em reais"),
-  vencimento: z.string().nullable().describe("Data de vencimento, YYYY-MM-DD"),
+  valor: z.number().nullable().describe("Valor exato do documento em reais (ex: 70.20)"),
+  vencimento: z.string().nullable().describe("Data de vencimento exata no formato YYYY-MM-DD"),
   numeroDocumento: z.string().nullable(),
   pagador: z.string().nullable().describe("Nome de quem deve pagar"),
 })
@@ -43,8 +45,9 @@ function obterModelo() {
     }
   }
   if (process.env.OPENAI_API_KEY) {
+    // Usar GPT-4o completo com visão de alta resolução para OCR exato de todos os 47 dígitos
     return {
-      modelo: openai("gpt-4o-mini"),
+      modelo: openai("gpt-4o"),
       provedor: "openai" as const,
     }
   }
@@ -99,15 +102,25 @@ export async function POST(req: Request) {
       model: ia.modelo,
       output: Output.object({ schema }),
       system:
-        "Você é um assistente especialista em extração precisa de dados de boletos bancários e contas brasileiras (energia, água, internet, impostos, fornecedores). " +
-        "Copie os dados com exatidão cirúrgica exatamente como impressos no documento. " +
-        "Se um campo não aparecer ou estiver ilegível, devolva null — nunca invente nada. " +
-        "A linha digitável tem 47 dígitos (boleto bancário) ou 48 (concessionárias de água/luz/tributos); confira dígito por dígito.",
+        "Você é um perito em leitura, conferência e extração exata de boletos bancários brasileiros e contas de cobrança (energia, água, internet, impostos, fornecedores).\n\n" +
+        "SUA META PRINCIPAL: Extrair com 100% de precisão TODOS os números da LINHA DIGITÁVEL e o VALOR EXATO com centavos.\n\n" +
+        "COMO EXTRAIR A LINHA DIGITÁVEL:\n" +
+        "1. A Linha Digitável é a sequência de números impressa em destaque (geralmente no topo do boleto/recibo do sacado ou logo acima do código de barras). É O DADO MAIS IMPORTANTE DE TODOS.\n" +
+        "2. BOLETOS BANCÁRIOS (47 dígitos): divididos em 5 campos:\n" +
+        "   - Campo 1: 5 dígitos + ponto + 5 dígitos\n" +
+        "   - Campo 2: 5 dígitos + ponto + 6 dígitos\n" +
+        "   - Campo 3: 5 dígitos + ponto + 6 dígitos\n" +
+        "   - Campo 4: 1 dígito verificador geral\n" +
+        "   - Campo 5: 14 dígitos (os 4 primeiros são o fator de vencimento, e os 10 ÚLTIMOS DÍGITOS SÃO OBRIGATORIAMENTE O VALOR EM CENTAVOS). Por exemplo, para um boleto de R$ 70,20, o Campo 5 TERMINA OBRIGATORIAMENTE EM '0000007020'. Use essa regra matemática para conferir e garantir que todos os dígitos do valor estão 100% corretos!\n" +
+        "3. CONTAS DE CONCESSIONÁRIA / TRIBUTOS (48 dígitos, começam com 8):\n" +
+        "   - Divididas em 4 blocos de 12 dígitos cada.\n" +
+        "4. NÃO confunda com o código de barras contínuo de 44 dígitos; leia a LINHA DIGITÁVEL numérica de 47 ou 48 dígitos.\n" +
+        "5. Copie dígito por dígito exatamente como impresso.",
       messages: [
         {
           role: "user",
           content: [
-            { type: "text", text: "Extraia os dados deste boleto ou fatura de cobrança brasileira." },
+            { type: "text", text: "Extraia todos os dados deste boleto de cobrança com máxima precisão numérica." },
             conteudoArquivo,
           ],
         },
@@ -128,14 +141,13 @@ export async function POST(req: Request) {
   }
 
   const avisos: string[] = []
-  const decodificado = lido?.linhaDigitavel
-    ? interpretarBoleto(lido.linhaDigitavel)
-    : null
+  const digitosBrutos = lido?.linhaDigitavel ? apenasDigitos(lido.linhaDigitavel) : ""
+  const decodificado = digitosBrutos ? interpretarBoleto(digitosBrutos) : null
 
   let valor = lido?.valor ?? undefined
   let vencimento = lido?.vencimento ?? undefined
 
-  if (!lido?.linhaDigitavel) {
+  if (!digitosBrutos) {
     avisos.push("Não encontrei a linha digitável com clareza — confira o valor e vencimento.")
   } else if (!decodificado || !decodificado.valido) {
     avisos.push(
@@ -160,15 +172,17 @@ export async function POST(req: Request) {
     }
   }
 
+  // Linha final validada (se o decodificador tiver reconstruído perfeitamente ou a lida)
+  const linhaParaFormatar = decodificado?.linhaDigitavel || digitosBrutos
+  const numeroFormatado = formatarLinhaDigitavel(linhaParaFormatar)
+
   return NextResponse.json({
     campos: {
       beneficiario: lido?.beneficiario ?? undefined,
       cnpjCpfBeneficiario: lido?.cnpjCpfBeneficiario ?? undefined,
       pagador: lido?.pagador ?? undefined,
       numeroDocumento: lido?.numeroDocumento ?? undefined,
-      numeroBoleto: lido?.linhaDigitavel
-        ? apenasDigitos(lido.linhaDigitavel)
-        : undefined,
+      numeroBoleto: numeroFormatado || undefined,
       valor,
       vencimento,
     },
