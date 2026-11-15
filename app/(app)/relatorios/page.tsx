@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { useData } from "@/context/data-context"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -356,7 +357,7 @@ export default function RelatoriosPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 sm:gap-8">
+    <div className="flex flex-col gap-5 sm:gap-8 pb-16 sm:pb-8">
       {/* ========================================================= */}
       {/* CABEÇALHO EXECUTIVO PROFISSIONAL EXCLUSIVO PARA IMPRESSÃO / PDF */}
       {/* ========================================================= */}
@@ -865,51 +866,75 @@ export default function RelatoriosPage() {
       {/* 1. SEÇÃO: ORÇAMENTOS FECHADOS */}
       {(secaoFiltro === "todas" || secaoFiltro === "orcamentos") && (
         <section className="flex flex-col gap-3 print-avoid-break">
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              <FileText className="h-5 w-5 text-blue-500 print:text-slate-900" />
-              Orçamentos fechados no período
-              <Badge variant="secondary" className="font-bold">{orcamentosPeriodo.length}</Badge>
-            </h2>
-            <span className="text-sm font-black text-primary print:text-slate-900">
-              Total: {formatarMoeda(totalOrcamentos)}
-            </span>
+          {/* Header da Seção Limpo e Responsivo */}
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <FileText className="h-4 w-4 text-blue-500 shrink-0" />
+              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
+                Orçamentos Fechados
+              </h3>
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0">
+                {orcamentosPeriodo.length}
+              </Badge>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-[10px] font-bold text-muted-foreground mr-1 hidden xs:inline">Total:</span>
+              <span className="text-xs sm:text-base font-black text-primary">
+                {formatarMoeda(totalOrcamentos)}
+              </span>
+            </div>
           </div>
 
-          {/* Cards Mobile (Ocultos em tela grande e OCULTOS NA IMPRESSÃO) */}
+          {/* Cards Mobile Modernos e Compactos (OCULTOS NA IMPRESSÃO) */}
           <div className="block md:hidden print:hidden">
             {orcamentosPeriodo.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-border/80 bg-card/50 p-6 text-center text-sm text-muted-foreground">
+              <p className="rounded-xl border border-dashed border-border/80 bg-card/50 p-5 text-center text-xs text-muted-foreground">
                 Nenhum orçamento fechado para os filtros selecionados.
               </p>
             ) : (
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2">
                 {orcamentosPeriodo.map((o) => (
-                  <div
+                  <Link
                     key={o.id}
-                    className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 shadow-2xs"
+                    href={`/orcamentos/${o.id}/orcamento`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3 hover:border-primary/40 active:bg-muted/40 transition-all shadow-2xs group"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs font-black text-primary">#{o.numero}</span>
-                        <h3 className="font-bold text-sm text-foreground leading-snug break-words">
-                          {nomeCliente(o.clienteId)}
-                        </h3>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-500 flex flex-col items-center justify-center shrink-0 border border-blue-500/20 font-black">
+                        <span className="text-[9px] uppercase tracking-wider text-blue-400 font-bold leading-none">OS</span>
+                        <span className="text-xs leading-none mt-0.5">#{o.numero}</span>
                       </div>
-                      <Badge variant="secondary" className="shrink-0 text-[10px] font-semibold">
-                        Fechado
-                      </Badge>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                          {nomeCliente(o.clienteId)}
+                        </h4>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                          <span>{o.fechadoEm ? formatarData(o.fechadoEm) : "—"}</span>
+                          <span>•</span>
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                            Fechado
+                          </span>
+                          {(o.servicoFechado?.nome || o.materialFechado?.nome) && (
+                            <>
+                              <span>•</span>
+                              <span className="text-[11px] text-muted-foreground truncate max-w-[130px]">
+                                {o.servicoFechado?.nome || o.materialFechado?.nome}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="mt-3 pt-2.5 border-t border-border/50 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        {o.fechadoEm ? formatarData(o.fechadoEm) : "—"}
-                      </span>
-                      <span className="text-base font-black text-primary">
+                    <div className="text-right shrink-0">
+                      <span className="font-black text-sm text-foreground block">
                         {formatarMoeda(o.totalFechado ?? 0)}
                       </span>
+                      <span className="text-[10px] font-medium text-muted-foreground group-hover:text-primary flex items-center justify-end gap-0.5 mt-0.5">
+                        Ver OS <ChevronRight className="h-3 w-3" />
+                      </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -963,54 +988,68 @@ export default function RelatoriosPage() {
       {/* 2. SEÇÃO: PEDIDOS CONCLUÍDOS */}
       {(secaoFiltro === "todas" || secaoFiltro === "pedidos") && (
         <section className="flex flex-col gap-3 print-avoid-break">
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              <Package className="h-5 w-5 text-violet-500 print:text-slate-900" />
-              Pedidos concluídos no período
-              <Badge variant="secondary" className="font-bold">{pedidosPeriodo.length}</Badge>
-            </h2>
-            <span className="text-sm font-black text-primary print:text-slate-900">
-              Total: {formatarMoeda(totalPedidos)}
-            </span>
+          {/* Header da Seção Limpo e Responsivo */}
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Package className="h-4 w-4 text-violet-500 shrink-0" />
+              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
+                Pedidos Concluídos
+              </h3>
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0">
+                {pedidosPeriodo.length}
+              </Badge>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-[10px] font-bold text-muted-foreground mr-1 hidden xs:inline">Total:</span>
+              <span className="text-xs sm:text-base font-black text-primary">
+                {formatarMoeda(totalPedidos)}
+              </span>
+            </div>
           </div>
 
-          {/* Cards Mobile (Ocultos em Desktop e NA IMPRESSÃO) */}
+          {/* Cards Mobile Modernos e Compactos (OCULTOS NA IMPRESSÃO) */}
           <div className="block md:hidden print:hidden">
             {pedidosPeriodo.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-border/80 bg-card/50 p-6 text-center text-sm text-muted-foreground">
+              <p className="rounded-xl border border-dashed border-border/80 bg-card/50 p-5 text-center text-xs text-muted-foreground">
                 Nenhum pedido concluído para os filtros selecionados.
               </p>
             ) : (
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2">
                 {pedidosPeriodo.map((p) => (
                   <div
                     key={p.id}
-                    className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 shadow-2xs"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-2xs"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs font-black text-primary">#{p.numero}</span>
-                        <h3 className="font-bold text-sm text-foreground leading-snug break-words">
-                          {p.clienteNome || "Cliente Avulso"}
-                        </h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {p.produtoNome ?? "—"}
-                          {p.varianteNome ? ` · ${p.varianteNome}` : ""}
-                        </p>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-10 w-10 rounded-xl bg-violet-500/10 text-violet-500 flex flex-col items-center justify-center shrink-0 border border-violet-500/20 font-black">
+                        <span className="text-[9px] uppercase tracking-wider text-violet-400 font-bold leading-none">PED</span>
+                        <span className="text-xs leading-none mt-0.5">#{p.numero}</span>
                       </div>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-sm text-foreground truncate">
+                          {p.clienteNome || "Cliente Avulso"}
+                        </h4>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                          <span>{formatarData(p.criadoEm)}</span>
+                          <span>•</span>
+                          <span className="text-[11px] text-muted-foreground truncate max-w-[130px]">
+                            {p.produtoNome ?? "Produto rápido"}
+                            {p.varianteNome ? ` (${p.varianteNome})` : ""}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="font-black text-sm text-foreground block">
+                        {formatarMoeda(p.total)}
+                      </span>
                       <Badge
                         variant={p.status === "entregue" ? "secondary" : "default"}
-                        className="shrink-0 text-[10px] font-semibold"
+                        className="text-[9px] h-4 px-1.5 font-bold mt-0.5"
                       >
                         {p.status === "entregue" ? "Entregue" : "Pronto"}
                       </Badge>
-                    </div>
-
-                    <div className="mt-3 pt-2.5 border-t border-border/50 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{formatarData(p.criadoEm)}</span>
-                      <span className="text-base font-black text-primary">
-                        {formatarMoeda(p.total)}
-                      </span>
                     </div>
                   </div>
                 ))}
@@ -1077,59 +1116,85 @@ export default function RelatoriosPage() {
       {/* 3. SEÇÃO: LANÇAMENTOS FINANCEIROS */}
       {(secaoFiltro === "todas" || secaoFiltro === "financeiro") && (
         <section className="flex flex-col gap-3 print-avoid-break">
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              <TrendingUp className="h-5 w-5 text-emerald-500 print:text-slate-900" />
-              Lançamentos financeiros no período
-              <Badge variant="secondary" className="font-bold">{lancamentosPeriodo.length}</Badge>
-            </h2>
+          {/* Header da Seção Limpo e Responsivo */}
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <TrendingUp className="h-4 w-4 text-emerald-500 shrink-0" />
+              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
+                Lançamentos Financeiros
+              </h3>
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0">
+                {lancamentosPeriodo.length}
+              </Badge>
+            </div>
           </div>
 
-          {/* Cards Mobile (Ocultos em Desktop e NA IMPRESSÃO) */}
+          {/* Cards Mobile Modernos e Compactos (OCULTOS NA IMPRESSÃO) */}
           <div className="block md:hidden print:hidden">
             {lancamentosPeriodo.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-border/80 bg-card/50 p-6 text-center text-sm text-muted-foreground">
+              <p className="rounded-xl border border-dashed border-border/80 bg-card/50 p-5 text-center text-xs text-muted-foreground">
                 Nenhum lançamento para os filtros selecionados.
               </p>
             ) : (
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2">
                 {lancamentosPeriodo.map((l) => (
                   <div
                     key={l.id}
-                    className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 shadow-2xs"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-2xs"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-bold text-sm text-foreground leading-snug break-words">
-                          {l.descricao}
-                        </h3>
-                        <span className="text-xs text-muted-foreground block mt-0.5">
-                          {l.categoria} {l.clienteId ? `· ${nomeCliente(l.clienteId)}` : ""}
-                        </span>
-                      </div>
-                      <Badge
-                        variant={l.status === "pago" ? "secondary" : "default"}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
                         className={cn(
-                          "shrink-0 text-[10px] font-semibold",
-                          l.status === "pago" && "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                          "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 font-black text-sm border",
+                          l.tipo === "receita"
+                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                            : "bg-red-500/10 text-red-500 border-red-500/20"
                         )}
                       >
-                        {l.status === "pago" ? "Pago" : "Pendente"}
-                      </Badge>
+                        {l.tipo === "receita" ? "+" : "−"}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-sm text-foreground truncate">
+                          {l.descricao}
+                        </h4>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                          <span>
+                            {l.status === "pago" && l.pagoEm
+                              ? formatarData(l.pagoEm)
+                              : formatarData(l.vencimento)}
+                          </span>
+                          <span>•</span>
+                          <span className="text-[11px] text-muted-foreground truncate max-w-[120px]">
+                            {l.categoria}
+                          </span>
+                          {l.clienteId && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate max-w-[100px]">{nomeCliente(l.clienteId)}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="mt-3 pt-2.5 border-t border-border/50 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        {l.status === "pago" && l.pagoEm ? `Pago em ${formatarData(l.pagoEm)}` : `Venc: ${formatarData(l.vencimento)}`}
-                      </span>
+                    <div className="text-right shrink-0">
                       <span
                         className={cn(
-                          "text-base font-black",
-                          l.tipo === "receita" ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                          "font-black text-sm block",
+                          l.tipo === "receita" ? "text-emerald-500" : "text-destructive"
                         )}
                       >
                         {l.tipo === "receita" ? "+" : "−"} {formatarMoeda(l.valor)}
                       </span>
+                      <Badge
+                        variant={l.status === "pago" ? "secondary" : "default"}
+                        className={cn(
+                          "text-[9px] h-4 px-1.5 font-bold mt-0.5",
+                          l.status === "pago" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        )}
+                      >
+                        {l.status === "pago" ? "Pago" : "Pendente"}
+                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -1197,42 +1262,55 @@ export default function RelatoriosPage() {
       {/* 4. SEÇÃO: USO DE MATERIAIS */}
       {(secaoFiltro === "todas" || secaoFiltro === "materiais") && (
         <section className="flex flex-col gap-3 print-avoid-break">
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-              <Layers className="h-5 w-5 text-orange-500 print:text-slate-900" />
-              Consumo de materiais no período
-              <Badge variant="secondary" className="font-bold">{usoMaterial.length}</Badge>
-            </h2>
-            <span className="text-sm font-black text-foreground print:text-slate-900">
-              Total Custo: {formatarMoeda(totalCustoMateriais)}
-            </span>
+          {/* Header da Seção Limpo e Responsivo */}
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Layers className="h-4 w-4 text-orange-500 shrink-0" />
+              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
+                Consumo de Materiais
+              </h3>
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0">
+                {usoMaterial.length}
+              </Badge>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="text-[10px] font-bold text-muted-foreground mr-1 hidden xs:inline">Custo Total:</span>
+              <span className="text-xs sm:text-base font-black text-foreground">
+                {formatarMoeda(totalCustoMateriais)}
+              </span>
+            </div>
           </div>
 
-          {/* Cards Mobile (Ocultos em Desktop e NA IMPRESSÃO) */}
+          {/* Cards Mobile Modernos e Compactos (OCULTOS NA IMPRESSÃO) */}
           <div className="block md:hidden print:hidden">
             {usoMaterial.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-border/80 bg-card/50 p-6 text-center text-sm text-muted-foreground">
+              <p className="rounded-xl border border-dashed border-border/80 bg-card/50 p-5 text-center text-xs text-muted-foreground">
                 Nenhum uso de material nesse período.
               </p>
             ) : (
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2">
                 {usoMaterial.map((item) => (
                   <div
                     key={item.nome}
-                    className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 shadow-2xs"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-2xs"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-bold text-sm text-foreground leading-snug break-words">
-                        {item.nome}
-                      </h3>
-                      <Badge variant="secondary" className="shrink-0 text-[10px] font-semibold">
-                        {item.quantidade.toFixed(2)} {item.unidade}
-                      </Badge>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-10 w-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center shrink-0 border border-orange-500/20">
+                        <Layers className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-sm text-foreground truncate">
+                          {item.nome}
+                        </h4>
+                        <span className="text-xs text-muted-foreground block mt-0.5 font-medium">
+                          Consumo: <strong className="text-foreground">{item.quantidade.toFixed(2)} {item.unidade}</strong>
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="mt-3 pt-2.5 border-t border-border/50 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Custo calculado:</span>
-                      <span className="text-base font-black text-foreground">
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] font-bold text-muted-foreground block">Custo</span>
+                      <span className="font-black text-sm text-foreground">
                         {formatarMoeda(item.custo)}
                       </span>
                     </div>
