@@ -110,7 +110,11 @@ function LancamentoFormFields({
   const [descricao, setDescricao] = useState(lancamento?.descricao ?? inicial?.descricao ?? "")
   const [categoria, setCategoria] = useState(lancamento?.categoria ?? inicial?.categoria ?? "")
   const [valor, setValor] = useState(
-    lancamento ? String(lancamento.valor) : inicial?.valor != null ? String(inicial.valor) : ""
+    lancamento
+      ? Number(lancamento.valor).toFixed(2)
+      : inicial?.valor != null
+      ? Number(inicial.valor).toFixed(2)
+      : ""
   )
   const [vencimento, setVencimento] = useState(
     lancamento
@@ -274,9 +278,16 @@ function LancamentoFormFields({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="valor" className="text-xs font-semibold text-foreground">
-              Valor (R$)
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="valor" className="text-xs font-semibold text-foreground">
+                Valor (R$)
+              </Label>
+              {valor && isPositiveNumberInput(valor) && (
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatarMoeda(Number(valor))}
+                </span>
+              )}
+            </div>
             <Input
               id="valor"
               type="number"
@@ -284,6 +295,11 @@ function LancamentoFormFields({
               step="0.01"
               value={valor}
               onChange={(e) => setValor(e.target.value)}
+              onBlur={() => {
+                if (valor && !isNaN(Number(valor)) && Number(valor) > 0) {
+                  setValor(Number(valor).toFixed(2))
+                }
+              }}
               placeholder="0,00"
               className="h-11 sm:h-10 text-base sm:text-sm font-black text-emerald-600 dark:text-emerald-400"
             />
