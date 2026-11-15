@@ -179,6 +179,7 @@ function LancamentoFormFields({
       const decod = interpretarBoleto(limpo)
       if (decod && decod.valido) {
         setNumeroBoleto(formatarLinhaDigitavel(decod.linhaDigitavel))
+        setFormaPagamento("boleto")
         if (decod.valor != null && (!valor || valor === "" || Number(valor) === 0)) {
           setValor(decod.valor.toFixed(2))
         }
@@ -205,6 +206,7 @@ function LancamentoFormFields({
         return
       }
       const c = json.campos
+      setFormaPagamento("boleto")
       if (c.numeroBoleto) {
         setNumeroBoleto(c.numeroBoleto)
       }
@@ -219,6 +221,9 @@ function LancamentoFormFields({
       }
       if (c.pixCopiaECola && !pixCopiaECola) {
         setPixCopiaECola(c.pixCopiaECola)
+      }
+      if (c.observacoes && !observacoes) {
+        setObservacoes(c.observacoes)
       }
       toast.success("Código de barras lido com sucesso!")
     } catch {
@@ -424,101 +429,88 @@ function LancamentoFormFields({
           />
         </div>
 
-        {formaPagamento === "boleto" && !repetir && (
-          <div className="flex flex-col gap-2.5 p-3.5 rounded-xl bg-muted/40 border border-border">
+        {/* Campo de Código de Barras / Boleto */}
+        {!repetir && (formaPagamento === "boleto" || Boolean(numeroBoleto) || tipo === "despesa") && (
+          <div className="flex flex-col gap-2 p-3.5 rounded-xl bg-muted/40 border border-border">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Label htmlFor="numeroBoleto" className="text-xs font-bold text-foreground">
-                  Linha Digitável / Código de Barras
-                </Label>
-                {numeroBoleto && (
-                  <span
-                    className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded-md",
-                      numeroBoleto.replace(/\D/g, "").length === 47
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300"
-                        : numeroBoleto.replace(/\D/g, "").length === 48
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300"
-                        : "bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300"
-                    )}
-                  >
-                    {numeroBoleto.replace(/\D/g, "").length === 47
-                      ? "47 dígitos (Boleto)"
+              <Label htmlFor="numeroBoleto" className="text-xs font-bold text-foreground">
+                Código de Barras / Linha Digitável
+              </Label>
+              {numeroBoleto && (
+                <span
+                  className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-md",
+                    numeroBoleto.replace(/\D/g, "").length === 47
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300"
                       : numeroBoleto.replace(/\D/g, "").length === 48
-                      ? "48 dígitos (Concessionária)"
-                      : `${numeroBoleto.replace(/\D/g, "").length} dígitos`}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  disabled={escanandoCodigo}
-                  onClick={() => inputScanCamera.current?.click()}
-                  className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/90 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg border border-primary/20 cursor-pointer active:scale-95 transition-all disabled:opacity-50"
-                  title="Aponte a câmera bem de perto no código de barras"
-                >
-                  {escanandoCodigo ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Lendo código...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ScanLine className="w-3.5 h-3.5" />
-                      <span>Escanear Código</span>
-                    </>
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300"
+                      : "bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300"
                   )}
-                </button>
+                >
+                  {numeroBoleto.replace(/\D/g, "").length === 47
+                    ? "47 dígitos (Boleto)"
+                    : numeroBoleto.replace(/\D/g, "").length === 48
+                    ? "48 dígitos (Concessionária)"
+                    : `${numeroBoleto.replace(/\D/g, "").length} dígitos`}
+                </span>
+              )}
+            </div>
+
+            <div className="flex gap-2 items-center">
+              <Input
+                id="numeroBoleto"
+                value={numeroBoleto}
+                onChange={(e) => handleNumeroBoletoChange(e.target.value)}
+                placeholder="Cole os números ou escaneie o código"
+                className="h-11 sm:h-10 font-mono text-xs sm:text-sm flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={escanandoCodigo}
+                onClick={() => inputScanCamera.current?.click()}
+                className="h-11 sm:h-10 px-3 font-bold gap-1.5 text-xs shrink-0 border-primary/40 text-primary hover:bg-primary/10 cursor-pointer active:scale-95"
+              >
+                {escanandoCodigo ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Lendo...</span>
+                  </>
+                ) : (
+                  <>
+                    <ScanLine className="w-4 h-4" />
+                    <span>Escanear código</span>
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {infoBoleto && (
+              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+                <div className="flex items-center gap-1.5 truncate">
+                  <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span className="truncate">
+                    {infoBoleto.nome}
+                    {infoBoleto.decod.valor != null ? ` • R$ ${infoBoleto.decod.valor.toFixed(2)}` : ""}
+                    {infoBoleto.decod.vencimento ? ` • Venc: ${infoBoleto.decod.vencimento.split("-").reverse().join("/")}` : ""}
+                  </span>
+                </div>
                 {numeroBoleto && (
                   <button
                     type="button"
                     onClick={copiarCodigo}
-                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-1 rounded-lg border border-indigo-200/50 dark:border-indigo-800/50 cursor-pointer active:scale-95 transition-all"
+                    className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline shrink-0"
                   >
-                    {copiado ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        <span className="text-emerald-600 dark:text-emerald-400">Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copiar</span>
-                      </>
-                    )}
+                    {copiado ? "Copiado!" : "Copiar"}
                   </button>
                 )}
               </div>
-            </div>
-
-            <Input
-              id="numeroBoleto"
-              value={numeroBoleto}
-              onChange={(e) => handleNumeroBoletoChange(e.target.value)}
-              placeholder="Cole ou digite o código de barras (preenche valor e vencimento na hora)"
-              className="h-11 sm:h-10 font-mono text-xs sm:text-sm"
-            />
-
-            {infoBoleto && (
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
-                <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                <span>
-                  {infoBoleto.nome}
-                  {infoBoleto.decod.valor != null ? ` • R$ ${infoBoleto.decod.valor.toFixed(2)}` : ""}
-                  {infoBoleto.decod.vencimento ? ` • Vencimento: ${infoBoleto.decod.vencimento.split("-").reverse().join("/")}` : ""}
-                </span>
-              </div>
             )}
-
-            <p className="text-[11px] text-muted-foreground">
-              Você pode escanear com a câmera ou colar o código. O valor e o vencimento são calculados automaticamente.
-            </p>
 
             <input
               ref={inputScanCamera}
               type="file"
-              accept="image/*"
+              accept="image/*,application/pdf"
               capture="environment"
               className="hidden"
               onChange={(e) => {
