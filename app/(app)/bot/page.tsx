@@ -82,7 +82,7 @@ export default function BotPage() {
         <h1 className="text-2xl font-semibold">Central do Bot</h1>
         <p className="text-sm text-muted-foreground">
           Mensagens automáticas (orçamento fechado, status do pedido) e
-          perguntas testadas com IA de verdade (Gemini). O envio por WhatsApp
+          respostas automáticas inteligentes. O envio por WhatsApp
           ainda não está conectado — por enquanto, tudo fica registrado aqui.
         </p>
       </div>
