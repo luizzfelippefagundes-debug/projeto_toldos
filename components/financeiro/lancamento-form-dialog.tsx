@@ -479,7 +479,7 @@ function LancamentoFormFields({
                 ) : (
                   <>
                     <ScanLine className="w-4 h-4" />
-                    <span>Escanear código</span>
+                    <span>{numeroBoleto ? "Escanear de novo" : "Escanear código"}</span>
                   </>
                 )}
               </Button>
