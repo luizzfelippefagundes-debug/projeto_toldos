@@ -85,6 +85,37 @@ describe("interpretarBoleto", () => {
     expect(r?.valor).toBe(70.20)
     expect(r?.linhaDigitavel.length).toBe(48)
   })
+
+  it("decodifica perfeitamente o boleto real SICOOB de R$ 70,00 com vencimento 10/05/2026", () => {
+    const sicoobReal = "75691300780123727200838035480011214420000007000"
+    const r = interpretarBoleto(sicoobReal, hoje)
+    expect(r?.valido).toBe(true)
+    expect(r?.tipo).toBe("bancario")
+    expect(r?.banco).toBe("756")
+    expect(r?.valor).toBe(70.00)
+    expect(r?.vencimento).toBe("2026-05-10")
+    expect(r?.codigoBarras).toBe("75692144200000070001300701237272003803548001")
+  })
+
+  it("repara matematicamente campo 5 se OCR comer um zero (46 dígitos)", () => {
+    // 46 dígitos: faltou 1 zero em 0000007000
+    const comFaltaZero = "7569130078012372720083803548001121442000007000"
+    const r = interpretarBoleto(comFaltaZero, hoje)
+    expect(r?.valido).toBe(true)
+    expect(r?.valor).toBe(70.00)
+    expect(r?.vencimento).toBe("2026-05-10")
+    expect(r?.linhaDigitavel).toBe("75691300780123727200838035480011214420000007000")
+  })
+
+  it("repara matematicamente campo 5 se OCR duplicar um zero (48 dígitos)", () => {
+    // 48 dígitos: 1 zero a mais
+    const comZeroExtra = "756913007801237272008380354800112144200000007000"
+    const r = interpretarBoleto(comZeroExtra, hoje)
+    expect(r?.valido).toBe(true)
+    expect(r?.valor).toBe(70.00)
+    expect(r?.vencimento).toBe("2026-05-10")
+    expect(r?.linhaDigitavel).toBe("75691300780123727200838035480011214420000007000")
+  })
 })
 
 describe("vencimentoPeloFator", () => {

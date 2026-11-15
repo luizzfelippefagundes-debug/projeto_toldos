@@ -127,6 +127,33 @@ function interpretarBancario(
   digitos: string,
   hoje: Date
 ): BoletoInterpretado | null {
+  // Se digitos tem entre 43 e 52 dígitos (não sendo 44 que é código de barras),
+  // frequentemente o OCR comeu ou duplicou zeros no Campo 5 (fator + 10 dígitos de valor).
+  if (
+    digitos.length !== 47 &&
+    digitos.length !== 44 &&
+    digitos.length >= 43 &&
+    digitos.length <= 52
+  ) {
+    const c1 = digitos.slice(0, 10)
+    const c2 = digitos.slice(10, 21)
+    const c3 = digitos.slice(21, 32)
+    const dvGeral = digitos.slice(32, 33)
+    const tail = digitos.slice(33)
+    if (tail.length >= 8) {
+      const fator = tail.slice(0, 4)
+      const centavosStr = tail.slice(4)
+      const centavos = parseInt(centavosStr, 10)
+      if (!isNaN(centavos)) {
+        const tailNormalizado = fator + centavos.toString().padStart(10, "0")
+        const reconstruido = c1 + c2 + c3 + dvGeral + tailNormalizado
+        if (reconstruido.length === 47) {
+          digitos = reconstruido
+        }
+      }
+    }
+  }
+
   let codigoBarras: string
   let camposValidos = true
   let linhaDigitavelFinal = digitos
@@ -141,41 +168,55 @@ function interpretarBancario(
     const c1Ok = modulo10(c1.slice(0, -1)) === Number(c1.slice(-1))
     const c2Ok = modulo10(c2.slice(0, -1)) === Number(c2.slice(-1))
     const c3Ok = modulo10(c3.slice(0, -1)) === Number(c3.slice(-1))
+    const todosCamposOk = c1Ok && c2Ok && c3Ok
 
-    if (c1Ok && c2Ok && c3Ok) {
+    codigoBarras =
+      digitos.slice(0, 4) +
+      digitos.slice(32, 33) +
+      digitos.slice(33, 47) +
+      c1.slice(4, 9) +
+      c2.slice(0, 10) +
+      c3.slice(0, 10)
+
+    const semDv = codigoBarras.slice(0, 4) + codigoBarras.slice(5)
+    const dvEsperado = modulo11Bancario(semDv)
+    const dvGeralOriginalOk = dvEsperado === Number(codigoBarras[4])
+
+    if (todosCamposOk && dvGeralOriginalOk) {
       camposValidos = true
-    } else {
-      // Corrige DVs dos campos 1, 2 e 3 caso a leitura tenha sido imperfeita apenas no DV
+      linhaDigitavelFinal = digitos
+    } else if (todosCamposOk && !dvGeralOriginalOk) {
+      // Os campos de dados e seus DVs estão 100% íntegros; apenas o dígito verificador geral foi lido errado pelo OCR
+      codigoBarras = codigoBarras.slice(0, 4) + String(dvEsperado) + codigoBarras.slice(5)
+      linhaDigitavelFinal =
+        digitos.slice(0, 32) + String(dvEsperado) + digitos.slice(33)
+      camposValidos = true
+    } else if (!todosCamposOk && dvGeralOriginalOk) {
+      // O código de barras de 44 posições confere 100% com o DV Geral; apenas o DV de algum campo da linha foi lido errado
       const c1Correto = c1.slice(0, -1) + String(modulo10(c1.slice(0, -1)))
       const c2Correto = c2.slice(0, -1) + String(modulo10(c2.slice(0, -1)))
       const c3Correto = c3.slice(0, -1) + String(modulo10(c3.slice(0, -1)))
       linhaDigitavelFinal = c1Correto + c2Correto + c3Correto + dvGeral + fatorCentavos
       camposValidos = true
+    } else {
+      camposValidos = false
+      linhaDigitavelFinal = digitos
     }
-
-    codigoBarras =
-      linhaDigitavelFinal.slice(0, 4) +
-      linhaDigitavelFinal.slice(32, 33) +
-      linhaDigitavelFinal.slice(33, 47) +
-      c1.slice(4, 9) +
-      c2.slice(0, 10) +
-      c3.slice(0, 10)
   } else if (digitos.length === 44) {
     codigoBarras = digitos
     linhaDigitavelFinal = codigoBarrasParaLinhaBancaria(codigoBarras)
+    const semDv = codigoBarras.slice(0, 4) + codigoBarras.slice(5)
+    camposValidos = modulo11Bancario(semDv) === Number(codigoBarras[4])
   } else {
     return null
   }
-
-  const semDv = codigoBarras.slice(0, 4) + codigoBarras.slice(5)
-  const dvGeralOk = modulo11Bancario(semDv) === Number(codigoBarras[4])
 
   const fator = Number(codigoBarras.slice(5, 9))
   const centavos = Number(codigoBarras.slice(9, 19))
 
   return {
     tipo: "bancario",
-    valido: camposValidos && dvGeralOk,
+    valido: camposValidos,
     codigoBarras,
     linhaDigitavel: linhaDigitavelFinal,
     valor: centavos > 0 ? centavos / 100 : undefined,

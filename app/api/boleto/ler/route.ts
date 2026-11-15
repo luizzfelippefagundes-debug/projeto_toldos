@@ -115,22 +115,48 @@ export async function POST(req: Request) {
     try {
       const { output } = await generateText({
         model: modelo,
+        temperature: 0,
         output: Output.object({ schema }),
         system:
           "Você é um perito em leitura, conferência e extração exata de boletos bancários brasileiros e contas de cobrança (energia, água, internet, impostos, fornecedores).\n\n" +
-          "SUA META PRINCIPAL: Extrair com 100% de precisão TODOS os números da LINHA DIGITÁVEL e o VALOR EXATO com centavos.\n\n" +
-          "COMO EXTRAIR A LINHA DIGITÁVEL:\n" +
+          "SUA META PRINCIPAL: Extrair com 100% de precisão TODOS os números da LINHA DIGITÁVEL, o VALOR EXATO com centavos, a DATA DE VENCIMENTO e os demais dados da fatura.\n\n" +
+          "REGRAS DE EXTRAÇÃO DA LINHA DIGITÁVEL:\n" +
           "1. A Linha Digitável é a sequência de números impressa em destaque (geralmente no topo do boleto/recibo do sacado ou logo acima do código de barras). É O DADO MAIS IMPORTANTE DE TODOS.\n" +
-          "2. BOLETOS BANCÁRIOS (47 dígitos): divididos em 5 campos:\n" +
-          "   - Campo 1: 5 dígitos + ponto + 5 dígitos\n" +
-          "   - Campo 2: 5 dígitos + ponto + 6 dígitos\n" +
-          "   - Campo 3: 5 dígitos + ponto + 6 dígitos\n" +
-          "   - Campo 4: 1 dígito verificador geral\n" +
-          "   - Campo 5: 14 dígitos (os 4 primeiros são o fator de vencimento, e os 10 ÚLTIMOS DÍGITOS SÃO OBRIGATORIAMENTE O VALOR EM CENTAVOS). Por exemplo, para um boleto de R$ 70,20, o Campo 5 TERMINA OBRIGATORIAMENTE EM '0000007020'. Use essa regra matemática para conferir e garantir que todos os dígitos do valor estão 100% corretos!\n" +
-          "3. CONTAS DE CONCESSIONÁRIA / TRIBUTOS (48 dígitos, começam com 8):\n" +
-          "   - Divididas em 4 blocos de 12 dígitos cada.\n" +
-          "4. NÃO confunda com o código de barras contínuo de 44 dígitos; leia a LINHA DIGITÁVEL numérica de 47 ou 48 dígitos.\n" +
-          "5. Copie dígito por dígito exatamente como impresso.",
+          "2. BOLETOS BANCÁRIOS (47 DÍGITOS):\n" +
+          "   - Muitos bancos (como SICOOB, cooperativas ou boletos compactos) imprimem os 47 dígitos CONTINUAMENTE SEM ESPAÇOS E SEM PONTOS (ex: 75691300780123727200838035480011214420000007000). Outros bancos (Bradesco, Itaú, Santander, Caixa, BB) imprimem com pontos e espaços (ex: 23793.38128 60083.013528 56006.333306 1 89760000015000). Em qualquer caso, capture TODOS os 47 dígitos sem faltar nenhum!\n" +
+          "   - Estrutura matemática dos 5 campos (47 dígitos):\n" +
+          "     * Campo 1: 10 dígitos (banco + moeda + 5 dígitos livres + DV)\n" +
+          "     * Campo 2: 11 dígitos (10 dígitos livres + DV)\n" +
+          "     * Campo 3: 11 dígitos (10 dígitos livres + DV)\n" +
+          "     * Campo 4: 1 dígito (DV geral do código de barras)\n" +
+          "     * Campo 5: 14 dígitos OBRIGATÓRIOS. Os 4 primeiros são o fator de vencimento, e os 10 ÚLTIMOS DÍGITOS SÃO O VALOR EM CENTAVOS com zeros à esquerda! (Ex: R$ 70,00 = '0000007000'; R$ 70,20 = '0000007020'; R$ 150,00 = '0000015000'). Preste extrema atenção na contagem exata de zeros no Campo 5.\n" +
+          "3. CONTAS DE CONCESSIONÁRIA / TRIBUTOS (48 DÍGITOS, começam com 8):\n" +
+          "   - Divididas em 4 blocos de 12 dígitos cada (ex: Água, Luz, Gás, Telefone, IPTU, DAS).\n\n" +
+          "EXEMPLOS DE TREINAMENTO (FEW-SHOT):\n" +
+          "• Exemplo SICOOB / Link Internet (dígitos contínuos sem espaços):\n" +
+          "  Linha digitável: '75691300780123727200838035480011214420000007000'\n" +
+          "  Beneficiário: 'LUIZ PAULO PANDOLFI CAPRINI - CNPJ: 20.740.818/0001-58'\n" +
+          "  Pagador: 'MARINETH SILVA - CPF: 079.161.037-26'\n" +
+          "  Vencimento: '10/05/2026'\n" +
+          "  Valor: 70.00\n" +
+          "  Mês de referência: '04/2026'\n" +
+          "  Número do documento: '3627825'\n" +
+          "  Instruções: 'Após vencimento cobrar 2% de multa por atraso. Após o vencimento cobrar juros de 0,33% ao dia.'\n\n" +
+          "• Exemplo BRADESCO:\n" +
+          "  Linha digitável: '23793.38128 60083.013528 56006.333308 8 89760000015000'\n" +
+          "  Valor: 150.00\n" +
+          "  Vencimento: '05/05/2022'\n\n" +
+          "• Exemplo ITAÚ:\n" +
+          "  Linha digitável: '34191.09008 00000.123456 78901.234567 8 98760000035025'\n" +
+          "  Valor: 350.25\n\n" +
+          "• Exemplo CONCESSIONÁRIA ENERGIA / LUZ (48 dígitos, começam com 8):\n" +
+          "  Linha digitável: '846700000018 543801090113 004120150106 142010202604'\n" +
+          "  Valor: 154.38\n\n" +
+          "• Exemplo CONCESSIONÁRIA ÁGUA / SANEAMENTO (48 dígitos, começam com 8):\n" +
+          "  Linha digitável: '826400000004 702000123456 789012345678 901234567890'\n" +
+          "  Valor: 70.20\n\n" +
+          "PIX COPIA E COLA:\n" +
+          "Se houver QR Code Pix na fatura com código iniciado por '000201...', extraia a string completa no campo pixCopiaECola.",
         messages: [
           {
             role: "user",
@@ -168,8 +194,17 @@ export async function POST(req: Request) {
 
   const avisos: string[] = []
   let digitosBrutos = lido?.linhaDigitavel ? apenasDigitos(lido.linhaDigitavel) : ""
+
   if (lido?.blocosLinhaDigitavel && lido.blocosLinhaDigitavel.length > 0) {
-    const digitosBlocos = apenasDigitos(lido.blocosLinhaDigitavel.join(""))
+    const blocosLimpos = lido.blocosLinhaDigitavel.map(apenasDigitos)
+    if (blocosLimpos.length === 5 && blocosLimpos[4] && blocosLimpos[4].length !== 14 && blocosLimpos[4].length >= 8) {
+      const fator = blocosLimpos[4].slice(0, 4)
+      const centavos = parseInt(blocosLimpos[4].slice(4), 10)
+      if (!isNaN(centavos)) {
+        blocosLimpos[4] = fator + centavos.toString().padStart(10, "0")
+      }
+    }
+    const digitosBlocos = blocosLimpos.join("")
     if (
       (digitosBlocos.length === 47 || digitosBlocos.length === 48) &&
       digitosBrutos.length !== digitosBlocos.length
@@ -180,9 +215,17 @@ export async function POST(req: Request) {
 
   let decodificado = digitosBrutos ? interpretarBoleto(digitosBrutos) : null
 
-  // Se decodificado com linha contínua falhou, tenta os blocos
+  // Se decodificado com linha contínua falhou, tenta os blocos normalizados
   if ((!decodificado || !decodificado.valido) && lido?.blocosLinhaDigitavel) {
-    const digitosBlocos = apenasDigitos(lido.blocosLinhaDigitavel.join(""))
+    const blocosLimpos = lido.blocosLinhaDigitavel.map(apenasDigitos)
+    if (blocosLimpos.length === 5 && blocosLimpos[4] && blocosLimpos[4].length >= 8) {
+      const fator = blocosLimpos[4].slice(0, 4)
+      const centavos = parseInt(blocosLimpos[4].slice(4), 10)
+      if (!isNaN(centavos)) {
+        blocosLimpos[4] = fator + centavos.toString().padStart(10, "0")
+      }
+    }
+    const digitosBlocos = blocosLimpos.join("")
     const decodBlocos = interpretarBoleto(digitosBlocos)
     if (decodBlocos && decodBlocos.valido) {
       digitosBrutos = digitosBlocos
