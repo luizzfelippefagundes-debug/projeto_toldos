@@ -28,7 +28,7 @@ const schema = z.object({
     ),
   blocosLinhaDigitavel: z
     .array(z.string())
-    .optional()
+    .nullable()
     .describe(
       "Os blocos ou campos numéricos separados exatamente como impressos com espaços ou pontos (para contas de água/luz/energia são 4 blocos de 12 dígitos; para boleto bancário são 5 blocos)."
     ),
@@ -52,32 +52,25 @@ function normalizarDataISO(valor: string | null | undefined): string | undefined
   return undefined
 }
 
-function obterModelo() {
+function obterModelos() {
+  const modelos: any[] = []
   if (process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY) {
-    return {
-      modelo: google("gemini-2.5-flash"),
-      provedor: "google" as const,
-    }
+    modelos.push(google("gemini-2.5-flash"))
+    modelos.push(google("gemini-1.5-flash"))
   }
   if (process.env.OPENAI_API_KEY) {
-    // Usar GPT-4o completo com visão de alta resolução para OCR exato de todos os 47 dígitos
-    return {
-      modelo: openai("gpt-4o"),
-      provedor: "openai" as const,
-    }
+    modelos.push(openai("gpt-4o-mini"))
+    modelos.push(openai("gpt-4o"))
   }
   if (process.env.ANTHROPIC_API_KEY) {
-    return {
-      modelo: anthropic("claude-3-5-sonnet-latest"),
-      provedor: "anthropic" as const,
-    }
+    modelos.push(anthropic("claude-3-5-sonnet-latest"))
   }
-  return null
+  return modelos
 }
 
 export async function POST(req: Request) {
-  const ia = obterModelo()
-  if (!ia) {
+  const modelos = obterModelos()
+  if (modelos.length === 0) {
     return NextResponse.json(
       {
         erro: "Nenhuma chave de IA configurada no servidor (GOOGLE_GENERATIVE_AI_API_KEY ou OPENAI_API_KEY). Adicione sua chave no painel da Vercel ou no .env.local.",
@@ -106,50 +99,64 @@ export async function POST(req: Request) {
 
   const bytes = new Uint8Array(await arquivo.arrayBuffer())
 
-  let lido
-  try {
-    const conteudoArquivo =
-      arquivo.type === "application/pdf"
-        ? { type: "file" as const, data: bytes, mediaType: "application/pdf" }
-        : { type: "image" as const, image: bytes, mediaType: arquivo.type }
+  let lido: z.infer<typeof schema> | null = null
+  let ultimoErro: any = null
 
-    const { output } = await generateText({
-      model: ia.modelo,
-      output: Output.object({ schema }),
-      system:
-        "Você é um perito em leitura, conferência e extração exata de boletos bancários brasileiros e contas de cobrança (energia, água, internet, impostos, fornecedores).\n\n" +
-        "SUA META PRINCIPAL: Extrair com 100% de precisão TODOS os números da LINHA DIGITÁVEL e o VALOR EXATO com centavos.\n\n" +
-        "COMO EXTRAIR A LINHA DIGITÁVEL:\n" +
-        "1. A Linha Digitável é a sequência de números impressa em destaque (geralmente no topo do boleto/recibo do sacado ou logo acima do código de barras). É O DADO MAIS IMPORTANTE DE TODOS.\n" +
-        "2. BOLETOS BANCÁRIOS (47 dígitos): divididos em 5 campos:\n" +
-        "   - Campo 1: 5 dígitos + ponto + 5 dígitos\n" +
-        "   - Campo 2: 5 dígitos + ponto + 6 dígitos\n" +
-        "   - Campo 3: 5 dígitos + ponto + 6 dígitos\n" +
-        "   - Campo 4: 1 dígito verificador geral\n" +
-        "   - Campo 5: 14 dígitos (os 4 primeiros são o fator de vencimento, e os 10 ÚLTIMOS DÍGITOS SÃO OBRIGATORIAMENTE O VALOR EM CENTAVOS). Por exemplo, para um boleto de R$ 70,20, o Campo 5 TERMINA OBRIGATORIAMENTE EM '0000007020'. Use essa regra matemática para conferir e garantir que todos os dígitos do valor estão 100% corretos!\n" +
-        "3. CONTAS DE CONCESSIONÁRIA / TRIBUTOS (48 dígitos, começam com 8):\n" +
-        "   - Divididas em 4 blocos de 12 dígitos cada.\n" +
-        "4. NÃO confunda com o código de barras contínuo de 44 dígitos; leia a LINHA DIGITÁVEL numérica de 47 ou 48 dígitos.\n" +
-        "5. Copie dígito por dígito exatamente como impresso.",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Extraia todos os dados deste boleto de cobrança com máxima precisão numérica." },
-            conteudoArquivo,
-          ],
-        },
-      ],
-    })
-    lido = output
-  } catch (err: any) {
-    console.error("Erro na leitura do boleto pela IA:", err)
+  const conteudoArquivo =
+    arquivo.type === "application/pdf"
+      ? { type: "file" as const, data: bytes, mediaType: "application/pdf" }
+      : { type: "image" as const, image: bytes, mediaType: arquivo.type }
+
+  for (const modelo of modelos) {
+    try {
+      const { output } = await generateText({
+        model: modelo,
+        output: Output.object({ schema }),
+        system:
+          "Você é um perito em leitura, conferência e extração exata de boletos bancários brasileiros e contas de cobrança (energia, água, internet, impostos, fornecedores).\n\n" +
+          "SUA META PRINCIPAL: Extrair com 100% de precisão TODOS os números da LINHA DIGITÁVEL e o VALOR EXATO com centavos.\n\n" +
+          "COMO EXTRAIR A LINHA DIGITÁVEL:\n" +
+          "1. A Linha Digitável é a sequência de números impressa em destaque (geralmente no topo do boleto/recibo do sacado ou logo acima do código de barras). É O DADO MAIS IMPORTANTE DE TODOS.\n" +
+          "2. BOLETOS BANCÁRIOS (47 dígitos): divididos em 5 campos:\n" +
+          "   - Campo 1: 5 dígitos + ponto + 5 dígitos\n" +
+          "   - Campo 2: 5 dígitos + ponto + 6 dígitos\n" +
+          "   - Campo 3: 5 dígitos + ponto + 6 dígitos\n" +
+          "   - Campo 4: 1 dígito verificador geral\n" +
+          "   - Campo 5: 14 dígitos (os 4 primeiros são o fator de vencimento, e os 10 ÚLTIMOS DÍGITOS SÃO OBRIGATORIAMENTE O VALOR EM CENTAVOS). Por exemplo, para um boleto de R$ 70,20, o Campo 5 TERMINA OBRIGATORIAMENTE EM '0000007020'. Use essa regra matemática para conferir e garantir que todos os dígitos do valor estão 100% corretos!\n" +
+          "3. CONTAS DE CONCESSIONÁRIA / TRIBUTOS (48 dígitos, começam com 8):\n" +
+          "   - Divididas em 4 blocos de 12 dígitos cada.\n" +
+          "4. NÃO confunda com o código de barras contínuo de 44 dígitos; leia a LINHA DIGITÁVEL numérica de 47 ou 48 dígitos.\n" +
+          "5. Copie dígito por dígito exatamente como impresso.",
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Extraia todos os dados deste boleto de cobrança com máxima precisão numérica." },
+              conteudoArquivo,
+            ],
+          },
+        ],
+      })
+      if (output) {
+        lido = output
+        break
+      }
+    } catch (err: any) {
+      ultimoErro = err
+      console.warn("Tentativa com modelo falhou, tentando próximo modelo...", err?.message)
+    }
+  }
+
+  if (!lido) {
+    console.error("Erro na leitura do boleto pela IA:", ultimoErro)
     return NextResponse.json(
       {
         erro:
-          err?.message?.includes("unsupported") || err?.message?.includes("PDF")
-            ? "Para arquivos em PDF nativo, configure a chave GOOGLE_GENERATIVE_AI_API_KEY ou envie uma foto/print do boleto."
-            : "Não consegui ler o boleto agora. Verifique a imagem ou tente novamente.",
+          ultimoErro?.message?.includes("quota") || ultimoErro?.message?.includes("insufficient_quota")
+            ? "Limite de cota da chave da OpenAI/Google atingido. Verifique os créditos."
+            : ultimoErro?.message?.includes("unsupported") || ultimoErro?.message?.includes("PDF")
+            ? "Para arquivos em PDF nativo, envie uma foto ou print nítido do documento."
+            : "Não consegui ler o boleto agora. Verifique a iluminação e nitidez da imagem e tente novamente.",
       },
       { status: 502 }
     )
