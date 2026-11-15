@@ -362,7 +362,7 @@ export default function RelatoriosPage() {
       {/* ========================================================= */}
       {/* CABEÇALHO EXECUTIVO PROFISSIONAL EXCLUSIVO PARA IMPRESSÃO / PDF */}
       {/* ========================================================= */}
-      <div className="hidden print:flex flex-col gap-2.5 pb-3 mb-3 border-b-2 border-slate-900">
+      <div className="hidden print:flex flex-col gap-2.5 pb-3 mb-3 border-b-2 border-slate-300">
         <div className="flex items-center justify-between gap-4">
           {/* Logo Oficial e Identificação da Empresa */}
           <div className="flex items-center gap-3.5">
@@ -373,7 +373,7 @@ export default function RelatoriosPage() {
               className="h-13 w-auto object-contain shrink-0"
             />
             <div className="border-l-2 border-slate-300 pl-3">
-              <h1 className="text-sm font-black text-slate-950 uppercase tracking-tight leading-tight">
+              <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight leading-tight">
                 TOLDOS PRINT & COMUNICAÇÃO VISUAL
               </h1>
               <p className="text-[9.5px] text-slate-600 font-semibold leading-tight mt-0.5">
@@ -387,10 +387,10 @@ export default function RelatoriosPage() {
 
           {/* Dados do Relatório / Metadados */}
           <div className="text-right text-[10px] text-slate-600 shrink-0">
-            <span className="inline-block px-2 py-0.5 bg-slate-900 text-white font-black text-[9px] uppercase tracking-wider rounded">
+            <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-900 border border-slate-300 font-bold text-[9px] uppercase tracking-wider rounded">
               Relatório Executivo
             </span>
-            <p className="font-black text-slate-950 text-xs mt-1">
+            <p className="font-black text-slate-900 text-xs mt-1">
               {tituloPeriodo}
             </p>
             <p className="text-[9.5px] text-slate-500 font-medium">
@@ -403,28 +403,28 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Quadro Resumo em Linha Compacta para Impressão */}
-        <div className="grid grid-cols-5 gap-2 pt-2 border-t border-slate-300 text-xs">
-          <div className="p-2 bg-slate-50 rounded border border-slate-300">
-            <span className="text-[9px] uppercase font-bold text-slate-600 block">Total Recebido</span>
-            <span className="text-sm font-black text-emerald-800">{formatarMoeda(resumo.recebido)}</span>
+        <div className="grid grid-cols-5 gap-2 pt-2 border-t border-slate-200 text-xs">
+          <div className="p-2 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[9px] uppercase font-bold text-slate-500 block">Total Recebido</span>
+            <span className="text-sm font-black text-emerald-700">{formatarMoeda(resumo.recebido)}</span>
           </div>
-          <div className="p-2 bg-slate-50 rounded border border-slate-300">
-            <span className="text-[9px] uppercase font-bold text-slate-600 block">Total Pago</span>
-            <span className="text-sm font-black text-red-800">{formatarMoeda(resumo.pago)}</span>
+          <div className="p-2 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[9px] uppercase font-bold text-slate-500 block">Total Pago</span>
+            <span className="text-sm font-black text-red-700">{formatarMoeda(resumo.pago)}</span>
           </div>
-          <div className="p-2 bg-slate-50 rounded border border-slate-300">
-            <span className="text-[9px] uppercase font-bold text-slate-600 block">Saldo Líquido</span>
-            <span className={cn("text-sm font-black", saldo < 0 ? "text-red-800" : "text-emerald-800")}>
+          <div className="p-2 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[9px] uppercase font-bold text-slate-500 block">Saldo Líquido</span>
+            <span className={cn("text-sm font-black", saldo < 0 ? "text-red-700" : "text-emerald-700")}>
               {formatarMoeda(saldo)}
             </span>
           </div>
-          <div className="p-2 bg-slate-50 rounded border border-slate-300">
-            <span className="text-[9px] uppercase font-bold text-slate-600 block">A Receber Aberto</span>
-            <span className="text-sm font-black text-slate-900">{formatarMoeda(resumo.aReceber)}</span>
+          <div className="p-2 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[9px] uppercase font-bold text-slate-500 block">A Receber Aberto</span>
+            <span className="text-sm font-black text-slate-800">{formatarMoeda(resumo.aReceber)}</span>
           </div>
-          <div className="p-2 bg-slate-50 rounded border border-slate-300">
-            <span className="text-[9px] uppercase font-bold text-slate-600 block">Orçamentos Fechados</span>
-            <span className="text-sm font-black text-slate-900">
+          <div className="p-2 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[9px] uppercase font-bold text-slate-500 block">Orçamentos Fechados</span>
+            <span className="text-sm font-black text-slate-800">
               {orcamentosPeriodo.length} ({formatarMoeda(totalOrcamentos)})
             </span>
           </div>
@@ -885,19 +885,19 @@ export default function RelatoriosPage() {
       {(secaoFiltro === "todas" || secaoFiltro === "orcamentos") && (
         <section className="flex flex-col gap-3">
           {/* Header da Seção Limpo e Responsivo */}
-          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50 print:border-slate-300 print:pb-1">
             <div className="flex items-center gap-1.5 min-w-0">
-              <FileText className="h-4 w-4 text-blue-500 shrink-0" />
-              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
-                Orçamentos Fechados
+              <FileText className="h-4 w-4 text-blue-500 shrink-0 print:hidden" />
+              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate print:text-slate-900 print:text-xs print:font-black">
+                Orçamentos Fechados no Período
               </h3>
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0">
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0 print:bg-slate-100 print:text-slate-900 print:border print:border-slate-300">
                 {orcamentosPeriodo.length}
               </Badge>
             </div>
             <div className="text-right shrink-0">
-              <span className="text-[10px] font-bold text-muted-foreground mr-1 hidden xs:inline">Total:</span>
-              <span className="text-xs sm:text-base font-black text-primary">
+              <span className="text-[10px] font-bold text-muted-foreground mr-1 hidden xs:inline print:inline print:text-slate-600">Total:</span>
+              <span className="text-xs sm:text-base font-black text-primary print:text-slate-900 print:text-xs">
                 {formatarMoeda(totalOrcamentos)}
               </span>
             </div>
@@ -959,40 +959,40 @@ export default function RelatoriosPage() {
           </div>
 
           {/* Tabela Estruturada (Exibida em Desktop e EXCLUSIVA NA IMPRESSÃO / PDF) */}
-          <div className="hidden md:block print:block rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs print:border-slate-300 print:shadow-none print:rounded-none">
+          <div className="hidden md:block print:block rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs print:border-slate-300 print:shadow-none print:rounded-none print:bg-white">
             <Table className="print-table">
               <TableHeader className="bg-muted/40 print:bg-slate-100">
-                <TableRow className="print:border-b-2 print:border-slate-400">
+                <TableRow className="print:border-b-2 print:border-slate-400 print:bg-slate-100">
                   <TableHead className="font-bold print:text-slate-900">Nº da OS</TableHead>
                   <TableHead className="font-bold print:text-slate-900">Cliente</TableHead>
                   <TableHead className="font-bold print:text-slate-900">Data Fechamento</TableHead>
                   <TableHead className="text-right font-bold print:text-slate-900">Valor Total</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="print:bg-white">
                 {orcamentosPeriodo.map((o) => (
-                  <TableRow key={o.id} className="hover:bg-muted/30 print:border-b print:border-slate-200">
-                    <TableCell className="font-bold text-primary print:text-slate-900">#{o.numero}</TableCell>
-                    <TableCell className="font-medium print:text-slate-800">{nomeCliente(o.clienteId)}</TableCell>
-                    <TableCell className="print:text-slate-700">{o.fechadoEm ? formatarData(o.fechadoEm) : "—"}</TableCell>
-                    <TableCell className="text-right font-bold text-primary print:text-slate-900">
+                  <TableRow key={o.id} className="hover:bg-muted/30 print:border-b print:border-slate-200 print:bg-white">
+                    <TableCell className="font-bold text-primary print:text-slate-900 print:bg-white">#{o.numero}</TableCell>
+                    <TableCell className="font-medium print:text-slate-800 print:bg-white">{nomeCliente(o.clienteId)}</TableCell>
+                    <TableCell className="print:text-slate-700 print:bg-white">{o.fechadoEm ? formatarData(o.fechadoEm) : "—"}</TableCell>
+                    <TableCell className="text-right font-bold text-primary print:text-slate-900 print:bg-white">
                       {formatarMoeda(o.totalFechado ?? 0)}
                     </TableCell>
                   </TableRow>
                 ))}
                 {orcamentosPeriodo.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                  <TableRow className="print:bg-white">
+                    <TableCell colSpan={4} className="py-8 text-center text-muted-foreground print:bg-white print:text-slate-600">
                       Nenhum orçamento fechado nesse período.
                     </TableCell>
                   </TableRow>
                 )}
                 {orcamentosPeriodo.length > 0 && (
                   <TableRow className="font-bold bg-muted/20 print:bg-slate-100 print:border-t-2 print:border-slate-400">
-                    <TableCell colSpan={3} className="text-right text-muted-foreground print:text-slate-900">
+                    <TableCell colSpan={3} className="text-right text-muted-foreground print:text-slate-900 print:bg-slate-100">
                       TOTAL DO PERÍODO
                     </TableCell>
-                    <TableCell className="text-right text-primary font-black print:text-slate-950">
+                    <TableCell className="text-right text-primary font-black print:text-slate-950 print:bg-slate-100">
                       {formatarMoeda(totalOrcamentos)}
                     </TableCell>
                   </TableRow>
@@ -1007,19 +1007,19 @@ export default function RelatoriosPage() {
       {(secaoFiltro === "todas" || secaoFiltro === "pedidos") && (
         <section className="flex flex-col gap-3">
           {/* Header da Seção Limpo e Responsivo */}
-          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50 print:border-slate-300 print:pb-1">
             <div className="flex items-center gap-1.5 min-w-0">
-              <Package className="h-4 w-4 text-violet-500 shrink-0" />
-              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
-                Pedidos Concluídos
+              <Package className="h-4 w-4 text-violet-500 shrink-0 print:hidden" />
+              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate print:text-slate-900 print:text-xs print:font-black">
+                Pedidos Concluídos no Período
               </h3>
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0">
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0 print:bg-slate-100 print:text-slate-900 print:border print:border-slate-300">
                 {pedidosPeriodo.length}
               </Badge>
             </div>
             <div className="text-right shrink-0">
-              <span className="text-[10px] font-bold text-muted-foreground mr-1 hidden xs:inline">Total:</span>
-              <span className="text-xs sm:text-base font-black text-primary">
+              <span className="text-[10px] font-bold text-muted-foreground mr-1 hidden xs:inline print:inline print:text-slate-600">Total:</span>
+              <span className="text-xs sm:text-base font-black text-primary print:text-slate-900 print:text-xs">
                 {formatarMoeda(totalPedidos)}
               </span>
             </div>
@@ -1076,10 +1076,10 @@ export default function RelatoriosPage() {
           </div>
 
           {/* Tabela Estruturada (Desktop e Impressão) */}
-          <div className="hidden md:block print:block rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs print:border-slate-300 print:shadow-none print:rounded-none">
+          <div className="hidden md:block print:block rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs print:border-slate-300 print:shadow-none print:rounded-none print:bg-white">
             <Table className="print-table">
               <TableHeader className="bg-muted/40 print:bg-slate-100">
-                <TableRow className="print:border-b-2 print:border-slate-400">
+                <TableRow className="print:border-b-2 print:border-slate-400 print:bg-slate-100">
                   <TableHead className="font-bold print:text-slate-900">Nº Pedido</TableHead>
                   <TableHead className="font-bold print:text-slate-900">Cliente</TableHead>
                   <TableHead className="font-bold print:text-slate-900">Produto</TableHead>
@@ -1088,39 +1088,39 @@ export default function RelatoriosPage() {
                   <TableHead className="text-right font-bold print:text-slate-900">Valor Total</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="print:bg-white">
                 {pedidosPeriodo.map((p) => (
-                  <TableRow key={p.id} className="hover:bg-muted/30 print:border-b print:border-slate-200">
-                    <TableCell className="font-bold text-primary print:text-slate-900">#{p.numero}</TableCell>
-                    <TableCell className="font-medium print:text-slate-800">{p.clienteNome || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground print:text-slate-700">
+                  <TableRow key={p.id} className="hover:bg-muted/30 print:border-b print:border-slate-200 print:bg-white">
+                    <TableCell className="font-bold text-primary print:text-slate-900 print:bg-white">#{p.numero}</TableCell>
+                    <TableCell className="font-medium print:text-slate-800 print:bg-white">{p.clienteNome || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground print:text-slate-700 print:bg-white">
                       {p.produtoNome ?? "—"}
                       {p.varianteNome ? ` · ${p.varianteNome}` : ""}
                     </TableCell>
-                    <TableCell className="print:text-slate-700">{formatarData(p.criadoEm)}</TableCell>
-                    <TableCell>
+                    <TableCell className="print:text-slate-700 print:bg-white">{formatarData(p.criadoEm)}</TableCell>
+                    <TableCell className="print:bg-white">
                       <Badge variant={p.status === "entregue" ? "secondary" : "default"} className="print:border print:border-slate-400 print:bg-white print:text-slate-900">
                         {p.status === "entregue" ? "Entregue" : "Pronto"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right font-bold text-primary print:text-slate-900">
+                    <TableCell className="text-right font-bold text-primary print:text-slate-900 print:bg-white">
                       {formatarMoeda(p.total)}
                     </TableCell>
                   </TableRow>
                 ))}
                 {pedidosPeriodo.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                  <TableRow className="print:bg-white">
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground print:bg-white print:text-slate-600">
                       Nenhum pedido concluído nesse período.
                     </TableCell>
                   </TableRow>
                 )}
                 {pedidosPeriodo.length > 0 && (
                   <TableRow className="font-bold bg-muted/20 print:bg-slate-100 print:border-t-2 print:border-slate-400">
-                    <TableCell colSpan={5} className="text-right text-muted-foreground print:text-slate-900">
+                    <TableCell colSpan={5} className="text-right text-muted-foreground print:text-slate-900 print:bg-slate-100">
                       TOTAL DO PERÍODO
                     </TableCell>
-                    <TableCell className="text-right text-primary font-black print:text-slate-950">
+                    <TableCell className="text-right text-primary font-black print:text-slate-950 print:bg-slate-100">
                       {formatarMoeda(totalPedidos)}
                     </TableCell>
                   </TableRow>
@@ -1135,13 +1135,13 @@ export default function RelatoriosPage() {
       {(secaoFiltro === "todas" || secaoFiltro === "financeiro") && (
         <section className="flex flex-col gap-3">
           {/* Header da Seção Limpo e Responsivo */}
-          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50 print:border-slate-300 print:pb-1">
             <div className="flex items-center gap-1.5 min-w-0">
-              <TrendingUp className="h-4 w-4 text-emerald-500 shrink-0" />
-              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
-                Lançamentos Financeiros
+              <TrendingUp className="h-4 w-4 text-emerald-500 shrink-0 print:hidden" />
+              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate print:text-slate-900 print:text-xs print:font-black">
+                Lançamentos Financeiros no Período
               </h3>
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0">
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0 print:bg-slate-100 print:text-slate-900 print:border print:border-slate-300">
                 {lancamentosPeriodo.length}
               </Badge>
             </div>
@@ -1221,10 +1221,10 @@ export default function RelatoriosPage() {
           </div>
 
           {/* Tabela Estruturada (Desktop e Impressão) */}
-          <div className="hidden md:block print:block rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs print:border-slate-300 print:shadow-none print:rounded-none">
+          <div className="hidden md:block print:block rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs print:border-slate-300 print:shadow-none print:rounded-none print:bg-white">
             <Table className="print-table">
               <TableHeader className="bg-muted/40 print:bg-slate-100">
-                <TableRow className="print:border-b-2 print:border-slate-400">
+                <TableRow className="print:border-b-2 print:border-slate-400 print:bg-slate-100">
                   <TableHead className="font-bold print:text-slate-900">Data Ref.</TableHead>
                   <TableHead className="font-bold print:text-slate-900">Tipo</TableHead>
                   <TableHead className="font-bold print:text-slate-900">Descrição</TableHead>
@@ -1233,22 +1233,22 @@ export default function RelatoriosPage() {
                   <TableHead className="text-right font-bold print:text-slate-900">Valor</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="print:bg-white">
                 {lancamentosPeriodo.map((l) => (
-                  <TableRow key={l.id} className="hover:bg-muted/30 print:border-b print:border-slate-200">
-                    <TableCell className="print:text-slate-700">
+                  <TableRow key={l.id} className="hover:bg-muted/30 print:border-b print:border-slate-200 print:bg-white">
+                    <TableCell className="print:text-slate-700 print:bg-white">
                       {formatarData(l.status === "pago" && l.pagoEm ? l.pagoEm : l.vencimento)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="print:bg-white">
                       <span className={cn("text-xs font-bold", l.tipo === "receita" ? "text-emerald-600 dark:text-emerald-400 print:text-emerald-800" : "text-red-600 dark:text-red-400 print:text-red-800")}>
                         {l.tipo === "receita" ? "Receita" : "Despesa"}
                       </span>
                     </TableCell>
-                    <TableCell className="font-semibold text-foreground print:text-slate-900">{l.descricao}</TableCell>
-                    <TableCell className="text-muted-foreground print:text-slate-700">
+                    <TableCell className="font-semibold text-foreground print:text-slate-900 print:bg-white">{l.descricao}</TableCell>
+                    <TableCell className="text-muted-foreground print:text-slate-700 print:bg-white">
                       {l.categoria} {l.clienteId ? `(${nomeCliente(l.clienteId)})` : ""}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="print:bg-white">
                       <Badge
                         variant={l.status === "pago" ? "secondary" : "default"}
                         className={cn(
@@ -1259,14 +1259,14 @@ export default function RelatoriosPage() {
                         {l.status === "pago" ? "Pago" : "Pendente"}
                       </Badge>
                     </TableCell>
-                    <TableCell className={cn("text-right font-black", l.tipo === "receita" ? "text-primary print:text-slate-900" : "text-destructive print:text-slate-900")}>
+                    <TableCell className={cn("text-right font-black print:bg-white", l.tipo === "receita" ? "text-primary print:text-slate-900" : "text-destructive print:text-slate-900")}>
                       {l.tipo === "receita" ? "+" : "−"} {formatarMoeda(l.valor)}
                     </TableCell>
                   </TableRow>
                 ))}
                 {lancamentosPeriodo.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                  <TableRow className="print:bg-white">
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground print:bg-white print:text-slate-600">
                       Nenhum lançamento para os filtros selecionados.
                     </TableCell>
                   </TableRow>
@@ -1281,19 +1281,19 @@ export default function RelatoriosPage() {
       {(secaoFiltro === "todas" || secaoFiltro === "materiais") && (
         <section className="flex flex-col gap-3">
           {/* Header da Seção Limpo e Responsivo */}
-          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
+          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50 print:border-slate-300 print:pb-1">
             <div className="flex items-center gap-1.5 min-w-0">
-              <Layers className="h-4 w-4 text-orange-500 shrink-0" />
-              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
-                Consumo de Materiais
+              <Layers className="h-4 w-4 text-orange-500 shrink-0 print:hidden" />
+              <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate print:text-slate-900 print:text-xs print:font-black">
+                Consumo de Materiais no Período
               </h3>
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0">
+              <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-black shrink-0 print:bg-slate-100 print:text-slate-900 print:border print:border-slate-300">
                 {usoMaterial.length}
               </Badge>
             </div>
             <div className="text-right shrink-0">
-              <span className="text-[10px] font-bold text-muted-foreground mr-1 hidden xs:inline">Custo Total:</span>
-              <span className="text-xs sm:text-base font-black text-foreground">
+              <span className="text-[10px] font-bold text-muted-foreground mr-1 hidden xs:inline print:inline print:text-slate-600">Custo Total:</span>
+              <span className="text-xs sm:text-base font-black text-foreground print:text-slate-900 print:text-xs">
                 {formatarMoeda(totalCustoMateriais)}
               </span>
             </div>
@@ -1339,34 +1339,34 @@ export default function RelatoriosPage() {
           </div>
 
           {/* Tabela Estruturada (Desktop e Impressão) */}
-          <div className="hidden md:block print:block rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs print:border-slate-300 print:shadow-none print:rounded-none">
+          <div className="hidden md:block print:block rounded-2xl border border-border/80 bg-card overflow-hidden shadow-2xs print:border-slate-300 print:shadow-none print:rounded-none print:bg-white">
             <Table className="print-table">
               <TableHeader className="bg-muted/40 print:bg-slate-100">
-                <TableRow className="print:border-b-2 print:border-slate-400">
+                <TableRow className="print:border-b-2 print:border-slate-400 print:bg-slate-100">
                   <TableHead className="font-bold print:text-slate-900">Material</TableHead>
                   <TableHead className="font-bold print:text-slate-900">Quantidade Consumida</TableHead>
                   <TableHead className="text-right font-bold print:text-slate-900">Custo Total</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className="print:bg-white">
                 {usoMaterial.map((item) => (
-                  <TableRow key={item.nome} className="hover:bg-muted/30 print:border-b print:border-slate-200">
-                    <TableCell className="font-semibold text-foreground print:text-slate-900">{item.nome}</TableCell>
-                    <TableCell className="print:text-slate-700">{item.quantidade.toFixed(2)} {item.unidade}</TableCell>
-                    <TableCell className="text-right font-bold text-foreground print:text-slate-900">{formatarMoeda(item.custo)}</TableCell>
+                  <TableRow key={item.nome} className="hover:bg-muted/30 print:border-b print:border-slate-200 print:bg-white">
+                    <TableCell className="font-semibold text-foreground print:text-slate-900 print:bg-white">{item.nome}</TableCell>
+                    <TableCell className="print:text-slate-700 print:bg-white">{item.quantidade.toFixed(2)} {item.unidade}</TableCell>
+                    <TableCell className="text-right font-bold text-foreground print:text-slate-900 print:bg-white">{formatarMoeda(item.custo)}</TableCell>
                   </TableRow>
                 ))}
                 {usoMaterial.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
+                  <TableRow className="print:bg-white">
+                    <TableCell colSpan={3} className="py-8 text-center text-muted-foreground print:bg-white print:text-slate-600">
                       Nenhum uso de material nesse período.
                     </TableCell>
                   </TableRow>
                 )}
                 {usoMaterial.length > 0 && (
                   <TableRow className="font-bold bg-muted/20 print:bg-slate-100 print:border-t-2 print:border-slate-400">
-                    <TableCell colSpan={2} className="text-right text-muted-foreground print:text-slate-900">TOTAL</TableCell>
-                    <TableCell className="text-right font-black text-foreground print:text-slate-950">{formatarMoeda(totalCustoMateriais)}</TableCell>
+                    <TableCell colSpan={2} className="text-right text-muted-foreground print:text-slate-900 print:bg-slate-100">TOTAL</TableCell>
+                    <TableCell className="text-right font-black text-foreground print:text-slate-950 print:bg-slate-100">{formatarMoeda(totalCustoMateriais)}</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -1375,27 +1375,48 @@ export default function RelatoriosPage() {
         </section>
       )}
 
-      {/* ESTILOS DE IMPRESSÃO A4 EXECUTIVA COM LOGO E CORES OFICIAIS */}
+      {/* ESTILOS DE IMPRESSÃO A4 CLARA, LIMPA E PROFISSIONAL (SEM BARRAS PRETAS) */}
       <style jsx global>{`
         @media print {
           @page {
             size: A4 portrait;
             margin: 8mm 10mm;
           }
+          :root,
+          .dark,
+          html,
+          body {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            --background: 0 0% 100% !important;
+            --foreground: 222.2 84% 4.9% !important;
+            --card: 0 0% 100% !important;
+            --card-foreground: 222.2 84% 4.9% !important;
+            --popover: 0 0% 100% !important;
+            --popover-foreground: 222.2 84% 4.9% !important;
+            --muted: 210 40% 96.1% !important;
+            --muted-foreground: 215.4 16.3% 46.9% !important;
+            --border: 214.3 31.8% 91.4% !important;
+          }
           *, *::before, *::after {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
           body {
-            background: white !important;
+            background: #ffffff !important;
             color: #0f172a !important;
           }
-          /* Tabelas Corporativas A4 */
+          header, aside, nav, footer, button, .print\\:hidden {
+            display: none !important;
+          }
+          /* Tabelas Limpas Corporativas A4 */
           .print-table {
             display: table !important;
             width: 100% !important;
             border-collapse: collapse !important;
             margin-top: 4px !important;
+            background-color: #ffffff !important;
           }
           .print-table thead {
             display: table-header-group !important;
@@ -1406,31 +1427,36 @@ export default function RelatoriosPage() {
           .print-table tr {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+            background-color: #ffffff !important;
           }
           .print-table th {
             padding: 5px 6px !important;
             font-size: 9.5px !important;
             font-weight: 800 !important;
             text-transform: uppercase !important;
-            background-color: #0f172a !important;
-            color: #ffffff !important;
-            border: 1px solid #0f172a !important;
+            background-color: #f1f5f9 !important; /* CINZA CLARO LIMPO */
+            color: #1e293b !important; /* TEXTO ESCURO NÍTIDO */
+            border: 1px solid #cbd5e1 !important;
+            border-bottom: 2px solid #94a3b8 !important;
           }
           .print-table td {
             padding: 4px 6px !important;
             font-size: 9.5px !important;
             line-height: 1.25 !important;
-            border: 1px solid #cbd5e1 !important;
+            border: 1px solid #e2e8f0 !important;
             color: #0f172a !important;
+            background-color: #ffffff !important; /* TOTALMENTE BRANCO, NUNCA PRETO */
           }
           .print-table tbody tr:nth-child(even) td {
-            background-color: #f8fafc !important;
+            background-color: #ffffff !important; /* TUDO BRANCO PURO */
           }
           .print-table tfoot tr td,
           .print-table tr.font-bold td {
-            background-color: #f1f5f9 !important;
+            background-color: #f8fafc !important;
             font-weight: 800 !important;
-            border-top: 2px solid #0f172a !important;
+            color: #0f172a !important;
+            border-top: 2px solid #94a3b8 !important;
+            border-bottom: 2px solid #94a3b8 !important;
           }
         }
       `}</style>
