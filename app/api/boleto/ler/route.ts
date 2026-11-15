@@ -77,7 +77,7 @@ export async function POST(req: Request) {
   if (modelos.length === 0) {
     return NextResponse.json(
       {
-        erro: "Nenhuma chave de IA configurada no servidor (GOOGLE_GENERATIVE_AI_API_KEY ou OPENAI_API_KEY). Adicione sua chave no painel da Vercel ou no .env.local.",
+        erro: "Serviço de leitura não configurado no servidor. Configure a chave de acesso no painel da Vercel ou no .env.local.",
       },
       { status: 503 }
     )
