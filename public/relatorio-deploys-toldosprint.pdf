@@ -10,7 +10,7 @@
 endobj
 4 0 obj
 <<
-/Length 9229
+/Length 9219
 >>
 stream
 0.200025 w
@@ -30,8 +30,8 @@ BT
 /F1 9 Tf
 10.3499999999999996 TL
 0.278 0.333 0.412 rg
-323.6999999999998749 769.8899999999999864 Td
-(Resumo simples e direto de tudo que foi feito e como usar) Tj
+323.3399999999999181 769.8899999999999864 Td
+(Resumo simples e direto das funcionalidades e como usar) Tj
 ET
 BT
 /F1 9 Tf
@@ -53,14 +53,14 @@ BT
 11.5 TL
 1. g
 48. 707.8899999999999864 Td
-(PARTE 1: TUDO O QUE VOCÊ PEDIU NA LISTA ORIGINAL) Tj
+(PARTE 1: FUNCIONALIDADES SOLICITADAS) Tj
 ET
 BT
 /F1 7.5 Tf
 8.625 TL
 1. g
-484.0749999999999886 707.8899999999999864 Td
-(Entregue e testado) Tj
+468.3249999999999886 707.8899999999999864 Td
+(20 itens implementados) Tj
 ET
 BT
 /F2 9.5 Tf
@@ -1090,7 +1090,7 @@ endobj
 endobj
 8 0 obj
 <<
-/Length 10127
+/Length 10050
 >>
 stream
 0.5 w
@@ -1231,14 +1231,14 @@ BT
 11.5 TL
 1. g
 48. 623.3899999999999864 Td
-(PARTE 2: TUDO O QUE FIZEMOS A MAIS POR FORA DA LISTA \(BÔNUS\)) Tj
+(PARTE 2: RECURSOS EXTRAS IMPLEMENTADOS) Tj
 ET
 BT
 /F1 7.5 Tf
 8.625 TL
 1. g
-359.4249999999999545 623.3899999999999864 Td
-(Melhorias que deixaram o sistema nível empresa grande) Tj
+409.0749999999999318 623.3899999999999864 Td
+(10 melhorias complementares no sistema) Tj
 ET
 BT
 /F2 9.5 Tf
@@ -1273,8 +1273,8 @@ BT
 9.1999999999999993 TL
 0.078 g
 105. 579.8899999999999864 Td
-(Refizemos toda a engenharia do auto-scroll. Ele desce e sobe de forma contínua e suave, atualiza em tempo real a cada 3s e) Tj
-T* (tem letras grandes que dá para ler de longe.) Tj
+(Nova engenharia do auto-scroll implementada. Ele desce e sobe de forma contínua e suave, atualiza em tempo real a cada) Tj
+T* (3s e tem letras grandes que dá para ler de longe.) Tj
 ET
 BT
 /F2 8 Tf
@@ -1382,7 +1382,7 @@ BT
 9.1999999999999993 TL
 0.078 g
 105. 443.3899999999999864 Td
-(Criamos uma Lixeira de Segurança que guarda o que foi apagado, quem apagou, data e hora, com botão de 'Restaurar em 1) Tj
+(Lixeira de Segurança implementada que guarda o que foi apagado, quem apagou, data e hora, com botão de 'Restaurar em 1) Tj
 T* (clique'.) Tj
 ET
 BT
@@ -1437,8 +1437,8 @@ BT
 9.1999999999999993 TL
 0.078 g
 105. 370.3899999999999864 Td
-(Transformamos o contrato em uma tela oficial \(/contrato\) com diagramação executiva A4, logo da Toldos Print, regras do) Tj
-T* (Código de Defesa do Consumidor e carimbo digital.) Tj
+(O contrato foi integrado em tela oficial \(/contrato\) com diagramação executiva A4, logo da Toldos Print, regras do Código de) Tj
+T* (Defesa do Consumidor e carimbo digital.) Tj
 ET
 BT
 /F2 8 Tf
@@ -1492,7 +1492,7 @@ BT
 9.1999999999999993 TL
 0.078 g
 105. 297.3899999999999864 Td
-(Colocamos o botão verde 'Ver Contrato' em todos os cards de orçamento na tela de Produção.) Tj
+(Botão verde 'Ver Contrato' disponível em todos os cards de orçamento na tela de Produção.) Tj
 ET
 BT
 /F2 8 Tf
@@ -1546,7 +1546,7 @@ BT
 9.1999999999999993 TL
 0.078 g
 105. 233.8899999999999864 Td
-(Substituímos pelo logo oficial colorido da Toldos Print e colocamos o WhatsApp oficial de atendimento \(27\) 99748-9714.) Tj
+(Aplicado o logo oficial colorido da Toldos Print com o WhatsApp oficial de atendimento \(27\) 99748-9714.) Tj
 ET
 BT
 /F2 8 Tf
@@ -1600,7 +1600,7 @@ BT
 9.1999999999999993 TL
 0.078 g
 105. 170.3899999999999864 Td
-(Redesenhamos todas as tabelas para virarem cartões confortáveis de tocar com o polegar.) Tj
+(Tabelas adaptadas para cartões confortáveis de tocar com o polegar.) Tj
 ET
 BT
 /F2 8 Tf
@@ -1633,7 +1633,7 @@ endobj
 endobj
 10 0 obj
 <<
-/Length 3885
+/Length 3862
 >>
 stream
 0.5 w
@@ -1690,8 +1690,8 @@ BT
 9.1999999999999993 TL
 0.078 g
 105. 748.3899999999999864 Td
-(Criamos seletor de ano, botões dos 12 meses, separação de Pagos vs Pendentes e exportação para Excel com abas e cores) Tj
-T* (corporativas.) Tj
+(Seletor de ano, botões dos 12 meses, separação de Pagos vs Pendentes e exportação para Excel com abas e formatação) Tj
+T* (profissional.) Tj
 ET
 BT
 /F2 8 Tf
@@ -1745,8 +1745,8 @@ BT
 9.1999999999999993 TL
 0.078 g
 105. 675.3899999999999864 Td
-(Reescrevemos o código de impressão: agora o documento sai 100% branco limpo, com cabeçalhos cinza suave e texto) Tj
-T* (escuro nítido.) Tj
+(Código de impressão ajustado: agora o documento sai 100% branco limpo, com cabeçalhos cinza suave e texto escuro) Tj
+T* (nítido.) Tj
 ET
 BT
 /F2 8 Tf
@@ -1800,7 +1800,7 @@ BT
 9.1999999999999993 TL
 0.078 g
 105. 602.3899999999999864 Td
-(Implementamos tecnologia offline que guarda dados no aparelho e envia tudo sozinho assim que a internet volta.) Tj
+(Tecnologia offline que guarda dados no aparelho e envia tudo sozinho assim que a internet volta.) Tj
 ET
 BT
 /F2 8 Tf
@@ -1838,7 +1838,7 @@ BT
 9.1999999999999993 TL
 0.392 g
 199.019999999999925 539.3899999999999864 Td
-(Relatório explicativo gerado em 14/11/2026 às 23:57:06) Tj
+(Relatório explicativo gerado em 15/11/2026 às 00:03:22) Tj
 ET
 endstream
 endobj
@@ -419028,7 +419028,7 @@ endobj
 26 0 obj
 <<
 /Producer (jsPDF 4.2.1)
-/CreationDate (D:20261114235706-03'00')
+/CreationDate (D:20261115000321-03'00')
 >>
 endobj
 27 0 obj
@@ -419042,40 +419042,40 @@ endobj
 xref
 0 28
 0000000000 65535 f 
-0000034472 00000 n 
-0001781362 00000 n 
+0000034362 00000 n 
+0001781252 00000 n 
 0000000015 00000 n 
 0000000152 00000 n 
-0000009433 00000 n 
-0000009570 00000 n 
-0000020079 00000 n 
-0000020216 00000 n 
-0000030396 00000 n 
-0000030534 00000 n 
-0000034547 00000 n 
-0000034673 00000 n 
-0000034804 00000 n 
-0000034938 00000 n 
-0000035076 00000 n 
-0000035200 00000 n 
-0000035329 00000 n 
-0000035461 00000 n 
-0000035597 00000 n 
-0000035725 00000 n 
-0000035852 00000 n 
-0000035981 00000 n 
-0000036114 00000 n 
-0000036216 00000 n 
-0000036312 00000 n 
-0001781626 00000 n 
-0001781712 00000 n 
+0000009423 00000 n 
+0000009560 00000 n 
+0000020069 00000 n 
+0000020206 00000 n 
+0000030309 00000 n 
+0000030447 00000 n 
+0000034437 00000 n 
+0000034563 00000 n 
+0000034694 00000 n 
+0000034828 00000 n 
+0000034966 00000 n 
+0000035090 00000 n 
+0000035219 00000 n 
+0000035351 00000 n 
+0000035487 00000 n 
+0000035615 00000 n 
+0000035742 00000 n 
+0000035871 00000 n 
+0000036004 00000 n 
+0000036106 00000 n 
+0000036202 00000 n 
+0001781516 00000 n 
+0001781602 00000 n 
 trailer
 <<
 /Size 28
 /Root 27 0 R
 /Info 26 0 R
-/ID [ <B35955574373E2FC387D58E8B82FA743> <B35955574373E2FC387D58E8B82FA743> ]
+/ID [ <54A6C5B36A258D26F5C69BE5B9B111C5> <54A6C5B36A258D26F5C69BE5B9B111C5> ]
 >>
 startxref
-1781816
+1781706
 %%EOF
