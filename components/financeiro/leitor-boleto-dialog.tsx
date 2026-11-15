@@ -18,6 +18,24 @@ interface CamposLidos {
   numeroBoleto?: string
   valor?: number
   vencimento?: string
+  mesReferencia?: string
+  numeroDocumento?: string
+  pixCopiaECola?: string
+  instrucoes?: string
+  cnpjCpfBeneficiario?: string
+  pagador?: string
+}
+
+function montarDescricao(campos?: CamposLidos): string {
+  if (!campos) return "Boleto"
+  const nome = campos.beneficiario ? campos.beneficiario.trim() : "Boleto"
+  const detalhes: string[] = []
+  if (campos.mesReferencia) detalhes.push(`Ref: ${campos.mesReferencia}`)
+  if (campos.numeroDocumento) detalhes.push(`Doc #${campos.numeroDocumento}`)
+  if (detalhes.length > 0) {
+    return `${nome} (${detalhes.join(" — ")})`
+  }
+  return nome.toLowerCase().startsWith("boleto") ? nome : `Boleto — ${nome}`
 }
 
 interface Leitura {
@@ -254,9 +272,7 @@ export function LeitorBoletoDialog() {
           trigger={<span hidden />}
           avisos={leitura.avisos}
           inicial={{
-            descricao: campos.beneficiario
-              ? `Boleto — ${campos.beneficiario}`
-              : "Boleto",
+            descricao: montarDescricao(campos),
             categoria: classificacao.categoria,
             valor: campos.valor,
             vencimento: campos.vencimento,

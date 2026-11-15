@@ -36,11 +36,14 @@ const schema = z.object({
     .string()
     .nullable()
     .describe("Nome de quem recebe o pagamento (beneficiário/cedente/concessionária de água ou luz)"),
-  cnpjCpfBeneficiario: z.string().nullable(),
+  cnpjCpfBeneficiario: z.string().nullable().describe("CNPJ ou CPF da empresa emissora"),
   valor: z.number().nullable().describe("Valor exato do documento em reais (ex: 70.20 ou 154.38)"),
   vencimento: z.string().nullable().describe("Data de vencimento exata impressa no documento (ex: 2026-11-25 ou 25/11/2026)"),
-  numeroDocumento: z.string().nullable(),
+  mesReferencia: z.string().nullable().describe("Mês ou competência de referência (ex: '10/2026', 'Novembro/2026' ou '11/2026')"),
+  numeroDocumento: z.string().nullable().describe("Número da fatura, conta, número do documento ou nota fiscal"),
+  pixCopiaECola: z.string().nullable().describe("Código Pix Copia e Cola se houver QR Code Pix impresso"),
   pagador: z.string().nullable().describe("Nome de quem deve pagar"),
+  instrucoes: z.string().nullable().describe("Instruções de multa, juros ou observações do documento"),
 })
 
 function normalizarDataISO(valor: string | null | undefined): string | undefined {
@@ -59,8 +62,9 @@ function obterModelos() {
     modelos.push(google("gemini-1.5-flash"))
   }
   if (process.env.OPENAI_API_KEY) {
-    modelos.push(openai("gpt-4o-mini"))
+    // GPT-4o tem visão de altíssima resolução para leitura precisa de números pequenos
     modelos.push(openai("gpt-4o"))
+    modelos.push(openai("gpt-4o-mini"))
   }
   if (process.env.ANTHROPIC_API_KEY) {
     modelos.push(anthropic("claude-3-5-sonnet-latest"))
@@ -227,6 +231,9 @@ export async function POST(req: Request) {
       cnpjCpfBeneficiario: lido?.cnpjCpfBeneficiario ?? undefined,
       pagador: lido?.pagador ?? undefined,
       numeroDocumento: lido?.numeroDocumento ?? undefined,
+      mesReferencia: lido?.mesReferencia ?? undefined,
+      pixCopiaECola: lido?.pixCopiaECola ?? undefined,
+      instrucoes: lido?.instrucoes ?? undefined,
       numeroBoleto: numeroFormatado || undefined,
       valor,
       vencimento,

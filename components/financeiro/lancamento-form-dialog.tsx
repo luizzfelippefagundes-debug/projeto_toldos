@@ -26,6 +26,7 @@ import { formatarMoeda } from "@/lib/format"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Copy, Check, Sparkles } from "lucide-react"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 function hojeISO() {
   return formatarDataInput(new Date())
@@ -334,9 +335,29 @@ function LancamentoFormFields({
         {formaPagamento === "boleto" && !repetir && (
           <div className="flex flex-col gap-2 p-3.5 rounded-xl bg-muted/40 border border-border">
             <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="numeroBoleto" className="text-xs font-bold text-foreground">
-                Linha Digitável / Código de Barras
-              </Label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Label htmlFor="numeroBoleto" className="text-xs font-bold text-foreground">
+                  Linha Digitável / Código de Barras
+                </Label>
+                {numeroBoleto && (
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold px-2 py-0.5 rounded-md",
+                      numeroBoleto.replace(/\D/g, "").length === 47
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300"
+                        : numeroBoleto.replace(/\D/g, "").length === 48
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300"
+                    )}
+                  >
+                    {numeroBoleto.replace(/\D/g, "").length === 47
+                      ? "47 dígitos (Boleto)"
+                      : numeroBoleto.replace(/\D/g, "").length === 48
+                      ? "48 dígitos (Concessionária)"
+                      : `${numeroBoleto.replace(/\D/g, "").length} dígitos`}
+                  </span>
+                )}
+              </div>
               {numeroBoleto && (
                 <button
                   type="button"
