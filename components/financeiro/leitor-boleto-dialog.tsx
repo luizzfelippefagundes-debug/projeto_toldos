@@ -146,7 +146,7 @@ export function LeitorBoletoDialog() {
       </Button>
 
       <Dialog open={aberto} onOpenChange={(v) => !lendo && setAberto(v)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[92vh] overflow-y-auto p-4 sm:p-6 rounded-2xl shadow-2xl border-border/80">
           <DialogHeader>
             <div className="flex items-center gap-2">
               <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl text-indigo-600 dark:text-indigo-300">
