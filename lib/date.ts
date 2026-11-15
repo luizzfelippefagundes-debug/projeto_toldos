@@ -1,7 +1,5 @@
 export function interpretarDataLocal(valor: string): Date {
-  const partes = /^(\d{4})-(\d{2})-(\d{2})(?:T00:00(?::00(?:\.000)?)?Z)?$/.exec(
-    valor
-  )
+  const partes = /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(valor)
   if (partes) {
     const ano = Number(partes[1])
     const mes = Number(partes[2]) - 1

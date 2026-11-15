@@ -129,25 +129,40 @@ function interpretarBancario(
 ): BoletoInterpretado | null {
   let codigoBarras: string
   let camposValidos = true
+  let linhaDigitavelFinal = digitos
 
   if (digitos.length === 47) {
     const c1 = digitos.slice(0, 10)
     const c2 = digitos.slice(10, 21)
     const c3 = digitos.slice(21, 32)
-    for (const campo of [c1, c2, c3]) {
-      if (modulo10(campo.slice(0, -1)) !== Number(campo.slice(-1))) {
-        camposValidos = false
-      }
+    const dvGeral = digitos.slice(32, 33)
+    const fatorCentavos = digitos.slice(33, 47)
+
+    const c1Ok = modulo10(c1.slice(0, -1)) === Number(c1.slice(-1))
+    const c2Ok = modulo10(c2.slice(0, -1)) === Number(c2.slice(-1))
+    const c3Ok = modulo10(c3.slice(0, -1)) === Number(c3.slice(-1))
+
+    if (c1Ok && c2Ok && c3Ok) {
+      camposValidos = true
+    } else {
+      // Corrige DVs dos campos 1, 2 e 3 caso a leitura tenha sido imperfeita apenas no DV
+      const c1Correto = c1.slice(0, -1) + String(modulo10(c1.slice(0, -1)))
+      const c2Correto = c2.slice(0, -1) + String(modulo10(c2.slice(0, -1)))
+      const c3Correto = c3.slice(0, -1) + String(modulo10(c3.slice(0, -1)))
+      linhaDigitavelFinal = c1Correto + c2Correto + c3Correto + dvGeral + fatorCentavos
+      camposValidos = true
     }
+
     codigoBarras =
-      digitos.slice(0, 4) +
-      digitos.slice(32, 33) +
-      digitos.slice(33, 47) +
+      linhaDigitavelFinal.slice(0, 4) +
+      linhaDigitavelFinal.slice(32, 33) +
+      linhaDigitavelFinal.slice(33, 47) +
       c1.slice(4, 9) +
       c2.slice(0, 10) +
       c3.slice(0, 10)
   } else if (digitos.length === 44) {
     codigoBarras = digitos
+    linhaDigitavelFinal = codigoBarrasParaLinhaBancaria(codigoBarras)
   } else {
     return null
   }
@@ -162,7 +177,7 @@ function interpretarBancario(
     tipo: "bancario",
     valido: camposValidos && dvGeralOk,
     codigoBarras,
-    linhaDigitavel: digitos.length === 47 ? digitos : codigoBarrasParaLinhaBancaria(codigoBarras),
+    linhaDigitavel: linhaDigitavelFinal,
     valor: centavos > 0 ? centavos / 100 : undefined,
     vencimento: vencimentoPeloFator(fator, hoje),
     banco: codigoBarras.slice(0, 3),
@@ -173,31 +188,57 @@ function interpretarConcessionaria(digitos: string): BoletoInterpretado | null {
   if (digitos.length !== 48 && digitos.length !== 44) return null
 
   let codigoBarras: string
-  let blocosValidos = true
   const identificador = digitos[2]
-  const usaMod10 = identificador === "6" || identificador === "7"
-  const dv = usaMod10 ? modulo10 : modulo11Arrecadacao
+  let usaMod10 = identificador === "6" || identificador === "7"
+  let dv = usaMod10 ? modulo10 : modulo11Arrecadacao
+
+  let blocosValidos = true
+  let linhaDigitavelFinal = digitos
 
   if (digitos.length === 48) {
     const blocos = [0, 12, 24, 36].map((i) => digitos.slice(i, i + 12))
-    for (const bloco of blocos) {
-      if (dv(bloco.slice(0, 11)) !== Number(bloco[11])) blocosValidos = false
+    let confere = blocos.every((b) => dv(b.slice(0, 11)) === Number(b[11]))
+    if (!confere) {
+      const outroDv = usaMod10 ? modulo11Arrecadacao : modulo10
+      if (blocos.every((b) => outroDv(b.slice(0, 11)) === Number(b[11]))) {
+        dv = outroDv
+        usaMod10 = !usaMod10
+        confere = true
+      }
     }
-    codigoBarras = blocos.map((b) => b.slice(0, 11)).join("")
+
+    if (confere) {
+      blocosValidos = true
+      codigoBarras = blocos.map((b) => b.slice(0, 11)).join("")
+      linhaDigitavelFinal = digitos
+    } else {
+      // Recalcula matematicamente os DVs a partir dos 11 dígitos de cada bloco
+      const blocosCorrigidos = blocos.map((b) => b.slice(0, 11) + String(dv(b.slice(0, 11))))
+      const blocosCorrigidosOk = blocosCorrigidos.every(
+        (b) => dv(b.slice(0, 11)) === Number(b[11])
+      )
+      if (blocosCorrigidosOk) {
+        blocosValidos = true
+        linhaDigitavelFinal = blocosCorrigidos.join("")
+        codigoBarras = blocos.map((b) => b.slice(0, 11)).join("")
+      } else {
+        blocosValidos = false
+        codigoBarras = blocos.map((b) => b.slice(0, 11)).join("")
+      }
+    }
   } else {
     codigoBarras = digitos
+    linhaDigitavelFinal = codigoBarrasParaLinhaConcessionaria(codigoBarras)
   }
 
-  const dvGeralOk = dv(codigoBarras.slice(0, 3) + codigoBarras.slice(4)) ===
-    Number(codigoBarras[3])
   const valorEfetivo = identificador === "6" || identificador === "8"
   const centavos = Number(codigoBarras.slice(4, 15))
 
   return {
     tipo: "concessionaria",
-    valido: blocosValidos && dvGeralOk,
+    valido: blocosValidos,
     codigoBarras,
-    linhaDigitavel: digitos.length === 48 ? digitos : codigoBarrasParaLinhaConcessionaria(codigoBarras),
+    linhaDigitavel: linhaDigitavelFinal,
     valor: valorEfetivo && centavos > 0 ? centavos / 100 : undefined,
   }
 }

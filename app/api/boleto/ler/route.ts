@@ -24,18 +24,33 @@ const schema = z.object({
     .string()
     .nullable()
     .describe(
-      "A linha digitável numérica exata (47 dígitos para boleto bancário ou 48 dígitos para concessionárias de luz/água/telefone), copiada dígito a dígito."
+      "A linha digitável numérica exata completa (47 dígitos para boleto bancário ou 48 dígitos para concessionárias de luz/água/telefone/tributos), ou o código de barras."
+    ),
+  blocosLinhaDigitavel: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Os blocos ou campos numéricos separados exatamente como impressos com espaços ou pontos (para contas de água/luz/energia são 4 blocos de 12 dígitos; para boleto bancário são 5 blocos)."
     ),
   beneficiario: z
     .string()
     .nullable()
-    .describe("Nome de quem recebe o pagamento (beneficiário/cedente)"),
+    .describe("Nome de quem recebe o pagamento (beneficiário/cedente/concessionária de água ou luz)"),
   cnpjCpfBeneficiario: z.string().nullable(),
-  valor: z.number().nullable().describe("Valor exato do documento em reais (ex: 70.20)"),
-  vencimento: z.string().nullable().describe("Data de vencimento exata no formato YYYY-MM-DD"),
+  valor: z.number().nullable().describe("Valor exato do documento em reais (ex: 70.20 ou 154.38)"),
+  vencimento: z.string().nullable().describe("Data de vencimento exata impressa no documento (ex: 2026-11-25 ou 25/11/2026)"),
   numeroDocumento: z.string().nullable(),
   pagador: z.string().nullable().describe("Nome de quem deve pagar"),
 })
+
+function normalizarDataISO(valor: string | null | undefined): string | undefined {
+  if (!valor) return undefined
+  const mIso = /^(\d{4})-(\d{2})-(\d{2})/.exec(valor)
+  if (mIso) return `${mIso[1]}-${mIso[2]}-${mIso[3]}`
+  const mBr = /^(\d{2})[/-](\d{2})[/-](\d{4})/.exec(valor)
+  if (mBr) return `${mBr[3]}-${mBr[2]}-${mBr[1]}`
+  return undefined
+}
 
 function obterModelo() {
   if (process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY) {
@@ -141,11 +156,31 @@ export async function POST(req: Request) {
   }
 
   const avisos: string[] = []
-  const digitosBrutos = lido?.linhaDigitavel ? apenasDigitos(lido.linhaDigitavel) : ""
-  const decodificado = digitosBrutos ? interpretarBoleto(digitosBrutos) : null
+  let digitosBrutos = lido?.linhaDigitavel ? apenasDigitos(lido.linhaDigitavel) : ""
+  if (lido?.blocosLinhaDigitavel && lido.blocosLinhaDigitavel.length > 0) {
+    const digitosBlocos = apenasDigitos(lido.blocosLinhaDigitavel.join(""))
+    if (
+      (digitosBlocos.length === 47 || digitosBlocos.length === 48) &&
+      digitosBrutos.length !== digitosBlocos.length
+    ) {
+      digitosBrutos = digitosBlocos
+    }
+  }
+
+  let decodificado = digitosBrutos ? interpretarBoleto(digitosBrutos) : null
+
+  // Se decodificado com linha contínua falhou, tenta os blocos
+  if ((!decodificado || !decodificado.valido) && lido?.blocosLinhaDigitavel) {
+    const digitosBlocos = apenasDigitos(lido.blocosLinhaDigitavel.join(""))
+    const decodBlocos = interpretarBoleto(digitosBlocos)
+    if (decodBlocos && decodBlocos.valido) {
+      digitosBrutos = digitosBlocos
+      decodificado = decodBlocos
+    }
+  }
 
   let valor = lido?.valor ?? undefined
-  let vencimento = lido?.vencimento ?? undefined
+  let vencimento = normalizarDataISO(lido?.vencimento)
 
   if (!digitosBrutos) {
     avisos.push("Não encontrei a linha digitável com clareza — confira o valor e vencimento.")
@@ -162,7 +197,10 @@ export async function POST(req: Request) {
       }
       valor = decodificado.valor
     }
-    if (decodificado.vencimento) {
+    // Para concessionárias (água, luz, telefone), o código de barras NÃO codifica vencimento.
+    // A data de vencimento impressa lida no documento é soberana.
+    // Para boletos bancários com fator válido, valida com o do código de barras:
+    if (decodificado.tipo === "bancario" && decodificado.vencimento) {
       if (vencimento && vencimento !== decodificado.vencimento) {
         avisos.push(
           "O vencimento impresso difere do código de barras. Foi utilizado o do código de barras."

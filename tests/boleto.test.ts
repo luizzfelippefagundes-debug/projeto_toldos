@@ -70,6 +70,21 @@ describe("interpretarBoleto", () => {
     expect(r?.valido).toBe(true)
     expect(r?.valor).toBe(123.45)
   })
+
+  it("lê conta de água/saneamento (segmento 2) e formata linha de 48 dígitos", () => {
+    const { modulo10 } = _internos
+    // Segmento 2 = saneamento / água; Identificador 6 = valor efetivo R$ 70,20
+    const corpo = "8" + "2" + "6" + "0" + "00000007020" + "12345678901234567890123456789"
+    const semDv = corpo.slice(0, 3) + corpo.slice(4)
+    const barras = corpo.slice(0, 3) + modulo10(semDv) + corpo.slice(4)
+    const blocos = [0, 11, 22, 33].map((i) => barras.slice(i, i + 11))
+    const linha = blocos.map((b) => b + modulo10(b)).join("")
+    const r = interpretarBoleto(linha, hoje)
+    expect(r?.tipo).toBe("concessionaria")
+    expect(r?.valido).toBe(true)
+    expect(r?.valor).toBe(70.20)
+    expect(r?.linhaDigitavel.length).toBe(48)
+  })
 })
 
 describe("vencimentoPeloFator", () => {

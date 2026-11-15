@@ -20,7 +20,7 @@ import {
 import { useData } from "@/context/data-context"
 import type { FormaPagamento, LancamentoFinanceiro, TipoLancamento } from "@/lib/types"
 import { isPositiveNumberInput } from "@/lib/number"
-import { formatarDataInput } from "@/lib/date"
+import { formatarDataInput, interpretarDataLocal } from "@/lib/date"
 import { datasMensais, nomeDaParcela } from "@/lib/parcelas"
 import { formatarMoeda } from "@/lib/format"
 import { Switch } from "@/components/ui/switch"
@@ -29,6 +29,17 @@ import { toast } from "sonner"
 
 function hojeISO() {
   return formatarDataInput(new Date())
+}
+
+function normalizarDataParaInput(valor?: string | null): string {
+  if (!valor) return hojeISO()
+  // Se tem YYYY-MM-DD no início, extrai diretamente os dígitos sem passar por new Date
+  const mIso = /^(\d{4})-(\d{2})-(\d{2})/.exec(valor)
+  if (mIso) return `${mIso[1]}-${mIso[2]}-${mIso[3]}`
+  // Se veio em formato brasileiro DD/MM/YYYY ou DD-MM-YYYY
+  const mBr = /^(\d{2})[/-](\d{2})[/-](\d{4})/.exec(valor)
+  if (mBr) return `${mBr[3]}-${mBr[2]}-${mBr[1]}`
+  return formatarDataInput(interpretarDataLocal(valor))
 }
 
 const formasPagamento: { value: FormaPagamento; label: string }[] = [
@@ -118,9 +129,9 @@ function LancamentoFormFields({
   )
   const [vencimento, setVencimento] = useState(
     lancamento
-      ? formatarDataInput(new Date(lancamento.vencimento))
+      ? normalizarDataParaInput(lancamento.vencimento)
       : inicial?.vencimento
-      ? formatarDataInput(new Date(inicial.vencimento))
+      ? normalizarDataParaInput(inicial.vencimento)
       : hojeISO()
   )
   const [clienteId, setClienteId] = useState<string>(lancamento?.clienteId ?? "nenhum")
