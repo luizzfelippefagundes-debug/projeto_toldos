@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { use } from "react"
 import { formatarMoeda } from "@/lib/format"
+import { Logo } from "@/components/brand/logo"
 
 interface DadosOs {
   assinado: boolean
@@ -134,15 +135,24 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
   if (dados.assinado || concluido) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="max-w-md w-full text-center">
-          <div className="text-6xl mb-4">✅</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Documento assinado!</h1>
-          <p className="text-gray-500">
-            {dados.assinado
-              ? "Este documento já foi assinado anteriormente."
-              : "Sua assinatura foi registrada com sucesso. A Toldos Print já foi notificada."}
-          </p>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="bg-white border-b px-4 py-3 flex items-center gap-3 shadow-2xs">
+          <Logo className="w-28 py-1 px-2 rounded-md shrink-0 shadow-xs" />
+          <div className="border-l border-gray-200 pl-3">
+            <div className="font-bold text-gray-900 text-sm leading-tight">Toldos Print</div>
+            <div className="text-[11px] text-gray-500 font-medium leading-tight">Assinatura Digital</div>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="max-w-md w-full text-center bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+            <div className="text-6xl mb-4">✅</div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Documento assinado!</h1>
+            <p className="text-gray-600 text-sm">
+              {dados.assinado
+                ? "Este documento já foi assinado anteriormente."
+                : "Sua assinatura foi registrada com sucesso. A Toldos Print já foi notificada."}
+            </p>
+          </div>
         </div>
       </div>
     )
@@ -154,14 +164,12 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Cabeçalho */}
-      <div className="bg-white border-b px-4 py-3 flex items-center gap-3">
-        <div className="w-8 h-8 bg-gray-900 rounded flex items-center justify-center">
-          <span className="text-white text-xs font-bold">TP</span>
-        </div>
-        <div>
-          <div className="font-semibold text-gray-900 text-sm">Toldos Print</div>
-          <div className="text-xs text-gray-500">Assinatura Digital</div>
+      {/* Cabeçalho com Logo Oficial */}
+      <div className="bg-white border-b px-4 py-3 flex items-center gap-3 shadow-2xs">
+        <Logo className="w-28 py-1 px-2 rounded-md shrink-0 shadow-xs" />
+        <div className="border-l border-gray-200 pl-3">
+          <div className="font-bold text-gray-900 text-sm leading-tight">Toldos Print</div>
+          <div className="text-[11px] text-gray-500 font-medium leading-tight">Assinatura Digital</div>
         </div>
       </div>
 
