@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    container_name: toldosprint-sistema
+    restart: always
+    ports:
+      - "127.0.0.1:3004:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    env_file:
+      - .env.local
+    networks:
+      - app_app-net
+
+networks:
+  app_app-net:
+    external: true
