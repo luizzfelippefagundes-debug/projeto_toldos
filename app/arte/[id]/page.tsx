@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { use } from "react"
 import { formatarMoeda, formatarData } from "@/lib/format"
 import { CheckCircle2, AlertCircle, MessageCircle, ExternalLink, ZoomIn, ArrowRight } from "lucide-react"
+import { Logo } from "@/components/brand/logo"
 
 interface DadosArte {
   tipo: "orcamento" | "pedido"
@@ -62,18 +63,31 @@ export default function AprovarArtePage({ params }: { params: Promise<{ id: stri
 
   if (erro) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="max-w-md w-full text-center bg-white p-6 rounded-2xl border shadow-sm">
-          <div className="text-4xl mb-3">⚠️</div>
-          <h1 className="text-lg font-bold text-gray-800 mb-1">Não foi possível carregar a arte</h1>
-          <p className="text-sm text-gray-500 mb-4">{erro}</p>
-          <a
-            href="https://wa.me/5511999990000"
-            className="inline-flex items-center gap-2 text-sm text-emerald-600 font-medium hover:underline"
-          >
-            <MessageCircle className="w-4 h-4" />
-            Falar com o atendimento
-          </a>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <header className="bg-white border-b px-4 py-3 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-3">
+            <Logo className="w-28 py-1 px-2 rounded-md shrink-0 shadow-xs" />
+            <div className="border-l border-gray-200 pl-3">
+              <div className="font-bold text-gray-900 text-sm leading-tight">Toldos Print</div>
+              <div className="text-[11px] text-gray-500 font-medium leading-tight">Aprovação de Arte</div>
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="max-w-md w-full text-center bg-white p-6 rounded-2xl border shadow-sm">
+            <div className="text-4xl mb-3">⚠️</div>
+            <h1 className="text-lg font-bold text-gray-800 mb-1">Não foi possível carregar a arte</h1>
+            <p className="text-sm text-gray-500 mb-4">{erro}</p>
+            <a
+              href="https://wa.me/5527997489714"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-emerald-600 font-medium hover:underline"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Falar com o atendimento
+            </a>
+          </div>
         </div>
       </div>
     )
@@ -94,7 +108,7 @@ export default function AprovarArtePage({ params }: { params: Promise<{ id: stri
   const numeroFormatado = String(dados.numero).padStart(4, "0")
   const tituloPedido = dados.tipo === "orcamento" ? `Orçamento #${numeroFormatado}` : `Pedido #${numeroFormatado}`
 
-  const linkWhatsappAjuste = `https://wa.me/5511999990000?text=${encodeURIComponent(
+  const linkWhatsappAjuste = `https://wa.me/5527997489714?text=${encodeURIComponent(
     `Olá! Estou visualizando a arte do ${tituloPedido} (${dados.clienteNome}) e gostaria de solicitar um ajuste:`
   )}`
 
@@ -103,12 +117,10 @@ export default function AprovarArtePage({ params }: { params: Promise<{ id: stri
       {/* Cabeçalho */}
       <header className="bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-20 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-zinc-900 rounded-lg flex items-center justify-center shadow-xs">
-            <span className="text-white text-xs font-black tracking-wider">TP</span>
-          </div>
-          <div>
-            <div className="font-bold text-gray-900 text-sm leading-none">Toldos Print</div>
-            <div className="text-[11px] text-gray-500 mt-0.5">Aprovação de Arte</div>
+          <Logo className="w-28 py-1 px-2 rounded-md shrink-0 shadow-xs" />
+          <div className="border-l border-gray-200 pl-3">
+            <div className="font-bold text-gray-900 text-sm leading-tight">Toldos Print</div>
+            <div className="text-[11px] text-gray-500 font-medium leading-tight">Aprovação de Arte</div>
           </div>
         </div>
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-zinc-100 text-zinc-700">

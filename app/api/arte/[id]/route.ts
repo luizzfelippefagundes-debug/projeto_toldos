@@ -4,14 +4,19 @@ import { garantirColunasOrcamentos, garantirColunasPedidosRapidos } from "@/lib/
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const limpoId = id.startsWith("orc-") ? id.slice(4) : id
+  const semPrefixo = id.startsWith("orc-") ? id.slice(4) : id
+  const comPrefixo = id.startsWith("orc-") ? id : `orc-${id}`
   await garantirColunasOrcamentos()
   await garantirColunasPedidosRapidos()
 
   const sql = getSql()
 
-  // 1. Tenta achar em orcamentos
-  const orcRows = await sql`SELECT * FROM orcamentos WHERE id = ${limpoId} LIMIT 1`
+  // 1. Tenta achar em orcamentos (aceita tanto com 'orc-' quanto sem)
+  const orcRows = await sql`
+    SELECT * FROM orcamentos 
+    WHERE id = ${id} OR id = ${comPrefixo} OR id = ${semPrefixo} 
+    LIMIT 1
+  `
   if (orcRows.length > 0) {
     const r = orcRows[0]
     const cliRows = await sql`SELECT nome, telefone FROM clientes WHERE id = ${r.cliente_id} LIMIT 1`
@@ -40,7 +45,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   // 2. Tenta achar em pedidos_rapidos
-  const pedRows = await sql`SELECT * FROM pedidos_rapidos WHERE id = ${limpoId} LIMIT 1`
+  const pedRows = await sql`
+    SELECT * FROM pedidos_rapidos 
+    WHERE id = ${id} OR id = ${semPrefixo} OR id = ${comPrefixo} 
+    LIMIT 1
+  `
   if (pedRows.length > 0) {
     const p = pedRows[0]
     return NextResponse.json({
