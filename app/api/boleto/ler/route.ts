@@ -1,13 +1,15 @@
 import { anthropic } from "@ai-sdk/anthropic"
+import { google } from "@ai-sdk/google"
+import { openai } from "@ai-sdk/openai"
 import { generateText, Output } from "ai"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { apenasDigitos, interpretarBoleto } from "@/lib/boleto"
 
-// Lê um boleto (PDF ou foto). O Claude extrai os campos do documento e a
-// linha digitável é decodificada em código (lib/boleto.ts): valor e
-// vencimento vindos dela valem mais que os lidos pela IA, que só avisa
-// quando as duas leituras divergem. A chave fica só aqui no servidor.
+// Lê um boleto (PDF ou foto). A IA multimodal (Google Gemini, OpenAI GPT-4o ou Claude)
+// extrai os campos do documento e a linha digitável é decodificada e validada
+// matematicamente em código (lib/boleto.ts): valor e vencimento do código de barras
+// têm prioridade máxima de validação.
 
 const TIPOS_ACEITOS = [
   "application/pdf",
@@ -21,7 +23,7 @@ const schema = z.object({
   linhaDigitavel: z
     .string()
     .nullable()
-    .describe("Linha digitável ou código de barras numérico, só os dígitos"),
+    .describe("Linha digitável ou código de barras numérico, só os dígitos (47 ou 48 dígitos)"),
   beneficiario: z
     .string()
     .nullable()
@@ -33,10 +35,35 @@ const schema = z.object({
   pagador: z.string().nullable().describe("Nome de quem deve pagar"),
 })
 
+function obterModelo() {
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY) {
+    return {
+      modelo: google("gemini-2.5-flash"),
+      provedor: "google" as const,
+    }
+  }
+  if (process.env.OPENAI_API_KEY) {
+    return {
+      modelo: openai("gpt-4o-mini"),
+      provedor: "openai" as const,
+    }
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return {
+      modelo: anthropic("claude-3-5-sonnet-latest"),
+      provedor: "anthropic" as const,
+    }
+  }
+  return null
+}
+
 export async function POST(req: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const ia = obterModelo()
+  if (!ia) {
     return NextResponse.json(
-      { erro: "ANTHROPIC_API_KEY não configurada. Veja .env.example." },
+      {
+        erro: "Nenhuma chave de IA configurada no servidor (GOOGLE_GENERATIVE_AI_API_KEY ou OPENAI_API_KEY). Adicione sua chave no painel da Vercel ou no .env.local.",
+      },
       { status: 503 }
     )
   }
@@ -63,54 +90,62 @@ export async function POST(req: Request) {
 
   let lido
   try {
+    const conteudoArquivo =
+      arquivo.type === "application/pdf"
+        ? { type: "file" as const, data: bytes, mediaType: "application/pdf" }
+        : { type: "image" as const, image: bytes, mediaType: arquivo.type }
+
     const { output } = await generateText({
-      model: anthropic("claude-sonnet-5-5"),
+      model: ia.modelo,
       output: Output.object({ schema }),
       system:
-        "Você extrai dados de boletos de cobrança brasileiros. " +
-        "Copie os dados exatamente como estão impressos no documento; " +
-        "se um campo não aparecer ou estiver ilegível, devolva null — nunca invente. " +
-        "A linha digitável tem 47 dígitos (boleto bancário) ou 48 (concessionária); " +
-        "confira dígito a dígito.",
+        "Você é um assistente especialista em extração precisa de dados de boletos bancários e contas brasileiras (energia, água, internet, impostos, fornecedores). " +
+        "Copie os dados com exatidão cirúrgica exatamente como impressos no documento. " +
+        "Se um campo não aparecer ou estiver ilegível, devolva null — nunca invente nada. " +
+        "A linha digitável tem 47 dígitos (boleto bancário) ou 48 (concessionárias de água/luz/tributos); confira dígito por dígito.",
       messages: [
         {
           role: "user",
           content: [
-            { type: "text", text: "Extraia os dados deste boleto." },
-            arquivo.type === "application/pdf"
-              ? { type: "file", data: bytes, mediaType: "application/pdf" }
-              : { type: "image", image: bytes, mediaType: arquivo.type },
+            { type: "text", text: "Extraia os dados deste boleto ou fatura de cobrança brasileira." },
+            conteudoArquivo,
           ],
         },
       ],
     })
     lido = output
-  } catch {
+  } catch (err: any) {
+    console.error("Erro na leitura do boleto pela IA:", err)
     return NextResponse.json(
-      { erro: "Não consegui ler o boleto agora. Tente de novo ou preencha à mão." },
+      {
+        erro:
+          err?.message?.includes("unsupported") || err?.message?.includes("PDF")
+            ? "Para arquivos em PDF nativo, configure a chave GOOGLE_GENERATIVE_AI_API_KEY ou envie uma foto/print do boleto."
+            : "Não consegui ler o boleto agora. Verifique a imagem ou tente novamente.",
+      },
       { status: 502 }
     )
   }
 
   const avisos: string[] = []
-  const decodificado = lido.linhaDigitavel
+  const decodificado = lido?.linhaDigitavel
     ? interpretarBoleto(lido.linhaDigitavel)
     : null
 
-  let valor = lido.valor ?? undefined
-  let vencimento = lido.vencimento ?? undefined
+  let valor = lido?.valor ?? undefined
+  let vencimento = lido?.vencimento ?? undefined
 
-  if (!lido.linhaDigitavel) {
-    avisos.push("Não encontrei a linha digitável — confira valor e vencimento.")
+  if (!lido?.linhaDigitavel) {
+    avisos.push("Não encontrei a linha digitável com clareza — confira o valor e vencimento.")
   } else if (!decodificado || !decodificado.valido) {
     avisos.push(
-      "A linha digitável lida não passou na verificação dos dígitos. Confira o número, o valor e o vencimento com o boleto."
+      "A linha digitável lida não passou na verificação automática dos dígitos. Confira o número, o valor e o vencimento."
     )
   } else {
     if (decodificado.valor !== undefined) {
       if (valor !== undefined && Math.abs(valor - decodificado.valor) > 0.005) {
         avisos.push(
-          `O valor impresso (R$ ${valor.toFixed(2)}) difere do valor do código de barras (R$ ${decodificado.valor.toFixed(2)}). Usei o do código de barras.`
+          `O valor impresso (R$ ${valor.toFixed(2)}) difere do código de barras (R$ ${decodificado.valor.toFixed(2)}). Foi utilizado o valor do código de barras.`
         )
       }
       valor = decodificado.valor
@@ -118,7 +153,7 @@ export async function POST(req: Request) {
     if (decodificado.vencimento) {
       if (vencimento && vencimento !== decodificado.vencimento) {
         avisos.push(
-          "O vencimento impresso difere do vencimento do código de barras. Usei o do código de barras."
+          "O vencimento impresso difere do código de barras. Foi utilizado o do código de barras."
         )
       }
       vencimento = decodificado.vencimento
@@ -127,11 +162,11 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     campos: {
-      beneficiario: lido.beneficiario ?? undefined,
-      cnpjCpfBeneficiario: lido.cnpjCpfBeneficiario ?? undefined,
-      pagador: lido.pagador ?? undefined,
-      numeroDocumento: lido.numeroDocumento ?? undefined,
-      numeroBoleto: lido.linhaDigitavel
+      beneficiario: lido?.beneficiario ?? undefined,
+      cnpjCpfBeneficiario: lido?.cnpjCpfBeneficiario ?? undefined,
+      pagador: lido?.pagador ?? undefined,
+      numeroDocumento: lido?.numeroDocumento ?? undefined,
+      numeroBoleto: lido?.linhaDigitavel
         ? apenasDigitos(lido.linhaDigitavel)
         : undefined,
       valor,

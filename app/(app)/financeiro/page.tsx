@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Combobox } from "@/components/ui/combobox"
 import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-dialog"
+import { LeitorBoletoDialog } from "@/components/financeiro/leitor-boleto-dialog"
 import { LancamentoDetalheDialog } from "@/components/financeiro/lancamento-detalhe-dialog"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { agruparPagasDaSerie } from "@/lib/series"
@@ -142,6 +143,7 @@ export default function FinanceiroPage() {
           </p>
         </div>
         <div className="shrink-0 flex items-center gap-2">
+          <LeitorBoletoDialog />
           <LancamentoFormDialog
             trigger={
               <Button className="w-full sm:w-auto font-bold gap-2">

@@ -27,6 +27,7 @@ import { datasMensais, nomeDaParcela } from "@/lib/parcelas"
 import { formatarMoeda } from "@/lib/format"
 import { Switch } from "@/components/ui/switch"
 import { Plus } from "lucide-react"
+import { toast } from "sonner"
 
 function hojeISO() {
   return formatarDataInput(new Date())
@@ -47,6 +48,7 @@ interface InicialLancamento {
   vencimento?: string
   formaPagamento?: string
   numeroBoleto?: string
+  despesaFixa?: boolean
 }
 
 export function LancamentoFormDialog({
@@ -121,7 +123,7 @@ function LancamentoFormFields({
   )
   const [numeroBoleto, setNumeroBoleto] = useState(lancamento?.numeroBoleto ?? inicial?.numeroBoleto ?? "")
   const [pessoal, setPessoal] = useState(lancamento?.pessoal ?? false)
-  const [despesaFixa, setDespesaFixa] = useState(lancamento?.despesaFixa ?? false)
+  const [despesaFixa, setDespesaFixa] = useState(lancamento?.despesaFixa ?? inicial?.despesaFixa ?? false)
   // Só no lançamento novo: gera uma parcela por mês (financiamento, aluguel…).
   const [meses, setMeses] = useState("1")
   // Dessas parcelas, quantas (as primeiras) já foram pagas: entram como pagas.
@@ -385,7 +387,21 @@ function LancamentoFormFields({
 
         {formaPagamento === "boleto" && !repetir && (
           <div className="flex flex-col gap-2">
-            <Label htmlFor="numeroBoleto">Número do boleto</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="numeroBoleto">Número do boleto / Linha digitável</Label>
+              {numeroBoleto && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(numeroBoleto)
+                    toast.success("Código de barras copiado!")
+                  }}
+                  className="text-xs text-primary font-bold hover:underline cursor-pointer"
+                >
+                  Copiar código
+                </button>
+              )}
+            </div>
             <Input
               id="numeroBoleto"
               value={numeroBoleto}
