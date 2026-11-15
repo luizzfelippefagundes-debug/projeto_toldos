@@ -103,6 +103,8 @@ export async function POST(req: Request) {
 
   const bytes = new Uint8Array(await arquivo.arrayBuffer())
 
+  const modo = form?.get("modo") === "codigo_barras" ? "codigo_barras" : "completo"
+
   let lido: z.infer<typeof schema> | null = null
   let ultimoErro: any = null
 
@@ -111,6 +113,11 @@ export async function POST(req: Request) {
       ? { type: "file" as const, data: bytes, mediaType: "application/pdf" }
       : { type: "image" as const, image: bytes, mediaType: arquivo.type }
 
+  const textoInstrucaoUsuario =
+    modo === "codigo_barras"
+      ? "Esta imagem é um enquadramento focado de perto NO CÓDIGO DE BARRAS E LINHA DIGITÁVEL do boleto (como leitor de banco). Extraia com 100% de precisão numérica a LINHA DIGITÁVEL e o VALOR."
+      : "Extraia todos os dados deste boleto de cobrança com máxima precisão numérica."
+
   for (const modelo of modelos) {
     try {
       const { output } = await generateText({
@@ -118,6 +125,9 @@ export async function POST(req: Request) {
         temperature: 0,
         output: Output.object({ schema }),
         system:
+          (modo === "codigo_barras"
+            ? "ATENÇÃO: MODO LEITOR DE CÓDIGO DE BARRAS ATIVADO (ESTILO BANCO). A imagem enviada é um close-up focado no código de barras e nos números impressos da linha digitável. Concentre 100% da sua atenção na transcrição exata de TODOS os dígitos numéricos da linha digitável (47 dígitos para boleto bancário ou 48 dígitos para concessionária).\n\n"
+            : "") +
           "Você é um perito em leitura, conferência e extração exata de boletos bancários brasileiros e contas de cobrança (energia, água, internet, impostos, fornecedores).\n\n" +
           "SUA META PRINCIPAL: Extrair com 100% de precisão TODOS os números da LINHA DIGITÁVEL, o VALOR EXATO com centavos, a DATA DE VENCIMENTO e os demais dados da fatura.\n\n" +
           "REGRAS DE EXTRAÇÃO DA LINHA DIGITÁVEL:\n" +
@@ -161,7 +171,7 @@ export async function POST(req: Request) {
           {
             role: "user",
             content: [
-              { type: "text", text: "Extraia todos os dados deste boleto de cobrança com máxima precisão numérica." },
+              { type: "text", text: textoInstrucaoUsuario },
               conteudoArquivo,
             ],
           },

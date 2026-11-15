@@ -129,18 +129,22 @@ export function LeitorBoletoDialog() {
   const { lancamentos } = useData()
   const [aberto, setAberto] = useState(false)
   const [lendo, setLendo] = useState(false)
+  const [modoLendo, setModoLendo] = useState<"codigo_barras" | "completo">("codigo_barras")
   const [erro, setErro] = useState("")
   const [leitura, setLeitura] = useState<Leitura | null>(null)
   const inputArquivo = useRef<HTMLInputElement>(null)
-  const inputCamera = useRef<HTMLInputElement>(null)
+  const inputCameraCodigo = useRef<HTMLInputElement>(null)
+  const inputCameraCompleto = useRef<HTMLInputElement>(null)
 
-  async function enviar(arquivo: File | undefined) {
+  async function enviar(arquivo: File | undefined, modo: "codigo_barras" | "completo" = "codigo_barras") {
     if (!arquivo) return
     setErro("")
     setLendo(true)
+    setModoLendo(modo)
     try {
       const form = new FormData()
       form.append("file", await reduzirImagem(arquivo))
+      form.append("modo", modo)
       const res = await fetch("/api/boleto/ler", { method: "POST", body: form })
       const json = await res.json().catch(() => null)
       if (!res.ok || !json) {
@@ -171,7 +175,7 @@ export function LeitorBoletoDialog() {
         onClick={() => setAberto(true)}
         className="w-full sm:w-auto font-bold border-border/80 hover:bg-muted text-foreground gap-1.5 text-xs sm:text-sm h-10 px-2 sm:px-4 shadow-2xs transition-colors"
       >
-        <Camera className="h-4 w-4 shrink-0 text-primary" />
+        <ScanLine className="h-4 w-4 shrink-0 text-primary" />
         <span>Ler Boleto</span>
       </Button>
 
@@ -185,7 +189,7 @@ export function LeitorBoletoDialog() {
               <div>
                 <DialogTitle className="text-lg font-black">Ler Boleto</DialogTitle>
                 <DialogDescription className="text-xs">
-                  Tire uma foto ou envie o arquivo PDF para preencher os dados automaticamente.
+                  Escolha como deseja fazer a leitura do documento.
                 </DialogDescription>
               </div>
             </div>
@@ -198,9 +202,13 @@ export function LeitorBoletoDialog() {
                 <ScanLine className="w-6 h-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
               </div>
               <div>
-                <p className="font-bold text-sm text-foreground">Lendo dados do boleto...</p>
+                <p className="font-bold text-sm text-foreground">
+                  {modoLendo === "codigo_barras"
+                    ? "Lendo código de barras de perto..."
+                    : "Lendo dados completos do boleto..."}
+                </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Identificando valor, vencimento e código de barras.
+                  Conferindo dígitos, valor e data de vencimento.
                 </p>
               </div>
             </div>
@@ -208,18 +216,41 @@ export function LeitorBoletoDialog() {
             <div className="flex flex-col gap-3 py-2">
               <button
                 type="button"
-                onClick={() => inputCamera.current?.click()}
-                className="flex items-center gap-4 p-4 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary hover:bg-primary/5 transition-all text-left cursor-pointer group"
+                onClick={() => inputCameraCodigo.current?.click()}
+                className="relative flex items-center gap-3.5 p-4 rounded-xl border-2 border-primary/50 bg-primary/5 hover:bg-primary/10 transition-all text-left cursor-pointer group shadow-xs"
               >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground group-hover:scale-105 transition-transform shrink-0 shadow-xs">
+                  <ScanLine className="w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                      Escanear Código de Barras
+                    </p>
+                    <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-primary text-primary-foreground">
+                      Igual a banco
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Aproxime a câmera bem de perto do código de barras e números para máxima precisão.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => inputCameraCompleto.current?.click()}
+                className="flex items-center gap-3.5 p-4 rounded-xl border border-border hover:border-primary/40 hover:bg-muted/50 transition-all text-left cursor-pointer group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-muted-foreground group-hover:text-foreground group-hover:scale-105 transition-transform shrink-0">
                   <Camera className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                    Tirar foto com a Câmera
+                  <p className="font-bold text-sm text-foreground">
+                    Fotografar Folha Inteira
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Abre a câmera do celular para fotografar o boleto.
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Para ler também beneficiário, notas, Pix e fatura.
                   </p>
                 </div>
               </button>
@@ -227,7 +258,7 @@ export function LeitorBoletoDialog() {
               <button
                 type="button"
                 onClick={() => inputArquivo.current?.click()}
-                className="flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-muted/50 transition-all text-left cursor-pointer group"
+                className="flex items-center gap-3.5 p-4 rounded-xl border border-border hover:border-primary/40 hover:bg-muted/50 transition-all text-left cursor-pointer group"
               >
                 <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-muted-foreground group-hover:text-foreground group-hover:scale-105 transition-transform shrink-0">
                   <FileUp className="w-6 h-6" />
@@ -236,8 +267,8 @@ export function LeitorBoletoDialog() {
                   <p className="font-bold text-sm text-foreground">
                     Subir PDF ou Foto da Galeria
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Para arquivos baixados no PC ou recebidos no WhatsApp.
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Para arquivos baixados ou recebidos pelo WhatsApp.
                   </p>
                 </div>
               </button>
@@ -252,23 +283,36 @@ export function LeitorBoletoDialog() {
           )}
 
           <input
-            ref={inputArquivo}
-            type="file"
-            accept="application/pdf,image/*"
-            className="hidden"
-            onChange={(e) => {
-              enviar(e.target.files?.[0])
-              e.target.value = ""
-            }}
-          />
-          <input
-            ref={inputCamera}
+            ref={inputCameraCodigo}
             type="file"
             accept="image/*"
             capture="environment"
             className="hidden"
             onChange={(e) => {
-              enviar(e.target.files?.[0])
+              enviar(e.target.files?.[0], "codigo_barras")
+              e.target.value = ""
+            }}
+          />
+
+          <input
+            ref={inputCameraCompleto}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              enviar(e.target.files?.[0], "completo")
+              e.target.value = ""
+            }}
+          />
+
+          <input
+            ref={inputArquivo}
+            type="file"
+            accept="application/pdf,image/*"
+            className="hidden"
+            onChange={(e) => {
+              enviar(e.target.files?.[0], "completo")
               e.target.value = ""
             }}
           />

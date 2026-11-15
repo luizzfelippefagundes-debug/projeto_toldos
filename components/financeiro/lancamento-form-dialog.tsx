@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useMemo } from "react"
 import {
   Dialog,
   DialogContent,
@@ -24,9 +24,15 @@ import { formatarDataInput, interpretarDataLocal } from "@/lib/date"
 import { datasMensais, nomeDaParcela } from "@/lib/parcelas"
 import { formatarMoeda } from "@/lib/format"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Copy, Check, Sparkles } from "lucide-react"
+import { Plus, Copy, Check, Sparkles, Camera, Loader2, ScanLine } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import {
+  apenasDigitos,
+  formatarLinhaDigitavel,
+  interpretarBoleto,
+  obterIdentificacaoBoleto,
+} from "@/lib/boleto"
 
 function hojeISO() {
   return formatarDataInput(new Date())
@@ -142,6 +148,8 @@ function LancamentoFormFields({
     lancamento?.formaPagamento ?? (inicial?.formaPagamento as FormaPagamento | undefined) ?? "nenhuma"
   )
   const [numeroBoleto, setNumeroBoleto] = useState(lancamento?.numeroBoleto ?? inicial?.numeroBoleto ?? "")
+  const [escanandoCodigo, setEscanandoCodigo] = useState(false)
+  const inputScanCamera = useRef<HTMLInputElement>(null)
   const [pessoal, setPessoal] = useState(lancamento?.pessoal ?? false)
   const [despesaFixa, setDespesaFixa] = useState(lancamento?.despesaFixa ?? inicial?.despesaFixa ?? false)
   const [meses, setMeses] = useState("1")
@@ -154,6 +162,71 @@ function LancamentoFormFields({
     lancamento?.pixCopiaECola ?? inicial?.pixCopiaECola ?? ""
   )
   const [pixCopiado, setPixCopiado] = useState(false)
+
+  const infoBoleto = useMemo(() => {
+    if (!numeroBoleto) return null
+    const d = interpretarBoleto(numeroBoleto)
+    if (d && d.valido) {
+      return { decod: d, nome: obterIdentificacaoBoleto(d) }
+    }
+    return null
+  }, [numeroBoleto])
+
+  function handleNumeroBoletoChange(texto: string) {
+    setNumeroBoleto(texto)
+    const limpo = apenasDigitos(texto)
+    if (limpo.length === 44 || limpo.length === 47 || limpo.length === 48) {
+      const decod = interpretarBoleto(limpo)
+      if (decod && decod.valido) {
+        setNumeroBoleto(formatarLinhaDigitavel(decod.linhaDigitavel))
+        if (decod.valor != null && (!valor || valor === "" || Number(valor) === 0)) {
+          setValor(decod.valor.toFixed(2))
+        }
+        if (decod.vencimento && (!vencimento || vencimento === hojeISO())) {
+          setVencimento(decod.vencimento)
+        }
+        const bancoInfo = obterIdentificacaoBoleto(decod)
+        toast.success(`${bancoInfo} reconhecido! Dados preenchidos.`)
+      }
+    }
+  }
+
+  async function escanearCodigoBarrasDireto(arquivo?: File) {
+    if (!arquivo) return
+    setEscanandoCodigo(true)
+    try {
+      const form = new FormData()
+      form.append("file", arquivo)
+      form.append("modo", "codigo_barras")
+      const res = await fetch("/api/boleto/ler", { method: "POST", body: form })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.campos) {
+        toast.error(json?.erro ?? "Não foi possível ler o código. Aproxime a câmera e tente novamente.")
+        return
+      }
+      const c = json.campos
+      if (c.numeroBoleto) {
+        setNumeroBoleto(c.numeroBoleto)
+      }
+      if (c.valor != null && Number(c.valor) > 0) {
+        setValor(Number(c.valor).toFixed(2))
+      }
+      if (c.vencimento) {
+        setVencimento(normalizarDataParaInput(c.vencimento))
+      }
+      if (c.beneficiario && !descricao) {
+        setDescricao(`Boleto — ${c.beneficiario}`)
+      }
+      if (c.pixCopiaECola && !pixCopiaECola) {
+        setPixCopiaECola(c.pixCopiaECola)
+      }
+      toast.success("Código de barras lido com sucesso!")
+    } catch {
+      toast.error("Erro ao enviar imagem. Verifique a conexão.")
+    } finally {
+      setEscanandoCodigo(false)
+    }
+  }
 
   const quantidadeMeses = Number(meses)
   const mesesValidos =
@@ -352,8 +425,8 @@ function LancamentoFormFields({
         </div>
 
         {formaPagamento === "boleto" && !repetir && (
-          <div className="flex flex-col gap-2 p-3.5 rounded-xl bg-muted/40 border border-border">
-            <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col gap-2.5 p-3.5 rounded-xl bg-muted/40 border border-border">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
                 <Label htmlFor="numeroBoleto" className="text-xs font-bold text-foreground">
                   Linha Digitável / Código de Barras
@@ -377,36 +450,82 @@ function LancamentoFormFields({
                   </span>
                 )}
               </div>
-              {numeroBoleto && (
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   type="button"
-                  onClick={copiarCodigo}
-                  className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200/50 dark:border-indigo-800/50 cursor-pointer active:scale-95 transition-all"
+                  disabled={escanandoCodigo}
+                  onClick={() => inputScanCamera.current?.click()}
+                  className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/90 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-lg border border-primary/20 cursor-pointer active:scale-95 transition-all disabled:opacity-50"
+                  title="Aponte a câmera bem de perto no código de barras"
                 >
-                  {copiado ? (
+                  {escanandoCodigo ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
-                      <span className="text-emerald-600 dark:text-emerald-400">Copiado!</span>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Lendo código...</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Copiar código</span>
+                      <ScanLine className="w-3.5 h-3.5" />
+                      <span>Escanear Código</span>
                     </>
                   )}
                 </button>
-              )}
+                {numeroBoleto && (
+                  <button
+                    type="button"
+                    onClick={copiarCodigo}
+                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-1 rounded-lg border border-indigo-200/50 dark:border-indigo-800/50 cursor-pointer active:scale-95 transition-all"
+                  >
+                    {copiado ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-emerald-600 dark:text-emerald-400">Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copiar</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
+
             <Input
               id="numeroBoleto"
               value={numeroBoleto}
-              onChange={(e) => setNumeroBoleto(e.target.value)}
-              placeholder="Ex: 00190.00009 03..."
+              onChange={(e) => handleNumeroBoletoChange(e.target.value)}
+              placeholder="Cole ou digite o código de barras (preenche valor e vencimento na hora)"
               className="h-11 sm:h-10 font-mono text-xs sm:text-sm"
             />
+
+            {infoBoleto && (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+                <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span>
+                  {infoBoleto.nome}
+                  {infoBoleto.decod.valor != null ? ` • R$ ${infoBoleto.decod.valor.toFixed(2)}` : ""}
+                  {infoBoleto.decod.vencimento ? ` • Vencimento: ${infoBoleto.decod.vencimento.split("-").reverse().join("/")}` : ""}
+                </span>
+              </div>
+            )}
+
             <p className="text-[11px] text-muted-foreground">
-              Você pode copiar este código direto para colar no app do seu banco.
+              Você pode escanear com a câmera ou colar o código. O valor e o vencimento são calculados automaticamente.
             </p>
+
+            <input
+              ref={inputScanCamera}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                escanearCodigoBarrasDireto(e.target.files?.[0])
+                e.target.value = ""
+              }}
+            />
           </div>
         )}
 

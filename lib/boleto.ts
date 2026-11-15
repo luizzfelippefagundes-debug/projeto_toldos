@@ -293,5 +293,37 @@ export function interpretarBoleto(
   return interpretarBancario(digitos, hoje)
 }
 
+export function obterIdentificacaoBoleto(decod: BoletoInterpretado): string {
+  if (decod.tipo === "concessionaria") {
+    const segmento = decod.codigoBarras[1]
+    const mapaSegmentos: Record<string, string> = {
+      "1": "Prefeituras / IPTU / Tributos",
+      "2": "Água e Esgoto / Saneamento",
+      "3": "Energia Elétrica e Gás",
+      "4": "Energia / Telecomunicações",
+      "5": "Órgãos Governamentais",
+      "6": "Carnês e Concessionárias",
+      "7": "Multas de Trânsito",
+    }
+    return mapaSegmentos[segmento] || "Conta de Concessionária"
+  }
+  const banco = decod.banco || decod.codigoBarras.slice(0, 3)
+  const mapaBancos: Record<string, string> = {
+    "001": "Banco do Brasil",
+    "033": "Santander",
+    "041": "Banrisul",
+    "077": "Banco Inter",
+    "104": "Caixa Econômica",
+    "212": "Banco Original",
+    "237": "Bradesco",
+    "260": "Nubank",
+    "341": "Itaú",
+    "422": "Safra",
+    "748": "Sicredi",
+    "756": "SICOOB",
+  }
+  return mapaBancos[banco] ? `${mapaBancos[banco]} (${banco})` : `Banco ${banco}`
+}
+
 // Só pra montar linhas válidas nos testes.
 export const _internos = { modulo10, modulo11Bancario }
