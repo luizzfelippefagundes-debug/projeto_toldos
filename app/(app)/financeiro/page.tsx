@@ -142,13 +142,13 @@ export default function FinanceiroPage() {
             Contas a pagar e a receber — orçamentos fechados e pedidos entram aqui automaticamente.
           </p>
         </div>
-        <div className="shrink-0 flex items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
           <LeitorBoletoDialog />
           <LancamentoFormDialog
             trigger={
-              <Button className="w-full sm:w-auto font-bold gap-2">
-                <Plus className="h-4 w-4" />
-                Novo Lançamento
+              <Button className="w-full sm:w-auto font-bold gap-1.5 text-xs sm:text-sm h-10 px-2 sm:px-4 shadow-2xs">
+                <Plus className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap">Novo Lançamento</span>
               </Button>
             }
           />

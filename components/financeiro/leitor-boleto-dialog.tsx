@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-dialog"
 import { useData } from "@/context/data-context"
-import { Camera, FileUp, Loader2, Sparkles, AlertCircle } from "lucide-react"
+import { Camera, FileUp, Loader2, ScanLine, AlertCircle, FileText } from "lucide-react"
 
 interface CamposLidos {
   beneficiario?: string
@@ -138,24 +138,23 @@ export function LeitorBoletoDialog() {
       <Button
         variant="outline"
         onClick={() => setAberto(true)}
-        className="font-bold border-indigo-500/30 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 gap-2 shadow-2xs transition-colors"
+        className="w-full sm:w-auto font-bold border-border/80 hover:bg-muted text-foreground gap-1.5 text-xs sm:text-sm h-10 px-2 sm:px-4 shadow-2xs transition-colors"
       >
-        <Sparkles className="h-4 w-4 text-indigo-500 animate-pulse" />
-        <span className="hidden sm:inline">Escanear Boleto com IA</span>
-        <span className="sm:hidden">Ler Boleto IA</span>
+        <Camera className="h-4 w-4 shrink-0 text-primary" />
+        <span>Ler Boleto</span>
       </Button>
 
       <Dialog open={aberto} onOpenChange={(v) => !lendo && setAberto(v)}>
         <DialogContent className="w-[95vw] sm:max-w-md max-h-[92vh] overflow-y-auto p-4 sm:p-6 rounded-2xl shadow-2xl border-border/80">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl text-indigo-600 dark:text-indigo-300">
-                <Sparkles className="h-5 w-5" />
+              <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                <ScanLine className="h-5 w-5" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-black">Escanear Boleto com IA</DialogTitle>
+                <DialogTitle className="text-lg font-black">Ler Boleto</DialogTitle>
                 <DialogDescription className="text-xs">
-                  Tire uma foto ou suba um PDF. A IA extrai valor, vencimento e código de barras.
+                  Tire uma foto ou envie o arquivo PDF para preencher os dados automaticamente.
                 </DialogDescription>
               </div>
             </div>
@@ -164,13 +163,13 @@ export function LeitorBoletoDialog() {
           {lendo ? (
             <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
               <div className="relative">
-                <div className="w-14 h-14 rounded-full border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 animate-spin" />
-                <Sparkles className="w-6 h-6 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                <div className="w-14 h-14 rounded-full border-4 border-muted border-t-primary animate-spin" />
+                <ScanLine className="w-6 h-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
               </div>
               <div>
                 <p className="font-bold text-sm text-foreground">Lendo dados do boleto...</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  A inteligência artificial está identificando valor, vencimento e linha digitável.
+                  Identificando valor, vencimento e código de barras.
                 </p>
               </div>
             </div>
@@ -179,17 +178,17 @@ export function LeitorBoletoDialog() {
               <button
                 type="button"
                 onClick={() => inputCamera.current?.click()}
-                className="flex items-center gap-4 p-4 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-800 hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-all text-left cursor-pointer group"
+                className="flex items-center gap-4 p-4 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary hover:bg-primary/5 transition-all text-left cursor-pointer group"
               >
-                <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
                   <Camera className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm text-foreground group-hover:text-indigo-600 transition-colors">
+                  <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
                     Tirar foto com a Câmera
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Abre a câmera do celular para fotografar o boleto de papel.
+                    Abre a câmera do celular para fotografar o boleto.
                   </p>
                 </div>
               </button>
@@ -197,7 +196,7 @@ export function LeitorBoletoDialog() {
               <button
                 type="button"
                 onClick={() => inputArquivo.current?.click()}
-                className="flex items-center gap-4 p-4 rounded-xl border border-border hover:border-indigo-400 hover:bg-muted/50 transition-all text-left cursor-pointer group"
+                className="flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-muted/50 transition-all text-left cursor-pointer group"
               >
                 <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-muted-foreground group-hover:text-foreground group-hover:scale-105 transition-transform shrink-0">
                   <FileUp className="w-6 h-6" />

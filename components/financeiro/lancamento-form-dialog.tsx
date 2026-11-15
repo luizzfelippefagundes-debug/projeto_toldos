@@ -206,10 +206,10 @@ function LancamentoFormFields({
           {lancamento ? "Editar lançamento" : "Novo lançamento"}
         </DialogTitle>
         {inicial && (
-          <div className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-700 dark:text-indigo-300">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+          <div className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary">
+            <Check className="w-3.5 h-3.5 text-primary shrink-0" />
             <span className="font-medium">
-              Dados extraídos pela IA do boleto. Confira os campos antes de confirmar.
+              Dados lidos do boleto. Confira os campos antes de confirmar.
             </span>
           </div>
         )}
