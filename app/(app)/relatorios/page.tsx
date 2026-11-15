@@ -19,6 +19,7 @@ import { quantidadeMaterialConsumida } from "@/lib/calculo"
 import { formatarMoeda, formatarData } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { resumirFinanceiro } from "@/lib/financeiro"
+import { EMPRESA_ORCAMENTO } from "@/lib/orcamento-pdf"
 import type { ItemProduto, Orcamento } from "@/lib/types"
 import {
   FileSpreadsheet,
@@ -361,24 +362,41 @@ export default function RelatoriosPage() {
       {/* ========================================================= */}
       {/* CABEÇALHO EXECUTIVO PROFISSIONAL EXCLUSIVO PARA IMPRESSÃO / PDF */}
       {/* ========================================================= */}
-      <div className="hidden print:flex flex-col gap-3 pb-4 mb-4 border-b-2 border-slate-900">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-black text-slate-950 uppercase tracking-tight">
-              TOLDOS PRINT & COMUNICAÇÃO VISUAL
-            </h1>
-            <p className="text-xs font-bold text-slate-700">
-              Relatório Executivo & Demonstrativo Financeiro
-            </p>
-            <p className="text-[11px] text-slate-600 font-medium">
-              Período selecionado: <strong className="text-slate-900">{tituloPeriodo}</strong>
-            </p>
+      <div className="hidden print:flex flex-col gap-2.5 pb-3 mb-3 border-b-2 border-slate-900">
+        <div className="flex items-center justify-between gap-4">
+          {/* Logo Oficial e Identificação da Empresa */}
+          <div className="flex items-center gap-3.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo-orcamento.png"
+              alt="Toldos Print"
+              className="h-13 w-auto object-contain shrink-0"
+            />
+            <div className="border-l-2 border-slate-300 pl-3">
+              <h1 className="text-sm font-black text-slate-950 uppercase tracking-tight leading-tight">
+                TOLDOS PRINT & COMUNICAÇÃO VISUAL
+              </h1>
+              <p className="text-[9.5px] text-slate-600 font-semibold leading-tight mt-0.5">
+                {EMPRESA_ORCAMENTO.cnpj}
+              </p>
+              <p className="text-[9px] text-slate-600 leading-tight">
+                {EMPRESA_ORCAMENTO.endereco.join(" — ")} • Tel: (27) 99748-9714
+              </p>
+            </div>
           </div>
-          <div className="text-right text-[11px] text-slate-600">
-            <p className="font-bold text-slate-900">
-              Emitido em: {new Date().toLocaleDateString("pt-BR")} às {new Date().toLocaleTimeString("pt-BR")}
+
+          {/* Dados do Relatório / Metadados */}
+          <div className="text-right text-[10px] text-slate-600 shrink-0">
+            <span className="inline-block px-2 py-0.5 bg-slate-900 text-white font-black text-[9px] uppercase tracking-wider rounded">
+              Relatório Executivo
+            </span>
+            <p className="font-black text-slate-950 text-xs mt-1">
+              {tituloPeriodo}
             </p>
-            <p className="font-semibold text-slate-800">
+            <p className="text-[9.5px] text-slate-500 font-medium">
+              Emitido em {new Date().toLocaleDateString("pt-BR")} às {new Date().toLocaleTimeString("pt-BR")}
+            </p>
+            <p className="text-[9.5px] font-bold text-slate-700">
               Filtro: {filtroStatus === "pagos" ? "Apenas Pagos" : filtroStatus === "pendentes" ? "Apenas Pendentes" : "Todos os Registros"}
             </p>
           </div>
@@ -386,26 +404,26 @@ export default function RelatoriosPage() {
 
         {/* Quadro Resumo em Linha Compacta para Impressão */}
         <div className="grid grid-cols-5 gap-2 pt-2 border-t border-slate-300 text-xs">
-          <div className="p-2 bg-slate-100 rounded border border-slate-300">
-            <span className="text-[10px] uppercase font-bold text-slate-600 block">Total Recebido</span>
+          <div className="p-2 bg-slate-50 rounded border border-slate-300">
+            <span className="text-[9px] uppercase font-bold text-slate-600 block">Total Recebido</span>
             <span className="text-sm font-black text-emerald-800">{formatarMoeda(resumo.recebido)}</span>
           </div>
-          <div className="p-2 bg-slate-100 rounded border border-slate-300">
-            <span className="text-[10px] uppercase font-bold text-slate-600 block">Total Pago</span>
+          <div className="p-2 bg-slate-50 rounded border border-slate-300">
+            <span className="text-[9px] uppercase font-bold text-slate-600 block">Total Pago</span>
             <span className="text-sm font-black text-red-800">{formatarMoeda(resumo.pago)}</span>
           </div>
-          <div className="p-2 bg-slate-100 rounded border border-slate-300">
-            <span className="text-[10px] uppercase font-bold text-slate-600 block">Saldo Período</span>
+          <div className="p-2 bg-slate-50 rounded border border-slate-300">
+            <span className="text-[9px] uppercase font-bold text-slate-600 block">Saldo Líquido</span>
             <span className={cn("text-sm font-black", saldo < 0 ? "text-red-800" : "text-emerald-800")}>
               {formatarMoeda(saldo)}
             </span>
           </div>
-          <div className="p-2 bg-slate-100 rounded border border-slate-300">
-            <span className="text-[10px] uppercase font-bold text-slate-600 block">A Receber Aberto</span>
+          <div className="p-2 bg-slate-50 rounded border border-slate-300">
+            <span className="text-[9px] uppercase font-bold text-slate-600 block">A Receber Aberto</span>
             <span className="text-sm font-black text-slate-900">{formatarMoeda(resumo.aReceber)}</span>
           </div>
-          <div className="p-2 bg-slate-100 rounded border border-slate-300">
-            <span className="text-[10px] uppercase font-bold text-slate-600 block">Orçamentos Fechados</span>
+          <div className="p-2 bg-slate-50 rounded border border-slate-300">
+            <span className="text-[9px] uppercase font-bold text-slate-600 block">Orçamentos Fechados</span>
             <span className="text-sm font-black text-slate-900">
               {orcamentosPeriodo.length} ({formatarMoeda(totalOrcamentos)})
             </span>
@@ -865,7 +883,7 @@ export default function RelatoriosPage() {
 
       {/* 1. SEÇÃO: ORÇAMENTOS FECHADOS */}
       {(secaoFiltro === "todas" || secaoFiltro === "orcamentos") && (
-        <section className="flex flex-col gap-3 print-avoid-break">
+        <section className="flex flex-col gap-3">
           {/* Header da Seção Limpo e Responsivo */}
           <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
             <div className="flex items-center gap-1.5 min-w-0">
@@ -987,7 +1005,7 @@ export default function RelatoriosPage() {
 
       {/* 2. SEÇÃO: PEDIDOS CONCLUÍDOS */}
       {(secaoFiltro === "todas" || secaoFiltro === "pedidos") && (
-        <section className="flex flex-col gap-3 print-avoid-break">
+        <section className="flex flex-col gap-3">
           {/* Header da Seção Limpo e Responsivo */}
           <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
             <div className="flex items-center gap-1.5 min-w-0">
@@ -1115,7 +1133,7 @@ export default function RelatoriosPage() {
 
       {/* 3. SEÇÃO: LANÇAMENTOS FINANCEIROS */}
       {(secaoFiltro === "todas" || secaoFiltro === "financeiro") && (
-        <section className="flex flex-col gap-3 print-avoid-break">
+        <section className="flex flex-col gap-3">
           {/* Header da Seção Limpo e Responsivo */}
           <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
             <div className="flex items-center gap-1.5 min-w-0">
@@ -1261,7 +1279,7 @@ export default function RelatoriosPage() {
 
       {/* 4. SEÇÃO: USO DE MATERIAIS */}
       {(secaoFiltro === "todas" || secaoFiltro === "materiais") && (
-        <section className="flex flex-col gap-3 print-avoid-break">
+        <section className="flex flex-col gap-3">
           {/* Header da Seção Limpo e Responsivo */}
           <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/50">
             <div className="flex items-center gap-1.5 min-w-0">
@@ -1357,39 +1375,62 @@ export default function RelatoriosPage() {
         </section>
       )}
 
-      {/* ESTILOS DE IMPRESSÃO A4 (Evita páginas infinitas, cortes feios e cartões brutos) */}
+      {/* ESTILOS DE IMPRESSÃO A4 EXECUTIVA COM LOGO E CORES OFICIAIS */}
       <style jsx global>{`
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm 12mm;
+            margin: 8mm 10mm;
+          }
+          *, *::before, *::after {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           body {
             background: white !important;
             color: #0f172a !important;
           }
+          /* Tabelas Corporativas A4 */
           .print-table {
             display: table !important;
             width: 100% !important;
             border-collapse: collapse !important;
+            margin-top: 4px !important;
           }
-          .print-table th {
-            padding: 5px 8px !important;
-            font-size: 11px !important;
-            text-transform: uppercase !important;
-            background-color: #f1f5f9 !important;
-            color: #0f172a !important;
-            border-bottom: 2px solid #94a3b8 !important;
+          .print-table thead {
+            display: table-header-group !important;
           }
-          .print-table td {
-            padding: 5px 8px !important;
-            font-size: 10.5px !important;
-            line-height: 1.3 !important;
-            border-bottom: 1px solid #e2e8f0 !important;
+          .print-table tbody {
+            display: table-row-group !important;
           }
-          .print-avoid-break {
+          .print-table tr {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+          }
+          .print-table th {
+            padding: 5px 6px !important;
+            font-size: 9.5px !important;
+            font-weight: 800 !important;
+            text-transform: uppercase !important;
+            background-color: #0f172a !important;
+            color: #ffffff !important;
+            border: 1px solid #0f172a !important;
+          }
+          .print-table td {
+            padding: 4px 6px !important;
+            font-size: 9.5px !important;
+            line-height: 1.25 !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #0f172a !important;
+          }
+          .print-table tbody tr:nth-child(even) td {
+            background-color: #f8fafc !important;
+          }
+          .print-table tfoot tr td,
+          .print-table tr.font-bold td {
+            background-color: #f1f5f9 !important;
+            font-weight: 800 !important;
+            border-top: 2px solid #0f172a !important;
           }
         }
       `}</style>
