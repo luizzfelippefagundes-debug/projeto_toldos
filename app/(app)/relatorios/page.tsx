@@ -32,6 +32,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Filter,
   CheckCircle2,
   AlertCircle,
@@ -66,6 +67,7 @@ export default function RelatoriosPage() {
 
   // Filtro de Status (Todos, Apenas Pagos, Apenas Pendentes)
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "pagos" | "pendentes">("todos")
+  const [mostrarDatasCustom, setMostrarDatasCustom] = useState(false)
 
   // Inicializa com o mês atual
   useEffect(() => {
@@ -411,22 +413,54 @@ export default function RelatoriosPage() {
       </div>
 
       {/* Header em Tela (Oculto na Impressão) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4 print:hidden">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-border/60 pb-3 print:hidden">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-black tracking-tight">Relatórios Gerenciais</h1>
+            <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-2xl font-black tracking-tight text-foreground leading-tight">
+                Relatórios
+              </h1>
+              <p className="text-[11px] text-muted-foreground hidden sm:block">
+                Demonstrativo gerencial, fluxo financeiro e fechamento de produção
+              </p>
+            </div>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Filtragem por mês, demonstrativo financeiro limpo e exportação executiva.
-          </p>
+
+          {/* Botões Compactos no Mobile (ao lado do título para poupar tela) */}
+          <div className="flex items-center gap-1.5 sm:hidden">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              className="h-8 px-2.5 text-xs font-semibold gap-1 border-border/80 shadow-2xs hover:bg-muted"
+              title="Imprimir / Salvar em PDF"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span>PDF</span>
+            </Button>
+            <Button
+              size="sm"
+              onClick={exportarExcel}
+              disabled={exportando}
+              className="h-8 px-2.5 text-xs font-bold gap-1 shadow-2xs"
+              title="Exportar para Excel"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              <span>{exportando ? "..." : "Excel"}</span>
+            </Button>
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+
+        {/* Botões Completos no Desktop */}
+        <div className="hidden sm:flex sm:items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.print()}
-            className="h-10 text-xs font-semibold gap-2 border-border/80 shadow-2xs hover:bg-muted"
+            className="h-9 px-3 text-xs font-semibold gap-2 border-border/80 shadow-2xs hover:bg-muted"
           >
             <Printer className="h-4 w-4" />
             Imprimir / PDF
@@ -435,7 +469,7 @@ export default function RelatoriosPage() {
             size="sm"
             onClick={exportarExcel}
             disabled={exportando}
-            className="h-10 text-xs font-bold gap-2 shadow-2xs"
+            className="h-9 px-3 text-xs font-bold gap-2 shadow-2xs"
           >
             <FileSpreadsheet className="h-4 w-4" />
             {exportando ? "Gerando Excel..." : "Exportar Excel"}
@@ -443,69 +477,72 @@ export default function RelatoriosPage() {
         </div>
       </div>
 
-      {/* PAINEL DE CONTROLE: SELETOR DE MÊS, ANO E FILTRO DE STATUS (Oculto na Impressão) */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs print:hidden">
-        {/* Linha 1: Navegador de Mês & Ano */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            <span className="font-bold text-base text-foreground">
-              {tituloPeriodo}
-            </span>
+      {/* PAINEL DE CONTROLE GERENCIAL (Oculto na Impressão) */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-card/90 p-3 sm:p-4 shadow-sm backdrop-blur-xs print:hidden">
+        {/* Linha 1: Período Ativo + Seletor Unificado de Ano */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Calendar className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block leading-tight">
+                Período Selecionado
+              </span>
+              <h2 className="font-extrabold text-sm sm:text-base text-foreground truncate">
+                {tituloPeriodo}
+              </h2>
+            </div>
           </div>
 
-          {/* Botões de navegação rápida Mês Anterior / Próximo + Seletor de Ano */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
+          {/* Navegador de Ano Elegante e Unificado: [ < ] [ 2026 ▾ ] [ > ] */}
+          <div className="inline-flex items-center rounded-xl border border-border/80 bg-background/80 shadow-2xs shrink-0 overflow-hidden">
+            <button
+              type="button"
               onClick={mesAnterior}
-              className="h-8 px-2 text-xs font-semibold gap-1"
+              className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
               title="Mês anterior"
             >
               <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Anterior</span>
-            </Button>
+            </button>
 
-            <select
-              value={anoSelecionado}
-              onChange={(e) => {
-                const ano = Number(e.target.value)
-                setAnoSelecionado(ano)
-                if (typeof mesSelecionado === "number") {
-                  selecionarMes(ano, mesSelecionado)
-                } else if (mesSelecionado === "todos") {
-                  selecionarAnoTodo(ano)
-                }
-              }}
-              className="h-8 rounded-lg border border-border/80 bg-background px-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {[2024, 2025, 2026, 2027].map((a) => (
-                <option key={a} value={a}>
-                  Ano {a}
-                </option>
-              ))}
-            </select>
+            <div className="relative border-x border-border/60 px-2 flex items-center">
+              <select
+                value={anoSelecionado}
+                onChange={(e) => {
+                  const ano = Number(e.target.value)
+                  setAnoSelecionado(ano)
+                  if (typeof mesSelecionado === "number") {
+                    selecionarMes(ano, mesSelecionado)
+                  } else if (mesSelecionado === "todos") {
+                    selecionarAnoTodo(ano)
+                  }
+                }}
+                className="h-8 appearance-none bg-transparent pr-4 text-xs font-black text-foreground cursor-pointer focus:outline-none"
+              >
+                {[2024, 2025, 2026, 2027].map((a) => (
+                  <option key={a} value={a} className="bg-popover text-popover-foreground">
+                    Ano {a}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-1.5 h-3 w-3 text-muted-foreground" />
+            </div>
 
-            <Button
-              variant="outline"
-              size="sm"
+            <button
+              type="button"
               onClick={mesProximo}
-              className="h-8 px-2 text-xs font-semibold gap-1"
+              className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
               title="Próximo mês"
             >
-              <span className="hidden sm:inline">Próximo</span>
               <ChevronRight className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
         </div>
 
-        {/* Linha 2: Pílulas dos 12 Meses (Toque único pra mudar de mês) */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-            Selecione o Mês:
-          </span>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+        {/* Linha 2: Seletor de Mês (Grid 6x2 no celular que nunca corta, 12 cols no desktop) */}
+        <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
+          <div className="grid grid-cols-6 sm:grid-cols-12 gap-1 sm:gap-1.5">
             {MESES.map((m) => {
               const ativo = mesSelecionado === m.index
               return (
@@ -514,64 +551,114 @@ export default function RelatoriosPage() {
                   type="button"
                   onClick={() => selecionarMes(anoSelecionado, m.index)}
                   className={cn(
-                    "px-3 py-1.5 rounded-full font-bold transition-all shrink-0",
+                    "h-8 rounded-lg text-xs font-bold transition-all flex items-center justify-center active:scale-95",
                     ativo
-                      ? "bg-primary text-primary-foreground shadow-xs font-black"
-                      : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-primary text-primary-foreground font-black shadow-xs ring-2 ring-primary/30"
+                      : "bg-muted/40 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                   )}
                 >
                   {m.sigla}
                 </button>
               )
             })}
+          </div>
 
-            <div className="h-4 w-px bg-border/80 mx-1 shrink-0" />
-
-            {/* Opção Ano Inteiro */}
+          {/* Opções de Escopo: Ano Todo, Todo Histórico, Datas Livres */}
+          <div className="grid grid-cols-3 gap-1 pt-0.5 text-[11px]">
             <button
               type="button"
               onClick={() => selecionarAnoTodo(anoSelecionado)}
               className={cn(
-                "px-3 py-1.5 rounded-full font-bold transition-all shrink-0",
+                "h-7 rounded-lg font-bold transition-all truncate px-1 text-center",
                 mesSelecionado === "todos"
-                  ? "bg-primary text-primary-foreground shadow-xs font-black"
-                  : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-primary text-primary-foreground font-black shadow-xs"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
               )}
             >
-              Ano Todo ({anoSelecionado})
+              Ano {anoSelecionado} Todo
             </button>
-
-            {/* Opção Todo o Histórico */}
             <button
               type="button"
               onClick={selecionarHistoricoCompleto}
               className={cn(
-                "px-3 py-1.5 rounded-full font-bold transition-all shrink-0",
+                "h-7 rounded-lg font-bold transition-all truncate px-1 text-center",
                 mesSelecionado === "custom" && !dataDe && !dataAte
-                  ? "bg-primary text-primary-foreground shadow-xs font-black"
-                  : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-primary text-primary-foreground font-black shadow-xs"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
               )}
             >
-              Histórico Completo
+              Todo Histórico
+            </button>
+            <button
+              type="button"
+              onClick={() => setMostrarDatasCustom((prev) => !prev)}
+              className={cn(
+                "h-7 rounded-lg font-bold transition-all truncate px-1 text-center flex items-center justify-center gap-1",
+                mostrarDatasCustom || (mesSelecionado === "custom" && (dataDe || dataAte))
+                  ? "bg-primary/20 text-primary border border-primary/30 font-black"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+              )}
+            >
+              <span>Datas Livres</span>
+              <ChevronDown className={cn("h-3 w-3 transition-transform", mostrarDatasCustom && "rotate-180")} />
             </button>
           </div>
+
+          {/* Ajuste fino por data (Colapsável para não poluir o celular) */}
+          {mostrarDatasCustom && (
+            <div className="mt-1 p-2.5 rounded-xl bg-muted/30 border border-border/60 flex items-center gap-2 text-xs animate-in fade-in duration-200">
+              <div className="flex-1 flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-muted-foreground">De:</span>
+                <input
+                  type="date"
+                  value={dataDe}
+                  onChange={(e) => {
+                    setDataDe(e.target.value)
+                    setMesSelecionado("custom")
+                  }}
+                  className="w-full h-8 rounded-lg border border-border/80 bg-background px-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div className="flex-1 flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-muted-foreground">Até:</span>
+                <input
+                  type="date"
+                  value={dataAte}
+                  onChange={(e) => {
+                    setDataAte(e.target.value)
+                    setMesSelecionado("custom")
+                  }}
+                  className="w-full h-8 rounded-lg border border-border/80 bg-background px-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Linha 3: Filtro de Liquidação (Todos vs Apenas Pagos vs Apenas Pendentes) + Datas Custom */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-border/60">
-          {/* Pílulas de Status para despoluir a visualização */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mr-1 flex items-center gap-1">
-              <Filter className="h-3 w-3" /> Situação:
+        {/* Linha 3: Segmented Control de Situação (Ultra compacto e limpo) */}
+        <div className="flex flex-col gap-1 pt-2 border-t border-border/60">
+          <div className="flex items-center justify-between text-[11px] font-semibold text-muted-foreground px-0.5">
+            <span className="flex items-center gap-1 font-bold uppercase tracking-wider">
+              <Filter className="h-3 w-3 text-primary" /> Filtro de Situação:
             </span>
+            <span className="text-[10px] text-muted-foreground font-medium">
+              {filtroStatus === "todos"
+                ? "Todos os lançamentos"
+                : filtroStatus === "pagos"
+                ? "Apenas baixados / quitados"
+                : "Apenas pendentes / em aberto"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-muted/40 border border-border/60 text-xs font-bold">
             <button
               type="button"
               onClick={() => setFiltroStatus("todos")}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-bold transition-all",
+                "h-8 rounded-lg transition-all flex items-center justify-center gap-1.5 active:scale-95",
                 filtroStatus === "todos"
-                  ? "bg-foreground text-background shadow-xs font-black"
-                  : "bg-muted/60 text-muted-foreground hover:bg-muted"
+                  ? "bg-background text-foreground shadow-2xs font-black border border-border/70"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               Todos
@@ -580,162 +667,130 @@ export default function RelatoriosPage() {
               type="button"
               onClick={() => setFiltroStatus("pagos")}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1",
+                "h-8 rounded-lg transition-all flex items-center justify-center gap-1.5 active:scale-95",
                 filtroStatus === "pagos"
-                  ? "bg-emerald-600 text-white shadow-xs font-black"
-                  : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20"
+                  ? "bg-emerald-600 text-white shadow-2xs font-black"
+                  : "text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
               )}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Apenas Pagos / Concluídos
+              <span>Pagos</span>
             </button>
             <button
               type="button"
               onClick={() => setFiltroStatus("pendentes")}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1",
+                "h-8 rounded-lg transition-all flex items-center justify-center gap-1.5 active:scale-95",
                 filtroStatus === "pendentes"
-                  ? "bg-amber-600 text-white shadow-xs font-black"
-                  : "bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+                  ? "bg-amber-600 text-white shadow-2xs font-black"
+                  : "text-amber-500 hover:text-amber-400 hover:bg-amber-500/10"
               )}
             >
               <AlertCircle className="h-3.5 w-3.5" />
-              Apenas Em Aberto / Pendentes
+              <span>Em Aberto</span>
             </button>
-          </div>
-
-          {/* Ajuste fino por data se precisar */}
-          <div className="flex items-center gap-2 text-xs">
-            <div className="flex items-center gap-1">
-              <span className="text-muted-foreground font-semibold">De:</span>
-              <input
-                type="date"
-                value={dataDe}
-                onChange={(e) => {
-                  setDataDe(e.target.value)
-                  setMesSelecionado("custom")
-                }}
-                className="h-8 rounded-lg border border-border/80 bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-muted-foreground font-semibold">Até:</span>
-              <input
-                type="date"
-                value={dataAte}
-                onChange={(e) => {
-                  setDataAte(e.target.value)
-                  setMesSelecionado("custom")
-                }}
-                className="h-8 rounded-lg border border-border/80 bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
           </div>
         </div>
       </div>
 
-      {/* CARDS DE MÉTRICAS EM TELA (Ocultos na impressão para não poluir o PDF) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 print:hidden">
-        {/* Recebido */}
-        <div className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>Recebido no Período</span>
+      {/* CARDS DE MÉTRICAS EM TELA (Compactos, elegantes e responsivos) */}
+      <div className="flex flex-col gap-2.5 print:hidden">
+        {/* Bloco 1: 4 Métricas Financeiras Principais */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          {/* Recebido */}
+          <div className="flex flex-col rounded-xl border border-border/80 border-l-4 border-l-emerald-500 bg-card p-3 sm:p-4 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="truncate">Recebido no Período</span>
+            </div>
+            <p className="mt-1 text-base sm:text-2xl font-black text-emerald-500 truncate">
+              {formatarMoeda(resumo.recebido)}
+            </p>
+            <span className="text-[10px] text-muted-foreground/80 mt-0.5">receitas baixadas</span>
           </div>
-          <p className="mt-1 text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
-            {formatarMoeda(resumo.recebido)}
-          </p>
-          <span className="text-[10px] text-muted-foreground/80 mt-0.5">receitas baixadas</span>
+
+          {/* Pago */}
+          <div className="flex flex-col rounded-xl border border-border/80 border-l-4 border-l-destructive bg-card p-3 sm:p-4 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+              <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+              <span className="truncate">Pago no Período</span>
+            </div>
+            <p className="mt-1 text-base sm:text-2xl font-black text-destructive truncate">
+              {formatarMoeda(resumo.pago)}
+            </p>
+            <span className="text-[10px] text-muted-foreground/80 mt-0.5">despesas baixadas</span>
+          </div>
+
+          {/* Saldo período */}
+          <div className="flex flex-col rounded-xl border border-border/80 border-l-4 border-l-primary bg-card p-3 sm:p-4 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+              <Clock className="h-3.5 w-3.5 text-primary" />
+              <span className="truncate">Saldo Líquido</span>
+            </div>
+            <p className={cn("mt-1 text-base sm:text-2xl font-black truncate", saldo < 0 ? "text-destructive" : "text-emerald-500")}>
+              {formatarMoeda(saldo)}
+            </p>
+            <span className="text-[10px] text-muted-foreground/80 mt-0.5">recebido − pago</span>
+          </div>
+
+          {/* Vencido a receber */}
+          <div className="flex flex-col rounded-xl border border-border/80 border-l-4 border-l-amber-500 bg-card p-3 sm:p-4 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+              <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+              <span className="truncate">Vencido a Receber</span>
+            </div>
+            <p className={cn("mt-1 text-base sm:text-2xl font-black truncate", resumo.vencidoAReceber > 0 ? "text-amber-500" : "text-foreground")}>
+              {formatarMoeda(resumo.vencidoAReceber)}
+            </p>
+            <span className="text-[10px] text-muted-foreground/80 mt-0.5">cobranças em atraso</span>
+          </div>
         </div>
 
-        {/* Pago */}
-        <div className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
-            <TrendingDown className="h-3.5 w-3.5 text-destructive" />
-            <span>Pago no Período</span>
+        {/* Bloco 2: Métricas Operacionais Secundárias */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          {/* Orçamentos fechados */}
+          <div className="flex flex-col rounded-xl border border-border/60 bg-card/70 p-2.5 sm:p-3.5 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+              <FileText className="h-3.5 w-3.5 text-blue-500" />
+              <span className="truncate">Orçamentos Fechados</span>
+            </div>
+            <p className="mt-0.5 text-sm sm:text-lg font-black text-foreground">
+              {orcamentosPeriodo.length} <span className="text-xs font-semibold text-primary">({formatarMoeda(totalOrcamentos)})</span>
+            </p>
           </div>
-          <p className="mt-1 text-xl sm:text-2xl font-black text-destructive">
-            {formatarMoeda(resumo.pago)}
-          </p>
-          <span className="text-[10px] text-muted-foreground/80 mt-0.5">despesas baixadas</span>
-        </div>
 
-        {/* Saldo período */}
-        <div className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
-            <Clock className="h-3.5 w-3.5 text-primary" />
-            <span>Saldo Líquido</span>
+          {/* Pedidos concluídos */}
+          <div className="flex flex-col rounded-xl border border-border/60 bg-card/70 p-2.5 sm:p-3.5 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+              <Package className="h-3.5 w-3.5 text-violet-500" />
+              <span className="truncate">Pedidos Prontos</span>
+            </div>
+            <p className="mt-0.5 text-sm sm:text-lg font-black text-foreground">
+              {pedidosPeriodo.length} <span className="text-xs font-semibold text-primary">({formatarMoeda(totalPedidos)})</span>
+            </p>
           </div>
-          <p className={cn("mt-1 text-xl sm:text-2xl font-black", saldo < 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400")}>
-            {formatarMoeda(saldo)}
-          </p>
-          <span className="text-[10px] text-muted-foreground/80 mt-0.5">recebido − pago</span>
-        </div>
 
-        {/* Vencido a receber */}
-        <div className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
-            <AlertCircle className="h-3.5 w-3.5 text-orange-500" />
-            <span>Vencido a Receber</span>
+          {/* A receber aberto */}
+          <div className="flex flex-col rounded-xl border border-border/60 bg-card/70 p-2.5 sm:p-3.5 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+              <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="truncate">A Receber Aberto</span>
+            </div>
+            <p className="mt-0.5 text-sm sm:text-lg font-black text-foreground">
+              {formatarMoeda(resumo.aReceber)}
+            </p>
           </div>
-          <p className={cn("mt-1 text-xl sm:text-2xl font-black", resumo.vencidoAReceber > 0 ? "text-destructive" : "text-foreground")}>
-            {formatarMoeda(resumo.vencidoAReceber)}
-          </p>
-          <span className="text-[10px] text-muted-foreground/80 mt-0.5">cobranças em atraso</span>
-        </div>
 
-        {/* Orçamentos fechados */}
-        <div className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
-            <FileText className="h-3.5 w-3.5 text-blue-500" />
-            <span>Orçamentos Fechados</span>
+          {/* Custo materiais */}
+          <div className="flex flex-col rounded-xl border border-border/60 bg-card/70 p-2.5 sm:p-3.5 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+              <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="truncate">Custo de Materiais</span>
+            </div>
+            <p className="mt-0.5 text-sm sm:text-lg font-black text-foreground">
+              {formatarMoeda(totalCustoMateriais)}
+            </p>
           </div>
-          <p className="mt-1 text-xl sm:text-2xl font-black text-foreground">
-            {orcamentosPeriodo.length}
-          </p>
-          <p className="text-xs font-semibold text-primary mt-0.5 truncate">
-            {formatarMoeda(totalOrcamentos)}
-          </p>
-        </div>
-
-        {/* Pedidos concluídos */}
-        <div className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
-            <Package className="h-3.5 w-3.5 text-violet-500" />
-            <span>Pedidos Prontos</span>
-          </div>
-          <p className="mt-1 text-xl sm:text-2xl font-black text-foreground">
-            {pedidosPeriodo.length}
-          </p>
-          <p className="text-xs font-semibold text-primary mt-0.5 truncate">
-            {formatarMoeda(totalPedidos)}
-          </p>
-        </div>
-
-        {/* A receber aberto */}
-        <div className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
-            <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>A Receber em Aberto</span>
-          </div>
-          <p className="mt-1 text-xl sm:text-2xl font-black text-foreground">
-            {formatarMoeda(resumo.aReceber)}
-          </p>
-          <span className="text-[10px] text-muted-foreground/80 mt-0.5">a vencer</span>
-        </div>
-
-        {/* Custo materiais */}
-        <div className="flex flex-col rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4 shadow-2xs">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
-            <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Custo de Materiais</span>
-          </div>
-          <p className="mt-1 text-xl sm:text-2xl font-black text-foreground">
-            {formatarMoeda(totalCustoMateriais)}
-          </p>
-          <span className="text-[10px] text-muted-foreground/80 mt-0.5">
-            {usoMaterial.length} tipos consumidos
-          </span>
         </div>
       </div>
 
