@@ -8,6 +8,7 @@ import { Logo } from "@/components/brand/logo"
 interface DadosOs {
   assinado: boolean
   assinadoEm: string | null
+  orcamentoId?: string
   orcamentoNumero: number
   orcamentoCriadoEm: string
   clienteNome: string
@@ -144,14 +145,34 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
           </div>
         </div>
         <div className="flex-1 flex items-center justify-center p-4">
-          <div className="max-w-md w-full text-center bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+          <div className="max-w-md w-full text-center bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-sm">
             <div className="text-6xl mb-4">✅</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Documento assinado!</h1>
-            <p className="text-gray-600 text-sm">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Contrato e OS Assinados!</h1>
+            <p className="text-gray-600 text-sm mb-6">
               {dados.assinado
-                ? "Este documento já foi assinado anteriormente."
-                : "Sua assinatura foi registrada com sucesso. A Toldos Print já foi notificada."}
+                ? "Este documento já foi assinado digitalmente."
+                : "Sua assinatura foi registrada com sucesso! A Toldos Print já foi notificada e seu pedido entrou em produção."}
             </p>
+            <div className="flex flex-col gap-2.5">
+              {dados.orcamentoId && (
+                <a
+                  href={`/api/orcamentos/${dados.orcamentoId}/contrato/pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm inline-flex items-center justify-center gap-2 transition-colors shadow-xs"
+                >
+                  📑 Baixar Contrato de Serviços Assinado (PDF)
+                </a>
+              )}
+              <a
+                href={`/api/assinar/${token}/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm inline-flex items-center justify-center gap-2 transition-colors shadow-xs"
+              >
+                📄 Baixar Ordem de Serviço Assinada (PDF)
+              </a>
+            </div>
           </div>
         </div>
       </div>

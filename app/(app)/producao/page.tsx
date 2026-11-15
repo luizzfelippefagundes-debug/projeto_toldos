@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   DndContext,
@@ -66,6 +67,7 @@ import {
   FileText,
   Pencil,
   Plus,
+  Printer,
 } from "lucide-react"
 import { linkWhatsapp } from "@/lib/whatsapp"
 import { toast } from "sonner"
@@ -1651,27 +1653,24 @@ function OrcamentoCardConteudo({
         <div className="flex items-center gap-1.5 shrink-0">
           {assinatura && (
             <div onPointerDown={(e) => e.stopPropagation()}>
-              {assinatura.assinado && assinatura.pdfUrl ? (
-                <a
-                  href={assinatura.pdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              {assinatura.assinado ? (
+                <Link
+                  href={`/orcamentos/${orcamento.id}/contrato`}
                   className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/25"
-                  title="OS Assinada - Ver PDF"
+                  title="Contrato e OS Assinados - Ver Documento"
                 >
                   <FileCheck className="h-3 w-3" />
                   Assinada
-                </a>
-              ) : assinatura.assinado ? (
-                <span className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600">
-                  <FileCheck className="h-3 w-3" />
-                  Assinada
-                </span>
+                </Link>
               ) : (
-                <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">
+                <Link
+                  href={`/orcamentos/${orcamento.id}/contrato`}
+                  className="inline-flex items-center gap-0.5 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 hover:bg-amber-500/20"
+                  title="Aguardando Assinatura - Ver Contrato"
+                >
                   <FileCheck className="h-3 w-3" />
                   Ag. Assinatura
-                </span>
+                </Link>
               )}
             </div>
           )}
@@ -1700,6 +1699,26 @@ function OrcamentoCardConteudo({
           onSalvar={onSalvarObservacao}
         />
       )}
+
+      {/* Botões de Acesso Rápido ao Contrato e OS */}
+      <div className="flex items-center gap-1.5 pt-1 border-t border-border/40" onPointerDown={(e) => e.stopPropagation()}>
+        <Link
+          href={`/orcamentos/${orcamento.id}/contrato`}
+          className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold transition-colors flex items-center justify-center gap-1 border border-emerald-500/20 shadow-2xs"
+          title="Abrir Contrato de Prestação de Serviços"
+        >
+          <FileText className="h-3 w-3" />
+          Ver Contrato
+        </Link>
+        <Link
+          href={`/orcamentos/${orcamento.id}/os`}
+          className="py-1 px-2.5 rounded-lg bg-muted/60 hover:bg-muted text-foreground text-[11px] font-medium transition-colors flex items-center justify-center gap-1 border border-border/60"
+          title="Ver Ordem de Serviço (PDF)"
+        >
+          <Printer className="h-3 w-3" />
+          OS
+        </Link>
+      </div>
 
       {/* Status Bar: Dropdown + Avançar */}
       <div

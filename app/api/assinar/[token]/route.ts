@@ -3,6 +3,7 @@ import { put } from "@vercel/blob"
 import { getSql } from "@/lib/db"
 import { garantirTabelaAssinaturasOs } from "@/lib/migracoes"
 import { gerarPdfOsServidor } from "@/lib/pdf-os-servidor"
+import { gerarPdfContratoServidor } from "@/lib/pdf-contrato-servidor"
 import { formatarNumeroOrcamento } from "@/lib/orcamento-pdf"
 import { enviarDocumentoWhatsapp } from "@/lib/evolution-api"
 import { registrarMensagemBot } from "@/lib/bot-registro"
@@ -36,6 +37,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
     assinado: !!reg.assinado_em,
     assinadoEm: reg.assinado_em ?? null,
     pdfUrl: reg.pdf_url ?? null,
+    orcamentoId: reg.orcamento_id,
     orcamentoNumero: r.numero,
     orcamentoCriadoEm: r.criado_em,
     clienteNome,
@@ -101,13 +103,33 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       fechadoEm: r.fechado_em,
     } as Orcamento
 
-    const clienteRows = await sql`SELECT nome, telefone FROM clientes WHERE id = ${r.cliente_id} LIMIT 1`
+    const clienteRows = await sql`SELECT nome, telefone, cpf, email FROM clientes WHERE id = ${r.cliente_id} LIMIT 1`
     const clienteNome = (clienteRows[0]?.nome as string) ?? "Cliente"
     const clienteTelefone = (clienteRows[0]?.telefone as string) ?? undefined
+    const clienteCpf = (clienteRows[0]?.cpf as string) ?? undefined
+    const clienteEmail = (clienteRows[0]?.email as string) ?? undefined
 
     try {
+      const numeroFormatado = formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)
       const pdf = await gerarPdfOsServidor(orcamento, clienteNome, clienteTelefone, assinaturaData)
-      const nomeArquivo = `OS-${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)}-assinada.pdf`
+      const nomeArquivo = `OS-${numeroFormatado}-assinada.pdf`
+
+      // Gera o Contrato Oficial de Prestação de Serviços assinado
+      let pdfContrato: Buffer | null = null
+      const nomeArquivoContrato = `Contrato-CTR-${numeroFormatado}-assinado.pdf`
+      try {
+        pdfContrato = await gerarPdfContratoServidor(
+          orcamento,
+          clienteNome,
+          clienteTelefone,
+          clienteCpf,
+          clienteEmail,
+          assinaturaData,
+          agora
+        )
+      } catch (errContrato) {
+        console.error("[assinar] falha ao gerar pdf do contrato:", errContrato)
+      }
 
       // Salva o PDF no Vercel Blob para ficar acessível no sistema (se configurado)
       try {
@@ -118,6 +140,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
           allowOverwrite: true,
         })
         await sql`UPDATE assinaturas_os SET pdf_url = ${blob.url} WHERE id = ${token}`
+
+        if (pdfContrato) {
+          await put(`contratos-assinados/${nomeArquivoContrato}`, pdfContrato, {
+            access: "public",
+            contentType: "application/pdf",
+            addRandomSuffix: false,
+            allowOverwrite: true,
+          })
+        }
       } catch (errBlob) {
         console.warn("[assinar] upload do blob falhou ou token não configurado:", errBlob)
       }
@@ -126,21 +157,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       if (numeroEmpresa) {
         await enviarDocumentoWhatsapp(
           numeroEmpresa,
-          pdf.toString("base64"),
-          nomeArquivo,
-          `✅ ${clienteNome} assinou a OS nº ${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)}!`
+          (pdfContrato || pdf).toString("base64"),
+          pdfContrato ? nomeArquivoContrato : nomeArquivo,
+          `✅ ${clienteNome} assinou o Contrato e a OS nº ${numeroFormatado}!`
         )
       }
 
       // Envia cópia do contrato de serviço assinado para o cliente
       if (clienteTelefone) {
         const nomeExibido = clienteNome.split(" ")[0]
-        const mensagemContrato = `Olá${nomeExibido ? `, ${nomeExibido}` : ""}! 🎉 Obrigado por assinar a Ordem de Serviço!\n\n📄 Segue em anexo o seu *Contrato de Prestação de Serviço assinado digitalmente* para você guardar.\n\nO seu pedido já foi aprovado e encaminhado para a produção! Qualquer dúvida estamos à disposição. 😊`
+        const mensagemContrato = `Olá${nomeExibido ? `, ${nomeExibido}` : ""}! 🎉 Obrigado por assinar a Ordem de Serviço!\n\n📄 Segue em anexo o seu *Contrato de Prestação de Serviços assinado digitalmente* para você guardar.\n\nO seu pedido já foi aprovado e encaminhado para a produção! Qualquer dúvida estamos à disposição. 😊`
 
+        // Envia o Contrato oficial em anexo
         await enviarDocumentoWhatsapp(
           clienteTelefone,
-          pdf.toString("base64"),
-          nomeArquivo,
+          (pdfContrato || pdf).toString("base64"),
+          pdfContrato ? nomeArquivoContrato : nomeArquivo,
           mensagemContrato
         )
 
@@ -148,7 +180,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
           clienteId: r.cliente_id ?? null,
           clienteNome,
           telefone: clienteTelefone,
-          texto: `📄 Contrato de serviço assinado enviado ao cliente: ${nomeArquivo}`,
+          texto: `📄 Contrato de serviço assinado enviado ao cliente: ${pdfContrato ? nomeArquivoContrato : nomeArquivo}`,
           origem: "automatica",
           autor: "bot",
         })
