@@ -10,7 +10,7 @@ import { formatarData, formatarMoeda } from "@/lib/format"
 import { formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { linkWhatsapp } from "@/lib/whatsapp"
-import { ArrowLeft, MessageCircle, Printer } from "lucide-react"
+import { ArrowLeft, MessageCircle, Printer, FileCheck } from "lucide-react"
 
 export default function OrdemDeServicoPage() {
   const { id } = useParams<{ id: string }>()
@@ -155,6 +155,13 @@ export default function OrdemDeServicoPage() {
             onClick={() => router.push(`/orcamentos/${orcamento.id}/orcamento`)}
           >
             Ver orçamento (PDF)
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/orcamentos/${orcamento.id}/contrato`)}
+          >
+            <FileCheck className="mr-2 h-4 w-4" />
+            Ver contrato
           </Button>
           <Button onClick={() => window.print()}>
             <Printer className="mr-2 h-4 w-4" />

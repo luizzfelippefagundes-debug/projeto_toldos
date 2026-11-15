@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { OrcamentoDetalhes } from "@/components/orcamentos/orcamento-detalhes"
 import { EnviarWhatsappDialog } from "@/components/orcamentos/enviar-whatsapp-dialog"
-import { Printer, FileText, Pencil, Copy, RotateCcw, Trash2, MessageCircle } from "lucide-react"
+import { Printer, FileText, FileCheck, Pencil, Copy, RotateCcw, Trash2, MessageCircle } from "lucide-react"
 import { toast } from "sonner"
 
 export function OrcamentoDetalheDialog({
@@ -108,6 +108,15 @@ export function OrcamentoDetalheDialog({
                 >
                   <Printer className="mr-2 h-4 w-4" />
                   Imprimir OS
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  nativeButton={false}
+                  render={<Link href={`/orcamentos/${orcamento.id}/contrato`} />}
+                >
+                  <FileCheck className="mr-2 h-4 w-4" />
+                  Contrato
                 </Button>
                 <Button variant="outline" size="sm" onClick={handleDuplicar}>
                   <Copy className="mr-2 h-4 w-4" />

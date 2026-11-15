@@ -240,8 +240,8 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         </button>
 
         <p className="text-xs text-center text-gray-400 pb-4">
-          Ao confirmar, você concorda com os termos da Ordem de Serviço.
-          Sua assinatura e IP serão registrados com data e hora.
+          Ao confirmar, você concorda com os termos da Ordem de Serviço e do Contrato de Prestação de Serviços.
+          Sua assinatura e IP serão registrados digitalmente com data e hora.
         </p>
       </div>
     </div>

@@ -9,7 +9,7 @@ import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { ehImagem, formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 import { textoCondicoesPagamento } from "@/lib/parcelas"
 import { OrcamentoOficial } from "@/components/orcamentos/orcamento-oficial"
-import { ArrowLeft, MessageCircle, Printer } from "lucide-react"
+import { ArrowLeft, MessageCircle, Printer, FileCheck } from "lucide-react"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { linkWhatsapp, mensagemOrcamentoWhatsapp } from "@/lib/whatsapp"
 import { gerarPdfOrcamento } from "@/lib/pdf-orcamento"
@@ -121,6 +121,13 @@ export default function OrcamentoOficialPage() {
               Cliente sem telefone
             </Button>
           )}
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/orcamentos/${orcamento.id}/contrato`)}
+          >
+            <FileCheck className="mr-2 h-4 w-4" />
+            Ver Contrato
+          </Button>
           <Button onClick={() => window.print()}>
             <Printer className="mr-2 h-4 w-4" />
             Imprimir / salvar PDF

@@ -8,7 +8,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const sql = getSql()
   const rows = await sql`
-    SELECT id, assinado_em, pdf_url, criado_em, expira_em
+    SELECT id, assinado_em, assinatura_data, pdf_url, criado_em, expira_em
     FROM assinaturas_os
     WHERE orcamento_id = ${id}
     ORDER BY criado_em DESC
@@ -23,6 +23,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     token: r.id,
     assinado,
     assinadoEm: r.assinado_em ?? null,
+    assinaturaData: r.assinatura_data ?? null,
     pdfUrl: assinado ? `/api/assinar/${r.id}/pdf` : (r.pdf_url ?? null),
     criadoEm: r.criado_em,
     expiraEm: r.expira_em,
