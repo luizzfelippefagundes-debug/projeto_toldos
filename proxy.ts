@@ -41,6 +41,11 @@ const apiSoDono = createRouteMatcher([
 ])
 
 export default clerkMiddleware(async (auth, req) => {
+  const host = req.headers.get("host") || ""
+  if (host.startsWith("sistema.") && req.nextUrl.pathname === "/") {
+    return NextResponse.redirect(new URL("/dashboard", req.url))
+  }
+
   if (rotaPublica(req)) return
 
   const { userId, sessionClaims, redirectToSignIn } = await auth()
