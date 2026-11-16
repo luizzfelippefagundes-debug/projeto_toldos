@@ -170,7 +170,7 @@ describe("séries no Financeiro", () => {
     fireEvent.change(screen.getByLabelText("Vencimento"), { target: { value: "2026-08-28" } })
     fireEvent.change(screen.getByLabelText("Repetir por quantos meses?"), { target: { value: "15" } })
     fireEvent.change(screen.getByLabelText("Dessas, quantas já foram pagas?"), { target: { value: "3" } })
-    expect(screen.getByText(/As 3 primeiras parcelas \(até 28\/10\/2026\)/)).toBeTruthy()
+    expect(screen.getByText(/3 parcelas anteriores entrarão como/)).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Salvar" }))
     await waitFor(() => expect(ctx!.lancamentos).toHaveLength(15))

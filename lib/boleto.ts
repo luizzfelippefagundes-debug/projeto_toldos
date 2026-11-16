@@ -4,8 +4,12 @@
 
 export interface BoletoInterpretado {
   tipo: "bancario" | "concessionaria"
-  // Dígitos verificadores conferem. Se false, a leitura provavelmente errou.
+  // Dígitos verificadores conferem (ou foram recompostos). Se false, a leitura provavelmente errou.
   valido: boolean
+  // true só quando o dígito verificador GERAL bate com o que foi lido — é o único
+  // DV que protege o valor e o fator de vencimento. Se false, valor/vencimento
+  // tirados do código NÃO são confiáveis.
+  confiavel: boolean
   codigoBarras: string
   linhaDigitavel: string
   valor?: number
@@ -78,6 +82,38 @@ export function vencimentoPeloFator(
     Math.abs(a - referencia) <= Math.abs(b - referencia) ? a : b
   )
   return formatarData(new Date(melhor))
+}
+
+// Inverso de vencimentoPeloFator: data YYYY-MM-DD -> fator de 4 dígitos.
+// A partir de 22/02/2025 o fator recomeça em 1000.
+export function fatorDoVencimento(dataISO: string): number | undefined {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dataISO)
+  if (!m) return undefined
+  const DIA = 86_400_000
+  const t = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  const reinicio = Date.UTC(2025, 1, 22)
+  const fator =
+    t >= reinicio
+      ? 1000 + Math.round((t - reinicio) / DIA)
+      : Math.round((t - Date.UTC(1997, 9, 7)) / DIA)
+  if (fator < 1000 || fator > 9999) return undefined
+  return fator
+}
+
+// Confere o DV geral de um código de barras bancário (44 posições).
+export function dvGeralBancarioConfere(cb: string): boolean {
+  if (cb.length !== 44) return false
+  return modulo11Bancario(cb.slice(0, 4) + cb.slice(5)) === Number(cb[4])
+}
+
+// Monta um código de barras bancário trocando fator/valor e mantendo o DV lido.
+export function montarCodigoBancario(cbBase: string, fator: number, centavos: number): string {
+  return (
+    cbBase.slice(0, 5) +
+    String(fator).padStart(4, "0") +
+    String(Math.round(centavos)).padStart(10, "0") +
+    cbBase.slice(19)
+  )
 }
 
 export function codigoBarrasParaLinhaBancaria(cb: string): string {
@@ -156,6 +192,7 @@ function interpretarBancario(
 
   let codigoBarras: string
   let camposValidos = true
+  let confiavel = false
   let linhaDigitavelFinal = digitos
 
   if (digitos.length === 47) {
@@ -184,13 +221,16 @@ function interpretarBancario(
 
     if (todosCamposOk && dvGeralOriginalOk) {
       camposValidos = true
+      confiavel = true
       linhaDigitavelFinal = digitos
     } else if (todosCamposOk && !dvGeralOriginalOk) {
-      // Os campos de dados e seus DVs estão 100% íntegros; apenas o dígito verificador geral foi lido errado pelo OCR
-      codigoBarras = codigoBarras.slice(0, 4) + String(dvEsperado) + codigoBarras.slice(5)
-      linhaDigitavelFinal =
-        digitos.slice(0, 32) + String(dvEsperado) + digitos.slice(33)
-      camposValidos = true
+      // Campos 1-3 íntegros, mas o DV geral não bate. O campo 5 (fator + valor)
+      // só é protegido pelo DV geral, então NÃO dá pra saber se o erro está no DV
+      // ou no valor/vencimento. Marcamos como não confiável (antes o sistema
+      // "consertava" o DV e aceitava valor/data possivelmente errados).
+      camposValidos = false
+      confiavel = false
+      linhaDigitavelFinal = digitos
     } else if (!todosCamposOk && dvGeralOriginalOk) {
       // O código de barras de 44 posições confere 100% com o DV Geral; apenas o DV de algum campo da linha foi lido errado
       const c1Correto = c1.slice(0, -1) + String(modulo10(c1.slice(0, -1)))
@@ -198,6 +238,7 @@ function interpretarBancario(
       const c3Correto = c3.slice(0, -1) + String(modulo10(c3.slice(0, -1)))
       linhaDigitavelFinal = c1Correto + c2Correto + c3Correto + dvGeral + fatorCentavos
       camposValidos = true
+      confiavel = true
     } else {
       camposValidos = false
       linhaDigitavelFinal = digitos
@@ -207,6 +248,7 @@ function interpretarBancario(
     linhaDigitavelFinal = codigoBarrasParaLinhaBancaria(codigoBarras)
     const semDv = codigoBarras.slice(0, 4) + codigoBarras.slice(5)
     camposValidos = modulo11Bancario(semDv) === Number(codigoBarras[4])
+    confiavel = camposValidos
   } else {
     return null
   }
@@ -217,6 +259,7 @@ function interpretarBancario(
   return {
     tipo: "bancario",
     valido: camposValidos,
+    confiavel,
     codigoBarras,
     linhaDigitavel: linhaDigitavelFinal,
     valor: centavos > 0 ? centavos / 100 : undefined,
@@ -274,10 +317,15 @@ function interpretarConcessionaria(digitos: string): BoletoInterpretado | null {
 
   const valorEfetivo = identificador === "6" || identificador === "8"
   const centavos = Number(codigoBarras.slice(4, 15))
+  // DV geral (posição 4 do código) protege todos os 43 dígitos, inclusive o valor.
+  const dvGeralOk =
+    codigoBarras.length === 44 &&
+    dv(codigoBarras.slice(0, 3) + codigoBarras.slice(4)) === Number(codigoBarras[3])
 
   return {
     tipo: "concessionaria",
     valido: blocosValidos,
+    confiavel: blocosValidos && dvGeralOk,
     codigoBarras,
     linhaDigitavel: linhaDigitavelFinal,
     valor: valorEfetivo && centavos > 0 ? centavos / 100 : undefined,

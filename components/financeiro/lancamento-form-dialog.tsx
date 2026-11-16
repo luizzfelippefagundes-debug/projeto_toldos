@@ -21,7 +21,7 @@ import { useData } from "@/context/data-context"
 import type { FormaPagamento, LancamentoFinanceiro, TipoLancamento } from "@/lib/types"
 import { isPositiveNumberInput } from "@/lib/number"
 import { formatarDataInput, interpretarDataLocal } from "@/lib/date"
-import { datasMensais, nomeDaParcela, subtrairMeses } from "@/lib/parcelas"
+import { datasMensaisAncoradas, nomeDaParcela } from "@/lib/parcelas"
 import { formatarMoeda } from "@/lib/format"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Copy, Check, Sparkles, Camera, Loader2, ScanLine } from "lucide-react"
@@ -244,12 +244,16 @@ function LancamentoFormFields({
     !repetir ||
     (Number.isInteger(quantidadeJaPagas) && quantidadeJaPagas >= 0 && quantidadeJaPagas <= quantidadeMeses)
 
-  const dataInicialCalculada =
-    repetir && quantidadeJaPagas > 0 && dataRefereA === "proxima"
-      ? subtrairMeses(vencimento, quantidadeJaPagas)
-      : vencimento
+  // "proxima": a data digitada é a da próxima parcela a pagar (nº jaPagas + 1).
+  // "primeira": a data digitada é a da parcela 1.
+  const indiceReferencia =
+    repetir && jaPagasValidas && quantidadeJaPagas > 0 && dataRefereA === "proxima"
+      ? quantidadeJaPagas
+      : 0
 
-  const datasRepeticao = repetir ? datasMensais(dataInicialCalculada, quantidadeMeses) : []
+  const datasRepeticao = repetir
+    ? datasMensaisAncoradas(vencimento, quantidadeMeses, indiceReferencia)
+    : []
 
   const valido =
     descricao.trim().length > 0 &&

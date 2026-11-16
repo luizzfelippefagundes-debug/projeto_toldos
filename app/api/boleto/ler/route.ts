@@ -5,6 +5,7 @@ import { generateText, Output } from "ai"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { apenasDigitos, formatarLinhaDigitavel, interpretarBoleto } from "@/lib/boleto"
+import { reconciliarBoleto } from "@/lib/boleto-reconciliar"
 
 // Lê um boleto (PDF ou foto). A IA multimodal (Google Gemini, OpenAI GPT-4o ou Claude)
 // extrai os campos do documento e a linha digitável é decodificada e validada
@@ -297,42 +298,24 @@ export async function POST(req: Request) {
     }
   }
 
-  let valor = lido?.valor ?? undefined
-  let vencimento = normalizarDataISO(lido?.vencimento)
+  const reconciliado = reconciliarBoleto([
+    {
+      linhaDigitavel: lido?.linhaDigitavel,
+      blocosLinhaDigitavel: lido?.blocosLinhaDigitavel,
+      valor: lido?.valor,
+      vencimento: lido?.vencimento,
+    },
+  ])
 
-  if (!digitosBrutos) {
-    avisos.push("Não encontrei a linha digitável com clareza — confira o valor e vencimento.")
-  } else if (!decodificado || !decodificado.valido) {
-    avisos.push(
-      "A linha digitável lida não passou na verificação automática dos dígitos. Confira o número, o valor e o vencimento."
-    )
-  } else {
-    // 1. O VALOR IMPRESSO LIDO PELA IA É SOBERANO!
-    // O código de barras é usado apenas como fallback se o valor impresso não foi detectado no documento.
-    if (valor === undefined || valor === null || valor <= 0) {
-      if (decodificado.valor !== undefined && decodificado.valor > 0) {
-        valor = decodificado.valor
-      }
-    } else if (decodificado.valor !== undefined && decodificado.valor > 0 && Math.abs(valor - decodificado.valor) > 0.005) {
-      avisos.push(
-        `Valor impresso no documento mantido (R$ ${valor.toFixed(2)}).`
-      )
-    }
+  // Linha final formatada (reconciliada ou a decodificada ou a lida)
+  const linhaParaFormatar =
+    reconciliado.numeroBoleto ||
+    (decodificado?.linhaDigitavel ? formatarLinhaDigitavel(decodificado.linhaDigitavel) : undefined) ||
+    (digitosBrutos ? formatarLinhaDigitavel(digitosBrutos) : undefined)
 
-    // 2. A DATA DE VENCIMENTO IMPRESSA LIDA PELA IA É SOBERANA!
-    // O código de barras é usado apenas como fallback se a data impressa não foi detectada no documento.
-    if (!vencimento && decodificado.tipo === "bancario" && decodificado.vencimento) {
-      vencimento = decodificado.vencimento
-    } else if (vencimento && decodificado.tipo === "bancario" && decodificado.vencimento && vencimento !== decodificado.vencimento) {
-      avisos.push(
-        `Vencimento impresso no documento mantido (${vencimento.split("-").reverse().join("/")}).`
-      )
-    }
-  }
-
-  // Linha final validada (se o decodificador tiver reconstruído perfeitamente ou a lida)
-  const linhaParaFormatar = decodificado?.linhaDigitavel || digitosBrutos
-  const numeroFormatado = formatarLinhaDigitavel(linhaParaFormatar)
+  const avisosFinais = [...avisos, ...reconciliado.avisos].filter(
+    (aviso, idx, arr) => arr.indexOf(aviso) === idx
+  )
 
   return NextResponse.json({
     campos: {
@@ -343,11 +326,11 @@ export async function POST(req: Request) {
       mesReferencia: lido?.mesReferencia ?? undefined,
       pixCopiaECola: lido?.pixCopiaECola ?? undefined,
       instrucoes: lido?.instrucoes ?? undefined,
-      numeroBoleto: numeroFormatado || undefined,
-      valor,
-      vencimento,
+      numeroBoleto: linhaParaFormatar || undefined,
+      valor: reconciliado.valor,
+      vencimento: reconciliado.vencimento,
     },
-    linhaValida: Boolean(decodificado?.valido),
-    avisos,
+    linhaValida: reconciliado.confiavel,
+    avisos: avisosFinais,
   })
 }

@@ -85,6 +85,36 @@ export function datasMensais(primeiraData: string, quantidade: number): string[]
   })
 }
 
+// Desloca uma data YYYY-MM-DD em N meses (N pode ser negativo), mantendo o dia
+// original e caindo no último dia quando o mês não tem esse dia.
+export function deslocarMeses(dataISO: string, deslocamento: number): string {
+  const [ano, mes, dia] = dataISO.split("-").map(Number)
+  if (!ano || !mes || !dia || !Number.isInteger(deslocamento)) return dataISO
+  const total = mes - 1 + deslocamento
+  const a = ano + Math.floor(total / 12)
+  const m = ((total % 12) + 12) % 12
+  const ultimoDia = new Date(a, m + 1, 0).getDate()
+  const d = Math.min(dia, ultimoDia)
+  return `${a}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`
+}
+
+// Datas de uma série mensal em que a data conhecida é a da parcela de índice
+// `indiceReferencia` (0 = primeira). Ex.: 31 parcelas, 27 já pagas, próxima vence
+// 28/11/2026 -> indiceReferencia = 27; a parcela 28 cai exatamente em 28/11/2026.
+// Cada data é calculada a partir da referência (não em cadeia), então um dia 31
+// não "encolhe" para 28 depois de fevereiro.
+export function datasMensaisAncoradas(
+  dataReferencia: string,
+  quantidade: number,
+  indiceReferencia: number
+): string[] {
+  if (!Number.isInteger(quantidade) || quantidade < 1) return []
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataReferencia)) return []
+  return Array.from({ length: quantidade }, (_, i) =>
+    deslocarMeses(dataReferencia, i - indiceReferencia)
+  )
+}
+
 // "STRADA" -> "STRADA (3/15)"; sem repetição, o nome fica como está.
 export function nomeDaParcela(descricao: string, indice: number, total: number): string {
   return total > 1 ? `${descricao} (${indice + 1}/${total})` : descricao
