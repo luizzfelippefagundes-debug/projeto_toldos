@@ -17,7 +17,7 @@ const TIPOS_ACEITOS = [
   "image/png",
   "image/webp",
 ]
-const MAX_MB = 10
+const MAX_MB = 20
 
 const schema = z.object({
   linhaDigitavel: z
@@ -47,18 +47,69 @@ const schema = z.object({
 })
 
 function normalizarDataISO(valor: string | null | undefined): string | undefined {
-  if (!valor) return undefined
-  const mIso = /^(\d{4})-(\d{2})-(\d{2})/.exec(valor)
-  if (mIso) return `${mIso[1]}-${mIso[2]}-${mIso[3]}`
-  const mBr = /^(\d{2})[/-](\d{2})[/-](\d{4})/.exec(valor)
-  if (mBr) return `${mBr[3]}-${mBr[2]}-${mBr[1]}`
+  if (!valor || typeof valor !== "string") return undefined
+  const limpo = valor.trim()
+
+  // 1. Formato ISO: 2026-11-28 ou 2026/11/28 ou 2026.11.28
+  const mIso = /(\d{4})[/-](\d{1,2})[/-](\d{1,2})/.exec(limpo)
+  if (mIso) {
+    const ano = mIso[1]
+    const mes = mIso[2].padStart(2, "0")
+    const dia = mIso[3].padStart(2, "0")
+    return `${ano}-${mes}-${dia}`
+  }
+
+  // 2. Formato brasileiro: 28/11/2026, 28-11-2026, 28.11.2026
+  const mBr = /(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/.exec(limpo)
+  if (mBr) {
+    const dia = mBr[1].padStart(2, "0")
+    const mes = mBr[2].padStart(2, "0")
+    const ano = mBr[3]
+    return `${ano}-${mes}-${dia}`
+  }
+
+  // 3. Formato com ano de 2 dígitos: 28/11/26
+  const mBr2 = /(\d{1,2})[/.-](\d{1,2})[/.-](\d{2})\b/.exec(limpo)
+  if (mBr2) {
+    const dia = mBr2[1].padStart(2, "0")
+    const mes = mBr2[2].padStart(2, "0")
+    const ano = Number(mBr2[3]) >= 70 ? `19${mBr2[3]}` : `20${mBr2[3]}`
+    return `${ano}-${mes}-${dia}`
+  }
+
+  // 4. Formato por extenso: "28 de novembro de 2026", "13 de nov de 2026", "13 nov 2026"
+  const mesesNome: Record<string, string> = {
+    jan: "01", janeiro: "01",
+    fev: "02", fevereiro: "02",
+    mar: "03", marco: "03", março: "03",
+    abr: "04", abril: "04",
+    mai: "05", maio: "05",
+    jun: "06", junho: "06",
+    jul: "07", julho: "07",
+    ago: "08", agosto: "08",
+    set: "09", setembro: "09",
+    out: "10", outubro: "10",
+    nov: "11", novembro: "11",
+    dez: "12", dezembro: "12",
+  }
+  const mExtenso = /(\d{1,2})\s*(?:de|\/|-)?\s*([a-zA-ZçÇáéíóúÁÉÍÓÚ]{3,9})\.?,?\s*(?:de|\/|-)?\s*(\d{4})/i.exec(limpo)
+  if (mExtenso) {
+    const dia = mExtenso[1].padStart(2, "0")
+    const mesTexto = mExtenso[2].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 3)
+    const mes = mesesNome[mesTexto]
+    const ano = mExtenso[3]
+    if (mes) {
+      return `${ano}-${mes}-${dia}`
+    }
+  }
+
   return undefined
 }
 
 function obterModelos() {
   const modelos: any[] = []
   if (process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY) {
-    modelos.push(google("gemini-2.5-flash"))
+    modelos.push(google("gemini-2.0-flash"))
     modelos.push(google("gemini-1.5-flash"))
   }
   if (process.env.OPENAI_API_KEY) {
@@ -130,6 +181,9 @@ export async function POST(req: Request) {
             : "") +
           "Você é um perito em leitura, conferência e extração exata de boletos bancários brasileiros e contas de cobrança (energia, água, internet, impostos, fornecedores).\n\n" +
           "SUA META PRINCIPAL: Extrair com 100% de precisão TODOS os números da LINHA DIGITÁVEL, o VALOR EXATO com centavos, a DATA DE VENCIMENTO e os demais dados da fatura.\n\n" +
+          "REGRAS CRÍTICAS PARA VALOR E VENCIMENTO:\n" +
+          "• VALOR DO DOCUMENTO: Localize com atenção o campo '(=) Valor do Documento', 'Valor Cobrado' ou 'Valor a Pagar' impresso no boleto. Retorne o número decimal com centavos (ex: se estiver R$ 1.598,18 retorne 1598.18; se estiver R$ 303,75 retorne 303.75; se estiver R$ 502,00 retorne 502.00). NUNCA confunda com descontos, juros ou número de parcelas.\n" +
+          "• DATA DE VENCIMENTO: Localize com atenção o campo 'Vencimento' ou 'Data de Vencimento' no recibo do sacado ou topo do boleto. Retorne a data exata como impressa no documento no formato DD/MM/AAAA (ex: '13/11/2026', '28/11/2026'). NUNCA invente ou altere a data de vencimento impressa.\n\n" +
           "REGRAS DE EXTRAÇÃO DA LINHA DIGITÁVEL:\n" +
           "1. A Linha Digitável é a sequência de números impressa em destaque (geralmente no topo do boleto/recibo do sacado ou logo acima do código de barras). É O DADO MAIS IMPORTANTE DE TODOS.\n" +
           "2. BOLETOS BANCÁRIOS (47 DÍGITOS):\n" +
@@ -253,16 +307,20 @@ export async function POST(req: Request) {
       "A linha digitável lida não passou na verificação automática dos dígitos. Confira o número, o valor e o vencimento."
     )
   } else {
-    if (decodificado.valor !== undefined) {
-      if (valor !== undefined && Math.abs(valor - decodificado.valor) > 0.005) {
-        avisos.push(
-          `O valor impresso (R$ ${valor.toFixed(2)}) difere do código de barras (R$ ${decodificado.valor.toFixed(2)}). Foi utilizado o valor do código de barras.`
-        )
+    // 1. O VALOR IMPRESSO LIDO PELA IA É SOBERANO!
+    // O código de barras é usado apenas como fallback se o valor impresso não foi detectado no documento.
+    if (valor === undefined || valor === null || valor <= 0) {
+      if (decodificado.valor !== undefined && decodificado.valor > 0) {
+        valor = decodificado.valor
       }
-      valor = decodificado.valor
+    } else if (decodificado.valor !== undefined && decodificado.valor > 0 && Math.abs(valor - decodificado.valor) > 0.005) {
+      avisos.push(
+        `Valor impresso no documento mantido (R$ ${valor.toFixed(2)}).`
+      )
     }
-    // A data de vencimento impressa lida no documento é soberana.
-    // O código de barras é usado apenas como fallback se a data impressa não foi detectada.
+
+    // 2. A DATA DE VENCIMENTO IMPRESSA LIDA PELA IA É SOBERANA!
+    // O código de barras é usado apenas como fallback se a data impressa não foi detectada no documento.
     if (!vencimento && decodificado.tipo === "bancario" && decodificado.vencimento) {
       vencimento = decodificado.vencimento
     } else if (vencimento && decodificado.tipo === "bancario" && decodificado.vencimento && vencimento !== decodificado.vencimento) {

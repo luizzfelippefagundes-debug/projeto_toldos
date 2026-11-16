@@ -184,11 +184,11 @@ function LancamentoFormFields({
         if (decod.valor != null && (!valor || valor === "" || Number(valor) === 0)) {
           setValor(decod.valor.toFixed(2))
         }
-        if (decod.vencimento && (!vencimento || vencimento === hojeISO())) {
+        if (decod.vencimento && (!vencimento || vencimento === "") && !inicial?.vencimento) {
           setVencimento(decod.vencimento)
         }
         const bancoInfo = obterIdentificacaoBoleto(decod)
-        toast.success(`${bancoInfo} reconhecido! Dados preenchidos.`)
+        toast.success(`${bancoInfo} reconhecido!`)
       }
     }
   }

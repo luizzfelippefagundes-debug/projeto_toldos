@@ -106,16 +106,16 @@ function inferirClassificacao(beneficiario?: string): { categoria: string; despe
 
 async function reduzirImagem(arquivo: File): Promise<File> {
   if (!arquivo.type.startsWith("image/")) return arquivo
-  if (arquivo.size <= 8 * 1024 * 1024) return arquivo
+  if (arquivo.size <= 3 * 1024 * 1024) return arquivo
   try {
     const bitmap = await createImageBitmap(arquivo)
-    const escala = Math.min(1, 3500 / Math.max(bitmap.width, bitmap.height))
+    const escala = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height))
     const canvas = document.createElement("canvas")
     canvas.width = Math.round(bitmap.width * escala)
     canvas.height = Math.round(bitmap.height * escala)
     canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
     const blob = await new Promise<Blob | null>((ok) =>
-      canvas.toBlob(ok, "image/jpeg", 0.98)
+      canvas.toBlob(ok, "image/jpeg", 0.92)
     )
     return blob ? new File([blob], "boleto.jpg", { type: "image/jpeg" }) : arquivo
   } catch {
