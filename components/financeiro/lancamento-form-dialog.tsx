@@ -21,7 +21,7 @@ import { useData } from "@/context/data-context"
 import type { FormaPagamento, LancamentoFinanceiro, TipoLancamento } from "@/lib/types"
 import { isPositiveNumberInput } from "@/lib/number"
 import { formatarDataInput, interpretarDataLocal } from "@/lib/date"
-import { datasMensais, nomeDaParcela } from "@/lib/parcelas"
+import { datasMensais, nomeDaParcela, subtrairMeses } from "@/lib/parcelas"
 import { formatarMoeda } from "@/lib/format"
 import { Switch } from "@/components/ui/switch"
 import { Plus, Copy, Check, Sparkles, Camera, Loader2, ScanLine } from "lucide-react"
@@ -154,6 +154,7 @@ function LancamentoFormFields({
   const [despesaFixa, setDespesaFixa] = useState(lancamento?.despesaFixa ?? inicial?.despesaFixa ?? false)
   const [meses, setMeses] = useState("1")
   const [jaPagas, setJaPagas] = useState("0")
+  const [dataRefereA, setDataRefereA] = useState<"proxima" | "primeira">("proxima")
   const [copiado, setCopiado] = useState(false)
   const [observacoes, setObservacoes] = useState(
     lancamento?.observacoes ?? inicial?.observacoes ?? ""
@@ -238,11 +239,17 @@ function LancamentoFormFields({
     Boolean(lancamento) ||
     (Number.isInteger(quantidadeMeses) && quantidadeMeses >= 1 && quantidadeMeses <= 60)
   const repetir = !lancamento && mesesValidos && quantidadeMeses > 1
-  const datasRepeticao = repetir ? datasMensais(vencimento, quantidadeMeses) : []
   const quantidadeJaPagas = Number(jaPagas)
   const jaPagasValidas =
     !repetir ||
     (Number.isInteger(quantidadeJaPagas) && quantidadeJaPagas >= 0 && quantidadeJaPagas <= quantidadeMeses)
+
+  const dataInicialCalculada =
+    repetir && quantidadeJaPagas > 0 && dataRefereA === "proxima"
+      ? subtrairMeses(vencimento, quantidadeJaPagas)
+      : vencimento
+
+  const datasRepeticao = repetir ? datasMensais(dataInicialCalculada, quantidadeMeses) : []
 
   const valido =
     descricao.trim().length > 0 &&
@@ -677,25 +684,85 @@ function LancamentoFormFields({
         )}
 
         {repetir && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ja-pagas" className="text-xs font-semibold text-foreground">
-              Dessas, quantas já foram pagas?
-            </Label>
-            <Input
-              id="ja-pagas"
-              type="number"
-              min="0"
-              max={quantidadeMeses}
-              step="1"
-              className="h-11 sm:h-10 w-full sm:w-40 text-base sm:text-sm"
-              value={jaPagas}
-              onChange={(e) => setJaPagas(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              {quantidadeJaPagas > 0 && jaPagasValidas
-                ? `As ${quantidadeJaPagas} primeiras parcelas (até ${datasRepeticao[quantidadeJaPagas - 1].split("-").reverse().join("/")}) entram como pagas e o resto fica pendente. Se a primeira parcela já passou, coloque a data dela no vencimento.`
-                : "Deixe 0 se nenhuma foi paga. Se já pagou as primeiras, coloque aqui — sem precisar marcar uma por uma."}
-            </p>
+          <div className="flex flex-col gap-3 p-3.5 rounded-xl bg-muted/40 border border-border">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="ja-pagas" className="text-xs font-semibold text-foreground">
+                Dessas, quantas já foram pagas?
+              </Label>
+              <Input
+                id="ja-pagas"
+                type="number"
+                min="0"
+                max={quantidadeMeses}
+                step="1"
+                className="h-11 sm:h-10 w-full sm:w-40 text-base sm:text-sm"
+                value={jaPagas}
+                onChange={(e) => setJaPagas(e.target.value)}
+              />
+            </div>
+
+            {quantidadeJaPagas > 0 && jaPagasValidas && (
+              <div className="flex flex-col gap-2 pt-1">
+                <Label className="text-xs font-semibold text-foreground">
+                  A data de vencimento ({vencimento.split("-").reverse().join("/")}) é:
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDataRefereA("proxima")}
+                    className={cn(
+                      "text-left p-2.5 rounded-lg border text-xs transition-colors",
+                      dataRefereA === "proxima"
+                        ? "border-primary bg-primary/10 font-medium text-foreground ring-1 ring-primary"
+                        : "border-border hover:bg-muted text-muted-foreground"
+                    )}
+                  >
+                    <div className="font-bold text-foreground">Da próxima parcela ({quantidadeJaPagas + 1}ª de {quantidadeMeses})</div>
+                    <div className="text-[11px] mt-0.5 text-muted-foreground">
+                      Calcula as {quantidadeJaPagas} parcelas pagas no passado automaticamente.
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDataRefereA("primeira")}
+                    className={cn(
+                      "text-left p-2.5 rounded-lg border text-xs transition-colors",
+                      dataRefereA === "primeira"
+                        ? "border-primary bg-primary/10 font-medium text-foreground ring-1 ring-primary"
+                        : "border-border hover:bg-muted text-muted-foreground"
+                    )}
+                  >
+                    <div className="font-bold text-foreground">Da 1ª parcela do início</div>
+                    <div className="text-[11px] mt-0.5 text-muted-foreground">
+                      A data digitada foi a 1ª parcela lá no passado, e as demais vencem depois.
+                    </div>
+                  </button>
+                </div>
+
+                <div className="text-xs rounded-lg p-2.5 bg-background border border-border/70 space-y-1">
+                  <div className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+                    <Check className="h-3.5 w-3.5 shrink-0" />
+                    <span>
+                      {quantidadeJaPagas} {quantidadeJaPagas === 1 ? "parcela anterior entrará" : "parcelas anteriores entrarão"} como <strong>PAGAS</strong> (de {datasRepeticao[0]?.split("-").reverse().join("/")} até {datasRepeticao[quantidadeJaPagas - 1]?.split("-").reverse().join("/")}).
+                    </span>
+                  </div>
+                  {quantidadeMeses - quantidadeJaPagas > 0 && (
+                    <div className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0 ml-1 mr-1" />
+                      <span>
+                        {quantidadeMeses - quantidadeJaPagas} {quantidadeMeses - quantidadeJaPagas === 1 ? "parcela restante ficará" : "parcelas restantes ficarão"} <strong>PENDENTES</strong> (a primeira vence em {datasRepeticao[quantidadeJaPagas]?.split("-").reverse().join("/")} e a última em {datasRepeticao[datasRepeticao.length - 1]?.split("-").reverse().join("/")}).
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(!quantidadeJaPagas || quantidadeJaPagas === 0) && (
+              <p className="text-xs text-muted-foreground">
+                Deixe 0 se nenhuma foi paga. Se já pagou as primeiras, coloque aqui — sem precisar marcar uma por uma.
+              </p>
+            )}
           </div>
         )}
       </div>

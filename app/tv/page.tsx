@@ -439,11 +439,50 @@ function tocarAlarme() {
   } catch { /* AudioContext bloqueado antes de interação do usuário */ }
 }
 
+function tocarAlertaNovaDemanda() {
+  try {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {})
+    }
+    // Campanhiha / chime claro de notificação: notas ascendentes elegantes
+    const notas = [523.25, 659.25, 783.99, 1046.50]
+    notas.forEach((freq, i) => {
+      const t = ctx.currentTime + i * 0.09
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = "sine"
+      osc.frequency.setValueAtTime(freq, t)
+      gain.gain.setValueAtTime(0, t)
+      gain.gain.linearRampToValueAtTime(0.35, t + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(t)
+      osc.stop(t + 0.4)
+    })
+  } catch { /* AudioContext bloqueado antes de interação do usuário */ }
+}
+
+function dispararVibracaoCelular() {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator && typeof navigator.vibrate === "function") {
+      // Vibração dupla marcante para alertar no bolso: 300ms, pausa 100ms, 300ms, pausa 100ms, 500ms
+      navigator.vibrate([300, 100, 300, 100, 500])
+    }
+  } catch { /* sem suporte */ }
+}
+
 export default function TvPage() {
   const [pedidos, setPedidos] = useState<PedidoTV[]>([])
   const [avisos, setAvisos] = useState<AvisoTV[]>([])
   const [filtroStatusMobile, setFiltroStatusMobile] = useState<string>("todos")
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date | null>(null)
+  const [alertaRecente, setAlertaRecente] = useState<{ id: string; titulo: string; sub: string } | null>(null)
+  const [alertasAtivados, setAlertasAtivados] = useState<boolean>(false)
+  const pedidosConhecidosRef = useRef<Set<string> | null>(null)
   const [config, setConfig] = useState<{
     statusVisiveis?: string[]
     tiposVisiveis?: string[]
@@ -460,7 +499,36 @@ export default function TvPage() {
       const res = await fetch("/api/tv/pedidos", { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
-        const novosPedidos = data.pedidos ?? data
+        const novosPedidos: PedidoTV[] = data.pedidos ?? data
+
+        if (pedidosConhecidosRef.current === null) {
+          pedidosConhecidosRef.current = new Set(novosPedidos.map((p) => p.id))
+        } else {
+          const novatos = novosPedidos.filter((p) => !pedidosConhecidosRef.current!.has(p.id))
+          if (novatos.length > 0) {
+            novatos.forEach((p) => pedidosConhecidosRef.current!.add(p.id))
+            // Disparar Som & Vibração no celular
+            tocarAlertaNovaDemanda()
+            dispararVibracaoCelular()
+
+            const pri = novatos[0]
+            const titulo = `🔔 Nova Demanda: ${pri.tipo === "orcamento" ? "OS #" : "#"}${pri.numero}`
+            const sub = `${pri.cliente_nome} — ${pri.produto_nome || "Produção"}`
+            setAlertaRecente({ id: pri.id, titulo, sub })
+            setTimeout(() => setAlertaRecente(null), 8000)
+
+            if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+              try {
+                new Notification(titulo, {
+                  body: sub,
+                  icon: "/icons/icon-192x192.png",
+                  tag: `pedido-${pri.id}`,
+                })
+              } catch {}
+            }
+          }
+        }
+
         setPedidos((prev) => {
           if (JSON.stringify(prev) === JSON.stringify(novosPedidos)) return prev
           return novosPedidos
@@ -670,11 +738,55 @@ export default function TvPage() {
                 Sync {ultimaAtualizacao.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                tocarAlertaNovaDemanda()
+                dispararVibracaoCelular()
+                setAlertasAtivados(true)
+                if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+                  Notification.requestPermission().catch(() => {})
+                }
+              }}
+              className={`rounded-lg px-2 py-0.5 text-[10px] sm:text-xs font-bold transition-all shadow-2xs border inline-flex items-center gap-1 ${
+                alertasAtivados
+                  ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40"
+                  : "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/25"
+              }`}
+              title="Toque para testar e ativar som e vibração no celular"
+            >
+              <span>🔔</span>
+              <span>{alertasAtivados ? "Vibração & Som Ativos" : "Ativar Vibração e Alerta"}</span>
+            </button>
           </div>
         </div>
 
         <Relogio />
       </header>
+
+      {/* Alerta flutuante quando nova demanda entra na produção */}
+      {alertaRecente && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92vw] sm:w-auto bg-primary text-primary-foreground p-3 sm:p-4 rounded-2xl shadow-2xl border-2 border-primary-foreground/20 animate-in fade-in slide-in-from-top-4 duration-300 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-xl shrink-0 animate-bounce">
+            🔔
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-black text-xs sm:text-sm leading-tight">
+              {alertaRecente.titulo}
+            </div>
+            <div className="text-[11px] sm:text-xs text-primary-foreground/90 truncate mt-0.5">
+              {alertaRecente.sub}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAlertaRecente(null)}
+            className="text-xs font-bold bg-white/20 hover:bg-white/30 rounded-lg px-2.5 py-1 shrink-0"
+          >
+            OK
+          </button>
+        </div>
+      )}
 
       {/* Visualização MOBILE: SEM formato Kanban! Feed vertical com rolagem fluida e cartões 100% legíveis */}
       <div className="flex-1 min-h-0 flex flex-col md:hidden overflow-hidden">

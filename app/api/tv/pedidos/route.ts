@@ -171,13 +171,12 @@ export async function GET() {
       if (atrasadoA && !atrasadoB) return -1
       if (!atrasadoA && atrasadoB) return 1
 
-      if (a.prazo_entrega_em && b.prazo_entrega_em) {
-        return a.prazo_entrega_em.localeCompare(b.prazo_entrega_em)
-      }
-      if (a.prazo_entrega_em) return -1
-      if (b.prazo_entrega_em) return 1
+      // Fila de Produção FIFO: o pedido que entrou primeiro fica no topo da fila, novos entram por baixo
+      const tempoA = a.criado_em ? new Date(a.criado_em).getTime() : 0
+      const tempoB = b.criado_em ? new Date(b.criado_em).getTime() : 0
+      if (tempoA !== tempoB) return tempoA - tempoB
 
-      return new Date(a.criado_em).getTime() - new Date(b.criado_em).getTime()
+      return a.numero - b.numero
     })
   }
 

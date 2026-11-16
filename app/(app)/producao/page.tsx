@@ -81,6 +81,40 @@ function normalizarTelefone(tel: string): string {
   return digits
 }
 
+function tocarAlertaNovaDemanda() {
+  try {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    if (!AudioCtx) return
+    const ctx = new AudioCtx()
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {})
+    }
+    const notas = [523.25, 659.25, 783.99, 1046.50]
+    notas.forEach((freq, i) => {
+      const t = ctx.currentTime + i * 0.09
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = "sine"
+      osc.frequency.setValueAtTime(freq, t)
+      gain.gain.setValueAtTime(0, t)
+      gain.gain.linearRampToValueAtTime(0.35, t + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(t)
+      osc.stop(t + 0.4)
+    })
+  } catch {}
+}
+
+function dispararVibracaoCelular() {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator && typeof navigator.vibrate === "function") {
+      navigator.vibrate([300, 100, 300, 100, 500])
+    }
+  } catch {}
+}
+
 function mensagemProducao(clienteNome: string, status: StatusPedidoRapido, idItem?: string): string {
   const nome = clienteNome.split(" ")[0] ?? ""
   if (status === "ag_confirmacao") {
@@ -249,6 +283,30 @@ export default function ProducaoPage() {
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orcamentos.length])
+
+  const pedidosConhecidosRef = useRef<Set<string> | null>(null)
+
+  useEffect(() => {
+    const todosIds = [
+      ...pedidosRapidos.map((p) => p.id),
+      ...orcamentos.filter((o) => o.statusProducao).map((o) => `orc-${o.id}`),
+    ]
+
+    if (pedidosConhecidosRef.current === null) {
+      pedidosConhecidosRef.current = new Set(todosIds)
+      return
+    }
+
+    const novos = todosIds.filter((id) => !pedidosConhecidosRef.current!.has(id))
+    if (novos.length > 0) {
+      novos.forEach((id) => pedidosConhecidosRef.current!.add(id))
+      tocarAlertaNovaDemanda()
+      dispararVibracaoCelular()
+      toast.info("🔔 Nova Demanda na Produção!", {
+        description: `${novos.length} novo(s) item(ns) na fila de produção.`,
+      })
+    }
+  }, [pedidosRapidos, orcamentos])
 
   const sensores = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -781,6 +839,27 @@ export default function ProducaoPage() {
             )
             const totalColuna = pedidosDaColuna.length + orcsDaColuna.length
             if (colunaAtiva === "todas" && totalColuna === 0) return null
+
+            const itensDaColuna = [
+              ...pedidosDaColuna.map((p) => ({
+                tipo: "pedido" as const,
+                id: p.id,
+                dataCriacao: p.criadoEm ? new Date(p.criadoEm).getTime() : 0,
+                numero: p.numero,
+                pedido: p,
+              })),
+              ...orcsDaColuna.map((o) => ({
+                tipo: "orcamento" as const,
+                id: `orc-${o.id}`,
+                dataCriacao: new Date(o.osEmitidaEm || o.fechadoEm || o.criadoEm || 0).getTime(),
+                numero: o.numero,
+                orcamento: o,
+              })),
+            ].sort((a, b) => {
+              if (a.dataCriacao !== b.dataCriacao) return a.dataCriacao - b.dataCriacao
+              return a.numero - b.numero
+            })
+
             return (
               <div key={col.status} className="flex flex-col gap-2.5">
                 <div className={cn("flex items-center justify-between rounded-lg px-3 py-1.5 border", col.corFundo, col.corBorda)}>
@@ -794,27 +873,32 @@ export default function ProducaoPage() {
                     {totalColuna}
                   </span>
                 </div>
-                {pedidosDaColuna.map((pedido) => (
-                  <PedidoCardConteudo
-                    key={pedido.id}
-                    pedido={pedido}
-                    produto={produtoDoPedido(pedido)}
-                    atrasado={estaAtrasado(pedido)}
-                    coluna={colunaMap[pedido.status]}
-                    onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
-                    onSalvarObservacao={(obs) => salvarObservacaoPedidoRapido(pedido.id, obs)}
-                    onMudarStatus={(status) =>
-                      solicitarConfirmacao(
-                        pedido.clienteNome,
-                        pedido.clienteTelefone,
-                        status,
-                        () => moverPedidoRapido(pedido.id, status),
-                        pedido.id
-                      )
-                    }
-                  />
-                ))}
-                {orcsDaColuna.map((orc) => {
+                {itensDaColuna.map((item, idx) => {
+                  if (item.tipo === "pedido") {
+                    const pedido = item.pedido
+                    return (
+                      <PedidoCardConteudo
+                        key={pedido.id}
+                        pedido={pedido}
+                        produto={produtoDoPedido(pedido)}
+                        atrasado={estaAtrasado(pedido)}
+                        coluna={colunaMap[pedido.status]}
+                        posicaoFila={idx + 1}
+                        onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
+                        onSalvarObservacao={(obs) => salvarObservacaoPedidoRapido(pedido.id, obs)}
+                        onMudarStatus={(status) =>
+                          solicitarConfirmacao(
+                            pedido.clienteNome,
+                            pedido.clienteTelefone,
+                            status,
+                            () => moverPedidoRapido(pedido.id, status),
+                            pedido.id
+                          )
+                        }
+                      />
+                    )
+                  }
+                  const orc = item.orcamento
                   const cli = clientes.find((c) => c.id === orc.clienteId)
                   return (
                     <OrcamentoCardConteudo
@@ -822,6 +906,7 @@ export default function ProducaoPage() {
                       orcamento={orc}
                       cliente={cli}
                       coluna={col}
+                      posicaoFila={idx + 1}
                       assinatura={assinaturas[orc.id]}
                       onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
                       onSalvarObservacao={(obs) => salvarObservacaoOrcamento(orc.id, obs)}
@@ -978,6 +1063,27 @@ export default function ProducaoPage() {
                     (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
                   )
                   const total = pedidosDaColuna.length + orcsDaColuna.length
+
+                  const itensDaColuna = [
+                    ...pedidosDaColuna.map((p) => ({
+                      tipo: "pedido" as const,
+                      id: p.id,
+                      dataCriacao: p.criadoEm ? new Date(p.criadoEm).getTime() : 0,
+                      numero: p.numero,
+                      pedido: p,
+                    })),
+                    ...orcsDaColuna.map((o) => ({
+                      tipo: "orcamento" as const,
+                      id: `orc-${o.id}`,
+                      dataCriacao: new Date(o.osEmitidaEm || o.fechadoEm || o.criadoEm || 0).getTime(),
+                      numero: o.numero,
+                      orcamento: o,
+                    })),
+                  ].sort((a, b) => {
+                    if (a.dataCriacao !== b.dataCriacao) return a.dataCriacao - b.dataCriacao
+                    return a.numero - b.numero
+                  })
+
                   return (
                     <ColunaDroppable key={col.status} status={col.status} coluna={col}>
                       {/* Header fixo da coluna */}
@@ -1012,28 +1118,33 @@ export default function ProducaoPage() {
                             Vazio
                           </div>
                         )}
-                        {pedidosDaColuna.map((pedido) => (
-                          <PedidoCardArrastavel key={pedido.id} id={pedido.id}>
-                            <PedidoCardConteudo
-                              pedido={pedido}
-                              produto={produtoDoPedido(pedido)}
-                              atrasado={estaAtrasado(pedido)}
-                              coluna={colunaMap[pedido.status]}
-                              onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
-                              onSalvarObservacao={(obs) => salvarObservacaoPedidoRapido(pedido.id, obs)}
-                              onMudarStatus={(status) =>
-                                solicitarConfirmacao(
-                                  pedido.clienteNome,
-                                  pedido.clienteTelefone,
-                                  status,
-                                  () => moverPedidoRapido(pedido.id, status),
-                                  pedido.id
-                                )
-                              }
-                            />
-                          </PedidoCardArrastavel>
-                        ))}
-                        {orcsDaColuna.map((orc) => {
+                        {itensDaColuna.map((item, idx) => {
+                          if (item.tipo === "pedido") {
+                            const pedido = item.pedido
+                            return (
+                              <PedidoCardArrastavel key={pedido.id} id={pedido.id}>
+                                <PedidoCardConteudo
+                                  pedido={pedido}
+                                  produto={produtoDoPedido(pedido)}
+                                  atrasado={estaAtrasado(pedido)}
+                                  coluna={colunaMap[pedido.status]}
+                                  posicaoFila={idx + 1}
+                                  onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
+                                  onSalvarObservacao={(obs) => salvarObservacaoPedidoRapido(pedido.id, obs)}
+                                  onMudarStatus={(status) =>
+                                    solicitarConfirmacao(
+                                      pedido.clienteNome,
+                                      pedido.clienteTelefone,
+                                      status,
+                                      () => moverPedidoRapido(pedido.id, status),
+                                      pedido.id
+                                    )
+                                  }
+                                />
+                              </PedidoCardArrastavel>
+                            )
+                          }
+                          const orc = item.orcamento
                           const cli = clientes.find((c) => c.id === orc.clienteId)
                           return (
                             <PedidoCardArrastavel key={`orc-${orc.id}`} id={`orc-${orc.id}`}>
@@ -1041,6 +1152,7 @@ export default function ProducaoPage() {
                                 orcamento={orc}
                                 cliente={cli}
                                 coluna={col}
+                                posicaoFila={idx + 1}
                                 assinatura={assinaturas[orc.id]}
                                 onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
                                 onSalvarObservacao={(obs) => salvarObservacaoOrcamento(orc.id, obs)}
@@ -1434,6 +1546,7 @@ function PedidoCardConteudo({
   produto,
   atrasado,
   coluna,
+  posicaoFila,
   onMudarStatus,
   onSalvarArte,
   onSalvarObservacao,
@@ -1442,6 +1555,7 @@ function PedidoCardConteudo({
   produto: ProdutoRapido | undefined
   atrasado: boolean
   coluna: (typeof colunas)[number]
+  posicaoFila?: number
   onMudarStatus: (status: StatusPedidoRapido) => void
   onSalvarArte: (url: string | null) => Promise<void>
   onSalvarObservacao?: (obs: string) => Promise<void>
@@ -1473,13 +1587,18 @@ function PedidoCardConteudo({
             {ini ?? <UserRound className="h-3.5 w-3.5" />}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs font-bold text-foreground">
                 #{pedido.numero}
               </span>
               <span className="rounded bg-muted px-1.5 py-0.2 text-[10px] font-semibold text-muted-foreground">
                 Rápida
               </span>
+              {typeof posicaoFila === "number" && (
+                <span className="rounded bg-primary/10 text-primary font-bold px-1.5 py-0.2 text-[10px]" title="Posição na fila">
+                  {posicaoFila}º na fila
+                </span>
+              )}
               {atrasado && (
                 <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
                   Atrasado
@@ -1582,6 +1701,7 @@ function OrcamentoCardConteudo({
   cliente,
   coluna,
   assinatura,
+  posicaoFila,
   onMudarStatus,
   onSalvarArte,
   onSalvarObservacao,
@@ -1590,6 +1710,7 @@ function OrcamentoCardConteudo({
   cliente: Cliente | undefined
   coluna: (typeof colunas)[number]
   assinatura?: { pdfUrl: string | null; assinado: boolean }
+  posicaoFila?: number
   onMudarStatus: (status: StatusPedidoRapido) => void
   onSalvarArte: (url: string | null) => Promise<void>
   onSalvarObservacao?: (obs: string) => Promise<void>
@@ -1620,13 +1741,18 @@ function OrcamentoCardConteudo({
             {ini ?? <UserRound className="h-3.5 w-3.5" />}
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-xs font-bold text-foreground">
                 ORC #{String(orcamento.numero).padStart(4, "0")}
               </span>
               <span className="rounded bg-violet-500/15 text-violet-700 dark:text-violet-300 px-1.5 py-0.2 text-[10px] font-semibold">
                 OS
               </span>
+              {typeof posicaoFila === "number" && (
+                <span className="rounded bg-primary/10 text-primary font-bold px-1.5 py-0.2 text-[10px]" title="Posição na fila">
+                  {posicaoFila}º na fila
+                </span>
+              )}
             </div>
           </div>
         </div>

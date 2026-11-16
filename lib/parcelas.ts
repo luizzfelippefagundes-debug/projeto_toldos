@@ -58,6 +58,17 @@ export function gerarParcelasOrcamento({
   ]
 }
 
+export function subtrairMeses(dataISO: string, qtdMeses: number): string {
+  const [ano, mes, dia] = dataISO.split("-").map(Number)
+  if (!ano || !mes || !dia || !Number.isInteger(qtdMeses) || qtdMeses <= 0) return dataISO
+  const total = mes - 1 - qtdMeses
+  const a = ano + Math.floor(total / 12)
+  const m = ((total % 12) + 12) % 12
+  const ultimoDia = new Date(a, m + 1, 0).getDate()
+  const d = Math.min(dia, ultimoDia)
+  return `${a}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`
+}
+
 // Datas (YYYY-MM-DD) de uma repetição mensal: mesmo dia todo mês, e no mês que
 // não tem o dia (31 em fevereiro) cai no último dia, voltando ao dia original
 // nos meses seguintes.

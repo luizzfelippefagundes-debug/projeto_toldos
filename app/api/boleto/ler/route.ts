@@ -261,16 +261,14 @@ export async function POST(req: Request) {
       }
       valor = decodificado.valor
     }
-    // Para concessionárias (água, luz, telefone), o código de barras NÃO codifica vencimento.
     // A data de vencimento impressa lida no documento é soberana.
-    // Para boletos bancários com fator válido, valida com o do código de barras:
-    if (decodificado.tipo === "bancario" && decodificado.vencimento) {
-      if (vencimento && vencimento !== decodificado.vencimento) {
-        avisos.push(
-          "O vencimento impresso difere do código de barras. Foi utilizado o do código de barras."
-        )
-      }
+    // O código de barras é usado apenas como fallback se a data impressa não foi detectada.
+    if (!vencimento && decodificado.tipo === "bancario" && decodificado.vencimento) {
       vencimento = decodificado.vencimento
+    } else if (vencimento && decodificado.tipo === "bancario" && decodificado.vencimento && vencimento !== decodificado.vencimento) {
+      avisos.push(
+        `Vencimento impresso no documento mantido (${vencimento.split("-").reverse().join("/")}).`
+      )
     }
   }
 
