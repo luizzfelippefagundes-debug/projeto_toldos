@@ -1,3 +1,4 @@
+import { google } from "@ai-sdk/google"
 import { openai } from "@ai-sdk/openai"
 import { generateText, stepCountIs, tool } from "ai"
 import { z } from "zod"
@@ -12,7 +13,7 @@ import {
   type ConversaBot,
   type MensagemHistorico,
 } from "./bot-conversa"
-import { enviarDocumentoWhatsapp } from "./evolution-api"
+import { enviarDocumentoWhatsapp, enviarMensagemWhatsapp } from "./evolution-api"
 import { formatarData, formatarMoeda } from "./format"
 import { gerarPdfOrcamentoServidor } from "./pdf-orcamento-servidor"
 import { formatarNumeroOrcamento } from "./orcamento-pdf"
@@ -29,31 +30,33 @@ const STATUS_PRODUCAO_LEGIVEL: Record<StatusPedidoRapido, string> = {
   entregue: "entregue",
 }
 
-const SERVICOS_TEXTO = `COMUNICAÇÃO VISUAL:
-- Adesivos comum
-- Adesivos em recorte
-- Banners
-- Placas de identificação
-- Placas de ACM 3D
-- Fachadas de ACM
-- Lonas
-- Reformas de fachada
-- Reformas de vitrines
-- Rótulos
-- Adesivo para carro
-- Adesivo para moto
-- Adesivo de parede
-- Letras 3D
-- Outdoor
+export const SERVICOS_TEXTO = `SERVIÇOS mais utilizados:
+
+COMUNICAÇÃO VISUAL:
+- adesivos comum
+- adesivos em recorte
+- banners
+- placas de identificação
+- placas de ACM 3D
+- fachadas de ACM
+- lonas
+- reformas de fachada
+- reformas de vitrines
+- rótulos
+- adesivos para carro
+- adesivo para moto
+- adesivo de parede
+- letras 3D
+- outdoor
 
 TOLDOS E COBERTURAS:
-- Toldos para janelas
-- Toldos para varandas ou área de serviço
-- Toldo fixo
-- Toldo cortina (de enrolar)
-- Toldos de policarbonato
-- Coberturas de policarbonato
-- Reformas de toldo`
+- toldos para janelas
+- toldos para varandas ou área de serviço
+- toldos fixo
+- toldo cortina (de enrolar)
+- toldos de policarbonato
+- coberturas de policarbonato
+- reformas de toldo`
 
 export function normalizarTelefone(numero: string): string {
   return numero.replace(/\D/g, "")
@@ -158,30 +161,45 @@ async function processarComTravaAdquirida(
   let localTemp = reiniciar ? null : conversa.localTemp
   let transferido = false
 
-  const systemPrompt = `Você é o atendente virtual da TOLDOSPRINT (Toldos e Comunicação Visual), respondendo pelo WhatsApp.
+  const systemPrompt = `Você é o atendente virtual da TOLDOSPRINT (Toldos e Comunicação Visual), respondendo pelo WhatsApp de forma profissional, ágil e acolhedora.
 
-Converse como uma pessoa de verdade, mensagens curtas, sem soar robótico. Não repete saudação em toda mensagem.
+FLUXO EXATO DA CONVERSA:
 
-Fluxo esperado numa conversa nova:
-1. Dê boas-vindas: "Seja bem-vindo(a) à TOLDOSPRINT (Toldos e Comunicação Visual)!"
-2. Pergunte o nome da pessoa e de qual cidade/bairro ela está falando. Assim que ela responder, chame salvar_dados_cliente.
-3. Pergunte "Como posso te ajudar?" — se ela não souber bem o que quer, mostre a lista de serviços mais procurados abaixo (uma categoria por linha).
-4. Deixe a pessoa explicar o que precisa, com suas próprias palavras.
-5. Se parecer um pedido de orçamento, sugira: tirar uma foto do local/peça, e ter em mãos as medidas ou um projeto, pra facilitar o orçamento.
-6. Avise que já está te transferindo pro atendente, e chame transferir_atendimento com um resumo curto do que a pessoa pediu (nome, local, o que quer). A partir daí, não responda mais nessa conversa — quem continua é o atendente humano.
+Passo 1 (Saudação Inicial):
+Se a conversa estiver começando (ou o cliente mandou apenas "oi", "olá", "bom dia", etc. sem dados):
+Diga exatamente:
+"Seja bem-vindo a TOLDOSPRINT (Toldos e Comunicação Visual)! 🤝✨
 
-Lista de serviços (mostre quando perguntarem "o que vocês fazem" ou algo vago):
+Qual seu nome e de qual cidade, bairro está falando?"
+
+Passo 2 (Apresentação dos Serviços):
+Assim que o cliente informar o nome e a cidade/bairro (chame a ferramenta salvar_dados_cliente):
+Agradeça pelo nome e apresente os serviços mais procurados exatamente no formato abaixo:
+"Prazer, [Nome do Cliente]!
+
 ${SERVICOS_TEXTO}
 
-Outras coisas que você pode resolver sem transferir:
-- Se perguntarem do status de um orçamento já feito ("cadê meu orçamento", "já ficou pronto?"), chame consultar_status_orcamento — não precisa pedir número, já busca pelo telefone de quem está mandando mensagem.
-- Se pedirem o PDF do orçamento ("manda o orçamento", "quero o pdf"), chame enviar_pdf_orcamento.
-- Se o assunto não tiver nada a ver com a loja, responda com simpatia e puxe de volta.
+Como posso te ajudar?"
 
-Regras:
-- Pergunte uma coisa de cada vez.
-- Chame no máximo UMA ferramenta por resposta.
-- Nunca invente status, valor ou prazo de orçamento — se consultar_status_orcamento não achar nada, diga isso ao cliente.`
+Passo 3 (Solicitação de Orçamento e Transferência):
+Quando o cliente disser o que precisa ou solicitar um orçamento de qualquer produto/serviço:
+Diga com simpatia:
+"Perfeito! Para facilitar e agilizar o seu orçamento:
+📸 Tire uma foto do que se trata ou deseja;
+📏 Tenha em mãos medidas ou projetos (se tiver).
+
+Já estou transferindo o seu atendimento para nossa equipe. Em breve vamos entrar em contato com você por aqui! ⏳🧑‍💼"
+
+Em seguida, chame IMEDIATAMENTE a ferramenta transferir_atendimento com o resumo do pedido (nome, cidade/bairro e o que ele deseja).
+
+OUTRAS CONSULTAS RÁPIDAS (Sem transferir):
+- Se o cliente perguntar o status de um orçamento que ele já fez ("cadê meu orçamento", "já ficou pronto?"), chame consultar_status_orcamento.
+- Se pedir o PDF do orçamento ("manda o orçamento", "quero o pdf"), chame enviar_pdf_orcamento.
+
+REGRAS GERAIS:
+- Não fique repetindo saudações desnecessárias.
+- Seja direto, claro e educado.
+- Se o cliente já mandar tudo na primeira mensagem (ex: "Sou João de Colatina e quero toldo cortina"), já salve os dados, apresente a orientação de fotos/medidas e transfira de uma vez.`
 
   const tools = {
     salvar_dados_cliente: tool({
@@ -260,13 +278,32 @@ Regras:
       inputSchema: z.object({ resumo: z.string().describe("Nome, local e o que a pessoa pediu, pro atendente ler rápido") }),
       execute: async ({ resumo }) => {
         transferido = true
+        // Notifica o dono/atendente da empresa no WhatsApp se configurado
+        const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
+        if (telEmpresa) {
+          const alerta = `🔔 *Novo Atendimento Transferido!*\n\n👤 *Cliente:* ${nomeTemp || "Não informado"}\n📍 *Local:* ${localTemp || "Não informado"}\n📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n💬 *Interesse:* ${resumo}\n\n👉 Acesse o WhatsApp para responder!`
+          enviarMensagemWhatsapp(telEmpresa, alerta).catch((err) =>
+            console.error("[bot] erro ao notificar empresa de transferência:", err)
+          )
+        }
         return { ok: true, resumo }
       },
     }),
   }
 
+  // Modelo de IA com seleção e fallback seguro
+  const modelo = process.env.OPENAI_API_KEY
+    ? openai("gpt-4o-mini")
+    : (process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY)
+    ? google("gemini-2.0-flash")
+    : null
+
+  if (!modelo) {
+    return `Seja bem-vindo a TOLDOSPRINT (Toldos e Comunicação Visual)!\n\nQual seu nome e de qual cidade, bairro está falando?`
+  }
+
   const { text } = await generateText({
-    model: openai("gpt-4.1"),
+    model: modelo,
     system: systemPrompt,
     messages: [
       ...historico.map((h) => ({ role: h.role, content: h.content }) as const),

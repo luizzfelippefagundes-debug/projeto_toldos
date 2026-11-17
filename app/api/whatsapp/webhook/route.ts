@@ -1,9 +1,10 @@
 import { timingSafeEqual } from "node:crypto"
 import { NextResponse } from "next/server"
 import { garantirTabelaConversasBot, garantirColunasOrcamentos, garantirCpfClientes } from "@/lib/migracoes"
-import { buscarClientePorTelefone, criarClienteAutomaticoSeNaoExistir } from "@/lib/bot-whatsapp"
+import { buscarClientePorTelefone, criarClienteAutomaticoSeNaoExistir, processarMensagemWhatsapp } from "@/lib/bot-whatsapp"
 import { registrarMensagemBot } from "@/lib/bot-registro"
 import { processarRetornoWhatsapp } from "@/lib/retornos-automatico"
+import { enviarMensagemWhatsapp } from "@/lib/evolution-api"
 
 interface ChaveMensagem {
   remoteJid?: string
@@ -102,13 +103,32 @@ export async function POST(request: Request) {
       autor: "cliente",
     })
 
+    let retornoProcessado = false
     if (cliente) {
-      await processarRetornoWhatsapp({
-        clienteId: cliente.id,
-        clienteNome: cliente.nome,
-        telefone,
-        texto,
-      })
+      retornoProcessado = Boolean(
+        await processarRetornoWhatsapp({
+          clienteId: cliente.id,
+          clienteNome: cliente.nome,
+          telefone,
+          texto,
+        })
+      )
+    }
+
+    // Se não foi um comando específico de retorno/aprovação, o Robô de Atendimento responde
+    if (!retornoProcessado) {
+      const respostaBot = await processarMensagemWhatsapp(telefone, texto)
+      if (respostaBot) {
+        await enviarMensagemWhatsapp(telefone, respostaBot)
+        await registrarMensagemBot({
+          clienteId: cliente?.id ?? null,
+          clienteNome: nomeExibicao,
+          telefone,
+          texto: respostaBot,
+          origem: "automatica",
+          autor: "bot",
+        })
+      }
     }
   } catch (e) {
     console.error("[whatsapp webhook] erro processando mensagem:", e)
