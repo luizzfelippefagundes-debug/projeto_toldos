@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-dialog"
 import { useData } from "@/context/data-context"
 import { Camera, FileUp, ScanLine, AlertCircle } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface CamposLidos {
   beneficiario?: string
@@ -127,6 +128,7 @@ export function LeitorBoletoDialog() {
   const { lancamentos } = useData()
   const [aberto, setAberto] = useState(false)
   const [lendo, setLendo] = useState(false)
+  const [arrastando, setArrastando] = useState(false)
   const [erro, setErro] = useState("")
   const [leitura, setLeitura] = useState<Leitura | null>(null)
   const inputArquivo = useRef<HTMLInputElement>(null)
@@ -198,44 +200,62 @@ export function LeitorBoletoDialog() {
               <div>
                 <p className="font-bold text-sm text-foreground">Lendo dados do boleto...</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Identificando valor, vencimento e código de barras.
+                  Extraindo fornecedor, valor, vencimento e código de barras.
                 </p>
               </div>
             </div>
           ) : (
             <div className="flex flex-col gap-3 py-2">
+              {/* Botão principal de PDF / Computador com Drag & Drop */}
               <button
                 type="button"
-                onClick={() => inputCamera.current?.click()}
-                className="flex items-center gap-4 p-4 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary hover:bg-primary/5 transition-all text-left cursor-pointer group"
+                onClick={() => inputArquivo.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setArrastando(true)
+                }}
+                onDragLeave={() => setArrastando(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setArrastando(false)
+                  const f = e.dataTransfer.files?.[0]
+                  if (f) enviar(f)
+                }}
+                className={cn(
+                  "flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left cursor-pointer group",
+                  arrastando
+                    ? "border-primary bg-primary/10 ring-2 ring-primary"
+                    : "border-primary/40 bg-primary/5 hover:border-primary hover:bg-primary/10"
+                )}
               >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
-                  <Camera className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
+                  <FileUp className="w-6 h-6" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                    Tirar foto com a Câmera
+                    {arrastando ? "Solte o arquivo aqui!" : "Subir PDF do Boleto ou Foto"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Abre a câmera do celular para fotografar o boleto.
+                    Clique para escolher ou arraste o PDF baixado direto pra cá.
                   </p>
                 </div>
               </button>
 
+              {/* Botão secundário para quem estiver no celular tirando foto */}
               <button
                 type="button"
-                onClick={() => inputArquivo.current?.click()}
-                className="flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/50 hover:bg-muted/50 transition-all text-left cursor-pointer group"
+                onClick={() => inputCamera.current?.click()}
+                className="flex items-center gap-4 p-3.5 rounded-xl border border-border hover:border-primary/40 hover:bg-muted/50 transition-all text-left cursor-pointer group"
               >
-                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-muted-foreground group-hover:text-foreground group-hover:scale-105 transition-transform shrink-0">
-                  <FileUp className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground group-hover:text-foreground group-hover:scale-105 transition-transform shrink-0">
+                  <Camera className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm text-foreground">
-                    Subir PDF ou Foto da Galeria
+                  <p className="font-semibold text-xs text-foreground group-hover:text-primary transition-colors">
+                    Tirar foto com a Câmera
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Para arquivos baixados ou recebidos no WhatsApp.
+                  <p className="text-[11px] text-muted-foreground">
+                    Para quando estiver no celular e o boleto for em papel impresso.
                   </p>
                 </div>
               </button>
