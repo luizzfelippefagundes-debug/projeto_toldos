@@ -6,6 +6,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { apenasDigitos, formatarLinhaDigitavel, interpretarBoleto } from "@/lib/boleto"
 import { reconciliarBoleto } from "@/lib/boleto-reconciliar"
+import { extrairDadosBoletoPdf } from "@/lib/boleto-pdf"
 
 // Lê um boleto (PDF ou foto). A IA multimodal (Google Gemini, OpenAI GPT-4o ou Claude)
 // extrai os campos do documento e a linha digitável é decodificada e validada
@@ -160,15 +161,40 @@ export async function POST(req: Request) {
   let lido: z.infer<typeof schema> | null = null
   let ultimoErro: any = null
 
-  const conteudoArquivo =
-    arquivo.type === "application/pdf"
-      ? { type: "file" as const, data: bytes, mediaType: "application/pdf" }
-      : { type: "image" as const, image: bytes, mediaType: arquivo.type }
+  // Se for PDF, tenta extrair o texto nativo digital (99% dos boletos de fornecedor têm texto digital)
+  const ehPdf = arquivo.type === "application/pdf"
+  const dadosPdf = ehPdf ? await extrairDadosBoletoPdf(bytes) : null
+  const temTextoPdf = Boolean(dadosPdf?.textoCompleto && dadosPdf.textoCompleto.length >= 20)
 
-  const textoInstrucaoUsuario =
-    modo === "codigo_barras"
-      ? "Esta imagem é um enquadramento focado de perto NO CÓDIGO DE BARRAS E LINHA DIGITÁVEL do boleto (como leitor de banco). Extraia com 100% de precisão numérica a LINHA DIGITÁVEL e o VALOR."
-      : "Extraia todos os dados deste boleto de cobrança com máxima precisão numérica."
+  // Conteúdo para a IA:
+  // Se PDF tem texto, envia o texto diretamente (compatível 100% com OpenAI gpt-4o e Gemini, super rápido e sem erro de media type)
+  // Se for imagem, envia como imagem multimodal
+  const conteudoMensagem: any[] = []
+
+  if (ehPdf && temTextoPdf) {
+    conteudoMensagem.push({
+      type: "text",
+      text:
+        "Abaixo está o texto digital integral extraído deste boleto em PDF gerado pelo emissor/banco:\n\n" +
+        "--- INÍCIO DO TEXTO DO BOLETO ---\n" +
+        dadosPdf!.textoCompleto +
+        "\n--- FIM DO TEXTO DO BOLETO ---\n\n" +
+        "Extraia com exatidão máxima todos os campos (linha digitável com todos os dígitos, valor exato, data de vencimento, beneficiário e fatura).",
+    })
+  } else {
+    conteudoMensagem.push({
+      type: "text",
+      text:
+        modo === "codigo_barras"
+          ? "Esta imagem é um enquadramento focado de perto NO CÓDIGO DE BARRAS E LINHA DIGITÁVEL do boleto (como leitor de banco). Extraia com 100% de precisão numérica a LINHA DIGITÁVEL e o VALOR."
+          : "Extraia todos os dados deste boleto de cobrança com máxima precisão numérica.",
+    })
+    conteudoMensagem.push(
+      ehPdf
+        ? { type: "file" as const, data: bytes, mediaType: "application/pdf" }
+        : { type: "image" as const, image: bytes, mediaType: arquivo.type }
+    )
+  }
 
   for (const modelo of modelos) {
     try {
@@ -225,10 +251,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "user",
-            content: [
-              { type: "text", text: textoInstrucaoUsuario },
-              conteudoArquivo,
-            ],
+            content: conteudoMensagem,
           },
         ],
       })
@@ -239,6 +262,40 @@ export async function POST(req: Request) {
     } catch (err: any) {
       ultimoErro = err
       console.warn("Tentativa com modelo falhou, tentando próximo modelo...", err?.message)
+    }
+  }
+
+  // Se a IA não respondeu mas o PDF tinha texto estruturado com linha digitável e valor:
+  if (!lido && dadosPdf && (dadosPdf.linhaDigitavel || (dadosPdf.valor && dadosPdf.vencimento))) {
+    lido = {
+      linhaDigitavel: dadosPdf.linhaDigitavel ?? null,
+      blocosLinhaDigitavel: null,
+      beneficiario: dadosPdf.beneficiario ?? null,
+      cnpjCpfBeneficiario: dadosPdf.cnpjCpfBeneficiario ?? null,
+      valor: dadosPdf.valor ?? null,
+      vencimento: dadosPdf.vencimento ?? null,
+      mesReferencia: null,
+      numeroDocumento: dadosPdf.numeroDocumento ?? null,
+      pixCopiaECola: dadosPdf.pixCopiaECola ?? null,
+      pagador: dadosPdf.pagador ?? null,
+      instrucoes: dadosPdf.instrucoes ?? null,
+    }
+  } else if (lido && dadosPdf) {
+    // Complementa dados faltantes da IA com os dados extraídos diretamente do PDF
+    if (!lido.linhaDigitavel && dadosPdf.linhaDigitavel) {
+      lido.linhaDigitavel = dadosPdf.linhaDigitavel
+    }
+    if ((!lido.valor || lido.valor <= 0) && dadosPdf.valor) {
+      lido.valor = dadosPdf.valor
+    }
+    if (!lido.vencimento && dadosPdf.vencimento) {
+      lido.vencimento = dadosPdf.vencimento
+    }
+    if (!lido.beneficiario && dadosPdf.beneficiario) {
+      lido.beneficiario = dadosPdf.beneficiario
+    }
+    if (!lido.numeroDocumento && dadosPdf.numeroDocumento) {
+      lido.numeroDocumento = dadosPdf.numeroDocumento
     }
   }
 
