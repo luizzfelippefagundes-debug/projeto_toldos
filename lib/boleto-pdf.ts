@@ -98,19 +98,20 @@ export async function extrairDadosBoletoPdf(pdfBytes: Uint8Array): Promise<Bolet
   // Se encontrou linha digitável, valida com interpretarBoleto
   if (res.linhaDigitavel) {
     const decod = interpretarBoleto(apenasDigitos(res.linhaDigitavel))
-    if (decod && decod.valido) {
+    if (decod) {
       res.bancoNome = obterIdentificacaoBoleto(decod)
       if (decod.valor != null && !res.valor) {
         res.valor = decod.valor
       }
-      if (decod.vencimento && !res.vencimento) {
+      if (decod.vencimento && !res.vencimento && decod.valido) {
         res.vencimento = decod.vencimento
       }
     }
   }
 
-  // 2. Extrair Vencimento do texto impresso (tem prioridade caso o código de barras seja não-padrão)
-  const regexVencimentoRotulo = /(?:Vencimento|Data\s*de\s*Vencimento)[\s:.]*(\d{1,2}[/.-]\d{1,2}[/.-]\d{4})/i
+  // 2. Extrair Vencimento do texto impresso (tem prioridade máxima)
+  // Padrão 1: "Vencimento: 13/11/2026" ou "Vencimento ... 13/11/2026"
+  const regexVencimentoRotulo = /(?:Vencimento|Data\s*de\s*Vencimento)[\s:.\S\w\s]{0,60}?(\d{1,2}[/.-]\d{1,2}[/.-]\d{4})/i
   const matchVenc = regexVencimentoRotulo.exec(textoCompleto)
   if (matchVenc) {
     const iso = normalizarDataBrParaIso(matchVenc[1])
@@ -120,7 +121,7 @@ export async function extrairDadosBoletoPdf(pdfBytes: Uint8Array): Promise<Bolet
   }
 
   // 3. Extrair Valor do Documento impresso
-  const regexValorRotulo = /(?:Valor\s*do\s*Documento|Valor\s*Cobrado|(=)\s*Valor|Total\s*a\s*Pagar)[\s:.]*(?:R\$\s*)?([\d.,]+)/i
+  const regexValorRotulo = /(?:Valor\s*do\s*Documento|Valor\s*Cobrado|(=)\s*Valor|Total\s*a\s*Pagar)[\s:.\S\w\s]{0,50}?(?:R\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2})\b/i
   const matchVal = regexValorRotulo.exec(textoCompleto)
   if (matchVal) {
     const val = extrairValorPtBr(matchVal[0])
@@ -130,30 +131,61 @@ export async function extrairDadosBoletoPdf(pdfBytes: Uint8Array): Promise<Bolet
   }
 
   // 4. Extrair Beneficiário / Cedente
-  const regexBeneficiario = /(?:Benefici[áa]rio|Cedente|Raz[ãa]o\s*Social)[\s:.]*([^\n\r]+)/i
-  const matchBen = regexBeneficiario.exec(textoCompleto)
-  if (matchBen) {
-    let nome = matchBen[1].trim()
-    // Limpar se tiver CNPJ colado
-    const matchCnpj = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2})/.exec(nome)
-    if (matchCnpj) {
-      res.cnpjCpfBeneficiario = matchCnpj[1]
-      nome = nome.replace(matchCnpj[0], "").replace(/CNPJ\/CPF[:\s]*/i, "").trim()
-    }
-    // Remove sufixos como "Agência", "Código" se capturados na mesma linha
-    nome = nome.replace(/\s*(?:Ag[êe]ncia|C[óo]digo|Endere[çc]o).*$/i, "").trim()
-    if (nome.length > 2) {
-      res.beneficiario = nome
+  const linhasTexto = textoCompleto.split("\n").map((l) => l.trim()).filter(Boolean)
+  for (let i = 0; i < linhasTexto.length; i++) {
+    const linha = linhasTexto[i]
+    if (/(?:Benefici[áa]rio|Cedente|Raz[ãa]o\s*Social)/i.test(linha)) {
+      const partes = linha.split(/(?:Benefici[áa]rio|Cedente|Raz[ãa]o\s*Social)[\s:.]*/i)
+      if (partes[1] && partes[1].trim().length > 3 && !/Ag[êe]ncia/i.test(partes[1])) {
+        let textoLinha = partes[1].trim()
+        const matchCnpj = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2})/.exec(textoLinha)
+        if (matchCnpj) {
+          res.cnpjCpfBeneficiario = matchCnpj[1]
+          textoLinha = textoLinha.replace(matchCnpj[0], "").replace(/CNPJ\/CPF[:\s-]*/i, "").trim()
+        }
+        textoLinha = textoLinha.replace(/\s*-\s*CNPJ[:\s-]*/i, "").trim()
+        res.beneficiario = textoLinha
+        break
+      } else if (linhasTexto[i + 1]) {
+        let prox = linhasTexto[i + 1]
+        const matchCnpj = /(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2})/.exec(prox)
+        if (matchCnpj) {
+          res.cnpjCpfBeneficiario = matchCnpj[1]
+          prox = prox.replace(matchCnpj[0], "").replace(/CNPJ\/CPF[:\s-]*/i, "").trim()
+        }
+        prox = prox
+          .replace(/\s*-\s*CNPJ[:\s-]*/i, "")
+          .replace(/\s*(?:Ag[êe]ncia|C[óo]digo|Endere[çc]o|Nosso\s*N[úu]mero|\d{3,5}\s*\/).*$/i, "")
+          .trim()
+        if (prox.length > 2) {
+          res.beneficiario = prox
+          break
+        }
+      }
     }
   }
 
   // 5. Extrair Número do Documento / Fatura
-  const regexNumDoc = /(?:N[º°.]?\s*do\s*Documento|N[º°.]?\s*Documento|Fatura|N[º°]\s*Fatura)[\s:.]*([A-Za-z0-9\-_./]+)/i
-  const matchDoc = regexNumDoc.exec(textoCompleto)
-  if (matchDoc) {
-    const doc = matchDoc[1].trim()
-    if (doc.length > 1 && !doc.toLowerCase().includes("vencimento")) {
-      res.numeroDocumento = doc
+  for (let i = 0; i < linhasTexto.length; i++) {
+    const linha = linhasTexto[i]
+    if (/(?:N[º°.]?\s*do\s*Documento|N[º°.]?\s*Documento|Fatura)/i.test(linha)) {
+      const partes = linha.split(/(?:N[º°.]?\s*do\s*Documento|N[º°.]?\s*Documento|Fatura)[\s:.]*/i)
+      if (partes[1] && /^[A-Za-z0-9\-_./]{3,20}$/.test(partes[1].trim())) {
+        res.numeroDocumento = partes[1].trim()
+        break
+      } else if (linhasTexto[i + 1]) {
+        const proxTokens = linhasTexto[i + 1].split(/\s+/)
+        const token = proxTokens.find(
+          (t) =>
+            /^[A-Za-z0-9\-_./]{3,20}$/.test(t) &&
+            !/\d{2}[/.-]\d{2}[/.-]\d{4}/.test(t) &&
+            !/^(DM|R\$|RC|ESPECIE)$/i.test(t)
+        )
+        if (token) {
+          res.numeroDocumento = token
+          break
+        }
+      }
     }
   }
 
