@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ erro: "telefone e mensagem são obrigatórios" }, { status: 400 })
   }
 
-  await enviarMensagemWhatsapp(String(telefone), String(mensagem))
+  const resultado = await enviarMensagemWhatsapp(String(telefone), String(mensagem))
 
   await registrarMensagemBot({
     clienteId: clienteId ?? null,
@@ -20,5 +20,5 @@ export async function POST(request: Request) {
     autor: "bot",
   })
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: resultado.ok, resultado })
 }

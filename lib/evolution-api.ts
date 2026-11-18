@@ -21,20 +21,33 @@ function resolverNumero(numero: string): string {
   return alvo.replace(/\D/g, "")
 }
 
-export async function enviarMensagemWhatsapp(numero: string, texto: string): Promise<void> {
+export async function enviarMensagemWhatsapp(
+  numero: string,
+  texto: string
+): Promise<{ ok: boolean; status?: number; data?: unknown }> {
   const cfg = configurada()
   if (!cfg) {
     console.warn("[whatsapp] Evolution API não configurada — mensagem não enviada:", { numero, texto })
-    return
+    return { ok: false, status: 500, data: "Evolution API não configurada" }
   }
+  const numDestino = resolverNumero(numero)
+  console.log(`[whatsapp] Enviando mensagem para ${numDestino} via instancia ${cfg.instancia}...`)
   const resposta = await fetch(`${cfg.baseUrl}/message/sendText/${cfg.instancia}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: cfg.apiKey },
-    body: JSON.stringify({ number: resolverNumero(numero), text: texto }),
+    body: JSON.stringify({ number: numDestino, text: texto }),
   })
+  const textBody = await resposta.text().catch(() => "")
+  let jsonBody: unknown = null
+  try {
+    jsonBody = JSON.parse(textBody)
+  } catch {}
   if (!resposta.ok) {
-    console.error("[whatsapp] Falha ao enviar mensagem:", resposta.status, (await resposta.text().catch(() => "")).slice(0, 500))
+    console.error("[whatsapp] Falha ao enviar mensagem:", resposta.status, textBody.slice(0, 500))
+    return { ok: false, status: resposta.status, data: jsonBody || textBody }
   }
+  console.log("[whatsapp] Resposta do envio:", textBody.slice(0, 200))
+  return { ok: true, status: resposta.status, data: jsonBody || textBody }
 }
 
 // PDF do orçamento (ou qualquer documento) anexado — mediaBase64 sem o
