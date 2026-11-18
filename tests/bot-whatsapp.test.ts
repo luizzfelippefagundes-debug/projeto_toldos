@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatarTelefoneBrasil, normalizarTelefone, SERVICOS_TEXTO } from "@/lib/bot-whatsapp"
+import { formatarTelefoneBrasil, normalizarTelefone, SERVICOS_TEXTO, resolverFluxoAtendimento } from "@/lib/bot-whatsapp"
 
 describe("normalizarTelefone", () => {
   it("tira tudo que não é dígito", () => {
@@ -59,5 +59,34 @@ describe("SERVICOS_TEXTO do Robô de Atendimento", () => {
     expect(SERVICOS_TEXTO).toContain("toldos de policarbonato")
     expect(SERVICOS_TEXTO).toContain("coberturas de policarbonato")
     expect(SERVICOS_TEXTO).toContain("reformas de toldo")
+  })
+})
+
+describe("resolverFluxoAtendimento (Motor de Regras Infalível do Robô)", () => {
+  it("responde saudação inicial com boas-vindas e pergunta nome e cidade", () => {
+    const res = resolverFluxoAtendimento("oi", [])
+    expect(res.resposta).toContain("Seja bem-vindo a TOLDOSPRINT")
+    expect(res.resposta).toContain("Qual seu nome e de qual cidade, bairro está falando?")
+    expect(res.transferir).toBeFalsy()
+  })
+
+  it("ao receber nome e cidade, apresenta os serviços mais utilizados e pergunta como ajudar", () => {
+    const res = resolverFluxoAtendimento("Sou o Lucas de Colatina Centro", [{ role: "assistant", content: "Qual seu nome?" }])
+    expect(res.resposta).toContain("SERVIÇOS mais utilizados:")
+    expect(res.resposta).toContain("COMUNICAÇÃO VISUAL:")
+    expect(res.resposta).toContain("TOLDOS E COBERTURAS:")
+    expect(res.resposta).toContain("Como posso te ajudar?")
+    expect(res.transferir).toBeFalsy()
+  })
+
+  it("ao solicitar orçamento, orienta a tirar foto, ter medidas e transfere", () => {
+    const res = resolverFluxoAtendimento("Quero orçamento de toldo cortina", [
+      { role: "assistant", content: "Como posso te ajudar?" },
+    ], "Lucas", "Colatina")
+
+    expect(res.resposta).toContain("Tire uma foto do que se trata ou deseja")
+    expect(res.resposta).toContain("Tenha em mãos medidas ou projetos")
+    expect(res.resposta).toContain("transferindo")
+    expect(res.transferir).toBe(true)
   })
 })

@@ -140,6 +140,75 @@ export async function processarMensagemWhatsapp(telefone: string, textoRecebido:
   }
 }
 
+export function resolverFluxoAtendimento(
+  textoRecebido: string,
+  historico: MensagemHistorico[],
+  nomeSalvo?: string | null,
+  localSalvo?: string | null
+): { resposta: string; nome?: string; local?: string; transferir?: boolean } {
+  const limpo = textoRecebido.trim().toLowerCase()
+  const eSaudacao = /^(oi+|ol[aá]+|e a[ií]|bom dia|boa tarde|boa noite|hey|hello|al[oô]+|opa|fala)[\s!?.]*$/i.test(limpo)
+  const pedeOrcamento = /(or[çc]amento|pre[çc]o|valor|quanto|custa|fazer|produzir|toldo|adesivo|placa|lona|fachada|banner|letra|reforma|cobertura)/i.test(limpo)
+
+  // 1. Início de conversa ou saudação simples
+  if (historico.length === 0 || eSaudacao) {
+    return {
+      resposta:
+        "Seja bem-vindo a TOLDOSPRINT (Toldos e Comunicação Visual)! 🤝✨\n\nQual seu nome e de qual cidade, bairro está falando?",
+    }
+  }
+
+  // 2. Se ainda não temos o nome ou o local, tenta extrair da resposta
+  if (!nomeSalvo || !localSalvo) {
+    let nomeExtraido = nomeSalvo || undefined
+    let localExtraido = localSalvo || undefined
+
+    const mSou = /(?:sou\s+(?:o|a)?\s*|me\s*chamo\s*|meu\s*nome\s*[ée]\s*)([a-zA-ZçÇáéíóúÁÉÍÓÚ\s]{2,25})/i.exec(textoRecebido)
+    if (mSou) {
+      nomeExtraido = mSou[1].trim()
+    } else if (!nomeSalvo && textoRecebido.split(/\s+/).length <= 4 && !pedeOrcamento) {
+      nomeExtraido = textoRecebido.split(/[,de\s]+/)[0].trim()
+    }
+
+    const mLocal = /(?:de|em|moro em|falando de|cidade)\s+([a-zA-ZçÇáéíóúÁÉÍÓÚ\s/-]{3,30})/i.exec(textoRecebido)
+    if (mLocal) {
+      localExtraido = mLocal[1].trim()
+    }
+
+    if (pedeOrcamento) {
+      return {
+        resposta:
+          `Perfeito${nomeExtraido ? `, ${nomeExtraido}` : ""}! Para facilitar e agilizar o seu orçamento:\n` +
+          `📸 Tire uma foto do que se trata ou deseja;\n` +
+          `📏 Tenha em mãos medidas ou projetos para facilitar no orçamento.\n\n` +
+          `Já estou transferindo o seu atendimento para nossa equipe. Em breve vamos entrar em contato com você por aqui! ⏳🧑‍💼`,
+        nome: nomeExtraido,
+        local: localExtraido,
+        transferir: true,
+      }
+    }
+
+    return {
+      resposta:
+        `Prazer${nomeExtraido ? `, ${nomeExtraido}` : ""}!\n\n` +
+        `${SERVICOS_TEXTO}\n\n` +
+        `Como posso te ajudar?`,
+      nome: nomeExtraido,
+      local: localExtraido,
+    }
+  }
+
+  // 3. Se já tinha nome ou solicitou produto/orçamento:
+  return {
+    resposta:
+      `Perfeito, ${nomeSalvo}! Para facilitar e agilizar o seu orçamento:\n` +
+      `📸 Tire uma foto do que se trata ou deseja;\n` +
+      `📏 Tenha em mãos medidas ou projetos para facilitar no orçamento.\n\n` +
+      `Já estou transferindo o seu atendimento para nossa equipe. Em breve vamos entrar em contato com você por aqui! ⏳🧑‍💼`,
+    transferir: true,
+  }
+}
+
 async function processarComTravaAdquirida(
   telefone: string,
   textoRecebido: string,
@@ -298,26 +367,54 @@ REGRAS GERAIS:
     ? google("gemini-2.0-flash")
     : null
 
-  if (!modelo) {
-    return `Seja bem-vindo a TOLDOSPRINT (Toldos e Comunicação Visual)!\n\nQual seu nome e de qual cidade, bairro está falando?`
+  let respostaFinal: string = ""
+
+  if (modelo) {
+    try {
+      const { text } = await generateText({
+        model: modelo,
+        system: systemPrompt,
+        messages: [
+          ...historico.map((h) => ({ role: h.role, content: h.content }) as const),
+          { role: "user" as const, content: textoRecebido },
+        ],
+        tools,
+        stopWhen: stepCountIs(4),
+      })
+      if (text && text.trim().length > 0) {
+        respostaFinal = text.trim()
+      }
+    } catch (err: any) {
+      console.warn("[bot-whatsapp] Falha na chamada da IA, acionando fluxo de regras...", err?.message)
+    }
   }
 
-  const { text } = await generateText({
-    model: modelo,
-    system: systemPrompt,
-    messages: [
-      ...historico.map((h) => ({ role: h.role, content: h.content }) as const),
-      { role: "user" as const, content: textoRecebido },
-    ],
-    tools,
-    stopWhen: stepCountIs(4),
-  })
+  // Se a IA não respondeu ou deu erro, o fluxo de regras determinístico responde com 100% de precisão
+  if (!respostaFinal) {
+    const reg = resolverFluxoAtendimento(textoRecebido, historico, nomeTemp, localTemp)
+    respostaFinal = reg.resposta
+    if (reg.nome && !nomeTemp) nomeTemp = reg.nome
+    if (reg.local && !localTemp) localTemp = reg.local
+    if (reg.transferir) {
+      transferido = true
+      const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
+      if (telEmpresa) {
+        const alerta = `🔔 *Novo Atendimento Transferido!*\n\n👤 *Cliente:* ${nomeTemp || "Não informado"}\n📍 *Local:* ${localTemp || "Não informado"}\n📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n💬 *Interesse:* ${textoRecebido}\n\n👉 Acesse o WhatsApp para responder!`
+        enviarMensagemWhatsapp(telEmpresa, alerta).catch((e) =>
+          console.error("[bot] erro ao notificar empresa:", e)
+        )
+      }
+    }
+  }
 
-  const resposta = text.trim() || "Desculpa, não entendi — pode repetir?"
-  const novoHistorico = [...historico, { role: "user" as const, content: textoRecebido }, { role: "assistant" as const, content: resposta }]
+  const novoHistorico = [
+    ...historico,
+    { role: "user" as const, content: textoRecebido },
+    { role: "assistant" as const, content: respostaFinal },
+  ]
 
   await atualizarConversa(conversa.id, { nomeTemp, localTemp, historico: novoHistorico })
   if (transferido) await transferirAtendimento(conversa.id)
 
-  return resposta
+  return respostaFinal
 }

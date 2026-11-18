@@ -11,10 +11,13 @@ function configurada() {
   return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instancia }
 }
 
-// Se WHATSAPP_TEST_RECIPIENT estiver definida, todas as mensagens vão pra
-// esse número — útil pra testar sem enviar pra clientes reais.
+// Se WHATSAPP_TEST_RECIPIENT estiver definida e estivermos fora de produção,
+// redireciona para esse número — em produção, sempre envia diretamente ao destinatário real.
 function resolverNumero(numero: string): string {
-  return process.env.WHATSAPP_TEST_RECIPIENT ?? numero
+  if (process.env.NODE_ENV === "development" && process.env.WHATSAPP_TEST_RECIPIENT) {
+    return process.env.WHATSAPP_TEST_RECIPIENT
+  }
+  return numero
 }
 
 export async function enviarMensagemWhatsapp(numero: string, texto: string): Promise<void> {
