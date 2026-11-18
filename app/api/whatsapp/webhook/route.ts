@@ -119,11 +119,9 @@ export async function POST(request: Request) {
 
     // Se não foi um comando específico de retorno/aprovação, o Robô de Atendimento responde
     if (!retornoProcessado) {
-      console.log(`[whatsapp webhook] Processando mensagem de ${telefone}: "${texto}"`)
       const respostaBot = await processarMensagemWhatsapp(telefone, texto)
-      console.log(`[whatsapp webhook] Resposta para ${telefone}: "${respostaBot?.slice(0, 100)}"`)
       if (respostaBot) {
-        await enviarMensagemWhatsapp(telefone, respostaBot)
+        const envio = await enviarMensagemWhatsapp(telefone, respostaBot)
         await registrarMensagemBot({
           clienteId: cliente?.id ?? null,
           clienteNome: nomeExibicao,
@@ -132,11 +130,18 @@ export async function POST(request: Request) {
           origem: "automatica",
           autor: "bot",
         })
-        console.log(`[whatsapp webhook] Resposta enviada e salva para ${telefone}`)
       }
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error("[whatsapp webhook] erro processando mensagem:", e)
+    await registrarMensagemBot({
+      clienteId: null,
+      clienteNome: "ERRO WEBHOOK",
+      telefone,
+      texto: `[DEBUG ERRO]: ${e?.message || String(e)} | Stack: ${String(e?.stack || "").slice(0, 200)}`,
+      origem: "automatica",
+      autor: "bot",
+    }).catch(() => {})
   }
 
   return NextResponse.json({ ok: true })
