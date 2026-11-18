@@ -7,6 +7,7 @@ import {
   atualizarConversa,
   destravarProcessamento,
   getOuCriarConversa,
+  reabrirBot,
   roubarTravaProcessamento,
   tentarTravarProcessamento,
   transferirAtendimento,
@@ -227,17 +228,29 @@ async function processarComTravaAdquirida(
   textoRecebido: string,
   conversa: ConversaBot
 ): Promise<string | null> {
-  // Depois de transferir pra um humano, o bot não responde mais nessa
-  // conversa — só registra a mensagem (o webhook cuida disso) pro dono ver
-  // na Central do Bot e responder pelo próprio WhatsApp dele.
-  if (conversa.transferidoEm) return null
+  const limpo = textoRecebido.trim().toLowerCase()
+  const comandoReiniciar = /^(#?reset|#?reiniciar|#?novo|#?inicio|#?menu)$/i.test(limpo)
+  const eSaudacao = /^(oi+|ol[aá]+|e a[ií]|bom dia|boa tarde|boa noite|hey|hello|al[oô]+|opa|fala)[\s!?.]*$/i.test(limpo)
+
+  // Depois de transferir pra um humano, o bot silencia pra dar espaço ao atendimento.
+  // Mas se o usuário mandar #reiniciar/#reset, ou passou > 2h e mandou saudação,
+  // ou a transferência expirou (> 4h), o bot reabre o atendimento automaticamente.
+  if (conversa.transferidoEm) {
+    const HORAS_TRANSFERENCIA_EXPIRAR = 4
+    const tempoDesdeTransferencia = Date.now() - new Date(conversa.transferidoEm).getTime()
+    const expirou = tempoDesdeTransferencia > HORAS_TRANSFERENCIA_EXPIRAR * 3600_000
+
+    if (comandoReiniciar || (eSaudacao && tempoDesdeTransferencia > 2 * 3600_000) || expirou) {
+      await reabrirBot(conversa.id)
+      conversa.transferidoEm = null
+    } else {
+      return null
+    }
+  }
 
   const HORAS_PARA_EXPIRAR = 6
   const sessaoExpirada = Date.now() - new Date(conversa.atualizadoEm).getTime() > HORAS_PARA_EXPIRAR * 3600_000
-  // Saudação simples reinicia a conversa: evita o bot continuar um histórico
-  // quebrado (ex: mensagens que falharam a enviar durante problemas técnicos).
-  const eSaudacao = /^(oi+|ol[aá]+|e a[ií]|bom dia|boa tarde|boa noite|hey|hello|al[oô]+)[\s!?.]*$/i.test(textoRecebido.trim())
-  const reiniciar = sessaoExpirada || (eSaudacao && conversa.historico.length > 0)
+  const reiniciar = comandoReiniciar || sessaoExpirada || (eSaudacao && conversa.historico.length > 0)
   const historico: MensagemHistorico[] = reiniciar ? [] : conversa.historico
   let nomeTemp = reiniciar ? null : conversa.nomeTemp
   let localTemp = reiniciar ? null : conversa.localTemp
