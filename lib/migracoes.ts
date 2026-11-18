@@ -20,6 +20,10 @@ export async function garantirColunasOrcamentos() {
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS arte_url TEXT`
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS arte_aprovada_em TEXT`
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS observacao TEXT`
+  await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS mp_payment_id TEXT`
+  await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS pix_copia_cola TEXT`
+  await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS pix_qr_code_base64 TEXT`
+  await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS pago_em TEXT`
   orcamentosProntos = true
 }
 

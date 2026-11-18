@@ -149,8 +149,21 @@ export function resolverFluxoAtendimento(
   const limpo = textoRecebido.trim().toLowerCase()
   const eSaudacao = /^(oi+|ol[aá]+|e a[ií]|bom dia|boa tarde|boa noite|hey|hello|al[oô]+|opa|fala)[\s!?.]*$/i.test(limpo)
   const pedeOrcamento = /(or[çc]amento|pre[çc]o|valor|quanto|custa|fazer|produzir|toldo|adesivo|placa|lona|fachada|banner|letra|reforma|cobertura)/i.test(limpo)
+  const pedePix = /(pix|chave pix|copia e cola|como pagar|como pago|forma de pagamento|dados bancarios|mercado pago)/i.test(limpo)
 
-  // 1. Início de conversa ou saudação simples
+  // 1. Dúvida sobre pagamento / Pix
+  if (pedePix) {
+    const chavePix = process.env.PIX_CHAVE_EMPRESA || "(27) 99748-9714"
+    return {
+      resposta:
+        "💳 *PAGAMENTO VIA PIX (Mercado Pago / Banco):*\n\n" +
+        `Nossa chave PIX oficial é o telefone celular:\n👉 *${chavePix}*\n` +
+        "Favorecido: *Toldos Print (Comunicação Visual e Toldos)*\n\n" +
+        "Assim que realizar o pagamento, pode mandar o comprovante por aqui mesmo que confirmamos o seu pedido na hora! 🤝✨",
+    }
+  }
+
+  // 2. Início de conversa ou saudação simples
   if (historico.length === 0 || eSaudacao) {
     return {
       resposta:
@@ -158,7 +171,7 @@ export function resolverFluxoAtendimento(
     }
   }
 
-  // 2. Se ainda não temos o nome ou o local, tenta extrair da resposta
+  // 3. Se ainda não temos o nome ou o local, tenta extrair da resposta
   if (!nomeSalvo || !localSalvo) {
     let nomeExtraido = nomeSalvo || undefined
     let localExtraido = localSalvo || undefined
