@@ -360,51 +360,59 @@ REGRAS GERAIS:
     }),
   }
 
-  // Modelo de IA com seleção e fallback seguro
-  const modelo = process.env.OPENAI_API_KEY
-    ? openai("gpt-4o-mini")
-    : (process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY)
-    ? google("gemini-2.0-flash")
-    : null
+  // 1. O fluxo determinístico oficial da empresa tem prioridade absoluta:
+  // Resposta instantânea (0ms), sem custo, sem falha de rede e 100% no padrão solicitado.
+  const reg = resolverFluxoAtendimento(textoRecebido, historico, nomeTemp, localTemp)
+  let respostaFinal: string = reg.resposta
 
-  let respostaFinal: string = ""
-
-  if (modelo) {
-    try {
-      const { text } = await generateText({
-        model: modelo,
-        system: systemPrompt,
-        messages: [
-          ...historico.map((h) => ({ role: h.role, content: h.content }) as const),
-          { role: "user" as const, content: textoRecebido },
-        ],
-        tools,
-        stopWhen: stepCountIs(4),
-      })
-      if (text && text.trim().length > 0) {
-        respostaFinal = text.trim()
-      }
-    } catch (err: any) {
-      console.warn("[bot-whatsapp] Falha na chamada da IA, acionando fluxo de regras...", err?.message)
+  if (reg.nome && !nomeTemp) nomeTemp = reg.nome
+  if (reg.local && !localTemp) localTemp = reg.local
+  if (reg.transferir) {
+    transferido = true
+    const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
+    if (telEmpresa) {
+      const alerta = `🔔 *Novo Atendimento Transferido!*\n\n👤 *Cliente:* ${nomeTemp || "Não informado"}\n📍 *Local:* ${localTemp || "Não informado"}\n📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n💬 *Interesse:* ${textoRecebido}\n\n👉 Acesse o WhatsApp para responder!`
+      enviarMensagemWhatsapp(telEmpresa, alerta).catch((e) =>
+        console.error("[bot] erro ao notificar empresa:", e)
+      )
     }
   }
 
-  // Se a IA não respondeu ou deu erro, o fluxo de regras determinístico responde com 100% de precisão
+  // 2. Se não houver resposta de regra predefinida e tivermos modelo de IA, tenta com timeout de segurança
   if (!respostaFinal) {
-    const reg = resolverFluxoAtendimento(textoRecebido, historico, nomeTemp, localTemp)
-    respostaFinal = reg.resposta
-    if (reg.nome && !nomeTemp) nomeTemp = reg.nome
-    if (reg.local && !localTemp) localTemp = reg.local
-    if (reg.transferir) {
-      transferido = true
-      const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
-      if (telEmpresa) {
-        const alerta = `🔔 *Novo Atendimento Transferido!*\n\n👤 *Cliente:* ${nomeTemp || "Não informado"}\n📍 *Local:* ${localTemp || "Não informado"}\n📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n💬 *Interesse:* ${textoRecebido}\n\n👉 Acesse o WhatsApp para responder!`
-        enviarMensagemWhatsapp(telEmpresa, alerta).catch((e) =>
-          console.error("[bot] erro ao notificar empresa:", e)
-        )
+    const modelo = process.env.OPENAI_API_KEY
+      ? openai("gpt-4o-mini")
+      : (process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY)
+      ? google("gemini-2.0-flash")
+      : null
+
+    if (modelo) {
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 6000)
+        const { text } = await generateText({
+          model: modelo,
+          system: systemPrompt,
+          messages: [
+            ...historico.map((h) => ({ role: h.role, content: h.content }) as const),
+            { role: "user" as const, content: textoRecebido },
+          ],
+          tools,
+          abortSignal: controller.signal,
+        })
+        clearTimeout(timeout)
+        if (text && text.trim().length > 0) {
+          respostaFinal = text.trim()
+        }
+      } catch (err: any) {
+        console.warn("[bot-whatsapp] Falha na chamada da IA:", err?.message)
       }
     }
+  }
+
+  if (!respostaFinal) {
+    respostaFinal =
+      "Seja bem-vindo a TOLDOSPRINT (Toldos e Comunicação Visual)! 🤝✨\n\nQual seu nome e de qual cidade, bairro está falando?"
   }
 
   const novoHistorico = [

@@ -6,6 +6,8 @@ import { registrarMensagemBot } from "@/lib/bot-registro"
 import { processarRetornoWhatsapp } from "@/lib/retornos-automatico"
 import { enviarMensagemWhatsapp } from "@/lib/evolution-api"
 
+export const maxDuration = 60
+
 interface ChaveMensagem {
   remoteJid?: string
   fromMe?: boolean
@@ -117,7 +119,9 @@ export async function POST(request: Request) {
 
     // Se não foi um comando específico de retorno/aprovação, o Robô de Atendimento responde
     if (!retornoProcessado) {
+      console.log(`[whatsapp webhook] Processando mensagem de ${telefone}: "${texto}"`)
       const respostaBot = await processarMensagemWhatsapp(telefone, texto)
+      console.log(`[whatsapp webhook] Resposta para ${telefone}: "${respostaBot?.slice(0, 100)}"`)
       if (respostaBot) {
         await enviarMensagemWhatsapp(telefone, respostaBot)
         await registrarMensagemBot({
@@ -128,6 +132,7 @@ export async function POST(request: Request) {
           origem: "automatica",
           autor: "bot",
         })
+        console.log(`[whatsapp webhook] Resposta enviada e salva para ${telefone}`)
       }
     }
   } catch (e) {

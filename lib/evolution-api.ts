@@ -14,10 +14,11 @@ function configurada() {
 // Se WHATSAPP_TEST_RECIPIENT estiver definida e estivermos fora de produção,
 // redireciona para esse número — em produção, sempre envia diretamente ao destinatário real.
 function resolverNumero(numero: string): string {
-  if (process.env.NODE_ENV === "development" && process.env.WHATSAPP_TEST_RECIPIENT) {
-    return process.env.WHATSAPP_TEST_RECIPIENT
-  }
-  return numero
+  const alvo =
+    process.env.NODE_ENV === "development" && process.env.WHATSAPP_TEST_RECIPIENT
+      ? process.env.WHATSAPP_TEST_RECIPIENT
+      : numero
+  return alvo.replace(/\D/g, "")
 }
 
 export async function enviarMensagemWhatsapp(numero: string, texto: string): Promise<void> {
