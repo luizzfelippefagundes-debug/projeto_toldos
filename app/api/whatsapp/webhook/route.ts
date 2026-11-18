@@ -107,14 +107,13 @@ export async function POST(request: Request) {
 
     let retornoProcessado = false
     if (cliente) {
-      retornoProcessado = Boolean(
-        await processarRetornoWhatsapp({
-          clienteId: cliente.id,
-          clienteNome: cliente.nome,
-          telefone,
-          texto,
-        })
-      )
+      const ret = await processarRetornoWhatsapp({
+        clienteId: cliente.id,
+        clienteNome: cliente.nome,
+        telefone,
+        texto,
+      })
+      retornoProcessado = Boolean(ret?.processado)
     }
 
     // Se não foi um comando específico de retorno/aprovação, o Robô de Atendimento responde
