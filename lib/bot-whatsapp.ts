@@ -141,6 +141,16 @@ export const STOPWORDS_NOME = new Set([
   "marcar", "vincular", "vinculado"
 ])
 
+export const STOPWORDS_LOCAL = new Set([
+  "alteracao", "alteração", "alterac", "alteraç", "frente", "cima", "baixo",
+  "saber", "fazer", "ver", "comprar", "orcamento", "orçamento", "toldo", "toldos",
+  "outdoor", "outdoors", "fachada", "fachadas", "placa", "placas", "banner", "banners",
+  "adesivo", "adesivos", "reforma", "reformas", "breve", "semana", "mes", "mês", "ano",
+  "hoje", "amanha", "amanhã", "ontem", "tempo", "duvida", "dúvida", "duvidas", "dúvidas",
+  "sim", "nao", "não", "aqui", "ali", "la", "lá", "grupo", "mais", "menos", "nada", "tudo",
+  "projeto", "projetos", "medida", "medidas", "foto", "fotos", "valor", "valores", "preco", "preço"
+])
+
 export function ehNomeValido(nome?: string | null): boolean {
   if (!nome) return false
   const limpo = nome.trim()
@@ -150,6 +160,88 @@ export function ehNomeValido(nome?: string | null): boolean {
   const primeiraPalavra = limpo.toLowerCase().split(/\s+/)[0]
   if (STOPWORDS_NOME.has(primeiraPalavra)) return false
   return true
+}
+
+export function extrairLocalizacao(texto: string): string | undefined {
+  const limpo = texto.trim()
+
+  // 1. "Sou o Lucas de Colatina Centro", "Me chamo Lucas de Colatina"
+  const mSouDe = /^(?:sou\s+(?:o|a)?\s*|me\s*chamo\s*|meu\s*nome\s*[ée]\s*)[a-zA-ZçÇáéíóúÁÉÍÓÚ\s]+\s+de\s+([a-zA-ZçÇáéíóúÁÉÍÓÚ\s/-]{3,30})$/i.exec(limpo)
+  // 2. "moro em Colatina", "sou de Colatina", "falando de Vitória", "aqui de Colatina", "cidade de Colatina"
+  const mPrefixo = /(?:moro em|sou de|sou da cidade de|falando de|aqui de|aqui em|cidade de)\s+([a-zA-ZçÇáéíóúÁÉÍÓÚ\s/-]{3,30})/i.exec(limpo)
+
+  const candidato = (mSouDe ? mSouDe[1] : mPrefixo ? mPrefixo[1] : null)?.trim()
+  if (!candidato) return undefined
+
+  const primeira = candidato.toLowerCase().split(/[\s/-]+/)[0]
+  if (candidato.length < 3 || STOPWORDS_LOCAL.has(primeira) || STOPWORDS_NOME.has(primeira)) {
+    return undefined
+  }
+
+  if (/[\d?!@#$%^&*()_+={}\[\]:;"'<>/\\]/.test(candidato)) return undefined
+
+  return candidato
+}
+
+export function extrairAssuntoInteresse(texto: string): string | null {
+  const limpo = texto.toLowerCase()
+  if (/\b(outdoor|outdoors)\b/i.test(limpo)) return "Outdoor / Painel Externo"
+  if (/\b(toldo cortina|cortina)\b/i.test(limpo)) return "Toldo Cortina (de enrolar)"
+  if (/\b(toldo fixo)\b/i.test(limpo)) return "Toldo Fixo"
+  if (/\b(policarbonato|cobertura|coberturas)\b/i.test(limpo)) return "Cobertura / Toldo em Policarbonato"
+  if (/\b(toldo|toldos)\b/i.test(limpo)) return "Toldos e Coberturas"
+  if (/\b(fachada|fachadas)\b/i.test(limpo)) return "Fachada Comercial / ACM"
+  if (/\b(letra|letras|3d|caixa)\b/i.test(limpo)) return "Letras Caixa 3D"
+  if (/\b(placa|placas|acm)\b/i.test(limpo)) return "Placas de ACM / Identificação"
+  if (/\b(banner|banners|lona|lonas)\b/i.test(limpo)) return "Banners e Lonas"
+  if (/\b(adesivo|adesivos|envelopamento)\b/i.test(limpo)) return "Adesivos / Envelopamento"
+  if (/\b(rotulo|rotulos|rótulo|rótulos)\b/i.test(limpo)) return "Rótulos / Etiquetas"
+  if (/\b(vitrine|vitrines)\b/i.test(limpo)) return "Reforma de Vitrines"
+  if (/\b(reforma|reformas)\b/i.test(limpo)) return "Reforma / Manutenção"
+  if (/\b(or[çc]amento|pre[çc]o|valor|cota[çc][ãa]o|quanto custa)\b/i.test(limpo)) return "Solicitação de Orçamento"
+  return null
+}
+
+export function formatarAlertaTransferencia({
+  nome,
+  ehClienteCadastrado,
+  local,
+  telefone,
+  textoRecebido,
+  assunto,
+}: {
+  nome?: string | null
+  ehClienteCadastrado?: boolean
+  local?: string | null
+  telefone: string
+  textoRecebido: string
+  assunto?: string | null
+}): string {
+  const nomeEfetivo = ehNomeValido(nome) ? nome?.trim() : null
+  const rotuloCliente = nomeEfetivo
+    ? `${nomeEfetivo}${ehClienteCadastrado ? " (Cliente Cadastrado)" : ""}`
+    : "Não informado (Novo contato)"
+
+  const localValido =
+    local &&
+    local.trim() &&
+    !STOPWORDS_LOCAL.has(local.trim().toLowerCase()) &&
+    local.trim().toLowerCase() !== "não informado"
+      ? local.trim()
+      : null
+
+  const localLinha = localValido ? `📍 *Local:* ${localValido}\n` : ""
+  const assuntoLinha = assunto ? `🎯 *Assunto:* ${assunto}\n` : ""
+
+  return (
+    `🔔 *Novo Atendimento Transferido!*\n\n` +
+    `👤 *Cliente:* ${rotuloCliente}\n` +
+    localLinha +
+    `📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n` +
+    assuntoLinha +
+    `💬 *Mensagem do cliente:* "${textoRecebido.trim()}"\n\n` +
+    `👉 Acesse o WhatsApp para responder!`
+  )
 }
 
 export async function processarMensagemWhatsapp(
@@ -173,8 +265,9 @@ export function resolverFluxoAtendimento(
   historico: MensagemHistorico[],
   nomeSalvo?: string | null,
   localSalvo?: string | null,
-  pushName?: string | null
-): { resposta: string; nome?: string; local?: string; transferir?: boolean } {
+  pushName?: string | null,
+  ehClienteCadastrado?: boolean
+): { resposta: string; nome?: string; local?: string; transferir?: boolean; assunto?: string } {
   const limpo = textoRecebido.trim().toLowerCase()
   const eSaudacao = /^(oi+|ol[aá]+|e a[ií]|bom dia|boa tarde|boa noite|hey|hello|al[oô]+|opa|fala)[\s!?.]*$/i.test(limpo)
   const pedeOrcamento = /(or[çc]amento|pre[çc]o|valor|quanto|custa|fazer|produzir|toldo|toldos|adesivo|adesivos|placa|placas|lona|lonas|fachada|fachadas|banner|banners|faixa|faixas|letra|letras|3d|reforma|reformas|cobertura|coberturas|outdoor|outdoors|totem|totens|painel|paineis|painéis|rotulo|rotulos|rótulo|rótulos|vitrine|vitrines|envelopamento|acm|luminoso|luminosos|cortina|policarbonato|janela|varanda|tapume|comprar|encomendar)/i.test(limpo)
@@ -192,99 +285,134 @@ export function resolverFluxoAtendimento(
     }
   }
 
-  // Se o bot já apresentou o menu de serviços na conversa, NUNCA mais repete a lista!
-  // Qualquer resposta do cliente agora é o produto/serviço que ele deseja ou dúvida dele.
+  const nomeEfetivo =
+    (ehNomeValido(nomeSalvo) ? nomeSalvo!.trim() : null) ||
+    (ehNomeValido(pushName) ? pushName!.trim() : null)
+
+  const ehContatoConhecido = Boolean(ehClienteCadastrado || nomeEfetivo)
+  const assuntoDetectado = extrairAssuntoInteresse(textoRecebido)
+
+  // 2. CONTATOS CONHECIDOS (cliente já cadastrado no sistema ou com nome já identificado):
+  // NUNCA perguntar nome ou cidade! O Kaio e a empresa já sabem quem é o cliente.
+  if (ehContatoConhecido && nomeEfetivo) {
+    // Se o cliente apenas mandou saudação ("Oi", "Olá", "Bom dia", etc.)
+    if (eSaudacao) {
+      return {
+        resposta:
+          `Olá, ${nomeEfetivo}! Seja muito bem-vindo(a) à Toldos Print. 🤝✨\n\n` +
+          `Como podemos te ajudar hoje?`,
+        nome: nomeEfetivo,
+        local: localSalvo || undefined,
+      }
+    }
+
+    // Se o cliente pediu orçamento ou mencionou algum serviço
+    if (pedeOrcamento) {
+      return {
+        resposta:
+          `Perfeito, ${nomeEfetivo}! Para agilizar o seu orçamento:\n` +
+          `📸 Tire uma foto do local ou do que deseja;\n` +
+          `📏 Se tiver, envie também as medidas aproximadas ou projeto.\n\n` +
+          `Já estou transferindo o seu atendimento para nossa equipe técnica. Em instantes vamos te responder por aqui! ⏳🧑‍💼`,
+        nome: nomeEfetivo,
+        local: localSalvo || undefined,
+        transferir: true,
+        assunto: assuntoDetectado || "Solicitação de Orçamento",
+      }
+    }
+
+    // Se mandou mensagem em andamento (ex: "Semana que vem iremos finalizar a sua frente", "fechou, vamos marcar")
+    return {
+      resposta:
+        `Olá, ${nomeEfetivo}! Mensagem recebida. 🤝\n` +
+        `Já encaminhei diretamente para o Kaio e nossa equipe técnica. Em instantes vamos te responder por aqui! ⏳🧑‍💼`,
+      nome: nomeEfetivo,
+      local: localSalvo || undefined,
+      transferir: true,
+      assunto: assuntoDetectado || undefined,
+    }
+  }
+
+  // 3. CONTATOS NOVOS / NÃO IDENTIFICADOS:
+  // Se o bot já apresentou o menu de serviços na conversa, não repete mais
   const jaEnviouServicos = historico.some(
     (h) =>
       h.role === "assistant" &&
-      (h.content.includes("SERVIÇOS mais utilizados") || h.content.includes("Como posso te ajudar?"))
+      (h.content.includes("SERVIÇOS mais utilizados") ||
+        h.content.includes("Como posso te ajudar?") ||
+        h.content.includes("Como podemos te ajudar?"))
   )
-
-  const nomeEfetivo = (ehNomeValido(nomeSalvo) ? nomeSalvo : null) || (ehNomeValido(pushName) ? pushName : null)
 
   if (jaEnviouServicos && !eSaudacao) {
     const nomeParaMsg = nomeEfetivo ? `, ${nomeEfetivo}` : ""
     return {
       resposta:
-        `Perfeito${nomeParaMsg}! Para facilitar e agilizar o seu orçamento:\n` +
-        `📸 Tire uma foto do que se trata ou deseja;\n` +
-        `📏 Tenha em mãos medidas ou projetos para facilitar no orçamento.\n\n` +
-        `Já estou transferindo o seu atendimento para nossa equipe. Em breve vamos entrar em contato com você por aqui! ⏳🧑‍💼`,
+        `Perfeito${nomeParaMsg}! Para agilizar o seu orçamento:\n` +
+        `📸 Tire uma foto do local ou do que deseja;\n` +
+        `📏 Tenha em mãos as medidas ou projetos.\n\n` +
+        `Já estou transferindo o seu atendimento para nossa equipe técnica. Em instantes vamos te responder por aqui! ⏳🧑‍💼`,
       nome: nomeEfetivo || undefined,
       local: localSalvo || undefined,
       transferir: true,
+      assunto: assuntoDetectado || "Solicitação de Orçamento",
     }
   }
 
-  // 2. Início de conversa ou saudação simples (sem pedido específico)
+  // Se for início de conversa simples de novo contato (saudação ou sem pedido explícito)
   if ((historico.length === 0 && !pedeOrcamento) || eSaudacao) {
     return {
       resposta:
-        "Seja bem-vindo a TOLDOSPRINT (Toldos e Comunicação Visual)! 🤝✨\n\nQual seu nome e de qual cidade, bairro está falando?",
+        "Olá! Seja muito bem-vindo(a) à Toldos Print. 🤝✨\n" +
+        "Especialistas em Toldos, Coberturas e Comunicação Visual de alta qualidade.\n\n" +
+        "Para que possamos lhe atender com agilidade e direcionar ao setor correto:\n" +
+        "Por gentileza, com quem temos o prazer de falar e de qual cidade/bairro você é?",
     }
   }
 
-  // 3. Se ainda não temos o nome ou o local, tenta extrair da resposta
-  if (!nomeEfetivo || !localSalvo) {
-    let nomeExtraido = nomeEfetivo || undefined
-    let localExtraido = localSalvo || undefined
+  // Tenta extrair nome e local da mensagem do novo cliente
+  let nomeExtraido: string | undefined = undefined
+  let localExtraido: string | undefined = extrairLocalizacao(textoRecebido) || (localSalvo || undefined)
 
-    const mSou = /(?:sou\s+(?:o|a)?\s*|me\s*chamo\s*|meu\s*nome\s*[ée]\s*)([a-zA-ZçÇáéíóúÁÉÍÓÚ\s]{3,30})/i.exec(textoRecebido)
-    if (mSou && ehNomeValido(mSou[1].trim())) {
-      nomeExtraido = mSou[1].trim()
-    } else if (!nomeEfetivo && !pedeOrcamento) {
-      // Só aceita como nome se o bot acabou de perguntar o nome e a resposta for curta e válida
-      const ultimaPerguntaPediuNome =
-        historico.length > 0 &&
-        historico[historico.length - 1].role === "assistant" &&
-        historico[historico.length - 1].content.includes("Qual seu nome")
-      if (ultimaPerguntaPediuNome && textoRecebido.split(/\s+/).length <= 3) {
-        const candidato = textoRecebido.split(/[,de\s]+/)[0].trim()
-        if (ehNomeValido(candidato)) {
-          nomeExtraido = candidato
-        }
+  const mSou = /(?:sou\s+(?:o|a)?\s*|me\s*chamo\s*|meu\s*nome\s*[ée]\s*)([a-zA-ZçÇáéíóúÁÉÍÓÚ\s]{3,30})/i.exec(textoRecebido)
+  if (mSou && ehNomeValido(mSou[1].trim())) {
+    nomeExtraido = mSou[1].trim()
+  } else if (!pedeOrcamento) {
+    const ultimaPerguntaPediuNome =
+      historico.length > 0 &&
+      historico[historico.length - 1].role === "assistant" &&
+      (historico[historico.length - 1].content.includes("com quem temos o prazer de falar") ||
+        historico[historico.length - 1].content.includes("Qual seu nome"))
+    if (ultimaPerguntaPediuNome && textoRecebido.split(/\s+/).length <= 3) {
+      const candidato = textoRecebido.split(/[,de\s]+/)[0].trim()
+      if (ehNomeValido(candidato)) {
+        nomeExtraido = candidato
       }
     }
+  }
 
-    const mLocal = /(?:de|em|moro em|falando de|cidade)\s+([a-zA-ZçÇáéíóúÁÉÍÓÚ\s/-]{3,30})/i.exec(textoRecebido)
-    if (mLocal) {
-      localExtraido = mLocal[1].trim()
-    }
-
-    if (pedeOrcamento) {
-      const nomeParaMsg = (nomeExtraido || nomeEfetivo) ? `, ${nomeExtraido || nomeEfetivo}` : ""
-      return {
-        resposta:
-          `Perfeito${nomeParaMsg}! Para facilitar e agilizar o seu orçamento:\n` +
-          `📸 Tire uma foto do que se trata ou deseja;\n` +
-          `📏 Tenha em mãos medidas ou projetos para facilitar no orçamento.\n\n` +
-          `Já estou transferindo o seu atendimento para nossa equipe. Em breve vamos entrar em contato com você por aqui! ⏳🧑‍💼`,
-        nome: nomeExtraido,
-        local: localExtraido,
-        transferir: true,
-      }
-    }
-
-    const nomeParaMsg = (nomeExtraido || nomeEfetivo) ? `, ${nomeExtraido || nomeEfetivo}` : ""
+  if (pedeOrcamento) {
+    const nomeParaMsg = nomeExtraido ? `, ${nomeExtraido}` : ""
     return {
       resposta:
-        `Prazer${nomeParaMsg}!\n\n` +
-        `${SERVICOS_TEXTO}\n\n` +
-        `Como posso te ajudar?`,
+        `Perfeito${nomeParaMsg}! Para agilizar o seu orçamento:\n` +
+        `📸 Tire uma foto do local ou do que deseja;\n` +
+        `📏 Tenha em mãos as medidas ou projetos.\n\n` +
+        `Já estou transferindo o seu atendimento para nossa equipe técnica. Em instantes vamos te responder por aqui! ⏳🧑‍💼`,
       nome: nomeExtraido,
       local: localExtraido,
+      transferir: true,
+      assunto: assuntoDetectado || "Solicitação de Orçamento",
     }
   }
 
-  // 4. Se já tinha nome ou solicitou produto/orçamento:
-  const nomeParaMsg = nomeEfetivo ? `, ${nomeEfetivo}` : ""
+  const nomeParaMsg = nomeExtraido ? `, ${nomeExtraido}` : ""
   return {
     resposta:
-      `Perfeito${nomeParaMsg}! Para facilitar e agilizar o seu orçamento:\n` +
-      `📸 Tire uma foto do que se trata ou deseja;\n` +
-      `📏 Tenha em mãos medidas ou projetos para facilitar no orçamento.\n\n` +
-      `Já estou transferindo o seu atendimento para nossa equipe. Em breve vamos entrar em contato com você por aqui! ⏳🧑‍💼`,
-    transferir: true,
+      `Prazer${nomeParaMsg}!\n\n` +
+      `${SERVICOS_TEXTO}\n\n` +
+      `Como posso te ajudar?`,
+    nome: nomeExtraido,
+    local: localExtraido,
   }
 }
 
@@ -314,14 +442,23 @@ async function processarComTravaAdquirida(
     }
   }
 
+  // 1. Verifica se já é cliente cadastrado na base do Kaio/Toldos Print
+  const clienteCadastrado = await buscarClientePorTelefone(telefone)
+  const ehClienteCadastrado = Boolean(clienteCadastrado)
+  const nomeClienteCadastrado = clienteCadastrado?.nome?.trim()
+
   const HORAS_PARA_EXPIRAR = 6
   const sessaoExpirada = Date.now() - new Date(conversa.atualizadoEm).getTime() > HORAS_PARA_EXPIRAR * 3600_000
   const reiniciar = comandoReiniciar || sessaoExpirada || (eSaudacao && conversa.historico.length > 0)
   const historico: MensagemHistorico[] = reiniciar ? [] : conversa.historico
-  let nomeTemp = reiniciar
-    ? null
-    : (ehNomeValido(conversa.nomeTemp) ? conversa.nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null)
-  let localTemp = reiniciar ? null : conversa.localTemp
+
+  let nomeTemp =
+    (ehNomeValido(nomeClienteCadastrado) ? nomeClienteCadastrado : null) ||
+    (ehNomeValido(conversa.nomeTemp) ? conversa.nomeTemp : null) ||
+    (ehNomeValido(pushName) ? pushName?.trim() : null) ||
+    null
+
+  let localTemp = reiniciar ? null : (conversa.localTemp || extrairLocalizacao(textoRecebido) || null)
   let transferido = false
 
   const systemPrompt = `Você é o atendente virtual da TOLDOSPRINT (Toldos e Comunicação Visual), respondendo pelo WhatsApp de forma profissional, ágil e acolhedora.
@@ -444,11 +581,14 @@ REGRAS GERAIS:
         // Notifica o dono/atendente da empresa no WhatsApp se configurado
         const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
         if (telEmpresa) {
-          const nomeNotif =
-            (ehNomeValido(nomeTemp) ? nomeTemp : null) ||
-            (ehNomeValido(pushName) ? pushName : null) ||
-            "Não informado"
-          const alerta = `🔔 *Novo Atendimento Transferido!*\n\n👤 *Cliente:* ${nomeNotif}\n📍 *Local:* ${localTemp || "Não informado"}\n📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n💬 *Interesse:* ${resumo}\n\n👉 Acesse o WhatsApp para responder!`
+          const alerta = formatarAlertaTransferencia({
+            nome: (ehNomeValido(nomeTemp) ? nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null),
+            ehClienteCadastrado,
+            local: localTemp,
+            telefone,
+            textoRecebido: resumo,
+            assunto: extrairAssuntoInteresse(resumo) || extrairAssuntoInteresse(textoRecebido),
+          })
           enviarMensagemWhatsapp(telEmpresa, alerta).catch((err) =>
             console.error("[bot] erro ao notificar empresa de transferência:", err)
           )
@@ -460,7 +600,14 @@ REGRAS GERAIS:
 
   // 1. O fluxo determinístico oficial da empresa tem prioridade absoluta:
   // Resposta instantânea (0ms), sem custo, sem falha de rede e 100% no padrão solicitado.
-  const reg = resolverFluxoAtendimento(textoRecebido, historico, nomeTemp, localTemp, pushName)
+  const reg = resolverFluxoAtendimento(
+    textoRecebido,
+    historico,
+    nomeTemp,
+    localTemp,
+    pushName,
+    ehClienteCadastrado
+  )
   let respostaFinal: string = reg.resposta
 
   if (reg.nome && !nomeTemp && ehNomeValido(reg.nome)) nomeTemp = reg.nome
@@ -469,11 +616,14 @@ REGRAS GERAIS:
     transferido = true
     const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
     if (telEmpresa) {
-      const nomeNotif =
-        (ehNomeValido(nomeTemp) ? nomeTemp : null) ||
-        (ehNomeValido(pushName) ? pushName : null) ||
-        "Não informado"
-      const alerta = `🔔 *Novo Atendimento Transferido!*\n\n👤 *Cliente:* ${nomeNotif}\n📍 *Local:* ${localTemp || "Não informado"}\n📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n💬 *Interesse:* ${textoRecebido}\n\n👉 Acesse o WhatsApp para responder!`
+      const alerta = formatarAlertaTransferencia({
+        nome: (ehNomeValido(nomeTemp) ? nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null),
+        ehClienteCadastrado,
+        local: localTemp,
+        telefone,
+        textoRecebido,
+        assunto: reg.assunto || extrairAssuntoInteresse(textoRecebido),
+      })
       enviarMensagemWhatsapp(telEmpresa, alerta).catch((e) =>
         console.error("[bot] erro ao notificar empresa:", e)
       )
@@ -521,8 +671,9 @@ REGRAS GERAIS:
   }
 
   if (!respostaFinal) {
-    respostaFinal =
-      "Seja bem-vindo a TOLDOSPRINT (Toldos e Comunicação Visual)! 🤝✨\n\nQual seu nome e de qual cidade, bairro está falando?"
+    respostaFinal = nomeTemp
+      ? `Olá, ${nomeTemp}! Como podemos te ajudar hoje?`
+      : "Olá! Seja muito bem-vindo(a) à Toldos Print. 🤝✨\n\nPor gentileza, com quem temos o prazer de falar e de qual cidade/bairro você é?"
   }
 
   const novoHistorico = [
