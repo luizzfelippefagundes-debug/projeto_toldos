@@ -160,16 +160,16 @@ export default function TransmissaoPage() {
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  async function copiarFotoParaClipboard() {
-    if (!fotoUrl) return
+  async function copiarFotoParaClipboard(mostrarToast = true): Promise<boolean> {
+    if (!fotoUrl) return false
     try {
       const res = await fetch(fotoUrl)
       const blob = await res.blob()
 
       if (blob.type === "image/png") {
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })])
-        toast.success("Foto copiada! Aperte Ctrl + V no WhatsApp para colar.")
-        return
+        if (mostrarToast) toast.success("Foto copiada! Aperte Ctrl + V no WhatsApp para colar.")
+        return true
       }
 
       // Converte JPEG/WebP para PNG via canvas para permitir escrita na área de transferência
@@ -186,24 +186,29 @@ export default function TransmissaoPage() {
       canvas.width = img.width
       canvas.height = img.height
       const ctx = canvas.getContext("2d")
-      if (!ctx) throw new Error("Erro no canvas")
+      if (!ctx) return false
       ctx.drawImage(img, 0, 0)
 
-      canvas.toBlob(async (pngBlob) => {
-        URL.revokeObjectURL(objUrl)
-        if (!pngBlob) {
-          toast.error("Não foi possível converter a foto.")
-          return
-        }
-        try {
-          await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })])
-          toast.success("Foto copiada! Aperte Ctrl + V no WhatsApp para colar.")
-        } catch {
-          toast.error("Navegador não autorizou copiar a imagem. Use o botão Baixar Foto.")
-        }
-      }, "image/png")
+      return new Promise<boolean>((resolve) => {
+        canvas.toBlob(async (pngBlob) => {
+          URL.revokeObjectURL(objUrl)
+          if (!pngBlob) {
+            if (mostrarToast) toast.error("Não foi possível converter a foto.")
+            return resolve(false)
+          }
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })])
+            if (mostrarToast) toast.success("Foto copiada! Aperte Ctrl + V no WhatsApp para colar.")
+            resolve(true)
+          } catch {
+            if (mostrarToast) toast.error("Navegador não autorizou copiar a imagem. Use o botão Baixar Foto.")
+            resolve(false)
+          }
+        }, "image/png")
+      })
     } catch {
-      toast.error("Erro ao copiar foto. Use o botão Baixar Foto.")
+      if (mostrarToast) toast.error("Erro ao copiar foto. Use o botão Baixar Foto.")
+      return false
     }
   }
 
@@ -218,7 +223,11 @@ export default function TransmissaoPage() {
     toast.success("Download da foto iniciado!")
   }
 
-  function abrirWhatsappCliente(tel: string, id: string, nome: string) {
+  async function abrirWhatsappCliente(tel: string, id: string, nome: string) {
+    if (fotoUrl) {
+      copiarFotoParaClipboard(false)
+      toast.info("📸 Foto copiada! Ao abrir o WhatsApp, aperte Ctrl + V para colar a foto.", { duration: 5000 })
+    }
     const link = linkWhatsapp(tel, mensagem.trim())
     if (!link) {
       toast.error(`Telefone de ${nome} inválido para WhatsApp.`)
@@ -327,7 +336,7 @@ export default function TransmissaoPage() {
                       size="sm"
                       variant="outline"
                       className="h-7 text-xs gap-1"
-                      onClick={copiarFotoParaClipboard}
+                      onClick={() => void copiarFotoParaClipboard(true)}
                     >
                       <Copy className="h-3 w-3" /> Copiar Foto
                     </Button>
@@ -567,7 +576,7 @@ export default function TransmissaoPage() {
                     type="button"
                     size="sm"
                     className="h-8.5 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium gap-1.5 shadow-xs"
-                    onClick={copiarFotoParaClipboard}
+                    onClick={() => void copiarFotoParaClipboard(true)}
                   >
                     <Copy className="h-3.5 w-3.5" /> Copiar Foto
                   </Button>

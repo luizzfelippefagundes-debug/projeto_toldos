@@ -109,9 +109,11 @@ export async function enviarImagemWhatsapp(
     body: JSON.stringify({
       number: resolverNumero(numero),
       mediatype: "image",
+      mediaType: "image",
       mimetype: mime,
       caption: legenda,
       media: mediaPayload,
+      fileName: "foto.jpg",
     }),
   })
   const textBody = await resposta.text().catch(() => "")
