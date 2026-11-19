@@ -129,7 +129,12 @@ export async function enviarImagemWhatsapp(
   return { ok: true, status: resposta.status, data: jsonBody || textBody }
 }
 
-export async function gerarCodigoPareamento(numero: string): Promise<{ ok: boolean; code?: string; erro?: string }> {
+export async function gerarCodigoPareamento(numero: string): Promise<{
+  ok: boolean
+  code?: string
+  qrBase64?: string
+  erro?: string
+}> {
   const cfg = configurada()
   if (!cfg) return { ok: false, erro: "Evolution API não configurada no servidor" }
 
@@ -148,8 +153,29 @@ export async function gerarCodigoPareamento(numero: string): Promise<{ ok: boole
     }
 
     const dados = (await resposta.json().catch(() => ({}))) as Record<string, unknown>
-    const code = (dados.code || dados.pairingCode || dados.pairing_code || dados.codePairing) as string | undefined
-    return { ok: true, code }
+    console.log("[whatsapp] Resposta do connect:", {
+      hasPairingCode: Boolean(dados.pairingCode),
+      keys: Object.keys(dados),
+    })
+
+    // Código de 8 dígitos de pareamento (NUNCA pegar dados.code se for a string interna 2@ do QR Code)
+    let pairingCode = (dados.pairingCode || dados.pairing_code || dados.codePairing) as string | undefined
+    if (
+      !pairingCode &&
+      typeof dados.code === "string" &&
+      !dados.code.startsWith("2@") &&
+      dados.code.length <= 12
+    ) {
+      pairingCode = dados.code
+    }
+
+    // QR Code em base64 (se a Evolution API devolver a imagem)
+    let qrBase64 = (dados.base64 || dados.qrcode) as string | undefined
+    if (qrBase64 && typeof qrBase64 === "string" && !qrBase64.startsWith("data:")) {
+      qrBase64 = `data:image/png;base64,${qrBase64}`
+    }
+
+    return { ok: true, code: pairingCode, qrBase64 }
   } catch (err: unknown) {
     return { ok: false, erro: err instanceof Error ? err.message : "Erro ao conectar" }
   }

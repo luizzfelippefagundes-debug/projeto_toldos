@@ -31,6 +31,7 @@ export default function BotPage() {
   const [numeroPareamento, setNumeroPareamento] = useState("27997489714")
   const [gerandoCodigo, setGerandoCodigo] = useState(false)
   const [codigoPareamento, setCodigoPareamento] = useState<string | null>(null)
+  const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
 
   async function gerarCodigo() {
@@ -40,6 +41,7 @@ export default function BotPage() {
     }
     setGerandoCodigo(true)
     setCodigoPareamento(null)
+    setQrCodeBase64(null)
     setCopiado(false)
     try {
       const res = await fetch("/api/bot/pareamento", {
@@ -47,13 +49,19 @@ export default function BotPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ numero: numeroPareamento.trim() }),
       })
-      const dados = (await res.json()) as { code?: string; erro?: string }
-      if (!res.ok || !dados.code) {
+      const dados = (await res.json()) as { code?: string; qrBase64?: string; erro?: string }
+      if (!res.ok) {
         toast.error(dados.erro || "Falha ao gerar código na Evolution API.")
         return
       }
-      setCodigoPareamento(dados.code)
-      toast.success("Código gerado com sucesso!")
+      if (dados.code) setCodigoPareamento(dados.code)
+      if (dados.qrBase64) setQrCodeBase64(dados.qrBase64)
+
+      if (dados.code || dados.qrBase64) {
+        toast.success("Código de pareamento gerado com sucesso!")
+      } else {
+        toast.warning("Código não gerado. Verifique se o número está correto.")
+      }
     } catch {
       toast.error("Erro de conexão ao gerar código.")
     } finally {
@@ -170,36 +178,56 @@ export default function BotPage() {
             </Button>
           </div>
 
-          {codigoPareamento && (
-            <div className="mt-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4 flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">
-                    Código de Conexão Gerado (válido por alguns minutos):
-                  </span>
-                  <div className="text-3xl font-mono font-bold tracking-widest text-emerald-800 dark:text-emerald-200 mt-1">
-                    {codigoPareamento}
+          {(codigoPareamento || qrCodeBase64) && (
+            <div className="mt-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-5 flex flex-col gap-4">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                {codigoPareamento && (
+                  <div className="flex-1">
+                    <span className="text-xs text-emerald-800 dark:text-emerald-300 font-semibold uppercase tracking-wider">
+                      Código de Pareamento de 8 Dígitos:
+                    </span>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <div className="text-3xl sm:text-4xl font-mono font-bold tracking-widest text-emerald-700 dark:text-emerald-300 bg-background/80 px-4 py-2 rounded-lg border border-emerald-500/30">
+                        {codigoPareamento}
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-10 px-3 border-emerald-500/40 bg-background hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-medium"
+                        onClick={copiarCodigo}
+                      >
+                        {copiado ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                        {copiado ? "Copiado!" : "Copiar"}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 self-start sm:self-center"
-                  onClick={copiarCodigo}
-                >
-                  {copiado ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                  {copiado ? "Copiado!" : "Copiar Código"}
-                </Button>
+                )}
+
+                {qrCodeBase64 && (
+                  <div className="flex flex-col items-center gap-1.5 shrink-0 bg-background/80 p-3 rounded-xl border border-emerald-500/30">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={qrCodeBase64}
+                      alt="QR Code WhatsApp"
+                      className="h-36 w-36 object-contain rounded bg-white p-1"
+                    />
+                    <span className="text-[11px] text-muted-foreground font-medium">
+                      Ou escaneie com a câmera
+                    </span>
+                  </div>
+                )}
               </div>
 
-              <div className="rounded-lg bg-background/60 p-3 text-xs text-muted-foreground border border-border/60 space-y-1">
-                <p className="font-semibold text-foreground">Como o dono conecta no celular dele:</p>
-                <p>1. Abrir o WhatsApp ➔ Configurações (ou três pontinhos) ➔ <b>Aparelhos Conectados</b></p>
-                <p>2. Clicar em <b>Conectar um aparelho</b></p>
-                <p>3. Embaixo da câmera, clicar em <b>&quot;Conectar com número de telefone&quot;</b></p>
-                <p>4. Digitar o código: <strong className="text-foreground font-mono">{codigoPareamento}</strong></p>
-              </div>
+              {codigoPareamento && (
+                <div className="rounded-lg bg-background/80 p-3.5 text-xs text-muted-foreground border border-border/60 space-y-1.5">
+                  <p className="font-semibold text-foreground text-sm">Como o dono conecta no WhatsApp dele:</p>
+                  <p>1. Abrir o WhatsApp ➔ Configurações (ou três pontinhos) ➔ <b>Aparelhos Conectados</b></p>
+                  <p>2. Clicar no botão verde <b>Conectar um aparelho</b></p>
+                  <p>3. Embaixo de onde abre a câmera, clicar em <b>&quot;Conectar com número de telefone&quot;</b></p>
+                  <p>4. Digitar o código de 8 dígitos: <strong className="text-foreground font-mono text-sm">{codigoPareamento}</strong></p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
