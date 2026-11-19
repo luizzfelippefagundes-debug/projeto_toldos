@@ -552,9 +552,6 @@ export default function TvPage() {
             if (JSON.stringify(prev) === JSON.stringify(data.config)) return prev
             return data.config
           })
-          if (data.config.tema && (data.config.tema === "light" || data.config.tema === "dark")) {
-            setThemeRef.current(data.config.tema)
-          }
         }
         setUltimaAtualizacao(new Date())
       }
@@ -589,8 +586,10 @@ export default function TvPage() {
         if (!res.ok) return
         const { tema } = await res.json()
         if ((tema === "light" || tema === "dark") && tema !== ultimoDoServidor) {
+          if (ultimoDoServidor !== null) {
+            setThemeRef.current(tema)
+          }
           ultimoDoServidor = tema
-          setThemeRef.current(tema)
         }
       } catch { /* tenta de novo no próximo ciclo */ }
     }

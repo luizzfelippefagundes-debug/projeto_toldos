@@ -45,7 +45,12 @@ export default function RootLayout({
         <ClerkProvider
           localization={{ ...ptBR, formFieldInputPlaceholder__signUpPassword: "Crie uma senha" }}
         >
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={false}
+            storageKey="toldosprint-theme"
+          >
             {children}
           </ThemeProvider>
         </ClerkProvider>
