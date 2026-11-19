@@ -39,6 +39,14 @@ import {
 import { toast } from "sonner"
 import { linkWhatsapp } from "@/lib/whatsapp"
 
+function obterNomeExibicao(nome?: string, telefone?: string): string {
+  const limpo = nome?.trim()
+  if (!limpo || limpo === "." || limpo === "-" || limpo === ",") {
+    return telefone ? `Cliente (${telefone})` : "Cliente sem nome"
+  }
+  return limpo
+}
+
 export default function TransmissaoPage() {
   const { clientes } = useData()
   const [busca, setBusca] = useState("")
@@ -500,7 +508,7 @@ export default function TransmissaoPage() {
                       {ativo && <span className="text-[10px] font-bold">✓</span>}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-foreground">{cliente.nome}</p>
+                      <p className="truncate font-medium text-foreground">{obterNomeExibicao(cliente.nome, cliente.telefone)}</p>
                       <p className="truncate text-xs text-muted-foreground">{cliente.telefone}</p>
                     </div>
                   </button>
@@ -518,14 +526,14 @@ export default function TransmissaoPage() {
 
       {/* Modal de Disparo Manual no WhatsApp */}
       <Dialog open={modalManualAberto} onOpenChange={setModalManualAberto}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="p-5 pb-3 border-b border-border">
-            <div className="flex items-center justify-between pr-6">
-              <DialogTitle className="flex items-center gap-2 text-lg">
-                <MessageCircle className="h-5 w-5 text-emerald-600" />
-                Disparo Manual no WhatsApp
+        <DialogContent className="w-[95vw] sm:max-w-2xl lg:max-w-3xl max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl border-border/80">
+          <DialogHeader className="p-5 pb-3.5 border-b border-border bg-card">
+            <div className="flex items-center justify-between pr-10">
+              <DialogTitle className="flex items-center gap-2.5 text-lg font-semibold">
+                <MessageCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+                <span>Disparo Manual no WhatsApp</span>
               </DialogTitle>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs shrink-0 bg-background/50">
                 {qtdEnviadosManuais} de {listaSelecionados.length} abertos
               </Badge>
             </div>
@@ -537,28 +545,28 @@ export default function TransmissaoPage() {
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
             {/* Aviso sobre a foto anexada */}
             {fotoUrl && (
-              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={fotoUrl}
                     alt="Foto da campanha"
-                    className="h-12 w-12 rounded object-cover border border-emerald-500/30 shrink-0"
+                    className="h-16 w-16 rounded-lg object-cover border border-emerald-500/30 shrink-0 shadow-xs"
                   />
-                  <div>
-                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
                       Foto anexada para a campanha
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-normal">
                       Clique em <b>Copiar Foto</b> e aperte <b>Ctrl + V</b> na conversa do WhatsApp para colar a imagem junto com o texto.
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
                   <Button
                     type="button"
                     size="sm"
-                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                    className="h-8.5 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium gap-1.5 shadow-xs"
                     onClick={copiarFotoParaClipboard}
                   >
                     <Copy className="h-3.5 w-3.5" /> Copiar Foto
@@ -567,7 +575,7 @@ export default function TransmissaoPage() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="h-8 text-xs gap-1"
+                    className="h-8.5 px-3 text-xs gap-1.5"
                     onClick={baixarFoto}
                   >
                     <Download className="h-3.5 w-3.5" /> Baixar
@@ -577,35 +585,35 @@ export default function TransmissaoPage() {
             )}
 
             {/* Progresso e Ação de Avanço Rápido */}
-            <div className="rounded-lg border border-border bg-muted/30 p-3.5 flex flex-col gap-2.5">
+            <div className="rounded-xl border border-border bg-muted/40 p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-medium">
+                <span className="font-medium text-foreground">
                   Progresso do envio: {qtdEnviadosManuais} / {listaSelecionados.length} ({progressoPercent}%)
                 </span>
                 {enviadosManuais.size > 0 && (
                   <button
                     type="button"
                     onClick={() => setEnviadosManuais(new Set())}
-                    className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
                   >
                     <RotateCcw className="h-3 w-3" /> Reiniciar contagem
                   </button>
                 )}
               </div>
-              <Progress value={progressoPercent} className="h-2" />
+              <Progress value={progressoPercent} className="h-2 w-full" />
 
               {proximoPendente && (
-                <div className="pt-1 flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground truncate max-w-[240px]">
-                    Próximo: <b className="text-foreground">{proximoPendente.nome}</b>
+                <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground truncate">
+                    Próximo da fila: <b className="text-foreground">{obterNomeExibicao(proximoPendente.nome, proximoPendente.telefone)}</b>
                   </span>
                   <Button
                     type="button"
                     size="sm"
-                    className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs gap-1.5"
+                    className="h-8.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs gap-1.5 shadow-xs shrink-0"
                     onClick={abrirProximo}
                   >
-                    Abrir Próximo ({proximoPendente.nome})
+                    Abrir Próximo ({obterNomeExibicao(proximoPendente.nome, proximoPendente.telefone)})
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -613,24 +621,25 @@ export default function TransmissaoPage() {
             </div>
 
             {/* Lista de Contatos */}
-            <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
+            <div className="border border-border rounded-xl divide-y divide-border overflow-hidden bg-card">
               {listaSelecionados.map((cliente, index) => {
                 const enviado = enviadosManuais.has(cliente.id)
+                const nomeExibicao = obterNomeExibicao(cliente.nome, cliente.telefone)
                 return (
                   <div
                     key={cliente.id}
                     className={cn(
-                      "flex items-center justify-between p-3 gap-3 transition-colors",
-                      enviado ? "bg-muted/20" : "bg-card hover:bg-muted/40"
+                      "flex items-center justify-between p-3.5 gap-3 transition-colors",
+                      enviado ? "bg-muted/30" : "hover:bg-muted/50"
                     )}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3.5 min-w-0">
                       <span className="text-xs font-mono text-muted-foreground w-6 text-right shrink-0">
                         #{index + 1}
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm truncate">{cliente.nome}</p>
+                          <p className="font-medium text-sm truncate">{nomeExibicao}</p>
                           {enviado && (
                             <Badge variant="outline" className="text-[10px] h-4 px-1.5 text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
                               ✓ Aberto
@@ -646,20 +655,20 @@ export default function TransmissaoPage() {
                       size="sm"
                       variant={enviado ? "outline" : "default"}
                       className={cn(
-                        "h-8 text-xs shrink-0 gap-1.5",
+                        "h-8.5 px-3.5 text-xs shrink-0 gap-1.5 font-medium transition-all",
                         enviado
                           ? "text-muted-foreground hover:text-foreground"
-                          : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
                       )}
                       onClick={() => abrirWhatsappCliente(cliente.telefone, cliente.id, cliente.nome)}
                     >
                       {enviado ? (
                         <>
-                          <ExternalLink className="h-3 w-3" /> Reabrir
+                          <ExternalLink className="h-3.5 w-3.5" /> Reabrir
                         </>
                       ) : (
                         <>
-                          <ExternalLink className="h-3 w-3" /> Abrir WhatsApp
+                          <ExternalLink className="h-3.5 w-3.5" /> Abrir WhatsApp
                         </>
                       )}
                     </Button>
