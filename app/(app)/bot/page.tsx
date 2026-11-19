@@ -632,9 +632,9 @@ export default function BotPage() {
                       Ver Conversa ({contato.mensagens.length})
                     </Button>
 
-                    {contato.statusConversao === "nao_fechou" && contato.clienteId && (
+                    {contato.statusConversao === "nao_fechou" && (
                       <Link
-                        href={`/orcamentos/novo?clienteId=${contato.clienteId}`}
+                        href={contato.clienteId ? `/orcamentos/novo?clienteId=${contato.clienteId}` : `/orcamentos/novo`}
                         className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-emerald-500/30 text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 transition-colors"
                       >
                         <FilePlus2 className="h-3.5 w-3.5" />

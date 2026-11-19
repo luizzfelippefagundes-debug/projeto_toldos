@@ -84,6 +84,7 @@ export function NovoOrcamentoForm() {
   const [salvoOffline, setSalvoOffline] = useState<{ clienteNome: string; total: number } | null>(null)
   const searchParams = useSearchParams()
   const editarId = searchParams.get("editar")
+  const paramClienteId = searchParams.get("clienteId")
   const orcamentoEditando = editarId
     ? orcamentos.find((o) => o.id === editarId && o.status !== "cancelado")
     : null
@@ -98,6 +99,13 @@ export function NovoOrcamentoForm() {
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
+
+  // Preenche clienteId vindo por URL (ex: a partir da Central do Bot)
+  useEffect(() => {
+    if (paramClienteId && !editarId && !rascunho) {
+      setClienteId(paramClienteId)
+    }
+  }, [paramClienteId, editarId, rascunho])
 
   const [passoAtual, setPassoAtual] = useState(1)
 

@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto"
 import { NextResponse } from "next/server"
 import { garantirTabelaConversasBot, garantirColunasOrcamentos, garantirCpfClientes } from "@/lib/migracoes"
-import { buscarClientePorTelefone, criarClienteAutomaticoSeNaoExistir, processarMensagemWhatsapp } from "@/lib/bot-whatsapp"
+import { buscarClientePorTelefone, processarMensagemWhatsapp } from "@/lib/bot-whatsapp"
 import { registrarMensagemBot } from "@/lib/bot-registro"
 import { processarRetornoWhatsapp } from "@/lib/retornos-automatico"
 import { enviarMensagemWhatsapp } from "@/lib/evolution-api"
@@ -85,15 +85,11 @@ export async function POST(request: Request) {
     await garantirColunasOrcamentos()
     await garantirCpfClientes()
 
-    // Busca cliente existente pelo telefone ou cadastra automaticamente se for contato novo
-    let cliente = await buscarClientePorTelefone(telefone)
-    if (!cliente) {
-      cliente = await criarClienteAutomaticoSeNaoExistir({
-        telefone,
-        pushName,
-      })
-    }
-
+    // Só vincula cliente se ele já existir previamente no cadastro da empresa.
+    // NÃO cadastra automaticamente na tabela de Clientes só por mandar mensagem no WhatsApp,
+    // para não poluir a base de clientes com curiosos/spam. Ele fica registrado no histórico
+    // do bot (Central do Bot) e só vira cliente quando fizer ou fechar um orçamento.
+    const cliente = await buscarClientePorTelefone(telefone)
     const nomeExibicao = cliente?.nome ?? (pushName || telefone)
 
     await registrarMensagemBot({
