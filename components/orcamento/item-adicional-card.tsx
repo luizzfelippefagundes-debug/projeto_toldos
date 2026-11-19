@@ -174,6 +174,20 @@ export function ItemAdicionalCard({
         </div>
       )}
 
+      {material && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`observacao-${form.id}`}>
+            Observações do item <span className="font-normal text-muted-foreground">(opcional)</span>
+          </Label>
+          <Input
+            id={`observacao-${form.id}`}
+            placeholder="Ex.: adesivo porta de vidro comum, aplicar pelo lado de dentro..."
+            value={form.observacao ?? ""}
+            onChange={(e) => atualizar({ observacao: e.target.value })}
+          />
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <Label>
           Acabamentos{" "}

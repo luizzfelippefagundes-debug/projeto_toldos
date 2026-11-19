@@ -288,6 +288,9 @@ export default function ContratoServicoPage() {
                 <ul className="list-disc list-inside space-y-0.5 text-slate-700">
                   <li>
                     <strong>Item Principal:</strong> {nomeMaterial} — Dimensões: {orcamento.item.largura.toFixed(2)}m × {orcamento.item.altura.toFixed(2)}m (Total: {(orcamento.item.largura * orcamento.item.altura * orcamento.item.quantidadeUnidades).toFixed(2)} m², Qtd: {orcamento.item.quantidadeUnidades} un).
+                    {orcamento.item.observacao && (
+                      <span className="block italic text-slate-600 pl-4 mt-0.5">Obs: {orcamento.item.observacao}</span>
+                    )}
                   </li>
                   {nomesAcabamentos && (
                     <li><strong>Acabamentos:</strong> {nomesAcabamentos}.</li>
@@ -298,6 +301,9 @@ export default function ContratoServicoPage() {
                   {(orcamento.item.itensAdicionais ?? []).map((ad, idx) => (
                     <li key={idx}>
                       <strong>Item Adicional #{idx + 2}:</strong> {ad.materialFechado?.nome || "Material extra"} — {ad.largura.toFixed(2)}m × {ad.altura.toFixed(2)}m (Qtd: {ad.quantidadeUnidades} un).
+                      {ad.observacao && (
+                        <span className="block italic text-slate-600 pl-4 mt-0.5">Obs: {ad.observacao}</span>
+                      )}
                     </li>
                   ))}
                 </ul>

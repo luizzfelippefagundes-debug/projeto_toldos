@@ -25,6 +25,7 @@ export interface LinhaOrcamento {
   unidade: string
   valorUnitario: number
   valorTotal: number
+  observacao?: string
 }
 
 const arredondar = (n: number) => Math.round(n * 100) / 100
@@ -60,6 +61,7 @@ function linhaDoProduto(
     quantidade: unidadeMaterial === "m2" ? pecas : item.quantidadeUnidades || 1,
     unidade: "un",
     valorTotal,
+    ...(item.observacao?.trim() ? { observacao: item.observacao.trim() } : {}),
   }
 }
 

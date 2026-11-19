@@ -160,7 +160,14 @@ export function OrcamentoOficial({
                   lineHeight: 1.3,
                 }}
               >
-                <span>{l.nome}</span>
+                <span>
+                  <div>{l.nome}</div>
+                  {l.observacao && (
+                    <div style={{ fontSize: "7.5pt", color: "#555", fontStyle: "italic", marginTop: "1pt" }}>
+                      Obs: {l.observacao}
+                    </div>
+                  )}
+                </span>
                 <span style={{ textAlign: "right" }}>{l.quantidade}</span>
                 <span style={{ textAlign: "right" }}>{l.unidade}</span>
                 <span style={{ textAlign: "right" }}>{formatarMoeda(l.valorUnitario)}</span>

@@ -90,6 +90,7 @@ export interface ItemProduto {
   quantidadeUnidades: number
   horasEstimadas: number
   acabamentos?: AcabamentoSelecionado[]
+  observacao?: string
 }
 
 // Item a mais no mesmo orçamento (ex.: uma janela junto com as portas). Não

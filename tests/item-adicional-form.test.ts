@@ -51,6 +51,7 @@ describe("item adicional (formulário)", () => {
       id: "ad-2", materialId: "lona", servicoId: "s-m2", largura: 2, altura: 3,
       quantidadeUnidades: 2, horasEstimadas: 1.5,
       acabamentos: [{ acabamentoId: "acb-1", quantidade: 4 }],
+      observacao: "adesivo porta de vidro comum",
     }
     expect(formParaItem(itemParaForm(item))).toEqual(item)
   })

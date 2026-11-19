@@ -11,6 +11,7 @@ export interface ItemAdicionalForm {
   quantidadeUnidades: string
   horasEstimadas: string
   acabamentos: Record<string, { ativo: boolean; qtd: string }>
+  observacao?: string
 }
 
 function numeroOuZero(valor: string): number {
@@ -28,6 +29,7 @@ export function formVazio(id: string): ItemAdicionalForm {
     quantidadeUnidades: "1",
     horasEstimadas: "",
     acabamentos: {},
+    observacao: "",
   }
 }
 
@@ -47,6 +49,7 @@ export function formParaItem(form: ItemAdicionalForm): ItemAdicional {
     quantidadeUnidades: numeroOuZero(form.quantidadeUnidades),
     horasEstimadas: numeroOuZero(form.horasEstimadas),
     ...(acabamentos.length > 0 ? { acabamentos } : {}),
+    ...(form.observacao?.trim() ? { observacao: form.observacao.trim() } : {}),
   }
 }
 
@@ -65,6 +68,7 @@ export function itemParaForm(item: ItemAdicional): ItemAdicionalForm {
         { ativo: true, qtd: String(quantidade) },
       ])
     ),
+    observacao: item.observacao ?? "",
   }
 }
 

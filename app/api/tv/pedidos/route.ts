@@ -15,6 +15,7 @@ interface PedidoItemRaw {
   altura?: number | string
   quantidadeUnidades?: number | string
   observacoes?: string
+  observacao?: string
 }
 
 interface OrcamentoRaw {
@@ -150,7 +151,7 @@ export async function GET() {
       produto_nome: mat?.nome || "Orçamento de Comunicação Visual",
       variante_nome: variante_nome || null,
       acabamento: serv?.nome || null,
-      observacao: o.observacao || item.observacoes || "",
+      observacao: o.observacao || item.observacao || item.observacoes || "",
       status: o.status === "arte" ? "aprovado" : o.status,
       criado_em: o.criado_em,
       prazo_entrega_em: null,

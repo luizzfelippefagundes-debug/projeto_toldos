@@ -279,7 +279,12 @@ export default function OrdemDeServicoPage() {
                 linhas.map((l, i) => (
                   <tr key={`${l.nome}-${i}`} style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td className="px-3 py-2 font-medium">
-                      {l.nome}
+                      <div>{l.nome}</div>
+                      {l.observacao && (
+                        <div className="text-xs text-gray-500 italic font-normal mt-0.5">
+                          Obs: {l.observacao}
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-center text-gray-600">
                       {l.quantidade} {l.unidade}

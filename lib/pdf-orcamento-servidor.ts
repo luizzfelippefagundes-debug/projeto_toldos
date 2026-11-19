@@ -38,12 +38,14 @@ export async function gerarPdfOrcamentoServidor(orcamento: Orcamento, clienteNom
       quantidade: orcamento.item.quantidadeUnidades > 1 ? orcamento.item.quantidadeUnidades : 1,
       unidade: unidade === "m2" ? "m²" : "un",
       valor: total,
+      observacao: orcamento.item.observacao,
     },
     ...(orcamento.item.itensAdicionais ?? []).map((extra) => ({
       nome: extra.materialFechado?.nome ?? "Item adicional",
       quantidade: extra.quantidadeUnidades > 1 ? extra.quantidadeUnidades : 1,
       unidade: "un",
       valor: 0,
+      observacao: extra.observacao,
     })),
   ]
 
@@ -98,6 +100,12 @@ export async function gerarPdfOrcamentoServidor(orcamento: Orcamento, clienteNom
     doc.text(String(linha.quantidade), 400, y, { align: "right" })
     doc.text(linha.unidade, 440, y, { align: "right" })
     doc.text(formatarMoeda(linha.valor), direita - 2, y, { align: "right" })
+    if (linha.observacao) {
+      y += 11
+      doc.setFont("helvetica", "italic").setFontSize(7.5).setTextColor(120)
+      doc.text(`Obs: ${linha.observacao}`, esquerda + 4, y, { maxWidth: 325 })
+      doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(0)
+    }
     y += 16
   }
 

@@ -108,6 +108,7 @@ export function NovoOrcamentoForm() {
   const [altura, setAltura] = useState("")
   const [quantidadeUnidades, setQuantidadeUnidades] = useState("1")
   const [horasEstimadas, setHorasEstimadas] = useState("")
+  const [observacaoItem, setObservacaoItem] = useState("")
   // Itens a mais do orçamento (além do principal, que usa os campos acima).
   const [extras, setExtras] = useState<ItemAdicionalForm[]>([])
   const [ajusteManual, setAjusteManual] = useState("0")
@@ -176,6 +177,7 @@ export function NovoOrcamentoForm() {
     setAltura(orcamentoEditando.item.altura ? String(orcamentoEditando.item.altura) : "")
     setQuantidadeUnidades(String(orcamentoEditando.item.quantidadeUnidades || 1))
     setHorasEstimadas(orcamentoEditando.item.horasEstimadas ? String(orcamentoEditando.item.horasEstimadas) : "")
+    setObservacaoItem(orcamentoEditando.item.observacao ?? "")
     setAjusteManual(String(orcamentoEditando.ajusteManual))
     setValidadeDias(String(orcamentoEditando.validadeDias ?? 7))
     const acabamentos = orcamentoEditando.item.acabamentos ?? []
@@ -224,6 +226,7 @@ export function NovoOrcamentoForm() {
     setHorasEstimadas(
       rascunho.item.horasEstimadas ? String(rascunho.item.horasEstimadas) : ""
     )
+    setObservacaoItem(rascunho.item.observacao ?? "")
     setAjusteManual(String(rascunho.ajusteManual))
     const acabamentos = rascunho.item.acabamentos ?? []
     setAcabamentosAtivos(
@@ -311,6 +314,7 @@ export function NovoOrcamentoForm() {
       condicoesPagamento: condicoesPagamento.trim() || undefined,
       entradaPercent: numeroOuZero(entradaPercent),
       fotos: fotos.length > 0 ? fotos : undefined,
+      observacao: observacaoItem.trim() || undefined,
       itensAdicionais: extras.length > 0 ? extras.map(formParaItem) : undefined,
     }),
     [
@@ -320,6 +324,7 @@ export function NovoOrcamentoForm() {
       altura,
       quantidadeUnidades,
       horasEstimadas,
+      observacaoItem,
       acabamentosAtivos,
       acabamentosQtd,
       instalacaoIncluida,
@@ -962,6 +967,20 @@ export function NovoOrcamentoForm() {
                       step="0.5"
                       value={horasEstimadas}
                       onChange={(e) => setHorasEstimadas(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {material && (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="observacaoItem">
+                      Observações do item <span className="font-normal text-muted-foreground">(opcional)</span>
+                    </Label>
+                    <Input
+                      id="observacaoItem"
+                      placeholder="Ex.: adesivo porta de vidro comum, aplicar pelo lado de dentro..."
+                      value={observacaoItem}
+                      onChange={(e) => setObservacaoItem(e.target.value)}
                     />
                   </div>
                 )}
