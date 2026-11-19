@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     }
 
     const sql = getSql()
-    const rows = await sql`SELECT * FROM lancamentos WHERE id = ${lancamentoId} LIMIT 1`
+    const rows = await sql`SELECT * FROM lancamentos_financeiros WHERE id = ${lancamentoId} LIMIT 1`
     if (rows.length === 0) {
       return NextResponse.json({ erro: "Lançamento não encontrado" }, { status: 404 })
     }
@@ -55,14 +55,15 @@ export async function POST(req: Request) {
     let resumo: DadosReciboServidor["resumo"]
     let referente = lancamento.descricao || "serviços prestados"
 
-    if (lancamento.orcamento_id) {
-      const oRows = await sql`SELECT numero, criado_em, total_fechado FROM orcamentos WHERE id = ${lancamento.orcamento_id} LIMIT 1`
+    const orcamentoId = lancamento.origem_id || lancamento.orcamento_id
+    if (orcamentoId) {
+      const oRows = await sql`SELECT numero, criado_em, total_fechado FROM orcamentos WHERE id = ${orcamentoId} LIMIT 1`
       if (oRows.length > 0) {
         const orc = oRows[0]
         numeroOrcamento = formatarNumeroOrcamento(orc.numero, orc.criado_em)
 
         // Busca todas as parcelas desse orçamento para calcular o saldo
-        const irmaos = await sql`SELECT * FROM lancamentos WHERE orcamento_id = ${lancamento.orcamento_id} ORDER BY vencimento ASC`
+        const irmaos = await sql`SELECT * FROM lancamentos_financeiros WHERE origem_id = ${orcamentoId} ORDER BY vencimento ASC`
         const ordenados = [...irmaos]
         const indice = ordenados.findIndex((l) => l.id === lancamento.id)
         sufixo = indice === 0 ? "ENTRADA" : indice > 0 ? `PARC-${indice}` : "REC"
