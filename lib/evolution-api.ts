@@ -129,9 +129,31 @@ export async function enviarImagemWhatsapp(
   return { ok: true, status: resposta.status, data: jsonBody || textBody }
 }
 
-// Mídia recebida do cliente (foto, áudio) — o payload do webhook só traz
-// metadados; o conteúdo em si precisa ser buscado à parte, com a `key`
-// exatamente como veio no webhook.
+export async function gerarCodigoPareamento(numero: string): Promise<{ ok: boolean; code?: string; erro?: string }> {
+  const cfg = configurada()
+  if (!cfg) return { ok: false, erro: "Evolution API não configurada no servidor" }
+
+  const numLimpo = numero.replace(/\D/g, "")
+  const numFinal = numLimpo.length <= 11 ? `55${numLimpo}` : numLimpo
+
+  try {
+    const resposta = await fetch(`${cfg.baseUrl}/instance/connect/${cfg.instancia}?number=${numFinal}`, {
+      method: "GET",
+      headers: { apikey: cfg.apiKey },
+    })
+
+    if (!resposta.ok) {
+      const texto = await resposta.text().catch(() => "")
+      return { ok: false, erro: `Falha na Evolution API (${resposta.status}): ${texto}` }
+    }
+
+    const dados = (await resposta.json().catch(() => ({}))) as Record<string, unknown>
+    const code = (dados.code || dados.pairingCode || dados.pairing_code || dados.codePairing) as string | undefined
+    return { ok: true, code }
+  } catch (err: unknown) {
+    return { ok: false, erro: err instanceof Error ? err.message : "Erro ao conectar" }
+  }
+}
 export async function buscarMidiaBase64(chaveMensagem: Record<string, unknown>): Promise<string | null> {
   const cfg = configurada()
   if (!cfg) return null
