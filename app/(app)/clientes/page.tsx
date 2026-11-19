@@ -368,9 +368,17 @@ export default function ClientesPage() {
                         {iniciaisCliente(cliente.nome)}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">
-                          {cliente.nome}
-                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">
+                            {cliente.nome}
+                          </p>
+                          {cliente.origem === "whatsapp" && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold">
+                              <MessageCircle className="h-2.5 w-2.5" />
+                              WhatsApp
+                            </Badge>
+                          )}
+                        </div>
                         {cliente.cpf && (
                           <p className="text-[11px] text-muted-foreground mt-0.5">
                             {cliente.cpf}
@@ -455,9 +463,17 @@ export default function ClientesPage() {
                     {iniciaisCliente(cliente.nome)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground group-hover:text-primary transition-colors leading-tight truncate text-sm">
-                      {cliente.nome}
-                    </p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-semibold text-foreground group-hover:text-primary transition-colors leading-tight truncate text-sm">
+                        {cliente.nome}
+                      </p>
+                      {cliente.origem === "whatsapp" && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold">
+                          <MessageCircle className="h-2.5 w-2.5" />
+                          WhatsApp
+                        </Badge>
+                      )}
+                    </div>
                     {cliente.cpf && (
                       <p className="text-[11px] text-muted-foreground truncate mt-0.5">{cliente.cpf}</p>
                     )}

@@ -23,7 +23,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       os_emitida_em=${b.osEmitidaEm ?? null},
       arte_url=${b.arteUrl ?? null},
       arte_aprovada_em=${b.arteAprovadaEm ?? null},
-      observacao=${b.observacao ?? null}
+      observacao=${b.observacao ?? null},
+      origem=COALESCE(${b.origem ?? null}, origem)
     WHERE id=${id}
   `
   return NextResponse.json(b)

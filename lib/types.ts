@@ -34,6 +34,7 @@ export interface Cliente {
   telefone: string
   email?: string
   cpf?: string
+  origem?: "whatsapp" | "balcao" | "loja" | string
 }
 
 export interface Acabamento {
@@ -169,6 +170,7 @@ export interface Orcamento {
   arteUrl?: string
   arteAprovadaEm?: string
   observacao?: string
+  origem?: "whatsapp" | "balcao" | "loja" | string
 }
 
 export interface EntradaEstoque {

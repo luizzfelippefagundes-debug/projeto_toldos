@@ -7,7 +7,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const b = await req.json()
   await getSql()`
     UPDATE clientes
-    SET nome = ${b.nome}, telefone = ${b.telefone}, email = ${b.email ?? null}, cpf = ${b.cpf ?? null}
+    SET nome = ${b.nome}, telefone = ${b.telefone}, email = ${b.email ?? null}, cpf = ${b.cpf ?? null},
+        origem = COALESCE(${b.origem ?? null}, origem)
     WHERE id = ${id}
   `
   return NextResponse.json({ ok: true })

@@ -18,13 +18,16 @@ import { UserPlus } from "lucide-react"
 
 interface Props {
   onCriado: (cliente: Cliente) => void
+  origemPadrao?: string
+  nomeInicial?: string
+  telefoneInicial?: string
 }
 
-export function ClienteQuickAddDialog({ onCriado }: Props) {
+export function ClienteQuickAddDialog({ onCriado, origemPadrao, nomeInicial, telefoneInicial }: Props) {
   const { addCliente } = useData()
   const [aberto, setAberto] = useState(false)
-  const [nome, setNome] = useState("")
-  const [telefone, setTelefone] = useState("")
+  const [nome, setNome] = useState(nomeInicial || "")
+  const [telefone, setTelefone] = useState(telefoneInicial || "")
   const [email, setEmail] = useState("")
   const [cpf, setCpf] = useState("")
 
@@ -36,6 +39,7 @@ export function ClienteQuickAddDialog({ onCriado }: Props) {
       telefone: telefone.trim(),
       email: email.trim() || undefined,
       cpf: cpf.trim() || undefined,
+      origem: origemPadrao || undefined,
     })
     onCriado(cliente)
     setNome("")

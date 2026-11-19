@@ -671,7 +671,11 @@ export default function BotPage() {
 
                     {contato.statusConversao === "nao_fechou" && (
                       <Link
-                        href={contato.clienteId ? `/orcamentos/novo?clienteId=${contato.clienteId}` : `/orcamentos/novo`}
+                        href={
+                          contato.clienteId
+                            ? `/orcamentos/novo?clienteId=${contato.clienteId}&origem=whatsapp`
+                            : `/orcamentos/novo?origem=whatsapp&nome=${encodeURIComponent(contato.nome)}&telefone=${encodeURIComponent(contato.telefone)}`
+                        }
                         className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-emerald-500/30 text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 transition-colors"
                       >
                         <FilePlus2 className="h-3.5 w-3.5" />

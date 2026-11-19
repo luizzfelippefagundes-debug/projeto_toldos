@@ -587,9 +587,17 @@ function CardConteudo({
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
-        <span className="text-xs font-bold text-muted-foreground">
-          #{formatarNumeroOrcamento(card.orcamento.numero, card.orcamento.criadoEm)}
-        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs font-bold text-muted-foreground">
+            #{formatarNumeroOrcamento(card.orcamento.numero, card.orcamento.criadoEm)}
+          </span>
+          {(card.orcamento.origem === "whatsapp" || card.cliente?.origem === "whatsapp") && (
+            <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold">
+              <MessageCircle className="h-2.5 w-2.5" />
+              WhatsApp
+            </Badge>
+          )}
+        </div>
         <BadgeContato retorno={card.retorno} situacao={card.situacao} />
       </div>
 

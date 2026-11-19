@@ -85,6 +85,9 @@ export function NovoOrcamentoForm() {
   const searchParams = useSearchParams()
   const editarId = searchParams.get("editar")
   const paramClienteId = searchParams.get("clienteId")
+  const paramOrigem = searchParams.get("origem")
+  const paramNome = searchParams.get("nome")
+  const paramTelefone = searchParams.get("telefone")
   const orcamentoEditando = editarId
     ? orcamentos.find((o) => o.id === editarId && o.status !== "cancelado")
     : null
@@ -662,6 +665,7 @@ export function NovoOrcamentoForm() {
         anexoNome,
         anexoUrl,
         validadeDias: numeroOuZero(validadeDias),
+        origem: paramOrigem || undefined,
       })
 
       // Envia email em background se o cliente tiver email cadastrado
@@ -861,7 +865,12 @@ export function NovoOrcamentoForm() {
                     className="w-full"
                   />
                 </div>
-                <ClienteQuickAddDialog onCriado={(c) => setClienteId(c.id)} />
+                <ClienteQuickAddDialog
+                  onCriado={(c) => setClienteId(c.id)}
+                  origemPadrao={paramOrigem || undefined}
+                  nomeInicial={paramNome || undefined}
+                  telefoneInicial={paramTelefone || undefined}
+                />
               </CardContent>
             </Card>
           )}

@@ -83,6 +83,7 @@ export interface DataContextValue {
     anexoNome: string | null
     anexoUrl?: string
     validadeDias?: number
+    origem?: string
   }) => Orcamento
   // Edita um orçamento aberto ou fechado. Em fechado, refaz a baixa de
   // estoque e atualiza o lançamento financeiro. Com `fechar`, um orçamento
@@ -434,6 +435,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       criadoEm: new Date().toISOString(),
       fechadoEm: new Date().toISOString(),
       validadeDias: dados.validadeDias ?? 7,
+      origem: dados.origem || cliente?.origem || undefined,
     }
 
     setOrcamentos((atual) => [novo, ...atual])
