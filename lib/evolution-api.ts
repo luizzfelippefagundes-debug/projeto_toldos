@@ -11,14 +11,9 @@ function configurada() {
   return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instancia }
 }
 
-// Se WHATSAPP_TEST_RECIPIENT estiver definida e estivermos fora de produção,
-// redireciona para esse número — em produção, sempre envia diretamente ao destinatário real.
+// Normaliza o número de destino para envio direto ao cliente
 function resolverNumero(numero: string): string {
-  const alvo =
-    process.env.NODE_ENV === "development" && process.env.WHATSAPP_TEST_RECIPIENT
-      ? process.env.WHATSAPP_TEST_RECIPIENT
-      : numero
-  return alvo.replace(/\D/g, "")
+  return numero.replace(/\D/g, "")
 }
 
 export async function enviarMensagemWhatsapp(
