@@ -272,13 +272,15 @@ export default function TransmissaoPage() {
       })
       const dados = (await res.json()) as { enviados: number; falhas: number }
       setResultado(dados)
-      if (dados.falhas === 0) {
-        toast.success(`Transmissão concluída para ${dados.enviados} cliente(s)!`)
+      if (dados.enviados > 0 && dados.falhas === 0) {
+        toast.success(`Foto e mensagem enviadas com sucesso para ${dados.enviados} cliente(s)!`)
+      } else if (dados.enviados > 0 && dados.falhas > 0) {
+        toast.warning(`${dados.enviados} enviados com sucesso, ${dados.falhas} falharam.`)
       } else {
-        toast.warning(`${dados.enviados} enviados, ${dados.falhas} falharam.`)
+        toast.error("O WhatsApp do robô não enviou. Verifique se a instância está conectada ou use o Disparo Manual.")
       }
     } catch {
-      toast.error("Erro ao enviar via API. Use a opção de Disparo Manual.")
+      toast.error("Erro ao enviar direto pelo sistema. Tente novamente ou use o Disparo Manual.")
     } finally {
       setEnviando(false)
     }
@@ -417,37 +419,37 @@ export default function TransmissaoPage() {
               </div>
             )}
 
-            <div className="flex flex-col gap-2 pt-2">
-              {/* Botão Principal: Disparo Manual */}
+            <div className="flex flex-col gap-2.5 pt-2">
+              {/* Botão Principal: Envio Direto pelo Sistema com Foto */}
               <Button
                 type="button"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm gap-2"
-                onClick={() => setModalManualAberto(true)}
-                disabled={selecionados.size === 0 || (!mensagem.trim() && !fotoUrl)}
-              >
-                <Smartphone className="h-4 w-4" />
-                Disparo Manual no WhatsApp ({selecionados.size})
-              </Button>
-
-              {/* Botão Secundário: Robô Evolution API */}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2 text-muted-foreground hover:text-foreground"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-11 text-sm shadow-md gap-2"
                 onClick={enviarAutomaticoApi}
                 disabled={enviando || (!mensagem.trim() && !fotoUrl) || selecionados.size === 0}
               >
                 {enviando ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Disparando via Robô...
+                    Enviando foto e mensagem para {selecionados.size} cliente(s)...
                   </>
                 ) : (
                   <>
-                    <Bot className="h-4 w-4" />
-                    Disparar via Robô (Evolution API)
+                    <Send className="h-4 w-4" />
+                    Enviar Direto pelo Sistema com a Foto ({selecionados.size})
                   </>
                 )}
+              </Button>
+
+              {/* Botão Secundário: Disparo Manual */}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full text-xs text-muted-foreground hover:text-foreground h-9 gap-2"
+                onClick={() => setModalManualAberto(true)}
+                disabled={selecionados.size === 0 || (!mensagem.trim() && !fotoUrl)}
+              >
+                <Smartphone className="h-3.5 w-3.5" />
+                Disparo Manual (Abrir no WhatsApp Web um a um)
               </Button>
             </div>
           </CardContent>
