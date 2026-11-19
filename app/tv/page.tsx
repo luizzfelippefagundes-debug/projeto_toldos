@@ -88,14 +88,14 @@ function PedidoCard({
   return (
     <div
       key={pedido.id}
-      className={`shrink-0 rounded-2xl border-2 transition-all p-3 sm:p-3.5 lg:p-4 shadow-sm w-full ${
+      className={`shrink-0 rounded-2xl border-2 transition-all p-3 sm:p-3.5 lg:p-4 shadow-sm w-full min-w-0 max-w-full overflow-hidden ${
         atrasado
           ? "border-red-500 bg-red-50/95 shadow-md dark:border-red-600 dark:bg-red-950/80"
           : "border-slate-200/90 bg-white shadow-2xs dark:border-slate-700/80 dark:bg-slate-900/95"
       }`}
     >
       {/* Linha superior: Tag OS / Pedido + Tipo + Prazo/Atrasado + Badge da Etapa */}
-      <div className="flex items-center justify-between gap-1.5 leading-none flex-wrap">
+      <div className="flex items-center justify-between gap-1.5 leading-none flex-wrap min-w-0">
         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
           <span className="font-black text-xs sm:text-sm lg:text-base text-foreground tracking-tight shrink-0">
             {pedido.tipo === "orcamento" ? `OS #${pedido.numero}` : `#${pedido.numero}`}
@@ -143,19 +143,28 @@ function PedidoCard({
       </p>
 
       {/* Bloco: O QUE É PRA FAZER (Destaque total para a fábrica - NUNCA CORTA) */}
-      <div className="mt-2 flex flex-col gap-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-2.5 sm:p-3.5 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs">
-        {/* Medidas / Quantidade em destaque com badge próprio para bater o olho */}
+      <div className="mt-2 flex flex-col gap-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-2.5 sm:p-3.5 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs min-w-0 max-w-full overflow-hidden">
+        {/* Medidas / Quantidade em destaque com layout 100% responsivo para bater o olho */}
         {pedido.variante_nome && (
-          <div>
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 border border-primary/30 px-2.5 py-1 text-xs sm:text-sm font-black text-primary">
-              <span>📏</span>
-              <span>DIMENSÕES: {pedido.variante_nome}</span>
-            </span>
+          <div className="w-full max-w-full rounded-lg bg-primary/15 border border-primary/30 px-2.5 py-1.5 text-primary box-border">
+            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase tracking-wider text-primary shrink-0">
+                <span className="text-xs sm:text-sm leading-none">📏</span>
+                <span>DIMENSÕES:</span>
+              </span>
+              <span
+                className={`font-black text-primary break-words whitespace-normal min-w-0 ${
+                  tamanhoGrande ? "text-xs sm:text-sm lg:text-base" : "text-xs sm:text-sm"
+                }`}
+              >
+                {pedido.variante_nome}
+              </span>
+            </div>
           </div>
         )}
 
         {/* Produto / Serviço com quebra de linha natural (NUNCA CORTA) */}
-        <div>
+        <div className="min-w-0 max-w-full">
           <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
             Serviço / Produto:
           </span>
@@ -166,7 +175,7 @@ function PedidoCard({
 
         {/* Acabamento completo com quebra de linha */}
         {pedido.acabamento && (
-          <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
+          <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50 min-w-0 max-w-full">
             <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
               Acabamento:
             </span>
@@ -178,7 +187,7 @@ function PedidoCard({
 
         {/* Observação / Instrução de Produção em Alto Destaque */}
         {pedido.observacao && (
-          <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60">
+          <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60 min-w-0 max-w-full">
             <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2 sm:p-2.5 text-amber-950 dark:text-amber-100 shadow-2xs">
               <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block text-amber-700 dark:text-amber-400">
                 ⚠️ Instrução de Produção:
