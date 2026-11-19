@@ -180,6 +180,59 @@ export async function gerarCodigoPareamento(numero: string): Promise<{
     return { ok: false, erro: err instanceof Error ? err.message : "Erro ao conectar" }
   }
 }
+export async function verificarStatusInstancia(): Promise<{
+  ok: boolean
+  conectado: boolean
+  estado: string
+  erro?: string
+}> {
+  const cfg = configurada()
+  if (!cfg) {
+    return { ok: false, conectado: false, estado: "desconfigurado", erro: "Evolution API não configurada" }
+  }
+
+  try {
+    const resposta = await fetch(`${cfg.baseUrl}/instance/connectionState/${cfg.instancia}`, {
+      method: "GET",
+      headers: { apikey: cfg.apiKey },
+      cache: "no-store",
+    })
+
+    if (!resposta.ok) {
+      return { ok: false, conectado: false, estado: "erro", erro: `HTTP ${resposta.status}` }
+    }
+
+    const dados = (await resposta.json().catch(() => ({}))) as Record<string, unknown>
+    const instanceObj = (dados.instance || {}) as Record<string, unknown>
+    const state = String(instanceObj.state || dados.state || "close").toLowerCase()
+    const conectado = state === "open"
+
+    return { ok: true, conectado, estado: state }
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      conectado: false,
+      estado: "erro",
+      erro: err instanceof Error ? err.message : "Erro ao verificar status",
+    }
+  }
+}
+
+export async function reiniciarInstancia(): Promise<{ ok: boolean; erro?: string }> {
+  const cfg = configurada()
+  if (!cfg) return { ok: false, erro: "Evolution API não configurada" }
+
+  try {
+    const resposta = await fetch(`${cfg.baseUrl}/instance/restart/${cfg.instancia}`, {
+      method: "PUT",
+      headers: { apikey: cfg.apiKey },
+    })
+    return { ok: resposta.ok }
+  } catch (err: unknown) {
+    return { ok: false, erro: err instanceof Error ? err.message : "Erro ao reiniciar instância" }
+  }
+}
+
 export async function buscarMidiaBase64(chaveMensagem: Record<string, unknown>): Promise<string | null> {
   const cfg = configurada()
   if (!cfg) return null

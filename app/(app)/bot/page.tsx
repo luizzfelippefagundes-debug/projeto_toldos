@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useData } from "@/context/data-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -34,6 +34,9 @@ import {
   ExternalLink,
   Users,
   TrendingUp,
+  RefreshCw,
+  AlertCircle,
+  HelpCircle,
 } from "lucide-react"
 import { toast } from "sonner"
 import type { MensagemBot } from "@/lib/types"
@@ -67,6 +70,49 @@ export default function BotPage() {
   const [codigoPareamento, setCodigoPareamento] = useState<string | null>(null)
   const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
+  const [statusConexao, setStatusConexao] = useState<{
+    checando: boolean
+    conectado: boolean | null
+    estado: string | null
+  }>({
+    checando: false,
+    conectado: null,
+    estado: null,
+  })
+
+  const verificarStatus = useCallback(async (silencioso = false) => {
+    if (!silencioso) setStatusConexao((prev) => ({ ...prev, checando: true }))
+    try {
+      const res = await fetch("/api/bot/pareamento")
+      const dados = (await res.json().catch(() => ({}))) as {
+        ok?: boolean
+        conectado?: boolean
+        estado?: string
+      }
+      setStatusConexao({
+        checando: false,
+        conectado: Boolean(dados.conectado),
+        estado: dados.estado || "close",
+      })
+      if (!silencioso) {
+        if (dados.conectado) {
+          toast.success("WhatsApp está conectado e pronto para uso!")
+        } else {
+          toast.info("WhatsApp ainda não está conectado.")
+        }
+      }
+    } catch {
+      setStatusConexao({ checando: false, conectado: false, estado: "desconhecido" })
+    }
+  }, [])
+
+  useEffect(() => {
+    verificarStatus(true)
+    const interval = setInterval(() => {
+      verificarStatus(true)
+    }, 20000)
+    return () => clearInterval(interval)
+  }, [verificarStatus])
 
   // Filtros do levantamento
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "fechado" | "aberto" | "nao_fechou">("todos")
@@ -247,11 +293,41 @@ export default function BotPage() {
 
       {/* Card Conectar por Código de Pareamento */}
       <Card className="border-emerald-500/30 bg-emerald-500/5">
-        <CardHeader>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3">
           <CardTitle className="text-base flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
             <KeyRound className="h-5 w-5 text-emerald-600" />
             Conectar WhatsApp à Distância (Código de 8 Dígitos — Sem QR Code)
           </CardTitle>
+          <div className="flex items-center gap-2">
+            {statusConexao.conectado === true ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                WhatsApp Conectado
+              </span>
+            ) : statusConexao.conectado === false ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                Desconectado
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Verificando...
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs gap-1 border-emerald-500/30 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-500/10"
+              onClick={() => verificarStatus(false)}
+              disabled={statusConexao.checando}
+              title="Verificar se o WhatsApp já conectou"
+            >
+              <RefreshCw className={cn("h-3 w-3", statusConexao.checando && "animate-spin")} />
+              Verificar Status
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <p className="text-xs text-muted-foreground leading-relaxed">
@@ -338,6 +414,19 @@ export default function BotPage() {
                   <p>4. Digitar o código de 8 dígitos: <strong className="text-foreground font-mono text-sm">{codigoPareamento}</strong></p>
                 </div>
               )}
+
+              {/* Dica para erro do WhatsApp no iPhone */}
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3.5 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+                <div className="flex items-center gap-2 font-semibold">
+                  <HelpCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Se aparecer &quot;Não é possível conectar novos dispositivos no momento&quot; no celular:</span>
+                </div>
+                <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                  <li><b>Limite de 4 aparelhos:</b> No WhatsApp do dono, abra <i>Aparelhos Conectados</i> e desconecte computadores/sessões antigas que não usa mais.</li>
+                  <li><b>Bloqueio temporário:</b> Feche o app do WhatsApp no iPhone de verdade (arraste para cima na troca de apps) e aguarde 5 a 10 minutos.</li>
+                  <li><b>Oscilação de Wi-Fi:</b> Se ele estiver no Wi-Fi, peça para desligar o Wi-Fi e tentar pelos dados móveis (4G/5G).</li>
+                </ul>
+              </div>
             </div>
           )}
         </CardContent>
