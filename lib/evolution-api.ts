@@ -82,28 +82,49 @@ export async function enviarDocumentoWhatsapp(
 
 export async function enviarImagemWhatsapp(
   numero: string,
-  imagemBase64: string,
-  legenda?: string
-): Promise<void> {
+  imagemBase64OuUrl: string,
+  legenda?: string,
+  mimetype?: string
+): Promise<{ ok: boolean; status?: number; data?: unknown }> {
   const cfg = configurada()
   if (!cfg) {
     console.warn("[whatsapp] Evolution API não configurada — imagem não enviada:", { numero })
-    return
+    return { ok: false, status: 500, data: "Evolution API não configurada" }
   }
+
+  let mediaPayload = imagemBase64OuUrl
+  let mime = mimetype || "image/jpeg"
+
+  if (imagemBase64OuUrl.startsWith("data:")) {
+    const match = imagemBase64OuUrl.match(/^data:([^;]+);base64,(.*)$/)
+    if (match) {
+      mime = match[1] || mime
+      mediaPayload = match[2]
+    }
+  }
+
   const resposta = await fetch(`${cfg.baseUrl}/message/sendMedia/${cfg.instancia}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: cfg.apiKey },
     body: JSON.stringify({
       number: resolverNumero(numero),
       mediatype: "image",
-      mimetype: "image/jpeg",
+      mimetype: mime,
       caption: legenda,
-      media: imagemBase64,
+      media: mediaPayload,
     }),
   })
+  const textBody = await resposta.text().catch(() => "")
+  let jsonBody: unknown = null
+  try {
+    jsonBody = JSON.parse(textBody)
+  } catch {}
+
   if (!resposta.ok) {
-    console.error("[whatsapp] Falha ao enviar imagem:", resposta.status, (await resposta.text().catch(() => "")).slice(0, 500))
+    console.error("[whatsapp] Falha ao enviar imagem:", resposta.status, textBody.slice(0, 500))
+    return { ok: false, status: resposta.status, data: jsonBody || textBody }
   }
+  return { ok: true, status: resposta.status, data: jsonBody || textBody }
 }
 
 // Mídia recebida do cliente (foto, áudio) — o payload do webhook só traz
