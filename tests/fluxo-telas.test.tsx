@@ -124,7 +124,7 @@ describe("telas novas com dados reais", () => {
     expect(texto).toMatch(/reais/) // valor por extenso
     expect(texto).toContain("Saldo restante")
     expect(texto).toMatch(new RegExp(`Valor do orçamento${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }).replace(/[$]/g, "\\$").replace(/\s/g, "\\s")}`))
-    expect(within(recibo.container).getByRole("button", { name: /abrir whatsapp/i }).getAttribute("href")).toContain("wa.me/55")
+    expect(within(recibo.container).getByRole("button", { name: /conversar no whatsapp|abrir whatsapp/i }).getAttribute("href")).toContain("wa.me/55")
     expect(within(recibo.container).getByRole("button", { name: /enviar recibo em pdf/i })).toBeTruthy()
   })
 

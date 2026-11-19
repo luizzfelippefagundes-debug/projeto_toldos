@@ -52,12 +52,16 @@ export async function POST(req: Request) {
       mensagem ||
       `📄 Segue em anexo o seu Orçamento nº ${numeroFormatado} da Toldos Print! Qualquer dúvida estamos à disposição.`
 
-    await enviarDocumentoWhatsapp(
+    const envio = await enviarDocumentoWhatsapp(
       destinoTelefone,
       pdfBuffer.toString("base64"),
       nomeArquivo,
       legenda
     )
+
+    if (!envio.ok) {
+      throw new Error(envio.erro || "Falha ao enviar documento PDF do orçamento pelo WhatsApp")
+    }
 
     await registrarMensagemBot({
       clienteId: r.cliente_id ?? null,

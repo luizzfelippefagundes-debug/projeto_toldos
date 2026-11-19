@@ -44,12 +44,16 @@ export async function POST(req: Request) {
   const pdf = await gerarPdfOsServidor(orcamento, clienteNome, clienteTelefone)
   const nomeArquivo = `OS-${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)}.pdf`
 
-  await enviarDocumentoWhatsapp(
+  const envio = await enviarDocumentoWhatsapp(
     telefone,
     pdf.toString("base64"),
     nomeArquivo,
     `📋 Segue a Ordem de Serviço nº ${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)} da Toldos Print!`
   )
+
+  if (!envio.ok) {
+    throw new Error(envio.erro || "Falha ao enviar documento PDF da OS pelo WhatsApp")
+  }
 
   await registrarMensagemBot({
     clienteId: orcamento.clienteId ?? null,

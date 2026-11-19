@@ -95,12 +95,12 @@ export default function ReciboPage() {
     resumo,
   }
 
-  const mensagem =
-    `Olá${cliente ? `, ${cliente.nome.split(" ")[0]}` : ""}! Recebemos seu pagamento de ${formatarMoeda(lancamento.valor)} ` +
-    `(${referente}). Segue o recibo em anexo. ` +
+  const mensagemTexto =
+    `Olá${cliente ? `, ${cliente.nome.split(" ")[0]}` : ""}! Recebemos e confirmamos seu pagamento de ${formatarMoeda(lancamento.valor)} ` +
+    `(${referente}). ` +
     (resumo && resumo.saldo > 0 ? `Saldo restante: ${formatarMoeda(resumo.saldo)}. ` : resumo ? "Orçamento quitado! " : "") +
-    "Obrigado pela confiança! — Toldos Print"
-  const whatsapp = cliente?.telefone ? linkWhatsApp(cliente.telefone, mensagem) : null
+    "Qualquer dúvida estamos à disposição! — Toldos Print"
+  const whatsapp = cliente?.telefone ? linkWhatsApp(cliente.telefone, mensagemTexto) : null
 
   async function handleEnviarReciboWhatsapp() {
     if (!lancamento || !cliente?.telefone) {
@@ -119,7 +119,7 @@ export default function ReciboPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.erro || "Falha ao enviar recibo")
-      toast.success("Recibo oficial em PDF enviado com sucesso pelo WhatsApp!")
+      toast.success(`Recibo oficial em PDF enviado com sucesso para ${cliente.nome}!`)
     } catch (err: any) {
       toast.error(err?.message || "Erro ao enviar recibo pelo WhatsApp.")
     } finally {
@@ -138,14 +138,14 @@ export default function ReciboPage() {
           {cliente?.telefone && (
             <Button
               variant="default"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium gap-2"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium gap-2 shadow-sm"
               disabled={enviandoWhatsapp}
               onClick={handleEnviarReciboWhatsapp}
             >
               {enviandoWhatsapp ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Enviando PDF...
+                  Enviando PDF oficial...
                 </>
               ) : (
                 <>
@@ -163,7 +163,7 @@ export default function ReciboPage() {
               render={<a href={whatsapp} target="_blank" rel="noopener noreferrer" />}
             >
               <MessageCircle className="mr-2 h-4 w-4 text-emerald-600" />
-              Abrir WhatsApp Web
+              Conversar no WhatsApp Web
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
@@ -173,9 +173,9 @@ export default function ReciboPage() {
         </div>
       </div>
       {cliente?.telefone && (
-        <p className="mb-4 text-xs text-muted-foreground print:hidden">
-          Clique em &quot;Enviar Recibo em PDF no WhatsApp&quot; para que o bot envie o documento oficial assinado em PDF diretamente para o cliente.
-        </p>
+        <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50/50 p-3 text-xs text-emerald-900 print:hidden dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-200">
+          💡 Para enviar o <strong>arquivo PDF oficial do recibo</strong> anexado diretamente no celular do cliente, clique no botão verde <strong>&quot;Enviar Recibo em PDF no WhatsApp&quot;</strong>.
+        </div>
       )}
 
       <div className="overflow-x-auto print:overflow-visible">

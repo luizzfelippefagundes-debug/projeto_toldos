@@ -52,11 +52,11 @@ export async function enviarDocumentoWhatsapp(
   mediaBase64: string,
   nomeArquivo: string,
   legenda?: string
-): Promise<void> {
+): Promise<{ ok: boolean; status?: number; data?: unknown; erro?: string }> {
   const cfg = configurada()
   if (!cfg) {
     console.warn("[whatsapp] Evolution API não configurada — documento não enviado:", { numero, nomeArquivo })
-    return
+    return { ok: false, erro: "Evolution API não configurada no servidor" }
   }
   const resposta = await fetch(`${cfg.baseUrl}/message/sendMedia/${cfg.instancia}`, {
     method: "POST",
@@ -64,15 +64,30 @@ export async function enviarDocumentoWhatsapp(
     body: JSON.stringify({
       number: resolverNumero(numero),
       mediatype: "document",
+      mediaType: "document",
       mimetype: "application/pdf",
       fileName: nomeArquivo,
       caption: legenda,
       media: mediaBase64,
     }),
   })
+  const textBody = await resposta.text().catch(() => "")
+  let jsonBody: unknown = null
+  try {
+    jsonBody = JSON.parse(textBody)
+  } catch {}
+
   if (!resposta.ok) {
-    console.error("[whatsapp] Falha ao enviar documento:", resposta.status, (await resposta.text().catch(() => "")).slice(0, 500))
+    console.error("[whatsapp] Falha ao enviar documento:", resposta.status, textBody.slice(0, 500))
+    return {
+      ok: false,
+      status: resposta.status,
+      data: jsonBody || textBody,
+      erro: `Falha na Evolution API (${resposta.status}): ${textBody.slice(0, 200)}`,
+    }
   }
+  console.log(`[whatsapp] Documento ${nomeArquivo} enviado com sucesso para ${resolverNumero(numero)}`)
+  return { ok: true, status: resposta.status, data: jsonBody || textBody }
 }
 
 export async function enviarImagemWhatsapp(

@@ -113,12 +113,16 @@ export async function POST(req: Request) {
       (resumo && resumo.saldo > 0 ? `Saldo restante: ${formatarMoeda(resumo.saldo)}. ` : resumo ? "Orçamento quitado! " : "") +
       "Obrigado pela confiança! — Toldos Print"
 
-    await enviarDocumentoWhatsapp(
+    const envio = await enviarDocumentoWhatsapp(
       clienteTelefone,
       pdfBuffer.toString("base64"),
       nomeArquivo,
       mensagem
     )
+
+    if (!envio.ok) {
+      throw new Error(envio.erro || "Falha ao enviar documento PDF pelo WhatsApp")
+    }
 
     await registrarMensagemBot({
       clienteId: clienteId ?? null,
