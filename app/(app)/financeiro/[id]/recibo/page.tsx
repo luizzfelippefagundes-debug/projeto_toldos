@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useData } from "@/context/data-context"
 import { Button } from "@/components/ui/button"
@@ -7,7 +8,8 @@ import { ReciboOficial, type DadosRecibo } from "@/components/financeiro/recibo-
 import { formatarMoeda } from "@/lib/format"
 import { formatarNumeroOrcamento } from "@/lib/orcamento-pdf"
 import { linkWhatsApp } from "@/lib/retornos"
-import { ArrowLeft, MessageCircle, Printer } from "lucide-react"
+import { ArrowLeft, MessageCircle, Printer, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 const rotuloForma: Record<string, string> = {
   boleto: "boleto",
@@ -21,6 +23,7 @@ export default function ReciboPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { lancamentos, clientes, orcamentos } = useData()
+  const [enviandoWhatsapp, setEnviandoWhatsapp] = useState(false)
 
   const lancamento = lancamentos.find((l) => l.id === id)
 
@@ -99,6 +102,31 @@ export default function ReciboPage() {
     "Obrigado pela confiança! — Toldos Print"
   const whatsapp = cliente?.telefone ? linkWhatsApp(cliente.telefone, mensagem) : null
 
+  async function handleEnviarReciboWhatsapp() {
+    if (!lancamento || !cliente?.telefone) {
+      toast.error("Cliente ou lançamento não encontrado.")
+      return
+    }
+    setEnviandoWhatsapp(true)
+    try {
+      const res = await fetch("/api/whatsapp/enviar-recibo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lancamentoId: lancamento.id,
+          telefone: cliente.telefone,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.erro || "Falha ao enviar recibo")
+      toast.success("Recibo oficial em PDF enviado com sucesso pelo WhatsApp!")
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao enviar recibo pelo WhatsApp.")
+    } finally {
+      setEnviandoWhatsapp(false)
+    }
+  }
+
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
@@ -107,26 +135,46 @@ export default function ReciboPage() {
           Voltar
         </Button>
         <div className="flex flex-wrap items-center gap-2">
+          {cliente?.telefone && (
+            <Button
+              variant="default"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium gap-2"
+              disabled={enviandoWhatsapp}
+              onClick={handleEnviarReciboWhatsapp}
+            >
+              {enviandoWhatsapp ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Enviando PDF...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="h-4 w-4" />
+                  Enviar Recibo em PDF no WhatsApp
+                </>
+              )}
+            </Button>
+          )}
           {whatsapp && (
             <Button
               variant="outline"
+              size="sm"
               nativeButton={false}
               render={<a href={whatsapp} target="_blank" rel="noopener noreferrer" />}
             >
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Abrir WhatsApp do cliente
+              <MessageCircle className="mr-2 h-4 w-4 text-emerald-600" />
+              Abrir WhatsApp Web
             </Button>
           )}
-          <Button onClick={() => window.print()}>
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="mr-2 h-4 w-4" />
-            Imprimir / salvar PDF
+            Imprimir / Salvar PDF
           </Button>
         </div>
       </div>
-      {whatsapp && (
+      {cliente?.telefone && (
         <p className="mb-4 text-xs text-muted-foreground print:hidden">
-          Dica: salve o recibo em PDF primeiro e anexe na conversa do WhatsApp — o link já abre
-          com a mensagem pronta.
+          Clique em &quot;Enviar Recibo em PDF no WhatsApp&quot; para que o bot envie o documento oficial assinado em PDF diretamente para o cliente.
         </p>
       )}
 

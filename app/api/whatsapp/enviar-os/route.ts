@@ -3,6 +3,7 @@ import { getSql } from "@/lib/db"
 import { enviarDocumentoWhatsapp } from "@/lib/evolution-api"
 import { gerarPdfOsServidor } from "@/lib/pdf-os-servidor"
 import { formatarNumeroOrcamento } from "@/lib/orcamento-pdf"
+import { registrarMensagemBot } from "@/lib/bot-registro"
 import type { Orcamento } from "@/lib/types"
 
 export async function POST(req: Request) {
@@ -49,6 +50,15 @@ export async function POST(req: Request) {
     nomeArquivo,
     `📋 Segue a Ordem de Serviço nº ${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)} da Toldos Print!`
   )
+
+  await registrarMensagemBot({
+    clienteId: orcamento.clienteId ?? null,
+    clienteNome,
+    telefone,
+    texto: `📋 Ordem de Serviço em PDF enviada ao cliente: ${nomeArquivo}`,
+    origem: "automatica",
+    autor: "bot",
+  })
 
   return NextResponse.json({ ok: true })
 }

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
-import { MessageCircle } from "lucide-react"
+import { MessageCircle, FileText } from "lucide-react"
 import type { Orcamento, Cliente } from "@/lib/types"
 import { formatarMoeda } from "@/lib/format"
 
@@ -48,6 +48,7 @@ function normalizarTelefone(tel: string): string {
 
 export function EnviarWhatsappDialog({ open, onOpenChange, orcamento, cliente }: Props) {
   const [mensagem, setMensagem] = useState(() => mensagemSugerida(orcamento, cliente))
+  const [anexarPdf, setAnexarPdf] = useState(true)
   const [enviando, setEnviando] = useState(false)
 
   const telefone = cliente?.telefone ? normalizarTelefone(cliente.telefone) : null
@@ -56,21 +57,38 @@ export function EnviarWhatsappDialog({ open, onOpenChange, orcamento, cliente }:
     if (!telefone || !mensagem.trim()) return
     setEnviando(true)
     try {
-      const res = await fetch("/api/whatsapp/enviar-notificacao", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          telefone,
-          mensagem: mensagem.trim(),
-          clienteId: cliente?.id ?? null,
-          clienteNome: cliente?.nome ?? telefone,
-        }),
-      })
-      if (!res.ok) throw new Error("Falha ao enviar")
-      toast.success("Mensagem enviada pelo WhatsApp!")
+      if (anexarPdf) {
+        const res = await fetch("/api/whatsapp/enviar-orcamento", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orcamentoId: orcamento.id,
+            telefone,
+            mensagem: mensagem.trim(),
+          }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.erro || "Falha ao enviar documento")
+        }
+        toast.success("Orçamento em PDF enviado pelo WhatsApp com sucesso!")
+      } else {
+        const res = await fetch("/api/whatsapp/enviar-notificacao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            telefone,
+            mensagem: mensagem.trim(),
+            clienteId: cliente?.id ?? null,
+            clienteNome: cliente?.nome ?? telefone,
+          }),
+        })
+        if (!res.ok) throw new Error("Falha ao enviar mensagem")
+        toast.success("Mensagem enviada pelo WhatsApp!")
+      }
       onOpenChange(false)
-    } catch {
-      toast.error("Erro ao enviar. Verifique a conexão com o WhatsApp.")
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao enviar. Verifique a conexão com o WhatsApp.")
     } finally {
       setEnviando(false)
     }
@@ -111,6 +129,21 @@ export function EnviarWhatsappDialog({ open, onOpenChange, orcamento, cliente }:
               className="resize-none text-sm"
             />
           </div>
+
+          <label
+            htmlFor="anexar-pdf"
+            className="flex items-center gap-2 pt-1 text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300 select-none"
+          >
+            <input
+              type="checkbox"
+              id="anexar-pdf"
+              checked={anexarPdf}
+              onChange={(e) => setAnexarPdf(e.target.checked)}
+              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+            />
+            <FileText className="h-3.5 w-3.5 text-blue-600" />
+            <span>Anexar documento oficial em PDF do orçamento</span>
+          </label>
         </div>
 
         <DialogFooter>
