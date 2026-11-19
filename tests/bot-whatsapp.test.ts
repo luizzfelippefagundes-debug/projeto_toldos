@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { formatarTelefoneBrasil, normalizarTelefone, SERVICOS_TEXTO, resolverFluxoAtendimento } from "@/lib/bot-whatsapp"
+import {
+  formatarTelefoneBrasil,
+  normalizarTelefone,
+  SERVICOS_TEXTO,
+  resolverFluxoAtendimento,
+  ehNomeValido,
+} from "@/lib/bot-whatsapp"
 
 describe("normalizarTelefone", () => {
   it("tira tudo que não é dígito", () => {
@@ -88,5 +94,17 @@ describe("resolverFluxoAtendimento (Motor de Regras Infalível do Robô)", () =>
     expect(res.resposta).toContain("Tenha em mãos medidas ou projetos")
     expect(res.resposta).toContain("transferindo")
     expect(res.transferir).toBe(true)
+  })
+
+  it("não aceita fragmentos ou palavras comuns como 'qu', 'qual', 'fechou' como nome", () => {
+    expect(ehNomeValido("qu")).toBe(false)
+    expect(ehNomeValido("qual")).toBe(false)
+    expect(ehNomeValido("fechou")).toBe(false)
+    expect(ehNomeValido("oi")).toBe(false)
+    expect(ehNomeValido("Lucas")).toBe(true)
+    expect(ehNomeValido("João Carlos")).toBe(true)
+
+    const res = resolverFluxoAtendimento("qu", [{ role: "assistant", content: "Qual seu nome e de qual cidade?" }])
+    expect(res.nome).toBeUndefined()
   })
 })

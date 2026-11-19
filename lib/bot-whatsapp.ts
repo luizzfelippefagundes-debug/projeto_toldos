@@ -129,13 +129,40 @@ async function adquirirTrava(conversaInicial: ConversaBot): Promise<{ conversa: 
   return { conversa, travado: false }
 }
 
-export async function processarMensagemWhatsapp(telefone: string, textoRecebido: string): Promise<string | null> {
+export const STOPWORDS_NOME = new Set([
+  "qu", "qual", "quanto", "quando", "onde", "como", "quem", "por", "que", "pra", "pro",
+  "oi", "ola", "opa", "eai", "fala", "alo", "bom", "dia", "boa", "tarde", "noite",
+  "sim", "nao", "ok", "beleza", "blz", "fechou", "vamos", "valeu", "obrigado", "obrigada",
+  "quero", "queria", "gostaria", "preciso", "precisava", "favor", "porfavor",
+  "tem", "voce", "voces", "toldo", "toldos", "banner", "banners", "lona", "lonas",
+  "placa", "placas", "adesivo", "adesivos", "fachada", "fachadas", "letra", "letras",
+  "preco", "precos", "valor", "valores", "orcamento", "orcamentos", "reforma", "reformas",
+  "teste", "testes", "testando", "nada", "tudo", "mais", "menos", "aqui", "grupo", "fazer",
+  "marcar", "vincular", "vinculado"
+])
+
+export function ehNomeValido(nome?: string | null): boolean {
+  if (!nome) return false
+  const limpo = nome.trim()
+  if (limpo.length < 3) return false
+  if (limpo.length > 40) return false
+  if (/[\d?!@#$%^&*()_+={}\[\]:;"'<>/\\]/.test(limpo)) return false
+  const primeiraPalavra = limpo.toLowerCase().split(/\s+/)[0]
+  if (STOPWORDS_NOME.has(primeiraPalavra)) return false
+  return true
+}
+
+export async function processarMensagemWhatsapp(
+  telefone: string,
+  textoRecebido: string,
+  pushName?: string | null
+): Promise<string | null> {
   const conversaInicial = await getOuCriarConversa(telefone)
   const { conversa, travado } = await adquirirTrava(conversaInicial)
   if (!travado) return "Só um segundo, já te respondo!"
 
   try {
-    return await processarComTravaAdquirida(telefone, textoRecebido, conversa)
+    return await processarComTravaAdquirida(telefone, textoRecebido, conversa, pushName)
   } finally {
     await destravarProcessamento(conversa.id)
   }
@@ -145,7 +172,8 @@ export function resolverFluxoAtendimento(
   textoRecebido: string,
   historico: MensagemHistorico[],
   nomeSalvo?: string | null,
-  localSalvo?: string | null
+  localSalvo?: string | null,
+  pushName?: string | null
 ): { resposta: string; nome?: string; local?: string; transferir?: boolean } {
   const limpo = textoRecebido.trim().toLowerCase()
   const eSaudacao = /^(oi+|ol[aá]+|e a[ií]|bom dia|boa tarde|boa noite|hey|hello|al[oô]+|opa|fala)[\s!?.]*$/i.test(limpo)
@@ -172,16 +200,28 @@ export function resolverFluxoAtendimento(
     }
   }
 
+  const nomeEfetivo = (ehNomeValido(nomeSalvo) ? nomeSalvo : null) || (ehNomeValido(pushName) ? pushName : null)
+
   // 3. Se ainda não temos o nome ou o local, tenta extrair da resposta
-  if (!nomeSalvo || !localSalvo) {
-    let nomeExtraido = nomeSalvo || undefined
+  if (!nomeEfetivo || !localSalvo) {
+    let nomeExtraido = nomeEfetivo || undefined
     let localExtraido = localSalvo || undefined
 
-    const mSou = /(?:sou\s+(?:o|a)?\s*|me\s*chamo\s*|meu\s*nome\s*[ée]\s*)([a-zA-ZçÇáéíóúÁÉÍÓÚ\s]{2,25})/i.exec(textoRecebido)
-    if (mSou) {
+    const mSou = /(?:sou\s+(?:o|a)?\s*|me\s*chamo\s*|meu\s*nome\s*[ée]\s*)([a-zA-ZçÇáéíóúÁÉÍÓÚ\s]{3,30})/i.exec(textoRecebido)
+    if (mSou && ehNomeValido(mSou[1].trim())) {
       nomeExtraido = mSou[1].trim()
-    } else if (!nomeSalvo && textoRecebido.split(/\s+/).length <= 4 && !pedeOrcamento) {
-      nomeExtraido = textoRecebido.split(/[,de\s]+/)[0].trim()
+    } else if (!nomeEfetivo && !pedeOrcamento) {
+      // Só aceita como nome se o bot acabou de perguntar o nome e a resposta for curta e válida
+      const ultimaPerguntaPediuNome =
+        historico.length > 0 &&
+        historico[historico.length - 1].role === "assistant" &&
+        historico[historico.length - 1].content.includes("Qual seu nome")
+      if (ultimaPerguntaPediuNome && textoRecebido.split(/\s+/).length <= 3) {
+        const candidato = textoRecebido.split(/[,de\s]+/)[0].trim()
+        if (ehNomeValido(candidato)) {
+          nomeExtraido = candidato
+        }
+      }
     }
 
     const mLocal = /(?:de|em|moro em|falando de|cidade)\s+([a-zA-ZçÇáéíóúÁÉÍÓÚ\s/-]{3,30})/i.exec(textoRecebido)
@@ -190,9 +230,10 @@ export function resolverFluxoAtendimento(
     }
 
     if (pedeOrcamento) {
+      const nomeParaMsg = nomeExtraido ? `, ${nomeExtraido}` : ""
       return {
         resposta:
-          `Perfeito${nomeExtraido ? `, ${nomeExtraido}` : ""}! Para facilitar e agilizar o seu orçamento:\n` +
+          `Perfeito${nomeParaMsg}! Para facilitar e agilizar o seu orçamento:\n` +
           `📸 Tire uma foto do que se trata ou deseja;\n` +
           `📏 Tenha em mãos medidas ou projetos para facilitar no orçamento.\n\n` +
           `Já estou transferindo o seu atendimento para nossa equipe. Em breve vamos entrar em contato com você por aqui! ⏳🧑‍💼`,
@@ -202,9 +243,10 @@ export function resolverFluxoAtendimento(
       }
     }
 
+    const nomeParaMsg = nomeExtraido ? `, ${nomeExtraido}` : ""
     return {
       resposta:
-        `Prazer${nomeExtraido ? `, ${nomeExtraido}` : ""}!\n\n` +
+        `Prazer${nomeParaMsg}!\n\n` +
         `${SERVICOS_TEXTO}\n\n` +
         `Como posso te ajudar?`,
       nome: nomeExtraido,
@@ -212,10 +254,11 @@ export function resolverFluxoAtendimento(
     }
   }
 
-  // 3. Se já tinha nome ou solicitou produto/orçamento:
+  // 4. Se já tinha nome ou solicitou produto/orçamento:
+  const nomeParaMsg = nomeEfetivo ? `, ${nomeEfetivo}` : ""
   return {
     resposta:
-      `Perfeito, ${nomeSalvo}! Para facilitar e agilizar o seu orçamento:\n` +
+      `Perfeito${nomeParaMsg}! Para facilitar e agilizar o seu orçamento:\n` +
       `📸 Tire uma foto do que se trata ou deseja;\n` +
       `📏 Tenha em mãos medidas ou projetos para facilitar no orçamento.\n\n` +
       `Já estou transferindo o seu atendimento para nossa equipe. Em breve vamos entrar em contato com você por aqui! ⏳🧑‍💼`,
@@ -226,7 +269,8 @@ export function resolverFluxoAtendimento(
 async function processarComTravaAdquirida(
   telefone: string,
   textoRecebido: string,
-  conversa: ConversaBot
+  conversa: ConversaBot,
+  pushName?: string | null
 ): Promise<string | null> {
   const limpo = textoRecebido.trim().toLowerCase()
   const comandoReiniciar = /^(#?reset|#?reiniciar|#?novo|#?inicio|#?menu)$/i.test(limpo)
@@ -252,7 +296,9 @@ async function processarComTravaAdquirida(
   const sessaoExpirada = Date.now() - new Date(conversa.atualizadoEm).getTime() > HORAS_PARA_EXPIRAR * 3600_000
   const reiniciar = comandoReiniciar || sessaoExpirada || (eSaudacao && conversa.historico.length > 0)
   const historico: MensagemHistorico[] = reiniciar ? [] : conversa.historico
-  let nomeTemp = reiniciar ? null : conversa.nomeTemp
+  let nomeTemp = reiniciar
+    ? null
+    : (ehNomeValido(conversa.nomeTemp) ? conversa.nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null)
   let localTemp = reiniciar ? null : conversa.localTemp
   let transferido = false
 
@@ -376,7 +422,11 @@ REGRAS GERAIS:
         // Notifica o dono/atendente da empresa no WhatsApp se configurado
         const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
         if (telEmpresa) {
-          const alerta = `🔔 *Novo Atendimento Transferido!*\n\n👤 *Cliente:* ${nomeTemp || "Não informado"}\n📍 *Local:* ${localTemp || "Não informado"}\n📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n💬 *Interesse:* ${resumo}\n\n👉 Acesse o WhatsApp para responder!`
+          const nomeNotif =
+            (ehNomeValido(nomeTemp) ? nomeTemp : null) ||
+            (ehNomeValido(pushName) ? pushName : null) ||
+            "Não informado"
+          const alerta = `🔔 *Novo Atendimento Transferido!*\n\n👤 *Cliente:* ${nomeNotif}\n📍 *Local:* ${localTemp || "Não informado"}\n📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n💬 *Interesse:* ${resumo}\n\n👉 Acesse o WhatsApp para responder!`
           enviarMensagemWhatsapp(telEmpresa, alerta).catch((err) =>
             console.error("[bot] erro ao notificar empresa de transferência:", err)
           )
@@ -388,16 +438,20 @@ REGRAS GERAIS:
 
   // 1. O fluxo determinístico oficial da empresa tem prioridade absoluta:
   // Resposta instantânea (0ms), sem custo, sem falha de rede e 100% no padrão solicitado.
-  const reg = resolverFluxoAtendimento(textoRecebido, historico, nomeTemp, localTemp)
+  const reg = resolverFluxoAtendimento(textoRecebido, historico, nomeTemp, localTemp, pushName)
   let respostaFinal: string = reg.resposta
 
-  if (reg.nome && !nomeTemp) nomeTemp = reg.nome
+  if (reg.nome && !nomeTemp && ehNomeValido(reg.nome)) nomeTemp = reg.nome
   if (reg.local && !localTemp) localTemp = reg.local
   if (reg.transferir) {
     transferido = true
     const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
     if (telEmpresa) {
-      const alerta = `🔔 *Novo Atendimento Transferido!*\n\n👤 *Cliente:* ${nomeTemp || "Não informado"}\n📍 *Local:* ${localTemp || "Não informado"}\n📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n💬 *Interesse:* ${textoRecebido}\n\n👉 Acesse o WhatsApp para responder!`
+      const nomeNotif =
+        (ehNomeValido(nomeTemp) ? nomeTemp : null) ||
+        (ehNomeValido(pushName) ? pushName : null) ||
+        "Não informado"
+      const alerta = `🔔 *Novo Atendimento Transferido!*\n\n👤 *Cliente:* ${nomeNotif}\n📍 *Local:* ${localTemp || "Não informado"}\n📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n💬 *Interesse:* ${textoRecebido}\n\n👉 Acesse o WhatsApp para responder!`
       enviarMensagemWhatsapp(telEmpresa, alerta).catch((e) =>
         console.error("[bot] erro ao notificar empresa:", e)
       )
@@ -447,7 +501,11 @@ REGRAS GERAIS:
     { role: "assistant" as const, content: respostaFinal },
   ]
 
-  await atualizarConversa(conversa.id, { nomeTemp, localTemp, historico: novoHistorico })
+  await atualizarConversa(conversa.id, {
+    nomeTemp: ehNomeValido(nomeTemp) ? nomeTemp : null,
+    localTemp,
+    historico: novoHistorico,
+  })
   if (transferido) await transferirAtendimento(conversa.id)
 
   return respostaFinal
