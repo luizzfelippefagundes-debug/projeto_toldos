@@ -61,6 +61,7 @@ export default function TransmissaoPage() {
   // Disparo manual via WhatsApp Web
   const [modalManualAberto, setModalManualAberto] = useState(false)
   const [enviadosManuais, setEnviadosManuais] = useState<Set<string>>(new Set())
+  const [incluirLinkFoto, setIncluirLinkFoto] = useState(true)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -225,10 +226,21 @@ export default function TransmissaoPage() {
 
   async function abrirWhatsappCliente(tel: string, id: string, nome: string) {
     if (fotoUrl) {
-      copiarFotoParaClipboard(false)
+      void copiarFotoParaClipboard(false)
       toast.info("📸 Foto copiada! Ao abrir o WhatsApp, aperte Ctrl + V para colar a foto.", { duration: 5000 })
     }
-    const link = linkWhatsapp(tel, mensagem.trim())
+
+    let textoFinal = mensagem.trim()
+    if (
+      incluirLinkFoto &&
+      fotoUrl &&
+      fotoUrl.startsWith("http") &&
+      !textoFinal.includes(fotoUrl)
+    ) {
+      textoFinal = textoFinal ? `${textoFinal}\n\n🖼️ Foto: ${fotoUrl}` : `🖼️ Foto: ${fotoUrl}`
+    }
+
+    const link = linkWhatsapp(tel, textoFinal)
     if (!link) {
       toast.error(`Telefone de ${nome} inválido para WhatsApp.`)
       return
@@ -593,6 +605,18 @@ export default function TransmissaoPage() {
                   </Button>
                 </div>
               </div>
+            )}
+
+            {fotoUrl && fotoUrl.startsWith("http") && (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none px-1">
+                <input
+                  type="checkbox"
+                  checked={incluirLinkFoto}
+                  onChange={(e) => setIncluirLinkFoto(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-border text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                />
+                <span>Incluir link da foto no texto para gerar miniatura automática no WhatsApp</span>
+              </label>
             )}
 
             {/* Progresso e Ação de Avanço Rápido */}
