@@ -223,6 +223,13 @@ export async function reiniciarInstancia(): Promise<{ ok: boolean; erro?: string
   if (!cfg) return { ok: false, erro: "Evolution API não configurada" }
 
   try {
+    // 1. Tenta logout para desconectar/limpar qualquer sessão fantasma ou handshake travado
+    await fetch(`${cfg.baseUrl}/instance/logout/${cfg.instancia}`, {
+      method: "DELETE",
+      headers: { apikey: cfg.apiKey },
+    }).catch(() => {})
+
+    // 2. Reinicia a instância limpa
     const resposta = await fetch(`${cfg.baseUrl}/instance/restart/${cfg.instancia}`, {
       method: "PUT",
       headers: { apikey: cfg.apiKey },

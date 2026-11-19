@@ -35,6 +35,7 @@ import {
   Users,
   TrendingUp,
   RefreshCw,
+  RotateCcw,
   AlertCircle,
   HelpCircle,
 } from "lucide-react"
@@ -113,6 +114,30 @@ export default function BotPage() {
     }, 20000)
     return () => clearInterval(interval)
   }, [verificarStatus])
+
+  const [reiniciando, setReiniciando] = useState(false)
+  async function limparEReiniciar() {
+    setReiniciando(true)
+    try {
+      const res = await fetch("/api/bot/pareamento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acao: "reiniciar" }),
+      })
+      if (res.ok) {
+        toast.success("Conexão resetada com sucesso! Sessões presas foram limpas.")
+        setCodigoPareamento(null)
+        setQrCodeBase64(null)
+        verificarStatus(true)
+      } else {
+        toast.error("Não foi possível reiniciar a instância.")
+      }
+    } catch {
+      toast.error("Erro ao reiniciar instância.")
+    } finally {
+      setReiniciando(false)
+    }
+  }
 
   // Filtros do levantamento
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "fechado" | "aberto" | "nao_fechou">("todos")
@@ -326,6 +351,18 @@ export default function BotPage() {
             >
               <RefreshCw className={cn("h-3 w-3", statusConexao.checando && "animate-spin")} />
               Verificar Status
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+              onClick={limparEReiniciar}
+              disabled={reiniciando}
+              title="Limpar tentativas anteriores travadas na Evolution API"
+            >
+              <RotateCcw className={cn("h-3 w-3", reiniciando && "animate-spin")} />
+              {reiniciando ? "Limpando..." : "Limpar Tentativas"}
             </Button>
           </div>
         </CardHeader>
