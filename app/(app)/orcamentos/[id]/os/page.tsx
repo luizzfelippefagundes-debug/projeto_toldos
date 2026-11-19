@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import QRCode from "qrcode"
+import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useData } from "@/context/data-context"
@@ -11,7 +10,6 @@ import { formatarData, formatarMoeda } from "@/lib/format"
 import { formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { linkWhatsapp } from "@/lib/whatsapp"
-import { gerarPayloadPixEstatico } from "@/lib/mercadopago"
 import { ArrowLeft, MessageCircle, Printer, FileCheck } from "lucide-react"
 
 export default function OrdemDeServicoPage() {
@@ -47,43 +45,7 @@ export default function OrdemDeServicoPage() {
   const saldoEntrega = Math.round((totalFinal / 2) * 100) / 100
   const hoje = new Date()
   const [enviando, setEnviando] = useState(false)
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("")
-  const [pixCopiaCola, setPixCopiaCola] = useState<string>("")
   const numeroFormatado = formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)
-
-  useEffect(() => {
-    if (!orcamento) return
-    let ativo = true
-    async function carregarQr() {
-      const orc = orcamento as any
-      if (orc?.pixQrCodeBase64) {
-        setQrCodeDataUrl(`data:image/png;base64,${orc.pixQrCodeBase64}`)
-        setPixCopiaCola(orc.pixCopiaCola || "")
-        return
-      }
-
-      const chavePix = process.env.NEXT_PUBLIC_PIX_CHAVE || "27997489714"
-      const payload = gerarPayloadPixEstatico({
-        chave: chavePix,
-        nome: "TOLDOS PRINT",
-        cidade: "COLATINA",
-        valor: saldoEntrega,
-        identificador: orcamento ? `OS${orcamento.numero}` : "OS",
-      })
-
-      setPixCopiaCola(payload)
-      try {
-        const url = await QRCode.toDataURL(payload, { width: 250, margin: 1 })
-        if (ativo) setQrCodeDataUrl(url)
-      } catch (e) {
-        console.error("Erro gerando QR Code Pix na OS:", e)
-      }
-    }
-    carregarQr()
-    return () => {
-      ativo = false
-    }
-  }, [orcamento, saldoEntrega])
 
   const adicionaisParaPdf = (orcamento.item.itensAdicionais ?? []).map((extra) => {
     const materialExtra = materiais.find((m) => m.id === extra.materialId)
@@ -343,52 +305,6 @@ export default function OrdemDeServicoPage() {
             )}
           </div>
         )}
-
-        {/* ──────────── PAGAMENTO NA ENTREGA (PIX MERCADO PAGO / DIRETO) ──────────── */}
-        <div className="mt-8 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4 print:border-gray-400">
-          <div className="flex flex-row items-center justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="inline-block rounded bg-black px-2 py-0.5 text-xs font-bold tracking-wide text-white print:bg-black print:text-white">
-                  PAGAMENTO NA ENTREGA
-                </span>
-                <span className="text-xs font-semibold text-gray-700">PIX MERCADO PAGO</span>
-              </div>
-              <p className="mt-1 text-xs text-gray-600">
-                Aponte a câmera do seu celular ou do app do banco para pagar o saldo na entrega.
-              </p>
-              <div className="mt-2 text-sm font-semibold text-gray-900">
-                Saldo a Pagar:{" "}
-                <span className="text-base font-bold text-green-700">
-                  {formatarMoeda(saldoEntrega)}
-                </span>
-              </div>
-              {pixCopiaCola && (
-                <p className="mt-1.5 font-mono text-[9px] text-gray-500 break-all select-all">
-                  <span className="font-semibold text-gray-700">Pix Copia e Cola: </span>
-                  {pixCopiaCola}
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-col items-center">
-              {qrCodeDataUrl ? (
-                <img
-                  src={qrCodeDataUrl}
-                  alt="QR Code Pix"
-                  className="h-28 w-28 rounded border border-gray-300 bg-white p-1 shadow-sm"
-                />
-              ) : (
-                <div className="flex h-28 w-28 items-center justify-center rounded border border-gray-300 bg-white text-[10px] text-gray-400">
-                  Carregando QR...
-                </div>
-              )}
-              <span className="mt-1 text-[9px] font-bold tracking-wider text-gray-500 uppercase">
-                Escanear p/ Pagar
-              </span>
-            </div>
-          </div>
-        </div>
 
         {/* ──────────── ASSINATURAS ──────────── */}
         <div className="mt-10 grid grid-cols-2 gap-8">
