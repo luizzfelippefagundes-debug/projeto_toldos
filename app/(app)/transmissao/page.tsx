@@ -567,7 +567,7 @@ export default function TransmissaoPage() {
                       Foto anexada para a campanha
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-normal">
-                      Clique em <b>Copiar Foto</b> e aperte <b>Ctrl + V</b> na conversa do WhatsApp para colar a imagem junto com o texto.
+                      O WhatsApp não anexa foto por link. Ao clicar em <b>Abrir WhatsApp</b>, a foto é copiada para sua área de transferência: basta dar <b>Ctrl + V</b> na tela do WhatsApp para colar a foto e enviar!
                     </p>
                   </div>
                 </div>
