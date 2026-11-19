@@ -1,38 +1,79 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
+import Link from "next/link"
 import { useData } from "@/context/data-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { formatarDataHora } from "@/lib/format"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { formatarDataHora, formatarMoeda } from "@/lib/format"
+import { linkWhatsapp } from "@/lib/whatsapp"
 import { cn } from "@/lib/utils"
-import { Bot, Send, User, KeyRound, Smartphone, Copy, Loader2, Check } from "lucide-react"
+import {
+  Bot,
+  User,
+  KeyRound,
+  Smartphone,
+  Copy,
+  Loader2,
+  Check,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Search,
+  MessageSquare,
+  FilePlus2,
+  ExternalLink,
+  Users,
+  TrendingUp,
+} from "lucide-react"
 import { toast } from "sonner"
+import type { MensagemBot } from "@/lib/types"
+
+interface ContatoBot {
+  id: string
+  telefone: string
+  nome: string
+  clienteId?: string
+  statusConversao: "fechado" | "aberto" | "nao_fechou"
+  valorTotalFechado: number
+  valorTotalAberto: number
+  qtdOrcamentos: number
+  qtdPedidos: number
+  ultimoContato: Date
+  ultimaMensagem: MensagemBot
+  mensagens: MensagemBot[]
+}
+
+function normalizarTel(tel?: string): string {
+  if (!tel) return ""
+  return tel.replace(/\D/g, "").slice(-8)
+}
 
 export default function BotPage() {
-  const { mensagensBot, clientes, addMensagemBot } = useData()
-  const [clienteId, setClienteId] = useState(
-    () => clientes.find((c) => c.nome.includes("Teste"))?.id ?? clientes[0]?.id ?? ""
-  )
-  const [pergunta, setPergunta] = useState("")
-  const [enviando, setEnviando] = useState(false)
+  const { mensagensBot, clientes, orcamentos, pedidosRapidos } = useData()
 
-  // Pareamento por código
+  // Conexão por código de pareamento
   const [numeroPareamento, setNumeroPareamento] = useState("27997489714")
   const [gerandoCodigo, setGerandoCodigo] = useState(false)
   const [codigoPareamento, setCodigoPareamento] = useState<string | null>(null)
   const [qrCodeBase64, setQrCodeBase64] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
+
+  // Filtros do levantamento
+  const [filtroStatus, setFiltroStatus] = useState<"todos" | "fechado" | "aberto" | "nao_fechou">("todos")
+  const [busca, setBusca] = useState("")
+
+  // Modal de histórico da conversa com o bot
+  const [conversaAberta, setConversaAberta] = useState<ContatoBot | null>(null)
 
   async function gerarCodigo() {
     if (!numeroPareamento.trim()) {
@@ -60,7 +101,7 @@ export default function BotPage() {
       if (dados.code || dados.qrBase64) {
         toast.success("Código de pareamento gerado com sucesso!")
       } else {
-        toast.warning("Código não gerado. Verifique se o número está correto.")
+        toast.warning("Código não gerado. Verifique se a instância está conectada.")
       }
     } catch {
       toast.error("Erro de conexão ao gerar código.")
@@ -77,62 +118,131 @@ export default function BotPage() {
     setTimeout(() => setCopiado(false), 3000)
   }
 
-  const cliente = clientes.find((c) => c.id === clienteId)
+  // Agrupamento de contatos do bot com cruzamento de orçamentos e pedidos
+  const contatosBot = useMemo<ContatoBot[]>(() => {
+    const mapa = new Map<string, MensagemBot[]>()
 
-  async function perguntar() {
-    const texto = pergunta.trim()
-    if (!texto || !cliente) return
-    setEnviando(true)
-    addMensagemBot({
-      clienteId: cliente.id,
-      clienteNome: cliente.nome,
-      telefone: cliente.telefone,
-      texto,
-      origem: "pergunta",
-      autor: "cliente",
-    })
-    setPergunta("")
-
-    try {
-      const resposta = await fetch("/api/bot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pergunta: texto,
-          contexto: { cliente: cliente.nome },
-        }),
-      })
-      const dados = await resposta.json()
-      if (!resposta.ok) {
-        toast.error(dados.erro ?? "Erro ao falar com o bot")
-        return
-      }
-      addMensagemBot({
-        clienteId: cliente.id,
-        clienteNome: cliente.nome,
-        telefone: cliente.telefone,
-        texto: dados.resposta,
-        origem: "pergunta",
-        autor: "bot",
-      })
-    } catch {
-      toast.error("Não consegui falar com o bot agora.")
-    } finally {
-      setEnviando(false)
+    // Agrupa mensagens por telefone normalizado
+    for (const m of mensagensBot) {
+      const chave = normalizarTel(m.telefone) || m.clienteId || m.clienteNome
+      if (!mapa.has(chave)) mapa.set(chave, [])
+      mapa.get(chave)!.push(m)
     }
-  }
 
-  const ordenadas = [...mensagensBot].sort(
-    (a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime()
+    const lista: ContatoBot[] = []
+
+    for (const [chave, msgs] of mapa.entries()) {
+      const msgsOrdenadas = [...msgs].sort(
+        (a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime()
+      )
+      const ultima = msgsOrdenadas[msgsOrdenadas.length - 1]
+      const primeira = msgsOrdenadas[0]
+
+      // Localiza o cliente cadastrado (por id ou telefone)
+      const cliente =
+        clientes.find((c) => c.id === ultima.clienteId) ||
+        clientes.find((c) => normalizarTel(c.telefone) === chave)
+
+      const nome =
+        cliente?.nome ||
+        (ultima.clienteNome && ultima.clienteNome !== "Cliente" ? ultima.clienteNome : null) ||
+        (primeira.clienteNome && primeira.clienteNome !== "Cliente" ? primeira.clienteNome : null) ||
+        `Contato ${ultima.telefone}`
+
+      const tel = cliente?.telefone || ultima.telefone
+
+      // Orçamentos e pedidos desse contato
+      const orcsDoCliente = cliente ? orcamentos.filter((o) => o.clienteId === cliente.id) : []
+      const pedsDoCliente = pedidosRapidos.filter(
+        (p) =>
+          normalizarTel(p.clienteTelefone) === chave ||
+          (cliente && p.clienteNome.toLowerCase().trim() === cliente.nome.toLowerCase().trim())
+      )
+
+      const orcsFechados = orcsDoCliente.filter((o) => o.status === "fechado")
+      const orcsAbertos = orcsDoCliente.filter((o) => o.status === "aberto")
+      const pedsValidos = pedsDoCliente
+
+      const valorFechado =
+        orcsFechados.reduce((acc, o) => acc + (o.totalFechado || 0), 0) +
+        pedsValidos.reduce((acc, p) => acc + p.total, 0)
+
+      const valorAberto = orcsAbertos.reduce((acc, o) => acc + (o.totalFechado || 0), 0)
+
+      let statusConversao: "fechado" | "aberto" | "nao_fechou" = "nao_fechou"
+      if (orcsFechados.length > 0 || pedsValidos.length > 0) {
+        statusConversao = "fechado"
+      } else if (orcsAbertos.length > 0) {
+        statusConversao = "aberto"
+      }
+
+      lista.push({
+        id: cliente?.id || chave,
+        telefone: tel,
+        nome,
+        clienteId: cliente?.id,
+        statusConversao,
+        valorTotalFechado: valorFechado,
+        valorTotalAberto: valorAberto,
+        qtdOrcamentos: orcsDoCliente.length,
+        qtdPedidos: pedsDoCliente.length,
+        ultimoContato: new Date(ultima.criadoEm),
+        ultimaMensagem: ultima,
+        mensagens: msgsOrdenadas,
+      })
+    }
+
+    // Ordena pelo último contato mais recente
+    return lista.sort((a, b) => b.ultimoContato.getTime() - a.ultimoContato.getTime())
+  }, [mensagensBot, clientes, orcamentos, pedidosRapidos])
+
+  // Métricas de funil
+  const totalContatos = contatosBot.length
+  const fechados = useMemo(() => contatosBot.filter((c) => c.statusConversao === "fechado"), [contatosBot])
+  const abertos = useMemo(() => contatosBot.filter((c) => c.statusConversao === "aberto"), [contatosBot])
+  const naoFecharam = useMemo(() => contatosBot.filter((c) => c.statusConversao === "nao_fechou"), [contatosBot])
+
+  const valorTotalConvertido = useMemo(
+    () => fechados.reduce((acc, c) => acc + c.valorTotalFechado, 0),
+    [fechados]
   )
+
+  const valorTotalEmAberto = useMemo(
+    () => abertos.reduce((acc, c) => acc + c.valorTotalAberto, 0),
+    [abertos]
+  )
+
+  const taxaConversao = totalContatos > 0 ? Math.round((fechados.length / totalContatos) * 100) : 0
+
+  // Filtros de busca e status
+  const contatosFiltrados = useMemo(() => {
+    return contatosBot.filter((c) => {
+      if (filtroStatus !== "todos" && c.statusConversao !== filtroStatus) return false
+      if (!busca.trim()) return true
+      const termo = busca.toLowerCase().trim()
+      return (
+        c.nome.toLowerCase().includes(termo) ||
+        c.telefone.includes(termo) ||
+        c.ultimaMensagem.texto.toLowerCase().includes(termo)
+      )
+    })
+  }, [contatosBot, filtroStatus, busca])
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Central do Bot</h1>
-        <p className="text-sm text-muted-foreground">
-          Conexão do WhatsApp da empresa, mensagens automáticas e transmissão.
-        </p>
+      {/* Cabeçalho */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <span>Central do Bot & WhatsApp</span>
+            <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
+              Ao vivo
+            </Badge>
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Levantamento dos contatos que chamaram no robô: quem fechou orçamento e quem ainda não fechou.
+          </p>
+        </div>
       </div>
 
       {/* Card Conectar por Código de Pareamento */}
@@ -233,96 +343,340 @@ export default function BotPage() {
         </CardContent>
       </Card>
 
+      {/* Cards de Métricas / Funil de Vendas do WhatsApp */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Total de Contatos */}
+        <Card className="p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Total Contatos via Bot</span>
+            <Users className="h-4 w-4 text-primary" />
+          </div>
+          <div className="mt-2">
+            <span className="text-2xl font-bold">{totalContatos}</span>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Pessoas que iniciaram conversa no WhatsApp
+            </p>
+          </div>
+        </Card>
+
+        {/* Fecharam Orçamento / Vendas */}
+        <Card className="p-4 flex flex-col justify-between border-emerald-500/30 bg-emerald-500/5">
+          <div className="flex items-center justify-between text-emerald-800 dark:text-emerald-300 text-xs font-semibold">
+            <span>Fecharam Venda (Clientes)</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          </div>
+          <div className="mt-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                {fechados.length}
+              </span>
+              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                ({taxaConversao}% de conversão)
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Total fechado: <b className="text-foreground">{formatarMoeda(valorTotalConvertido)}</b>
+            </p>
+          </div>
+        </Card>
+
+        {/* Orçamentos em Aberto */}
+        <Card className="p-4 flex flex-col justify-between border-amber-500/30 bg-amber-500/5">
+          <div className="flex items-center justify-between text-amber-800 dark:text-amber-300 text-xs font-semibold">
+            <span>Orçamentos em Aberto</span>
+            <Clock className="h-4 w-4 text-amber-600" />
+          </div>
+          <div className="mt-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                {abertos.length}
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Negociando: <b className="text-foreground">{formatarMoeda(valorTotalEmAberto)}</b>
+            </p>
+          </div>
+        </Card>
+
+        {/* Não Fecharam / Apenas Dúvidas */}
+        <Card className="p-4 flex flex-col justify-between border-slate-500/20 bg-muted/20">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Não Fecharam / Apenas Dúvidas</span>
+            <XCircle className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="mt-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-foreground">
+                {naoFecharam.length}
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Oportunidades para reativar e orçar
+            </p>
+          </div>
+        </Card>
+      </div>
+
+      {/* Levantamento de Contatos com Filtros */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Testar bot</CardTitle>
+        <CardHeader className="p-4 sm:p-5 border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant={filtroStatus === "todos" ? "default" : "outline"}
+                className="h-8 text-xs rounded-lg"
+                onClick={() => setFiltroStatus("todos")}
+              >
+                Todos ({totalContatos})
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={filtroStatus === "fechado" ? "default" : "outline"}
+                className={cn(
+                  "h-8 text-xs rounded-lg",
+                  filtroStatus === "fechado" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""
+                )}
+                onClick={() => setFiltroStatus("fechado")}
+              >
+                Fecharam ({fechados.length})
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={filtroStatus === "aberto" ? "default" : "outline"}
+                className={cn(
+                  "h-8 text-xs rounded-lg",
+                  filtroStatus === "aberto" ? "bg-amber-600 hover:bg-amber-700 text-white" : ""
+                )}
+                onClick={() => setFiltroStatus("aberto")}
+              >
+                Em Aberto ({abertos.length})
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={filtroStatus === "nao_fechou" ? "default" : "outline"}
+                className="h-8 text-xs rounded-lg"
+                onClick={() => setFiltroStatus("nao_fechou")}
+              >
+                Não Fecharam ({naoFecharam.length})
+              </Button>
+            </div>
+
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, telefone..."
+                className="pl-8 h-8 text-xs"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label>Simulando como</Label>
-            <Select
-              value={clienteId}
-              onValueChange={(v) => setClienteId(v ?? clienteId)}
-            >
-              <SelectTrigger className="w-full sm:w-72">
-                <SelectValue>
-                  {(v: string) => {
-                    const c = clientes.find((c) => c.id === v)
-                    return c ? `${c.nome} — ${c.telefone}` : "Selecione"
-                  }}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {clientes.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nome} — {c.telefone}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
+        <CardContent className="p-0">
+          <div className="divide-y divide-border overflow-hidden">
+            {contatosFiltrados.map((contato) => {
+              const linkWhats = linkWhatsapp(contato.telefone, "")
+              return (
+                <div
+                  key={contato.id}
+                  className="flex flex-col lg:flex-row lg:items-center justify-between p-4 gap-4 hover:bg-muted/40 transition-colors"
+                >
+                  {/* Identificação e Telefone */}
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center shrink-0 text-sm">
+                      {contato.nome.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-foreground truncate">
+                          {contato.nome}
+                        </span>
+                        {contato.statusConversao === "fechado" && (
+                          <Badge className="bg-emerald-600/10 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-500/20 text-[11px] h-5">
+                            ✓ Fechou Venda ({formatarMoeda(contato.valorTotalFechado)})
+                          </Badge>
+                        )}
+                        {contato.statusConversao === "aberto" && (
+                          <Badge className="bg-amber-600/10 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border-amber-500/20 text-[11px] h-5">
+                            ⏳ Orçamento Aberto ({formatarMoeda(contato.valorTotalAberto)})
+                          </Badge>
+                        )}
+                        {contato.statusConversao === "nao_fechou" && (
+                          <Badge variant="outline" className="text-muted-foreground text-[11px] h-5">
+                            ⚪ Apenas Contato (Sem Venda)
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        <span>{contato.telefone}</span>
+                        <span>·</span>
+                        <span>Último contato: {formatarDataHora(contato.ultimoContato.toISOString())}</span>
+                      </div>
+
+                      {/* Prévia da última mensagem */}
+                      <p className="text-xs text-muted-foreground line-clamp-1 mt-1.5 bg-muted/30 px-2 py-1 rounded border border-border/40">
+                        <strong className="text-foreground">
+                          {contato.ultimaMensagem.autor === "cliente" ? "Cliente: " : "Robô: "}
+                        </strong>
+                        {contato.ultimaMensagem.texto}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Ações Rápidas */}
+                  <div className="flex items-center gap-2 shrink-0 self-end lg:self-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1.5"
+                      onClick={() => setConversaAberta(contato)}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                      Ver Conversa ({contato.mensagens.length})
+                    </Button>
+
+                    {contato.statusConversao === "nao_fechou" && contato.clienteId && (
+                      <Link
+                        href={`/orcamentos/novo?clienteId=${contato.clienteId}`}
+                        className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-emerald-500/30 text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 transition-colors"
+                      >
+                        <FilePlus2 className="h-3.5 w-3.5" />
+                        Novo Orçamento
+                      </Link>
+                    )}
+
+                    {linkWhats && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                        onClick={() => window.open(linkWhats, "_blank")}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        WhatsApp
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+
+            {contatosFiltrados.length === 0 && (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                Nenhum contato encontrado com esse filtro.
+              </div>
+            )}
           </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="pergunta">Pergunta do cliente</Label>
-            <Textarea
-              id="pergunta"
-              value={pergunta}
-              onChange={(e) => setPergunta(e.target.value)}
-              placeholder="Ex: Quando fica pronto meu pedido?"
-            />
-          </div>
-          <Button
-            onClick={perguntar}
-            disabled={enviando || !pergunta.trim()}
-            className="self-end"
-          >
-            <Send className="mr-2 h-4 w-4" />
-            {enviando ? "Perguntando..." : "Perguntar"}
-          </Button>
         </CardContent>
       </Card>
 
-      <div className="flex flex-col gap-3">
-        {ordenadas.map((m) => (
-          <div
-            key={m.id}
-            className={cn(
-              "flex",
-              m.autor === "cliente" ? "justify-start" : "justify-end"
-            )}
-          >
-            <div
-              className={cn(
-                "max-w-md rounded-lg px-4 py-2 text-sm",
-                m.autor === "cliente"
-                  ? "bg-muted"
-                  : "bg-primary/15"
-              )}
-            >
-              <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                {m.autor === "cliente" ? (
-                  <User className="h-3 w-3" />
-                ) : (
-                  <Bot className="h-3 w-3" />
-                )}
-                <span>{m.clienteNome}</span>
-                <span>·</span>
-                <span>{formatarDataHora(m.criadoEm)}</span>
-                {m.origem === "automatica" && (
-                  <Badge variant="secondary" className="text-[10px]">
-                    Automática
-                  </Badge>
-                )}
+      {/* Modal Histórico da Conversa com o Bot */}
+      <Dialog open={!!conversaAberta} onOpenChange={(aberto) => !aberto && setConversaAberta(null)}>
+        <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <DialogHeader className="p-4 sm:p-5 pb-3 border-b border-border bg-card">
+            <div className="flex items-center justify-between pr-8">
+              <div className="min-w-0">
+                <DialogTitle className="text-base font-semibold truncate flex items-center gap-2">
+                  <span>{conversaAberta?.nome}</span>
+                  {conversaAberta?.statusConversao === "fechado" && (
+                    <Badge className="bg-emerald-600/10 text-emerald-600 border-emerald-500/20 text-[10px]">
+                      Fechou Venda
+                    </Badge>
+                  )}
+                  {conversaAberta?.statusConversao === "nao_fechou" && (
+                    <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                      Não Fechou
+                    </Badge>
+                  )}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  {conversaAberta?.telefone} · {conversaAberta?.mensagens.length} mensagem(ns) com o robô
+                </DialogDescription>
               </div>
-              {m.texto}
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 bg-muted/10">
+            {conversaAberta?.mensagens.map((m) => (
+              <div
+                key={m.id}
+                className={cn(
+                  "flex",
+                  m.autor === "cliente" ? "justify-start" : "justify-end"
+                )}
+              >
+                <div
+                  className={cn(
+                    "max-w-[85%] sm:max-w-md rounded-2xl px-4 py-2.5 text-xs sm:text-sm shadow-xs",
+                    m.autor === "cliente"
+                      ? "bg-card border border-border/80 text-foreground rounded-tl-xs"
+                      : "bg-emerald-600 text-white rounded-tr-xs"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "mb-1 flex items-center gap-1.5 text-[10px] font-medium",
+                      m.autor === "cliente" ? "text-muted-foreground" : "text-emerald-100"
+                    )}
+                  >
+                    {m.autor === "cliente" ? (
+                      <>
+                        <User className="h-3 w-3" />
+                        <span>{conversaAberta.nome}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bot className="h-3 w-3" />
+                        <span>Robô Toldos Print</span>
+                      </>
+                    )}
+                    <span>·</span>
+                    <span>{formatarDataHora(m.criadoEm)}</span>
+                  </div>
+                  <p className="whitespace-pre-wrap leading-relaxed">{m.texto}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-3 border-t border-border bg-card flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {conversaAberta?.statusConversao === "fechado"
+                ? `Total comprado: ${formatarMoeda(conversaAberta.valorTotalFechado)}`
+                : "Ainda não realizou compra ou pedido"}
+            </span>
+            <div className="flex items-center gap-2">
+              {conversaAberta && linkWhatsapp(conversaAberta.telefone, "") && (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                  onClick={() => window.open(linkWhatsapp(conversaAberta.telefone, "")!, "_blank")}
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> Abrir no WhatsApp
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setConversaAberta(null)}
+              >
+                Fechar
+              </Button>
             </div>
           </div>
-        ))}
-        {ordenadas.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            Nenhuma mensagem ainda.
-          </p>
-        )}
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
