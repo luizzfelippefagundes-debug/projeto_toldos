@@ -107,4 +107,24 @@ describe("resolverFluxoAtendimento (Motor de Regras Infalível do Robô)", () =>
     const res = resolverFluxoAtendimento("qu", [{ role: "assistant", content: "Qual seu nome e de qual cidade?" }])
     expect(res.nome).toBeUndefined()
   })
+
+  it("ao responder 'Outdoor' após o menu de serviços, entende o pedido e transfere sem reenviar menu", () => {
+    const historico = [
+      { role: "user" as const, content: "oi" },
+      { role: "assistant" as const, content: "Seja bem-vindo a TOLDOSPRINT! Qual seu nome e cidade?" },
+      { role: "assistant" as const, content: `Prazer, Poliany!\n\n${SERVICOS_TEXTO}\n\nComo posso te ajudar?` },
+    ]
+
+    const res = resolverFluxoAtendimento("Outdoor", historico, "Poliany", null, "Poliany")
+    expect(res.resposta).toContain("Perfeito, Poliany!")
+    expect(res.resposta).toContain("Tire uma foto do que se trata ou deseja")
+    expect(res.resposta).not.toContain("SERVIÇOS mais utilizados")
+    expect(res.transferir).toBe(true)
+  })
+
+  it("reconhece 'outdoor' imediatamente como pedido de orçamento", () => {
+    const res = resolverFluxoAtendimento("Vocês fazem outdoor?", [], "Poliany", "Colatina")
+    expect(res.transferir).toBe(true)
+    expect(res.resposta).toContain("transferindo")
+  })
 })

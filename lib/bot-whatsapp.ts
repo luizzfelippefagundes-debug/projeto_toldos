@@ -177,7 +177,7 @@ export function resolverFluxoAtendimento(
 ): { resposta: string; nome?: string; local?: string; transferir?: boolean } {
   const limpo = textoRecebido.trim().toLowerCase()
   const eSaudacao = /^(oi+|ol[aá]+|e a[ií]|bom dia|boa tarde|boa noite|hey|hello|al[oô]+|opa|fala)[\s!?.]*$/i.test(limpo)
-  const pedeOrcamento = /(or[çc]amento|pre[çc]o|valor|quanto|custa|fazer|produzir|toldo|adesivo|placa|lona|fachada|banner|letra|reforma|cobertura)/i.test(limpo)
+  const pedeOrcamento = /(or[çc]amento|pre[çc]o|valor|quanto|custa|fazer|produzir|toldo|toldos|adesivo|adesivos|placa|placas|lona|lonas|fachada|fachadas|banner|banners|faixa|faixas|letra|letras|3d|reforma|reformas|cobertura|coberturas|outdoor|outdoors|totem|totens|painel|paineis|painéis|rotulo|rotulos|rótulo|rótulos|vitrine|vitrines|envelopamento|acm|luminoso|luminosos|cortina|policarbonato|janela|varanda|tapume|comprar|encomendar)/i.test(limpo)
   const pedePix = /(pix|chave pix|copia e cola|como pagar|como pago|forma de pagamento|dados bancarios|mercado pago)/i.test(limpo)
 
   // 1. Dúvida sobre pagamento / Pix
@@ -192,15 +192,37 @@ export function resolverFluxoAtendimento(
     }
   }
 
-  // 2. Início de conversa ou saudação simples
-  if (historico.length === 0 || eSaudacao) {
+  // Se o bot já apresentou o menu de serviços na conversa, NUNCA mais repete a lista!
+  // Qualquer resposta do cliente agora é o produto/serviço que ele deseja ou dúvida dele.
+  const jaEnviouServicos = historico.some(
+    (h) =>
+      h.role === "assistant" &&
+      (h.content.includes("SERVIÇOS mais utilizados") || h.content.includes("Como posso te ajudar?"))
+  )
+
+  const nomeEfetivo = (ehNomeValido(nomeSalvo) ? nomeSalvo : null) || (ehNomeValido(pushName) ? pushName : null)
+
+  if (jaEnviouServicos && !eSaudacao) {
+    const nomeParaMsg = nomeEfetivo ? `, ${nomeEfetivo}` : ""
+    return {
+      resposta:
+        `Perfeito${nomeParaMsg}! Para facilitar e agilizar o seu orçamento:\n` +
+        `📸 Tire uma foto do que se trata ou deseja;\n` +
+        `📏 Tenha em mãos medidas ou projetos para facilitar no orçamento.\n\n` +
+        `Já estou transferindo o seu atendimento para nossa equipe. Em breve vamos entrar em contato com você por aqui! ⏳🧑‍💼`,
+      nome: nomeEfetivo || undefined,
+      local: localSalvo || undefined,
+      transferir: true,
+    }
+  }
+
+  // 2. Início de conversa ou saudação simples (sem pedido específico)
+  if ((historico.length === 0 && !pedeOrcamento) || eSaudacao) {
     return {
       resposta:
         "Seja bem-vindo a TOLDOSPRINT (Toldos e Comunicação Visual)! 🤝✨\n\nQual seu nome e de qual cidade, bairro está falando?",
     }
   }
-
-  const nomeEfetivo = (ehNomeValido(nomeSalvo) ? nomeSalvo : null) || (ehNomeValido(pushName) ? pushName : null)
 
   // 3. Se ainda não temos o nome ou o local, tenta extrair da resposta
   if (!nomeEfetivo || !localSalvo) {
@@ -230,7 +252,7 @@ export function resolverFluxoAtendimento(
     }
 
     if (pedeOrcamento) {
-      const nomeParaMsg = nomeExtraido ? `, ${nomeExtraido}` : ""
+      const nomeParaMsg = (nomeExtraido || nomeEfetivo) ? `, ${nomeExtraido || nomeEfetivo}` : ""
       return {
         resposta:
           `Perfeito${nomeParaMsg}! Para facilitar e agilizar o seu orçamento:\n` +
@@ -243,7 +265,7 @@ export function resolverFluxoAtendimento(
       }
     }
 
-    const nomeParaMsg = nomeExtraido ? `, ${nomeExtraido}` : ""
+    const nomeParaMsg = (nomeExtraido || nomeEfetivo) ? `, ${nomeExtraido || nomeEfetivo}` : ""
     return {
       resposta:
         `Prazer${nomeParaMsg}!\n\n` +
@@ -460,9 +482,17 @@ REGRAS GERAIS:
 
   // 2. Se não houver resposta de regra predefinida e tivermos modelo de IA, tenta com timeout de segurança
   if (!respostaFinal) {
-    const modelo = process.env.OPENAI_API_KEY
-      ? openai("gpt-4o-mini")
-      : (process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY)
+    const chaveOpenAIValida =
+      process.env.OPENAI_API_KEY &&
+      process.env.OPENAI_API_KEY.startsWith("sk-") &&
+      !process.env.OPENAI_API_KEY.includes("SENSITIVE")
+    const chaveGeminiValida =
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+      (process.env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY.includes("SENSITIVE"))
+
+    const modelo = chaveOpenAIValida
+      ? openai("gpt-4o")
+      : chaveGeminiValida
       ? google("gemini-2.0-flash")
       : null
 
