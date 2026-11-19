@@ -578,20 +578,23 @@ REGRAS GERAIS:
       inputSchema: z.object({ resumo: z.string().describe("Nome, local e o que a pessoa pediu, pro atendente ler rápido") }),
       execute: async ({ resumo }) => {
         transferido = true
-        // Notifica o dono/atendente da empresa no WhatsApp se configurado
-        const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
-        if (telEmpresa) {
-          const alerta = formatarAlertaTransferencia({
-            nome: (ehNomeValido(nomeTemp) ? nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null),
-            ehClienteCadastrado,
-            local: localTemp,
-            telefone,
-            textoRecebido: resumo,
-            assunto: extrairAssuntoInteresse(resumo) || extrairAssuntoInteresse(textoRecebido),
-          })
-          enviarMensagemWhatsapp(telEmpresa, alerta).catch((err) =>
-            console.error("[bot] erro ao notificar empresa de transferência:", err)
-          )
+        // Notificação de transferência para o WhatsApp da empresa desabilitada por solicitação do usuário.
+        // Para reativar futuramente, basta definir WHATSAPP_NOTIFICAR_TRANSFERENCIA=true
+        if (process.env.WHATSAPP_NOTIFICAR_TRANSFERENCIA === "true") {
+          const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
+          if (telEmpresa) {
+            const alerta = formatarAlertaTransferencia({
+              nome: (ehNomeValido(nomeTemp) ? nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null),
+              ehClienteCadastrado,
+              local: localTemp,
+              telefone,
+              textoRecebido: resumo,
+              assunto: extrairAssuntoInteresse(resumo) || extrairAssuntoInteresse(textoRecebido),
+            })
+            enviarMensagemWhatsapp(telEmpresa, alerta).catch((err) =>
+              console.error("[bot] erro ao notificar empresa de transferência:", err)
+            )
+          }
         }
         return { ok: true, resumo }
       },
@@ -614,19 +617,23 @@ REGRAS GERAIS:
   if (reg.local && !localTemp) localTemp = reg.local
   if (reg.transferir) {
     transferido = true
-    const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
-    if (telEmpresa) {
-      const alerta = formatarAlertaTransferencia({
-        nome: (ehNomeValido(nomeTemp) ? nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null),
-        ehClienteCadastrado,
-        local: localTemp,
-        telefone,
-        textoRecebido,
-        assunto: reg.assunto || extrairAssuntoInteresse(textoRecebido),
-      })
-      enviarMensagemWhatsapp(telEmpresa, alerta).catch((e) =>
-        console.error("[bot] erro ao notificar empresa:", e)
-      )
+    // Notificação de transferência para o WhatsApp da empresa desabilitada por solicitação do usuário.
+    // Para reativar futuramente, basta definir WHATSAPP_NOTIFICAR_TRANSFERENCIA=true
+    if (process.env.WHATSAPP_NOTIFICAR_TRANSFERENCIA === "true") {
+      const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
+      if (telEmpresa) {
+        const alerta = formatarAlertaTransferencia({
+          nome: (ehNomeValido(nomeTemp) ? nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null),
+          ehClienteCadastrado,
+          local: localTemp,
+          telefone,
+          textoRecebido,
+          assunto: reg.assunto || extrairAssuntoInteresse(textoRecebido),
+        })
+        enviarMensagemWhatsapp(telEmpresa, alerta).catch((e) =>
+          console.error("[bot] erro ao notificar empresa:", e)
+        )
+      }
     }
   }
 
