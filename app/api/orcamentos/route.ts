@@ -27,6 +27,7 @@ function rowToOrcamento(r: Record<string, unknown>): Orcamento {
     arteAprovadaEm: (r.arte_aprovada_em as string) ?? undefined,
     observacao: (r.observacao as string) ?? undefined,
     origem: (r.origem as string) ?? undefined,
+    fotoProntoUrl: (r.foto_pronto_url as string) ?? undefined,
   }
 }
 

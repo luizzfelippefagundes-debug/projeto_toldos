@@ -171,6 +171,7 @@ export interface Orcamento {
   arteAprovadaEm?: string
   observacao?: string
   origem?: "whatsapp" | "balcao" | "loja" | string
+  fotoProntoUrl?: string
 }
 
 export interface EntradaEstoque {
@@ -235,6 +236,7 @@ export interface PedidoRapido {
   prazoEntregaEm?: string
   arteUrl?: string
   arteAprovadaEm?: string
+  fotoProntoUrl?: string
 }
 
 export type Papel = "dono" | "producao" | "financeiro" | "operador"

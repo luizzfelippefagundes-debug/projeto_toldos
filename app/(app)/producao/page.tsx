@@ -69,6 +69,12 @@ import {
   Pencil,
   Plus,
   Printer,
+  Camera,
+  Eye,
+  Scissors,
+  ShieldCheck,
+  Calendar,
+  Flame,
 } from "lucide-react"
 import { linkWhatsapp } from "@/lib/whatsapp"
 import { toast } from "sonner"
@@ -242,7 +248,9 @@ export default function ProducaoPage() {
     clientes,
     moverOrcamentoProducao,
     salvarArteOrcamento,
+    salvarFotoProntoOrcamento,
     salvarArtePedidoRapido,
+    salvarFotoProntoPedidoRapido,
     salvarObservacaoOrcamento,
     salvarObservacaoPedidoRapido,
   } = useData()
@@ -250,7 +258,7 @@ export default function ProducaoPage() {
   const [colunaAtiva, setColunaAtiva] = useState<StatusPedidoRapido | "todas">("todas")
   const [ocultarEntregues, setOcultarEntregues] = useState(false)
   const [colunasVisiveis, setColunasVisiveis] = useState<string[]>(() => colunas.map((c) => c.status))
-  const [filtroPreset, setFiltroPreset] = useState<"todos" | "recentes_5" | "os" | "rapida" | "atrasados">("todos")
+  const [filtroPreset, setFiltroPreset] = useState<"todos" | "recentes_5" | "os" | "rapida" | "atrasados" | "hoje">("todos")
   const [ocultarVazias, setOcultarVazias] = useState(false)
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
   const [confirmando, setConfirmando] = useState<{
@@ -263,6 +271,171 @@ export default function ProducaoPage() {
   } | null>(null)
   const [assinaturas, setAssinaturas] = useState<Record<string, { pdfUrl: string | null; assinado: boolean }>>({})
   const [ordemManual, setOrdemManual] = useState<string[]>([])
+
+  // Avisos do Mural da Fábrica (Recados do Kaio / Central Telão)
+  const [avisosTv, setAvisosTv] = useState<{
+    id: string
+    mensagem: string
+    criado_em: string
+    cor: string
+    icone: string
+    ativo?: boolean
+  }[]>([])
+
+  useEffect(() => {
+    function carregarAvisos() {
+      fetch("/api/avisos-tv")
+        .then((r) => (r.ok ? r.json() : []))
+        .then((d) => {
+          if (Array.isArray(d)) {
+            setAvisosTv(d.filter((item) => item.ativo !== false).slice(0, 3))
+          }
+        })
+        .catch(() => {})
+    }
+    carregarAvisos()
+    const timer = setInterval(carregarAvisos, 20000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Modais de Visualizador de Arte, Checklist de Qualidade (QC) e Problema
+  const [modalArtePreview, setModalArtePreview] = useState<{ url: string; titulo: string } | null>(null)
+
+  const [modalQcItem, setModalQcItem] = useState<{
+    tipo: "pedido" | "orcamento"
+    id: string
+    numero: number
+    clienteNome: string
+    clienteTelefone: string | null
+    fotoAtual?: string
+  } | null>(null)
+  const [qcChecks, setQcChecks] = useState({ medidas: true, acabamento: true, visual: true })
+  const [qcUploading, setQcUploading] = useState(false)
+  const [qcFotomUrl, setQcFotomUrl] = useState<string | null>(null)
+  const qcFileInputRef = useRef<HTMLInputElement>(null)
+
+  const [modalProblemaItem, setModalProblemaItem] = useState<{
+    tipo: "pedido" | "orcamento"
+    id: string
+    numero: number
+    clienteNome: string
+    obsAtual?: string
+  } | null>(null)
+  const [motivoProblema, setMotivoProblema] = useState("")
+  const [detalheProblema, setDetalheProblema] = useState("")
+  const [salvandoProblema, setSalvandoProblema] = useState(false)
+
+  const abrirQc = useCallback(
+    (item: {
+      tipo: "pedido" | "orcamento"
+      id: string
+      numero: number
+      clienteNome: string
+      clienteTelefone: string | null
+      fotoAtual?: string
+    }) => {
+      setModalQcItem(item)
+      setQcChecks({ medidas: true, acabamento: true, visual: true })
+      setQcFotomUrl(item.fotoAtual || null)
+    },
+    []
+  )
+
+  const handleUploadQcFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setQcUploading(true)
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      const res = await fetch("/api/upload", { method: "POST", body: form })
+      const data = await res.json()
+      if (data.url) {
+        setQcFotomUrl(data.url)
+        toast.success("Foto da peça carregada com sucesso!")
+      } else {
+        toast.error("Erro ao enviar foto")
+      }
+    } catch {
+      toast.error("Erro de conexão no upload da foto")
+    } finally {
+      setQcUploading(false)
+      if (qcFileInputRef.current) qcFileInputRef.current.value = ""
+    }
+  }
+
+  const handleConcluirQc = async () => {
+    if (!modalQcItem) return
+    if (qcFotomUrl && qcFotomUrl !== modalQcItem.fotoAtual) {
+      if (modalQcItem.tipo === "pedido") {
+        await salvarFotoProntoPedidoRapido(modalQcItem.id, qcFotomUrl)
+      } else {
+        await salvarFotoProntoOrcamento(modalQcItem.id, qcFotomUrl)
+      }
+    }
+    const item = modalQcItem
+    setModalQcItem(null)
+
+    if (item.tipo === "pedido") {
+      solicitarConfirmacao(
+        item.clienteNome,
+        item.clienteTelefone,
+        "pronto",
+        () => moverPedidoRapido(item.id, "pronto"),
+        item.id
+      )
+    } else {
+      solicitarConfirmacao(
+        item.clienteNome,
+        item.clienteTelefone,
+        "pronto",
+        () => moverOrcamentoProducao(item.id, "pronto"),
+        item.id
+      )
+    }
+  }
+
+  const handleRegistrarProblema = async () => {
+    if (!modalProblemaItem) return
+    if (!motivoProblema.trim() && !detalheProblema.trim()) {
+      toast.error("Selecione um motivo ou descreva o problema.")
+      return
+    }
+    setSalvandoProblema(true)
+    try {
+      const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+      const motivoFormatado = motivoProblema ? `[${motivoProblema}]` : ""
+      const novoAlerta = `⚠️ ALERTA DA FÁBRICA (${hora}) ${motivoFormatado}: ${detalheProblema.trim()}`
+      const obsFinal = modalProblemaItem.obsAtual
+        ? `${modalProblemaItem.obsAtual}\n\n${novoAlerta}`
+        : novoAlerta
+
+      if (modalProblemaItem.tipo === "pedido") {
+        await salvarObservacaoPedidoRapido(modalProblemaItem.id, obsFinal)
+      } else {
+        await salvarObservacaoOrcamento(modalProblemaItem.id, obsFinal)
+      }
+
+      tocarAlertaNovaDemanda()
+      dispararVibracaoCelular()
+      toast.warning("Alerta de problema registrado no pedido!", {
+        description: "A equipe e os donos foram alertados.",
+      })
+      dispararNotificacaoNativa(
+        `⚠️ Problema no #${modalProblemaItem.numero} - ${modalProblemaItem.clienteNome}`,
+        novoAlerta,
+        "/producao"
+      )
+
+      setModalProblemaItem(null)
+      setMotivoProblema("")
+      setDetalheProblema("")
+    } catch {
+      toast.error("Erro ao registrar alerta de problema.")
+    } finally {
+      setSalvandoProblema(false)
+    }
+  }
 
   useEffect(() => {
     fetch("/api/producao/ordem")
@@ -382,6 +555,27 @@ export default function ProducaoPage() {
     return pedidoRapidoEstaAtrasado(pedido, produto?.prazoDias, hoje)
   }
 
+  function itemEParaHoje(dataPrazo: Date | null): boolean {
+    if (!dataPrazo || !hoje) return false
+    return (
+      dataPrazo.getFullYear() === hoje.getFullYear() &&
+      dataPrazo.getMonth() === hoje.getMonth() &&
+      dataPrazo.getDate() === hoje.getDate()
+    )
+  }
+
+  function orcamentoEParaHoje(o: Orcamento): boolean {
+    if (!hoje) return false
+    const dStr = o.fechadoEm || o.osEmitidaEm || o.criadoEm
+    if (!dStr) return false
+    const d = new Date(dStr)
+    return (
+      d.getFullYear() === hoje.getFullYear() &&
+      d.getMonth() === hoje.getMonth() &&
+      d.getDate() === hoje.getDate()
+    )
+  }
+
   // Lista unificada ordenada decrescente para cálculo de recentes
   const idsUltimos5Recentes = useMemo(() => {
     const lista: { id: string; tipo: "pedido" | "orcamento"; dataTs: number }[] = []
@@ -399,12 +593,28 @@ export default function ProducaoPage() {
     return new Set(lista.slice(0, 5).map((item) => (item.tipo === "pedido" ? item.id : `orc-${item.id}`)))
   }, [pedidosRapidos, orcamentos])
 
+  const totalHoje = useMemo(() => {
+    const pHoje = pedidosRapidos.filter((p) => {
+      const prod = produtoDoPedido(p)
+      const prazo = obterPrazoEntregaPedido(p, prod?.prazoDias)
+      return itemEParaHoje(prazo) || estaAtrasado(p)
+    }).length
+    const oHoje = orcamentos.filter((o) => o.statusProducao && orcamentoEParaHoje(o)).length
+    return pHoje + oHoje
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedidosRapidos, orcamentos, hoje, produtosRapidos])
+
   const pedidosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     return pedidosRapidos.filter((pedido) => {
       if (filtroPreset === "os") return false
       if (filtroPreset === "atrasados" && !estaAtrasado(pedido)) return false
       if (filtroPreset === "recentes_5" && !idsUltimos5Recentes.has(pedido.id)) return false
+      if (filtroPreset === "hoje") {
+        const prod = produtoDoPedido(pedido)
+        const prazo = obterPrazoEntregaPedido(pedido, prod?.prazoDias)
+        if (!itemEParaHoje(prazo) && !estaAtrasado(pedido)) return false
+      }
 
       if (!termo) return true
       return (
@@ -412,6 +622,7 @@ export default function ProducaoPage() {
         String(pedido.numero).includes(termo)
       )
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedidosRapidos, busca, filtroPreset, idsUltimos5Recentes, hoje, produtosRapidos])
 
   const orcamentosEmProducao = useMemo(() => {
@@ -421,6 +632,7 @@ export default function ProducaoPage() {
       if (filtroPreset === "rapida") return false
       if (filtroPreset === "atrasados") return false
       if (filtroPreset === "recentes_5" && !idsUltimos5Recentes.has(`orc-${o.id}`)) return false
+      if (filtroPreset === "hoje" && !orcamentoEParaHoje(o)) return false
 
       if (!termo) return true
       const cliente = clientes.find((c) => c.id === o.clienteId)
@@ -429,7 +641,8 @@ export default function ProducaoPage() {
         String(o.numero).includes(termo)
       )
     })
-  }, [orcamentos, clientes, busca, filtroPreset, idsUltimos5Recentes])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orcamentos, clientes, busca, filtroPreset, idsUltimos5Recentes, hoje])
 
   const colunasRenderizadas = useMemo(() => {
     return colunas.filter((col) => {
@@ -463,6 +676,41 @@ export default function ProducaoPage() {
   const totalEntregues =
     pedidosFiltrados.filter((p) => p.status === "entregue").length +
     orcamentosEmProducao.filter((o) => o.statusProducao === "entregue").length
+
+  const finalizadosHoje = useMemo(() => {
+    if (!hoje) return 0
+    const pHoje = pedidosRapidos.filter((p) => {
+      if (p.status !== "pronto" && p.status !== "entregue") return false
+      if (p.criadoEm) {
+        const d = new Date(p.criadoEm)
+        if (
+          d.getFullYear() === hoje.getFullYear() &&
+          d.getMonth() === hoje.getMonth() &&
+          d.getDate() === hoje.getDate()
+        ) {
+          return true
+        }
+      }
+      return p.status === "pronto"
+    }).length
+
+    const oHoje = orcamentos.filter((o) => {
+      if (o.statusProducao !== "pronto" && o.statusProducao !== "entregue") return false
+      if (o.fechadoEm || o.osEmitidaEm) {
+        const d = new Date((o.osEmitidaEm || o.fechadoEm)!)
+        if (
+          d.getFullYear() === hoje.getFullYear() &&
+          d.getMonth() === hoje.getMonth() &&
+          d.getDate() === hoje.getDate()
+        ) {
+          return true
+        }
+      }
+      return o.statusProducao === "pronto"
+    }).length
+
+    return pHoje + oHoje
+  }, [pedidosRapidos, orcamentos, hoje])
 
   const pedidoArrastando = arrastandoId && !arrastandoId.startsWith("orc-")
     ? pedidosRapidos.find((p) => p.id === arrastandoId)
@@ -634,8 +882,51 @@ export default function ProducaoPage() {
         </Button>
       </div>
 
+      {/* Mural de Avisos da Fábrica (Recados do Kaio / Central Telão) */}
+      {avisosTv.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 p-3 sm:p-4 shadow-xs">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 text-sm font-bold">
+                📢
+              </span>
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200">
+                  Mural da Fábrica & Recados do Telão
+                </h3>
+                <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                  Avisos importantes enviados diretamente pelo Kaio / Telão para a equipe
+                </p>
+              </div>
+            </div>
+            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300">
+              {avisosTv.length} ativo{avisosTv.length > 1 ? "s" : ""}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
+            {avisosTv.map((aviso) => (
+              <div
+                key={aviso.id}
+                className="flex items-start gap-2.5 rounded-xl border border-amber-500/20 bg-background/80 p-2.5 shadow-2xs"
+              >
+                <span className="text-base shrink-0">{aviso.icone || "📢"}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground leading-snug break-words">
+                    {aviso.mensagem}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {aviso.criado_em ? formatarData(aviso.criado_em) : "Recente"}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Métricas compactas */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3 rounded-xl border border-border bg-card px-2.5 sm:px-4 py-2 sm:py-3">
           <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15">
             <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500" />
@@ -664,6 +955,17 @@ export default function ProducaoPage() {
             <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Prontos</p>
             <p className={cn("text-base sm:text-xl font-bold leading-tight", prontos > 0 && "text-green-600")}>
               {prontos}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 rounded-xl border border-border bg-card px-2.5 sm:px-4 py-2 sm:py-3">
+          <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15">
+            <Flame className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">Finalizados hoje</p>
+            <p className="text-base sm:text-xl font-bold leading-tight text-amber-600 dark:text-amber-400">
+              {finalizadosHoje}
             </p>
           </div>
         </div>
@@ -818,6 +1120,21 @@ export default function ProducaoPage() {
             )}
           >
             Todos ({pedidosRapidos.length + orcamentos.filter((o) => o.statusProducao).length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFiltroPreset(filtroPreset === "hoje" ? "todos" : "hoje")}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-all shadow-2xs",
+              filtroPreset === "hoje"
+                ? "bg-emerald-600 text-white"
+                : "bg-muted/70 text-muted-foreground hover:text-foreground"
+            )}
+            title="Ver pedidos e ordens com prazo de entrega hoje"
+          >
+            <Calendar className="h-3 w-3" />
+            <span>Prazo Hoje ({totalHoje})</span>
           </button>
 
           <button
@@ -1010,6 +1327,26 @@ export default function ProducaoPage() {
                         onPromoverPrimeiro={() => promoverParaPrimeiro(pedido.id)}
                         onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
                         onSalvarObservacao={(obs) => salvarObservacaoPedidoRapido(pedido.id, obs)}
+                        onAbrirQc={() =>
+                          abrirQc({
+                            tipo: "pedido",
+                            id: pedido.id,
+                            numero: pedido.numero,
+                            clienteNome: pedido.clienteNome,
+                            clienteTelefone: pedido.clienteTelefone,
+                            fotoAtual: pedido.fotoProntoUrl,
+                          })
+                        }
+                        onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
+                        onAbrirProblema={() =>
+                          setModalProblemaItem({
+                            tipo: "pedido",
+                            id: pedido.id,
+                            numero: pedido.numero,
+                            clienteNome: pedido.clienteNome,
+                            obsAtual: pedido.observacao,
+                          })
+                        }
                         onMudarStatus={(status) =>
                           solicitarConfirmacao(
                             pedido.clienteNome,
@@ -1035,6 +1372,26 @@ export default function ProducaoPage() {
                       onPromoverPrimeiro={() => promoverParaPrimeiro(`orc-${orc.id}`)}
                       onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
                       onSalvarObservacao={(obs) => salvarObservacaoOrcamento(orc.id, obs)}
+                      onAbrirQc={() =>
+                        abrirQc({
+                          tipo: "orcamento",
+                          id: orc.id,
+                          numero: orc.numero,
+                          clienteNome: cli?.nome || "Cliente",
+                          clienteTelefone: cli?.telefone || null,
+                          fotoAtual: orc.fotoProntoUrl,
+                        })
+                      }
+                      onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
+                      onAbrirProblema={() =>
+                        setModalProblemaItem({
+                          tipo: "orcamento",
+                          id: orc.id,
+                          numero: orc.numero,
+                          clienteNome: cli?.nome || "Cliente",
+                          obsAtual: orc.observacao,
+                        })
+                      }
                       onMudarStatus={(status) =>
                         solicitarConfirmacao(
                           cli?.nome ?? "Cliente",
@@ -1254,6 +1611,26 @@ export default function ProducaoPage() {
                                   onPromoverPrimeiro={() => promoverParaPrimeiro(pedido.id)}
                                   onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
                                   onSalvarObservacao={(obs) => salvarObservacaoPedidoRapido(pedido.id, obs)}
+                                  onAbrirQc={() =>
+                                    abrirQc({
+                                      tipo: "pedido",
+                                      id: pedido.id,
+                                      numero: pedido.numero,
+                                      clienteNome: pedido.clienteNome,
+                                      clienteTelefone: pedido.clienteTelefone,
+                                      fotoAtual: pedido.fotoProntoUrl,
+                                    })
+                                  }
+                                  onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
+                                  onAbrirProblema={() =>
+                                    setModalProblemaItem({
+                                      tipo: "pedido",
+                                      id: pedido.id,
+                                      numero: pedido.numero,
+                                      clienteNome: pedido.clienteNome,
+                                      obsAtual: pedido.observacao,
+                                    })
+                                  }
                                   onMudarStatus={(status) =>
                                     solicitarConfirmacao(
                                       pedido.clienteNome,
@@ -1280,6 +1657,26 @@ export default function ProducaoPage() {
                                 onPromoverPrimeiro={() => promoverParaPrimeiro(`orc-${orc.id}`)}
                                 onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
                                 onSalvarObservacao={(obs) => salvarObservacaoOrcamento(orc.id, obs)}
+                                onAbrirQc={() =>
+                                  abrirQc({
+                                    tipo: "orcamento",
+                                    id: orc.id,
+                                    numero: orc.numero,
+                                    clienteNome: cli?.nome || "Cliente",
+                                    clienteTelefone: cli?.telefone || null,
+                                    fotoAtual: orc.fotoProntoUrl,
+                                  })
+                                }
+                                onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
+                                onAbrirProblema={() =>
+                                  setModalProblemaItem({
+                                    tipo: "orcamento",
+                                    id: orc.id,
+                                    numero: orc.numero,
+                                    clienteNome: cli?.nome || "Cliente",
+                                    obsAtual: orc.observacao,
+                                  })
+                                }
                                 onMudarStatus={(status) =>
                                   solicitarConfirmacao(
                                     cli?.nome ?? "Cliente",
@@ -1328,6 +1725,249 @@ export default function ProducaoPage() {
           </DndContext>
         </div>
       </div>
+
+      {/* Modal Visualizador de Arte em Alta Resolução */}
+      <Dialog open={!!modalArtePreview} onOpenChange={(open) => { if (!open) setModalArtePreview(null) }}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center justify-between gap-2 pr-6">
+              <span className="truncate">{modalArtePreview?.titulo || "Visualizador de Imagem"}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-[300px] max-h-[65vh] overflow-auto flex items-center justify-center bg-black/5 dark:bg-black/30 rounded-xl p-2 border border-border/60">
+            {modalArtePreview?.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={modalArtePreview.url}
+                alt={modalArtePreview.titulo}
+                className="max-h-full max-w-full object-contain rounded-lg shadow-md"
+              />
+            ) : null}
+          </div>
+
+          <DialogFooter className="flex items-center justify-between gap-2 pt-2 sm:justify-between">
+            <Button variant="outline" size="sm" onClick={() => setModalArtePreview(null)}>
+              Fechar
+            </Button>
+            {modalArtePreview?.url && (
+              <a
+                href={modalArtePreview.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-2xs"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span>Abrir Original / Baixar</span>
+              </a>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Checklist de Qualidade (QC) & Foto Peça Pronta */}
+      <Dialog open={!!modalQcItem} onOpenChange={(open) => { if (!open && !qcUploading) setModalQcItem(null) }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+              <ShieldCheck className="h-5 w-5 text-emerald-600" />
+              <span>Conferência de Qualidade (QC)</span>
+            </DialogTitle>
+            <DialogDescription>
+              Confira os itens abaixo antes de marcar #{modalQcItem?.numero} ({modalQcItem?.clienteNome}) como pronto.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-2">
+            {/* Checklist */}
+            <div className="flex flex-col gap-2.5 rounded-xl border border-border/80 bg-muted/30 p-3">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                Checklist de Qualidade:
+              </span>
+
+              <label className="flex items-start gap-2.5 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
+                <input
+                  type="checkbox"
+                  checked={qcChecks.medidas}
+                  onChange={(e) => setQcChecks((c) => ({ ...c, medidas: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 accent-emerald-600 cursor-pointer"
+                />
+                <span>📏 Medidas conferidas na trena (tamanho, escala e proporção corretos)</span>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
+                <input
+                  type="checkbox"
+                  checked={qcChecks.acabamento}
+                  onChange={(e) => setQcChecks((c) => ({ ...c, acabamento: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 accent-emerald-600 cursor-pointer"
+                />
+                <span>✂️ Acabamento conferido (corte no esquadro, ilhós, solda, verniz ou bainha)</span>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
+                <input
+                  type="checkbox"
+                  checked={qcChecks.visual}
+                  onChange={(e) => setQcChecks((c) => ({ ...c, visual: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 accent-emerald-600 cursor-pointer"
+                />
+                <span>🔍 Inspeção visual ok (sem falhas de impressão, riscos, manchas ou bolhas)</span>
+              </label>
+            </div>
+
+            {/* Foto da Peça Pronta */}
+            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-border/80 bg-muted/20 p-3">
+              <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Camera className="h-4 w-4 text-primary" />
+                <span>Foto da Peça Pronta (Evidência da Produção)</span>
+              </span>
+              <p className="text-[11px] text-muted-foreground">
+                Tire uma foto com a câmera do celular da peça pronta antes de embalar ou entregar.
+              </p>
+
+              {qcFotomUrl ? (
+                <div className="relative group rounded-lg overflow-hidden border border-border h-40 bg-black/10 flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qcFotomUrl} alt="Foto da peça pronta" className="max-h-full max-w-full object-contain" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => qcFileInputRef.current?.click()}
+                      disabled={qcUploading}
+                    >
+                      Trocar Foto
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => setQcFotomUrl(null)}
+                      disabled={qcUploading}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 py-5 px-4 cursor-pointer transition-colors text-center">
+                  {qcUploading ? (
+                    <>
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      <span className="text-xs font-semibold text-primary">Enviando foto...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="h-7 w-7 text-primary" />
+                      <span className="text-xs font-bold text-foreground">
+                        Tirar Foto / Carregar da Galeria
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        Toque para abrir a câmera do celular
+                      </span>
+                    </>
+                  )}
+                  <input
+                    ref={qcFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    disabled={qcUploading}
+                    onChange={handleUploadQcFoto}
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setModalQcItem(null)} disabled={qcUploading}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConcluirQc}
+              disabled={qcUploading || !(qcChecks.medidas && qcChecks.acabamento && qcChecks.visual)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+            >
+              <CheckCircle2 className="mr-1.5 h-4 w-4" />
+              <span>Aprovar QC e Marcar Pronto</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Reportar Problema / Retrabalho */}
+      <Dialog open={!!modalProblemaItem} onOpenChange={(open) => { if (!open && !salvandoProblema) setModalProblemaItem(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-destructive">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <span>Reportar Problema na Produção</span>
+            </DialogTitle>
+            <DialogDescription>
+              Informe o que está travando o item #{modalProblemaItem?.numero} ({modalProblemaItem?.clienteNome}).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 py-1">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-semibold">Motivo do Problema:</Label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  "Falta de material / Bobina",
+                  "Erro de impressão / Cabeçote",
+                  "Medidas incorretas",
+                  "Máquina / Plotter parada",
+                  "Arquivo de arte corrompido",
+                  "Outro problema",
+                ].map((motivo) => (
+                  <button
+                    key={motivo}
+                    type="button"
+                    onClick={() => setMotivoProblema(motivo)}
+                    className={cn(
+                      "rounded-lg p-2 text-left text-xs font-medium border transition-colors",
+                      motivoProblema === motivo
+                        ? "border-destructive bg-destructive/10 text-destructive font-bold"
+                        : "border-border/80 bg-background hover:bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {motivo}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs font-semibold">Detalhes adicionais (opcional):</Label>
+              <Textarea
+                rows={3}
+                placeholder="Ex: lona 440g acabou, necessário pedir reposição ou aguardar entrega..."
+                value={detalheProblema}
+                onChange={(e) => setDetalheProblema(e.target.value)}
+                className="text-xs resize-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setModalProblemaItem(null)} disabled={salvandoProblema}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleRegistrarProblema}
+              disabled={salvandoProblema || (!motivoProblema && !detalheProblema.trim())}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold"
+            >
+              <AlertTriangle className="mr-1.5 h-4 w-4" />
+              <span>{salvandoProblema ? "Salvando..." : "Emitir Alerta"}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1399,6 +2039,7 @@ function ArteCardWidget({
   clienteNome,
   clienteTelefone,
   onSalvarArte,
+  onAbrirArte,
 }: {
   id: string
   arteUrl?: string
@@ -1407,6 +2048,7 @@ function ArteCardWidget({
   clienteNome: string
   clienteTelefone?: string | null
   onSalvarArte: (url: string | null) => Promise<void>
+  onAbrirArte?: (url: string, titulo: string) => void
 }) {
   const [enviando, setEnviando] = useState(false)
   const [copiado, setCopiado] = useState(false)
@@ -1471,18 +2113,16 @@ function ArteCardWidget({
       {arteUrl ? (
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="group relative h-9 w-9 shrink-0 overflow-hidden rounded border bg-black/5">
+            <div
+              className="group relative h-9 w-9 shrink-0 overflow-hidden rounded border bg-black/5 cursor-pointer"
+              onClick={() => onAbrirArte && onAbrirArte(arteUrl, `Arte - ${clienteNome}`)}
+              title="Toque para ampliar"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={arteUrl} alt="Arte" className="h-full w-full object-cover" />
-              <a
-                href={arteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity text-white"
-                title="Abrir imagem"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity text-white">
+                <Eye className="h-3.5 w-3.5" />
+              </div>
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-[11px] font-medium text-foreground truncate">Arte anexada</span>
@@ -1684,6 +2324,9 @@ function PedidoCardConteudo({
   onMudarStatus,
   onSalvarArte,
   onSalvarObservacao,
+  onAbrirQc,
+  onAbrirArte,
+  onAbrirProblema,
 }: {
   pedido: PedidoRapido
   produto: ProdutoRapido | undefined
@@ -1694,14 +2337,15 @@ function PedidoCardConteudo({
   onMudarStatus: (status: StatusPedidoRapido) => void
   onSalvarArte: (url: string | null) => Promise<void>
   onSalvarObservacao?: (obs: string) => Promise<void>
+  onAbrirQc?: () => void
+  onAbrirArte?: (url: string, titulo: string) => void
+  onAbrirProblema?: () => void
 }) {
   // Colaborador (papel "operador") vê o pedido e instruções, mas não o valor financeiro em reais.
   const { papel } = usePapelAtivo()
   const prazo = obterPrazoEntregaPedido(pedido, produto?.prazoDias)
   const nome = pedido.clienteNome?.trim() || ""
   const ini = nome ? iniciais(nome) : null
-  const proximoStatus = PROXIMO_STATUS[pedido.status]
-  const proximo = proximoStatus ? colunaMap[proximoStatus] : null
 
   return (
     <div
@@ -1776,16 +2420,48 @@ function PedidoCardConteudo({
         {nome || <span className="italic text-muted-foreground font-normal">Sem cliente</span>}
       </p>
 
-      {/* Produto + Prazo */}
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[150px]", coluna.corFundo, coluna.corTexto)}>
-          {pedido.produtoNome ?? produto?.nome ?? "Produto"}
-        </span>
-        <div className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-          <Clock className="h-3 w-3" />
-          <span>{prazo ? formatarData(prazo.toISOString()) : "Sem prazo"}</span>
+      {/* Produto + Especificações + Prazo */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[150px]", coluna.corFundo, coluna.corTexto)}>
+            {pedido.produtoNome ?? produto?.nome ?? "Produto"}
+          </span>
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+            <Clock className="h-3 w-3" />
+            <span>{prazo ? formatarData(prazo.toISOString()) : "Sem prazo"}</span>
+          </div>
         </div>
+
+        {(pedido.varianteNome || pedido.acabamento) && (
+          <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+            {pedido.varianteNome && (
+              <span className="rounded bg-muted px-1.5 py-0.2 font-medium text-foreground">
+                {pedido.varianteNome}
+              </span>
+            )}
+            {pedido.acabamento && (
+              <span className="rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 px-1.5 py-0.2 font-medium">
+                ✂️ {pedido.acabamento}
+              </span>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Badge de Foto da Peça Pronta (se houver) */}
+      {pedido.fotoProntoUrl && (
+        <div
+          className="flex items-center justify-between gap-1.5 p-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 cursor-pointer text-xs transition-colors hover:bg-emerald-500/20"
+          onClick={() => onAbrirArte && onAbrirArte(pedido.fotoProntoUrl!, `Foto da Peça #${pedido.numero} - ${pedido.clienteNome}`)}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold text-[11px]">
+            <Camera className="h-3.5 w-3.5" />
+            <span>Foto da Peça Registrada</span>
+          </div>
+          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-medium">Ver foto</span>
+        </div>
+      )}
 
       {/* Widget de Arte */}
       <ArteCardWidget
@@ -1796,6 +2472,7 @@ function PedidoCardConteudo({
         clienteNome={pedido.clienteNome}
         clienteTelefone={pedido.clienteTelefone}
         onSalvarArte={onSalvarArte}
+        onAbrirArte={onAbrirArte}
       />
 
       {/* Widget de Observação / Instrução para Fábrica e TV */}
@@ -1806,16 +2483,110 @@ function PedidoCardConteudo({
         />
       )}
 
-      {/* Status Bar: Dropdown + Avançar */}
+      {/* Botão de Avanço Rápido de 1 Toque (Otimizado p/ Chão de Fábrica) */}
+      <div className="pt-1 flex flex-col gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
+        {pedido.status === "acabamento" ? (
+          <button
+            type="button"
+            onClick={onAbrirQc}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            <span>✅ Concluir / Peça Pronta</span>
+          </button>
+        ) : pedido.status === "impressao" ? (
+          <button
+            type="button"
+            onClick={() => onMudarStatus("acabamento")}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <Scissors className="h-4 w-4" />
+            <span>✂️ Ir p/ Acabamento</span>
+          </button>
+        ) : pedido.status === "aprovado" || pedido.status === "arte" || pedido.status === "ag_confirmacao" ? (
+          <button
+            type="button"
+            onClick={() => onMudarStatus("impressao")}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <Printer className="h-4 w-4" />
+            <span>🖨️ Iniciar Impressão</span>
+          </button>
+        ) : pedido.status === "aguardando" ? (
+          <button
+            type="button"
+            onClick={() => onMudarStatus("aprovado")}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <Flame className="h-4 w-4" />
+            <span>🚀 Iniciar Produção</span>
+          </button>
+        ) : pedido.status === "pronto" ? (
+          <div className="flex items-center gap-1.5">
+            <span className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Pronto p/ Retirada
+            </span>
+            <button
+              type="button"
+              onClick={() => onMudarStatus("entregue")}
+              className="py-1.5 px-3 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold shadow-2xs transition-all shrink-0 cursor-pointer"
+              title="Marcar como entregue ao cliente"
+            >
+              📦 Entregar
+            </button>
+          </div>
+        ) : null}
+
+        {/* Linha de Ações Rápidas: Ver Arte & Reportar Problema */}
+        <div className="flex items-center gap-1.5">
+          {pedido.arteUrl && onAbrirArte && (
+            <button
+              type="button"
+              onClick={() => onAbrirArte(pedido.arteUrl!, `Arte #${pedido.numero} - ${pedido.clienteNome}`)}
+              className="flex-1 py-1 px-2 rounded-lg bg-muted/60 hover:bg-muted border border-border/70 text-foreground text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+            >
+              <Eye className="h-3 w-3 text-primary" />
+              <span>Ver Arte</span>
+            </button>
+          )}
+
+          {pedido.fotoProntoUrl && onAbrirArte && (
+            <button
+              type="button"
+              onClick={() => onAbrirArte(pedido.fotoProntoUrl!, `Foto Peça #${pedido.numero} - ${pedido.clienteNome}`)}
+              className="py-1 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+              title="Ver foto da peça pronta"
+            >
+              <Camera className="h-3 w-3" />
+              <span>Foto</span>
+            </button>
+          )}
+
+          {onAbrirProblema && (
+            <button
+              type="button"
+              onClick={onAbrirProblema}
+              className="py-1 px-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors shrink-0 cursor-pointer"
+              title="Reportar problema ou retrabalho na fábrica"
+            >
+              <AlertTriangle className="h-3 w-3" />
+              <span>Problema</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Status Bar: Seletor manual para troca livre */}
       <div
         className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/60 text-xs"
         onPointerDown={(e) => e.stopPropagation()}
       >
+        <span className="text-[10px] text-muted-foreground font-medium">Trocar status:</span>
         <Select
           value={pedido.status}
           onValueChange={(val) => onMudarStatus(val as StatusPedidoRapido)}
         >
-          <SelectTrigger className="h-7 text-xs font-medium px-2 py-0 w-auto min-w-[125px] border-border/80 bg-background/80">
+          <SelectTrigger className="h-6 text-[11px] font-medium px-2 py-0 w-auto min-w-[120px] border-border/80 bg-background/80">
             <div className="flex items-center gap-1.5 truncate">
               <span className={cn("h-2 w-2 rounded-full shrink-0", coluna.cor)} />
               <span className="truncate">{coluna.titulo}</span>
@@ -1832,21 +2603,6 @@ function PedidoCardConteudo({
             ))}
           </SelectContent>
         </Select>
-
-        {proximo && (
-          <button
-            type="button"
-            onClick={() => onMudarStatus(proximo.status)}
-            className={cn(
-              "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-white shadow-2xs transition-all shrink-0 hover:opacity-90 active:scale-95",
-              proximo.cor
-            )}
-            title={`Avançar para ${proximo.titulo}`}
-          >
-            <span>Avançar</span>
-            <ChevronRight className="h-3 w-3" />
-          </button>
-        )}
       </div>
     </div>
   )
@@ -1862,6 +2618,9 @@ function OrcamentoCardConteudo({
   onMudarStatus,
   onSalvarArte,
   onSalvarObservacao,
+  onAbrirQc,
+  onAbrirArte,
+  onAbrirProblema,
 }: {
   orcamento: Orcamento
   cliente: Cliente | undefined
@@ -1872,13 +2631,14 @@ function OrcamentoCardConteudo({
   onMudarStatus: (status: StatusPedidoRapido) => void
   onSalvarArte: (url: string | null) => Promise<void>
   onSalvarObservacao?: (obs: string) => Promise<void>
+  onAbrirQc?: () => void
+  onAbrirArte?: (url: string, titulo: string) => void
+  onAbrirProblema?: () => void
 }) {
   const { papel } = usePapelAtivo()
   const nome = cliente?.nome?.trim() || ""
   const ini = nome ? iniciais(nome) : null
   const statusAtual = (orcamento.statusProducao as StatusPedidoRapido) || "aprovado"
-  const proximoStatus = PROXIMO_STATUS[statusAtual]
-  const proximo = proximoStatus ? colunaMap[proximoStatus] : null
 
   return (
     <div
@@ -1948,6 +2708,19 @@ function OrcamentoCardConteudo({
         {nome || <span className="italic text-muted-foreground font-normal">Sem cliente</span>}
       </p>
 
+      {/* Medidas Técnicas em Destaque */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-xs font-bold text-amber-900 dark:text-amber-300">
+          📏 {orcamento.item.largura}m × {orcamento.item.altura}m
+          {orcamento.item.quantidadeUnidades > 1 && ` (${orcamento.item.quantidadeUnidades} un)`}
+        </span>
+        {orcamento.materialFechado?.nome && (
+          <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground truncate max-w-[160px]" title={orcamento.materialFechado.nome}>
+            🧵 {orcamento.materialFechado.nome}
+          </span>
+        )}
+      </div>
+
       {/* Descrição + Data + Assinatura */}
       <div className="flex items-center justify-between gap-2 text-xs">
         <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[150px]", coluna.corFundo, coluna.corTexto)}>
@@ -1986,6 +2759,21 @@ function OrcamentoCardConteudo({
         </div>
       </div>
 
+      {/* Badge de Foto da Peça Pronta (se houver) */}
+      {orcamento.fotoProntoUrl && (
+        <div
+          className="flex items-center justify-between gap-1.5 p-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 cursor-pointer text-xs transition-colors hover:bg-emerald-500/20"
+          onClick={() => onAbrirArte && onAbrirArte(orcamento.fotoProntoUrl!, `Foto da Peça ORC #${orcamento.numero} - ${cliente?.nome || "Cliente"}`)}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold text-[11px]">
+            <Camera className="h-3.5 w-3.5" />
+            <span>Foto da Peça Registrada</span>
+          </div>
+          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-medium">Ver foto</span>
+        </div>
+      )}
+
       {/* Widget de Arte */}
       <ArteCardWidget
         id={orcamento.id}
@@ -1995,6 +2783,7 @@ function OrcamentoCardConteudo({
         clienteNome={cliente?.nome || "Cliente"}
         clienteTelefone={cliente?.telefone}
         onSalvarArte={onSalvarArte}
+        onAbrirArte={onAbrirArte}
       />
 
       {/* Widget de Observação / Instrução para Fábrica e TV */}
@@ -2025,16 +2814,110 @@ function OrcamentoCardConteudo({
         </Link>
       </div>
 
-      {/* Status Bar: Dropdown + Avançar */}
+      {/* Botão de Avanço Rápido de 1 Toque (Otimizado p/ Chão de Fábrica) */}
+      <div className="pt-1 flex flex-col gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
+        {statusAtual === "acabamento" ? (
+          <button
+            type="button"
+            onClick={onAbrirQc}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            <span>✅ Concluir / Peça Pronta</span>
+          </button>
+        ) : statusAtual === "impressao" ? (
+          <button
+            type="button"
+            onClick={() => onMudarStatus("acabamento")}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <Scissors className="h-4 w-4" />
+            <span>✂️ Ir p/ Acabamento</span>
+          </button>
+        ) : statusAtual === "aprovado" || statusAtual === "arte" || statusAtual === "ag_confirmacao" ? (
+          <button
+            type="button"
+            onClick={() => onMudarStatus("impressao")}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <Printer className="h-4 w-4" />
+            <span>🖨️ Iniciar Impressão</span>
+          </button>
+        ) : statusAtual === "aguardando" ? (
+          <button
+            type="button"
+            onClick={() => onMudarStatus("aprovado")}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <Flame className="h-4 w-4" />
+            <span>🚀 Iniciar Produção</span>
+          </button>
+        ) : statusAtual === "pronto" ? (
+          <div className="flex items-center gap-1.5">
+            <span className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Pronto p/ Retirada
+            </span>
+            <button
+              type="button"
+              onClick={() => onMudarStatus("entregue")}
+              className="py-1.5 px-3 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-bold shadow-2xs transition-all shrink-0 cursor-pointer"
+              title="Marcar como entregue ao cliente"
+            >
+              📦 Entregar
+            </button>
+          </div>
+        ) : null}
+
+        {/* Linha de Ações Rápidas: Ver Arte & Reportar Problema */}
+        <div className="flex items-center gap-1.5">
+          {orcamento.arteUrl && onAbrirArte && (
+            <button
+              type="button"
+              onClick={() => onAbrirArte(orcamento.arteUrl!, `Arte ORC #${orcamento.numero} - ${cliente?.nome || "Cliente"}`)}
+              className="flex-1 py-1 px-2 rounded-lg bg-muted/60 hover:bg-muted border border-border/70 text-foreground text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+            >
+              <Eye className="h-3 w-3 text-primary" />
+              <span>Ver Arte</span>
+            </button>
+          )}
+
+          {orcamento.fotoProntoUrl && onAbrirArte && (
+            <button
+              type="button"
+              onClick={() => onAbrirArte(orcamento.fotoProntoUrl!, `Foto Peça ORC #${orcamento.numero} - ${cliente?.nome || "Cliente"}`)}
+              className="py-1 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+              title="Ver foto da peça pronta"
+            >
+              <Camera className="h-3 w-3" />
+              <span>Foto</span>
+            </button>
+          )}
+
+          {onAbrirProblema && (
+            <button
+              type="button"
+              onClick={onAbrirProblema}
+              className="py-1 px-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors shrink-0 cursor-pointer"
+              title="Reportar problema ou retrabalho na fábrica"
+            >
+              <AlertTriangle className="h-3 w-3" />
+              <span>Problema</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Status Bar: Seletor manual para troca livre */}
       <div
         className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/60 text-xs"
         onPointerDown={(e) => e.stopPropagation()}
       >
+        <span className="text-[10px] text-muted-foreground font-medium">Trocar status:</span>
         <Select
           value={statusAtual}
           onValueChange={(val) => onMudarStatus(val as StatusPedidoRapido)}
         >
-          <SelectTrigger className="h-7 text-xs font-medium px-2 py-0 w-auto min-w-[125px] border-border/80 bg-background/80">
+          <SelectTrigger className="h-6 text-[11px] font-medium px-2 py-0 w-auto min-w-[120px] border-border/80 bg-background/80">
             <div className="flex items-center gap-1.5 truncate">
               <span className={cn("h-2 w-2 rounded-full shrink-0", coluna.cor)} />
               <span className="truncate">{coluna.titulo}</span>
@@ -2051,21 +2934,6 @@ function OrcamentoCardConteudo({
             ))}
           </SelectContent>
         </Select>
-
-        {proximo && (
-          <button
-            type="button"
-            onClick={() => onMudarStatus(proximo.status)}
-            className={cn(
-              "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-white shadow-2xs transition-all shrink-0 hover:opacity-90 active:scale-95",
-              proximo.cor
-            )}
-            title={`Avançar para ${proximo.titulo}`}
-          >
-            <span>Avançar</span>
-            <ChevronRight className="h-3 w-3" />
-          </button>
-        )}
       </div>
     </div>
   )

@@ -23,6 +23,7 @@ function rowToPedido(r: Record<string, unknown>): PedidoRapido {
     prazoEntregaEm: (r.prazo_entrega_em as string) ?? undefined,
     arteUrl: (r.arte_url as string) ?? undefined,
     arteAprovadaEm: (r.arte_aprovada_em as string) ?? undefined,
+    fotoProntoUrl: (r.foto_pronto_url as string) ?? undefined,
   }
 }
 
@@ -40,13 +41,13 @@ export async function POST(req: Request) {
       id, numero, produto_id, variante_id, acabamento, cliente_nome,
       cliente_telefone, observacao, total, status, criado_em,
       vendedor_id, produto_nome, variante_nome, prazo_entrega_em,
-      arte_url, arte_aprovada_em
+      arte_url, arte_aprovada_em, foto_pronto_url
     ) VALUES (
       ${b.id}, ${b.numero}, ${b.produtoId}, ${b.varianteId}, ${b.acabamento ?? null},
       ${b.clienteNome}, ${b.clienteTelefone}, ${b.observacao}, ${b.total},
       ${b.status}, ${b.criadoEm}, ${b.vendedorId ?? null}, ${b.produtoNome ?? null},
       ${b.varianteNome ?? null}, ${b.prazoEntregaEm ?? null},
-      ${b.arteUrl ?? null}, ${b.arteAprovadaEm ?? null}
+      ${b.arteUrl ?? null}, ${b.arteAprovadaEm ?? null}, ${b.fotoProntoUrl ?? null}
     )
   `
 

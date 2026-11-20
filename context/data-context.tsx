@@ -121,6 +121,8 @@ export interface DataContextValue {
   salvarArtePedidoRapido: (id: string, arteUrl: string | null) => Promise<void>
   salvarObservacaoOrcamento: (id: string, observacao: string) => Promise<void>
   salvarObservacaoPedidoRapido: (id: string, observacao: string) => Promise<void>
+  salvarFotoProntoOrcamento: (id: string, fotoUrl: string | null) => Promise<void>
+  salvarFotoProntoPedidoRapido: (id: string, fotoUrl: string | null) => Promise<void>
   addLancamento: (
     dados: Omit<LancamentoFinanceiro, "id" | "criadoEm">
   ) => LancamentoFinanceiro
@@ -680,11 +682,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  const salvarFotoProntoOrcamento: DataContextValue["salvarFotoProntoOrcamento"] = async (id, fotoProntoUrl) => {
+    setOrcamentos((atual) =>
+      atual.map((o) => {
+        if (o.id !== id) return o
+        const atualizado = { ...o, fotoProntoUrl: fotoProntoUrl ?? undefined }
+        apiPut(`/api/orcamentos/${id}`, atualizado)
+        return atualizado
+      })
+    )
+  }
+
   const salvarArtePedidoRapido: DataContextValue["salvarArtePedidoRapido"] = async (id, arteUrl) => {
     setPedidosRapidos((atual) =>
       atual.map((p) => {
         if (p.id !== id) return p
         const atualizado = { ...p, arteUrl: arteUrl ?? undefined }
+        apiPut(`/api/pedidos-rapidos/${id}`, atualizado)
+        return atualizado
+      })
+    )
+  }
+
+  const salvarFotoProntoPedidoRapido: DataContextValue["salvarFotoProntoPedidoRapido"] = async (id, fotoProntoUrl) => {
+    setPedidosRapidos((atual) =>
+      atual.map((p) => {
+        if (p.id !== id) return p
+        const atualizado = { ...p, fotoProntoUrl: fotoProntoUrl ?? undefined }
         apiPut(`/api/pedidos-rapidos/${id}`, atualizado)
         return atualizado
       })
@@ -964,7 +988,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       moverPedidoRapido,
       moverOrcamentoProducao,
       salvarArteOrcamento,
+      salvarFotoProntoOrcamento,
       salvarArtePedidoRapido,
+      salvarFotoProntoPedidoRapido,
       salvarObservacaoOrcamento,
       salvarObservacaoPedidoRapido,
       addLancamento,

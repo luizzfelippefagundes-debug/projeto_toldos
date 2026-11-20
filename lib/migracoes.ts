@@ -25,6 +25,7 @@ export async function garantirColunasOrcamentos() {
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS pix_qr_code_base64 TEXT`
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS pago_em TEXT`
   await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS origem TEXT`
+  await getSql()`ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS foto_pronto_url TEXT`
   orcamentosProntos = true
 }
 
@@ -32,6 +33,7 @@ export async function garantirColunasPedidosRapidos() {
   if (pedidosRapidosProntos) return
   await getSql()`ALTER TABLE pedidos_rapidos ADD COLUMN IF NOT EXISTS arte_url TEXT`
   await getSql()`ALTER TABLE pedidos_rapidos ADD COLUMN IF NOT EXISTS arte_aprovada_em TEXT`
+  await getSql()`ALTER TABLE pedidos_rapidos ADD COLUMN IF NOT EXISTS foto_pronto_url TEXT`
   pedidosRapidosProntos = true
 }
 
