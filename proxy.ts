@@ -33,6 +33,9 @@ const rotaPublica = createRouteMatcher([
   "/api/whatsapp/webhook(.*)",
   // Webhook e serviços públicos do Mercado Pago
   "/api/mercadopago(.*)",
+  // Site da loja: preços (só leitura) e pedido de orçamento. O pedido exige o
+  // segredo LOJA_API_SECRET dentro da própria rota.
+  "/api/loja(.*)",
 ])
 
 const rotaApi = createRouteMatcher(["/api(.*)"])

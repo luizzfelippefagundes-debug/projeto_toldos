@@ -204,6 +204,11 @@ export default function HistoricoOrcamentosPage() {
                         WhatsApp
                       </Badge>
                     )}
+                    {orcamento.origem === "loja" && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30 font-semibold">
+                        Site
+                      </Badge>
+                    )}
                   </div>
                   <p className="truncate text-sm text-muted-foreground">
                     {nomeCliente(orcamento.clienteId)}
@@ -260,6 +265,11 @@ export default function HistoricoOrcamentosPage() {
                       <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold">
                         <MessageCircle className="h-2.5 w-2.5" />
                         WhatsApp
+                      </Badge>
+                    )}
+                    {orcamento.origem === "loja" && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30 font-semibold">
+                        Site
                       </Badge>
                     )}
                   </div>
