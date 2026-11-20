@@ -89,7 +89,12 @@ export function useAlertas(): Alerta[] {
 
   const problemasProducao = useMemo(() => {
     const pedidos = pedidosRapidos
-      .filter((p) => p.status !== "pronto" && p.status !== "entregue" && p.observacao?.includes("ALERTA DA FÁBRICA"))
+      .filter(
+        (p) =>
+          p.status !== "pronto" &&
+          p.status !== "entregue" &&
+          (p.observacao?.includes("ALERTA DA FÁBRICA") || p.observacao?.includes("PROBLEMA REPORTADO"))
+      )
       .map((p) => ({
         id: `prob-ped-${p.id}`,
         numero: p.numero,
@@ -97,7 +102,15 @@ export function useAlertas(): Alerta[] {
       }))
 
     const orcs = orcamentos
-      .filter((o) => o.statusProducao && o.statusProducao !== "pronto" && o.statusProducao !== "entregue" && o.observacao?.includes("ALERTA DA FÁBRICA"))
+      .filter((o) => {
+        const st = o.statusProducao || (o.status === "fechado" ? "aguardando" : null)
+        return (
+          st &&
+          st !== "pronto" &&
+          st !== "entregue" &&
+          (o.observacao?.includes("ALERTA DA FÁBRICA") || o.observacao?.includes("PROBLEMA REPORTADO"))
+        )
+      })
       .map((o) => {
         const cli = clientes.find((c) => c.id === o.clienteId)
         return {
@@ -115,7 +128,7 @@ export function useAlertas(): Alerta[] {
       ...problemasProducao.map((prob) => ({
         id: prob.id,
         texto: `⚠️ Problema na fábrica no #${prob.numero} (${prob.cliente})`,
-        href: "/producao",
+        href: `/producao?busca=${encodeURIComponent(String(prob.numero))}`,
         quantidade: 1,
         Icon: AlertTriangle,
       })),

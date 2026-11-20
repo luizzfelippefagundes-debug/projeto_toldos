@@ -199,13 +199,23 @@ export default function DashboardPage() {
                   <Link
                     key={alerta.id}
                     href={alerta.href}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border/80 bg-accent/20 px-3 py-2.5 text-xs sm:text-sm hover:bg-accent transition-colors"
+                    className={cn(
+                      "flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-xs sm:text-sm transition-colors",
+                      alerta.id.startsWith("prob-")
+                        ? "border-red-500/60 bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 font-bold shadow-2xs"
+                        : "border-border/80 bg-accent/20 hover:bg-accent text-foreground"
+                    )}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <alerta.Icon className="h-4 w-4 shrink-0 text-destructive" />
-                      <span className="leading-snug text-foreground break-words">{alerta.texto}</span>
+                      <alerta.Icon
+                        className={cn(
+                          "h-4 w-4 shrink-0",
+                          alerta.id.startsWith("prob-") ? "text-red-600 dark:text-red-400 animate-pulse" : "text-destructive"
+                        )}
+                      />
+                      <span className="leading-snug break-words">{alerta.texto}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0 font-semibold">Ver →</span>
+                    <span className="text-xs shrink-0 font-bold opacity-80">Ver →</span>
                   </Link>
                 ))}
               </div>

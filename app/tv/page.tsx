@@ -82,6 +82,10 @@ function PedidoCard({
   mostrarColunaBadge?: boolean
 }) {
   const atrasado = estaAtrasado(pedido)
+  const temProblema = !!(
+    pedido.observacao &&
+    (pedido.observacao.includes("ALERTA DA FÁBRICA") || pedido.observacao.includes("PROBLEMA REPORTADO"))
+  )
   const colunaInfo = COLUNAS.find(
     (c) => c.status === pedido.status || (c.status === "aprovado" && (pedido.status as string) === "arte")
   )
@@ -90,9 +94,11 @@ function PedidoCard({
     <div
       key={pedido.id}
       className={`shrink-0 rounded-2xl border-2 transition-all p-3 sm:p-3.5 lg:p-4 shadow-sm w-full min-w-0 max-w-full overflow-hidden ${
-        atrasado
-          ? "border-red-500 bg-red-50/95 shadow-md dark:border-red-600 dark:bg-red-950/80"
-          : "border-slate-200/90 bg-white shadow-2xs dark:border-slate-700/80 dark:bg-slate-900/95"
+        temProblema
+          ? "border-red-600 bg-red-100/95 dark:border-red-500 dark:bg-red-950/85 ring-4 ring-red-500/30 shadow-lg animate-[pulse_3s_ease-in-out_infinite]"
+          : atrasado
+            ? "border-red-500 bg-red-50/95 shadow-md dark:border-red-600 dark:bg-red-950/80"
+            : "border-slate-200/90 bg-white shadow-2xs dark:border-slate-700/80 dark:bg-slate-900/95"
       }`}
     >
       {/* Linha superior: Tag OS / Pedido + Tipo + Prazo/Atrasado + Badge da Etapa */}
@@ -120,7 +126,11 @@ function PedidoCard({
           )}
         </div>
 
-        {atrasado ? (
+        {temProblema ? (
+          <span className="shrink-0 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] sm:text-xs font-black text-white uppercase tracking-wider animate-bounce shadow-md flex items-center gap-1">
+            🚨 TRAVADO / PROBLEMA
+          </span>
+        ) : atrasado ? (
           <span className="shrink-0 rounded-lg bg-red-600 px-2 py-0.5 text-[10px] sm:text-xs font-black text-white uppercase tracking-wider animate-pulse shadow-xs">
             Atrasado
           </span>
@@ -186,17 +196,28 @@ function PedidoCard({
           </div>
         )}
 
-        {/* Observação / Instrução de Produção em Alto Destaque */}
+        {/* Observação / Instrução de Produção ou Alerta da Fábrica */}
         {pedido.observacao && (
           <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60 min-w-0 max-w-full">
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2 sm:p-2.5 text-amber-950 dark:text-amber-100 shadow-2xs">
-              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block text-amber-700 dark:text-amber-400">
-                ⚠️ Instrução de Produção:
-              </span>
-              <p className="text-xs sm:text-sm lg:text-base font-bold break-words whitespace-normal mt-0.5 leading-snug">
-                {pedido.observacao}
-              </p>
-            </div>
+            {temProblema ? (
+              <div className="rounded-xl border-2 border-red-600 bg-red-500/20 dark:bg-red-950/50 p-2.5 sm:p-3 text-red-950 dark:text-red-100 shadow-md">
+                <span className="text-xs sm:text-sm font-black uppercase tracking-wider block text-red-600 dark:text-red-400 flex items-center gap-1.5 animate-pulse">
+                  🚨 ALERTA DA FÁBRICA / PROBLEMA TRAVADO:
+                </span>
+                <p className="text-xs sm:text-sm lg:text-base font-black break-words whitespace-normal mt-1 leading-snug text-red-700 dark:text-red-200">
+                  {pedido.observacao}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2 sm:p-2.5 text-amber-950 dark:text-amber-100 shadow-2xs">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block text-amber-700 dark:text-amber-400">
+                  ⚠️ Instrução de Produção:
+                </span>
+                <p className="text-xs sm:text-sm lg:text-base font-bold break-words whitespace-normal mt-0.5 leading-snug">
+                  {pedido.observacao}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

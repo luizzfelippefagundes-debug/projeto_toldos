@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 export function NotificacoesBell() {
   const { papel } = usePapelAtivo()
@@ -68,13 +69,23 @@ export function NotificacoesBell() {
                   key={alerta.id}
                   href={alerta.href}
                   onClick={() => setAberto(false)}
-                  className="flex items-start justify-between gap-3 rounded-xl border border-border/80 bg-accent/30 p-3 text-xs sm:text-sm transition-colors hover:bg-accent active:scale-[0.99]"
+                  className={cn(
+                    "flex items-start justify-between gap-3 rounded-xl border p-3 text-xs sm:text-sm transition-colors active:scale-[0.99]",
+                    alerta.id.startsWith("prob-")
+                      ? "border-red-500/60 bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:text-red-300 font-bold shadow-2xs"
+                      : "border-border/80 bg-accent/30 hover:bg-accent text-foreground"
+                  )}
                 >
                   <div className="flex items-start gap-2.5 min-w-0">
-                    <alerta.Icon className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                    <span className="leading-snug text-foreground font-medium break-words">{alerta.texto}</span>
+                    <alerta.Icon
+                      className={cn(
+                        "mt-0.5 h-4 w-4 shrink-0",
+                        alerta.id.startsWith("prob-") ? "text-red-600 dark:text-red-400 animate-pulse" : "text-destructive"
+                      )}
+                    />
+                    <span className="leading-snug break-words">{alerta.texto}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0 font-semibold self-center">Ver →</span>
+                  <span className="text-xs shrink-0 font-bold self-center opacity-80">Ver →</span>
                 </Link>
               ))}
             </div>

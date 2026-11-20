@@ -2623,6 +2623,29 @@ export default function ProducaoPage() {
               )}
             </div>
 
+            {/* Botão de Marcar Problema como Resolvido (quando houver alerta ativo) */}
+            {temProblemaReportado(modalDetalhesItem?.observacao) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const item = modalDetalhesItem
+                  if (!item) return
+                  const obsLimpa = limparAlertaProblema(item.observacao)
+                  if (item.tipo === "pedido") {
+                    await salvarObservacaoPedidoRapido(item.id, obsLimpa)
+                  } else {
+                    await salvarObservacaoOrcamento(item.id, obsLimpa)
+                  }
+                  setModalDetalhesItem(null)
+                  toast.success("Alerta de problema marcado como resolvido!")
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold transition-all cursor-pointer shadow-md"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Marcar Problema como Resolvido ✓</span>
+              </button>
+            )}
+
             {/* Botão de Reportar Problema */}
             <button
               type="button"
@@ -2999,6 +3022,31 @@ function ObservacaoProducaoWidget({
   )
 }
 
+function temProblemaReportado(obs?: string): boolean {
+  if (!obs) return false
+  return obs.includes("ALERTA DA FÁBRICA") || obs.includes("PROBLEMA REPORTADO")
+}
+
+function extrairAlertaProblema(obs?: string): string {
+  if (!obs) return ""
+  const linhas = obs.split("\n")
+  const linhasAlerta = linhas.filter(
+    (l) => l.includes("ALERTA DA FÁBRICA") || l.includes("PROBLEMA REPORTADO")
+  )
+  if (linhasAlerta.length > 0) {
+    return linhasAlerta.join("\n").trim()
+  }
+  return obs
+}
+
+function limparAlertaProblema(obs?: string): string {
+  if (!obs) return ""
+  const linhas = obs
+    .split("\n")
+    .filter((l) => !l.includes("ALERTA DA FÁBRICA") && !l.includes("PROBLEMA REPORTADO"))
+  return linhas.join("\n").trim()
+}
+
 function PedidoCardConteudo({
   pedido,
   produto,
@@ -3033,12 +3081,17 @@ function PedidoCardConteudo({
   const prazo = obterPrazoEntregaPedido(pedido, produto?.prazoDias)
   const nome = pedido.clienteNome?.trim() || ""
   const ini = nome ? iniciais(nome) : null
+  const temProblema = temProblemaReportado(pedido.observacao)
 
   return (
     <div
       className={cn(
-        "flex flex-col gap-2.5 rounded-xl border bg-card p-3 text-sm shadow-2xs transition-shadow hover:shadow-md",
-        atrasado ? "border-destructive/60 ring-1 ring-destructive/30" : "border-border/80"
+        "flex flex-col gap-2.5 rounded-xl border p-3 text-sm shadow-2xs transition-shadow hover:shadow-md",
+        temProblema
+          ? "border-red-500 ring-2 ring-red-500/50 bg-red-500/5 dark:bg-red-950/20 shadow-md"
+          : atrasado
+            ? "border-destructive/60 ring-1 ring-destructive/30 bg-card"
+            : "border-border/80 bg-card"
       )}
     >
       {/* Topo: avatar + número + preço */}
@@ -3106,6 +3159,36 @@ function PedidoCardConteudo({
       <p className="font-semibold text-foreground truncate text-xs leading-tight">
         {nome || <span className="italic text-muted-foreground font-normal">Sem cliente</span>}
       </p>
+
+      {/* Tarja de Alerta de Problema na Peça */}
+      {temProblema && (
+        <div className="rounded-xl border border-red-500/60 bg-red-500/15 dark:bg-red-950/40 p-2.5 flex flex-col gap-1 text-xs shadow-2xs">
+          <div className="flex items-center justify-between gap-1 text-red-600 dark:text-red-400 font-bold text-[11px] uppercase tracking-wide">
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 shrink-0 animate-bounce text-red-600 dark:text-red-400" />
+              <span>⚠️ PROBLEMA REPORTADO NA PEÇA:</span>
+            </span>
+            {onSalvarObservacao && (
+              <button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  const obsLimpa = limparAlertaProblema(pedido.observacao)
+                  await onSalvarObservacao(obsLimpa)
+                  toast.success("Alerta de problema resolvido!")
+                }}
+                className="text-[10px] bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded px-1.5 py-0.5 font-bold cursor-pointer transition-all shadow-2xs"
+                title="Marcar problema como resolvido e remover alerta"
+              >
+                Resolver ✓
+              </button>
+            )}
+          </div>
+          <p className="text-red-700 dark:text-red-300 font-semibold leading-tight text-xs whitespace-pre-wrap">
+            {extrairAlertaProblema(pedido.observacao)}
+          </p>
+        </div>
+      )}
 
       {/* Produto + Especificações + Prazo */}
       <div className="flex flex-col gap-1">
@@ -3337,12 +3420,15 @@ function OrcamentoCardConteudo({
   const nome = cliente?.nome?.trim() || ""
   const ini = nome ? iniciais(nome) : null
   const statusAtual = (orcamento.statusProducao as StatusPedidoRapido) || "aprovado"
+  const temProblema = temProblemaReportado(orcamento.observacao)
 
   return (
     <div
       className={cn(
-        "flex flex-col gap-2.5 rounded-xl border bg-card p-3 text-sm shadow-2xs transition-shadow hover:shadow-md",
-        "border-border/80 ring-1 ring-inset ring-violet-500/20"
+        "flex flex-col gap-2.5 rounded-xl border p-3 text-sm shadow-2xs transition-shadow hover:shadow-md",
+        temProblema
+          ? "border-red-500 ring-2 ring-red-500/50 bg-red-500/5 dark:bg-red-950/20 shadow-md"
+          : "border-border/80 bg-card ring-1 ring-inset ring-violet-500/20"
       )}
     >
       {/* Topo: avatar + número + preço */}
@@ -3405,6 +3491,36 @@ function OrcamentoCardConteudo({
       <p className="font-semibold text-foreground truncate text-xs leading-tight">
         {nome || <span className="italic text-muted-foreground font-normal">Sem cliente</span>}
       </p>
+
+      {/* Tarja de Alerta de Problema na Peça */}
+      {temProblema && (
+        <div className="rounded-xl border border-red-500/60 bg-red-500/15 dark:bg-red-950/40 p-2.5 flex flex-col gap-1 text-xs shadow-2xs">
+          <div className="flex items-center justify-between gap-1 text-red-600 dark:text-red-400 font-bold text-[11px] uppercase tracking-wide">
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 shrink-0 animate-bounce text-red-600 dark:text-red-400" />
+              <span>⚠️ PROBLEMA REPORTADO NA PEÇA:</span>
+            </span>
+            {onSalvarObservacao && (
+              <button
+                type="button"
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  const obsLimpa = limparAlertaProblema(orcamento.observacao)
+                  await onSalvarObservacao(obsLimpa)
+                  toast.success("Alerta de problema resolvido!")
+                }}
+                className="text-[10px] bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded px-1.5 py-0.5 font-bold cursor-pointer transition-all shadow-2xs"
+                title="Marcar problema como resolvido e remover alerta"
+              >
+                Resolver ✓
+              </button>
+            )}
+          </div>
+          <p className="text-red-700 dark:text-red-300 font-semibold leading-tight text-xs whitespace-pre-wrap">
+            {extrairAlertaProblema(orcamento.observacao)}
+          </p>
+        </div>
+      )}
 
       {/* Medidas Técnicas em Destaque */}
       <div className="flex items-center gap-1.5 flex-wrap">
