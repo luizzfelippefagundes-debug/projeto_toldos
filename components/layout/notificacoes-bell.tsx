@@ -36,14 +36,14 @@ export function NotificacoesBell() {
         </span>
       </DialogTrigger>
       <DialogContent className="w-[94vw] max-w-sm sm:max-w-md max-h-[85vh] flex flex-col p-4 sm:p-6 overflow-hidden">
-        <DialogHeader className="shrink-0 pb-2 border-b border-border/50">
-          <DialogTitle className="flex items-center justify-between text-base font-bold">
+        <DialogHeader className="shrink-0 pb-2 border-b border-border/50 pr-8">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold flex-wrap">
             <span className="flex items-center gap-2">
-              <Bell className="h-4 w-4 text-primary" />
-              Notificações
+              <Bell className="h-4 w-4 text-primary shrink-0" />
+              <span>Notificações</span>
             </span>
             {alertas.length > 0 && (
-              <span className="rounded-full bg-destructive/15 text-destructive font-bold text-xs px-2 py-0.5">
+              <span className="rounded-full bg-destructive/15 text-destructive font-bold text-xs px-2 py-0.5 shrink-0">
                 {alertas.length} {alertas.length === 1 ? "alerta" : "alertas"}
               </span>
             )}
