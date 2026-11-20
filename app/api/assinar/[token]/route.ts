@@ -8,6 +8,7 @@ import { formatarNumeroOrcamento } from "@/lib/orcamento-pdf"
 import { enviarDocumentoWhatsapp } from "@/lib/evolution-api"
 import { registrarMensagemBot } from "@/lib/bot-registro"
 import type { Orcamento } from "@/lib/types"
+import { notificarNovaDemandaOrcamento } from "@/lib/notificacoes-producao"
 
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -185,6 +186,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
           autor: "bot",
         })
       }
+      // Notifica a equipe de produção (Produção e TV) no WhatsApp
+      notificarNovaDemandaOrcamento({
+        numero: orcamento.numero,
+        clienteNome,
+        material: orcamento.materialFechado || (orcamento.item as any)?.materialNome || null,
+        servico: orcamento.servicoFechado || (orcamento.item as any)?.servicoNome || null,
+        dimensoes: (orcamento.item as any)?.largura && (orcamento.item as any)?.altura
+          ? `${(orcamento.item as any).largura}m x ${(orcamento.item as any).altura}m`
+          : null,
+      }).catch((err) =>
+        console.error("[assinar] falha ao notificar equipe de producao:", err)
+      )
     } catch (errPdf) {
       console.error("[assinar] falha ao gerar/enviar contrato de serviço:", errPdf)
     }

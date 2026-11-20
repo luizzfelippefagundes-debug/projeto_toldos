@@ -48,10 +48,21 @@ export async function GET() {
     ocultarVazias: true,
   }
 
+  let ordemCards: string[] = []
+
   try {
-    const confRows = await sql`SELECT valor FROM configuracoes WHERE chave = 'tv_config'`
+    const [confRows, ordRows] = await Promise.all([
+      sql`SELECT valor FROM configuracoes WHERE chave = 'tv_config'`,
+      sql`SELECT valor FROM configuracoes WHERE chave = 'ordem_cards_producao'`,
+    ])
     if (confRows[0]?.valor) {
       config = { ...config, ...JSON.parse(confRows[0].valor) }
+    }
+    if (ordRows[0]?.valor) {
+      const parsedOrd = JSON.parse(ordRows[0].valor)
+      if (Array.isArray(parsedOrd)) {
+        ordemCards = parsedOrd
+      }
     }
   } catch {
     // usa padrão se não houver tabela ou falhar
@@ -171,6 +182,17 @@ export async function GET() {
       const atrasadoB = b.status !== "pronto" && b.prazo_entrega_em && b.prazo_entrega_em < hoje
       if (atrasadoA && !atrasadoB) return -1
       if (!atrasadoA && atrasadoB) return 1
+
+      // Se houver ordenação manual flexível definida pelo gestor:
+      if (ordemCards.length > 0) {
+        const idA = a.tipo === "orcamento" ? `orc-${a.id}` : a.id
+        const idB = b.tipo === "orcamento" ? `orc-${b.id}` : b.id
+        const posA = ordemCards.indexOf(idA)
+        const posB = ordemCards.indexOf(idB)
+        if (posA !== -1 && posB !== -1) return posA - posB
+        if (posA !== -1 && posB === -1) return -1
+        if (posA === -1 && posB !== -1) return 1
+      }
 
       // Fila de Produção FIFO: o pedido que entrou primeiro fica no topo da fila, novos entram por baixo
       const tempoA = a.criado_em ? new Date(a.criado_em).getTime() : 0

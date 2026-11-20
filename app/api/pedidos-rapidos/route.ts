@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
 import { garantirColunasPedidosRapidos } from "@/lib/migracoes"
 import type { PedidoRapido } from "@/lib/types"
+import { notificarNovaDemandaPedidoRapido } from "@/lib/notificacoes-producao"
 
 function rowToPedido(r: Record<string, unknown>): PedidoRapido {
   return {
@@ -48,5 +49,10 @@ export async function POST(req: Request) {
       ${b.arteUrl ?? null}, ${b.arteAprovadaEm ?? null}
     )
   `
+
+  notificarNovaDemandaPedidoRapido(b).catch((err) =>
+    console.error("[pedidos-rapidos] erro ao notificar equipe de producao:", err)
+  )
+
   return NextResponse.json(b, { status: 201 })
 }

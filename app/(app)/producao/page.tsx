@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from "react"
 import {
   DndContext,
   DragOverlay,
@@ -261,6 +261,54 @@ export default function ProducaoPage() {
     executar: () => void
   } | null>(null)
   const [assinaturas, setAssinaturas] = useState<Record<string, { pdfUrl: string | null; assinado: boolean }>>({})
+  const [ordemManual, setOrdemManual] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch("/api/producao/ordem")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (Array.isArray(d?.ordem)) setOrdemManual(d.ordem)
+      })
+      .catch(() => {})
+  }, [])
+
+  const salvarOrdemManual = useCallback(async (novaOrdem: string[]) => {
+    setOrdemManual(novaOrdem)
+    try {
+      await fetch("/api/producao/ordem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ordem: novaOrdem }),
+      })
+    } catch (e) {
+      console.error("Erro ao salvar ordem manual:", e)
+    }
+  }, [])
+
+  const promoverParaPrimeiro = useCallback((id: string) => {
+    setOrdemManual((prev) => {
+      const filtrado = prev.filter((x) => x !== id)
+      const nova = [id, ...filtrado]
+      salvarOrdemManual(nova)
+      toast.success("Card priorizado como 1º da fila!")
+      return nova
+    })
+  }, [salvarOrdemManual])
+
+  const compararItensFila = useCallback(
+    (a: { id: string; dataCriacao: number; numero: number }, b: { id: string; dataCriacao: number; numero: number }) => {
+      if (ordemManual.length > 0) {
+        const posA = ordemManual.indexOf(a.id)
+        const posB = ordemManual.indexOf(b.id)
+        if (posA !== -1 && posB !== -1) return posA - posB
+        if (posA !== -1 && posB === -1) return -1
+        if (posA === -1 && posB !== -1) return 1
+      }
+      if (a.dataCriacao !== b.dataCriacao) return a.dataCriacao - b.dataCriacao
+      return a.numero - b.numero
+    },
+    [ordemManual]
+  )
 
   useEffect(() => {
     const orcsComOs = orcamentos.filter((o) => o.statusProducao)
@@ -464,9 +512,81 @@ export default function ProducaoPage() {
     setArrastandoId(null)
     const { active, over } = event
     if (!over) return
-    const novoStatus = String(over.id)
-    if (!statusValidos.has(novoStatus)) return
+
     const activeId = String(active.id)
+    const overId = String(over.id)
+
+    // Caso 1: Soltou em cima de outro card para reordenar na fila
+    if (overId.startsWith("card:")) {
+      const targetCardId = overId.replace("card:", "")
+      if (activeId === targetCardId) return
+
+      // Descobrir a coluna de destino baseada no card onde foi solto
+      let statusDestino: StatusPedidoRapido | null = null
+      const targetPedido = pedidosRapidos.find((p) => p.id === targetCardId)
+      if (targetPedido) {
+        statusDestino = (targetPedido.status === "arte" ? "aprovado" : targetPedido.status) as StatusPedidoRapido
+      } else if (targetCardId.startsWith("orc-")) {
+        const targetOrc = orcamentos.find((o) => o.id === targetCardId.slice(4))
+        if (targetOrc) {
+          const st = targetOrc.statusProducao === "arte" ? "aprovado" : targetOrc.statusProducao
+          statusDestino = (st as StatusPedidoRapido) || "aprovado"
+        }
+      }
+
+      // Reordenar no array de prioridades
+      setOrdemManual((prev) => {
+        const semActive = prev.filter((x) => x !== activeId)
+        const idxTarget = semActive.indexOf(targetCardId)
+        let nova: string[]
+        if (idxTarget === -1) {
+          nova = [activeId, targetCardId, ...semActive]
+        } else {
+          nova = [
+            ...semActive.slice(0, idxTarget),
+            activeId,
+            ...semActive.slice(idxTarget),
+          ]
+        }
+        salvarOrdemManual(nova)
+        return nova
+      })
+
+      // Se foi arrastado para uma coluna diferente, move também o status
+      if (statusDestino && statusValidos.has(statusDestino)) {
+        if (activeId.startsWith("orc-")) {
+          const orcId = activeId.slice(4)
+          const orc = orcamentos.find((o) => o.id === orcId)
+          if (orc && orc.statusProducao !== statusDestino) {
+            const cli = clientes.find((c) => c.id === orc.clienteId)
+            solicitarConfirmacao(
+              cli?.nome ?? "Cliente",
+              cli?.telefone ?? null,
+              statusDestino,
+              () => moverOrcamentoProducao(orcId, statusDestino!),
+              orcId
+            )
+          }
+        } else {
+          const pedido = pedidosRapidos.find((p) => p.id === activeId)
+          if (pedido && pedido.status !== statusDestino) {
+            solicitarConfirmacao(
+              pedido.clienteNome,
+              pedido.clienteTelefone,
+              statusDestino,
+              () => moverPedidoRapido(activeId, statusDestino!),
+              activeId
+            )
+          }
+        }
+      }
+      return
+    }
+
+    // Caso 2: Soltou na coluna diretamente
+    const novoStatus = overId
+    if (!statusValidos.has(novoStatus)) return
+
     if (activeId.startsWith("orc-")) {
       const orcId = activeId.slice(4)
       const orc = orcamentos.find((o) => o.id === orcId)
@@ -855,10 +975,7 @@ export default function ProducaoPage() {
                 numero: o.numero,
                 orcamento: o,
               })),
-            ].sort((a, b) => {
-              if (a.dataCriacao !== b.dataCriacao) return a.dataCriacao - b.dataCriacao
-              return a.numero - b.numero
-            })
+            ].sort(compararItensFila)
 
             return (
               <div key={col.status} className="flex flex-col gap-2.5">
@@ -884,6 +1001,7 @@ export default function ProducaoPage() {
                         atrasado={estaAtrasado(pedido)}
                         coluna={colunaMap[pedido.status]}
                         posicaoFila={idx + 1}
+                        onPromoverPrimeiro={() => promoverParaPrimeiro(pedido.id)}
                         onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
                         onSalvarObservacao={(obs) => salvarObservacaoPedidoRapido(pedido.id, obs)}
                         onMudarStatus={(status) =>
@@ -908,6 +1026,7 @@ export default function ProducaoPage() {
                       coluna={col}
                       posicaoFila={idx + 1}
                       assinatura={assinaturas[orc.id]}
+                      onPromoverPrimeiro={() => promoverParaPrimeiro(`orc-${orc.id}`)}
                       onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
                       onSalvarObservacao={(obs) => salvarObservacaoOrcamento(orc.id, obs)}
                       onMudarStatus={(status) =>
@@ -1079,10 +1198,7 @@ export default function ProducaoPage() {
                       numero: o.numero,
                       orcamento: o,
                     })),
-                  ].sort((a, b) => {
-                    if (a.dataCriacao !== b.dataCriacao) return a.dataCriacao - b.dataCriacao
-                    return a.numero - b.numero
-                  })
+                  ].sort(compararItensFila)
 
                   return (
                     <ColunaDroppable key={col.status} status={col.status} coluna={col}>
@@ -1129,6 +1245,7 @@ export default function ProducaoPage() {
                                   atrasado={estaAtrasado(pedido)}
                                   coluna={colunaMap[pedido.status]}
                                   posicaoFila={idx + 1}
+                                  onPromoverPrimeiro={() => promoverParaPrimeiro(pedido.id)}
                                   onSalvarArte={(url) => salvarArtePedidoRapido(pedido.id, url)}
                                   onSalvarObservacao={(obs) => salvarObservacaoPedidoRapido(pedido.id, obs)}
                                   onMudarStatus={(status) =>
@@ -1154,6 +1271,7 @@ export default function ProducaoPage() {
                                 coluna={col}
                                 posicaoFila={idx + 1}
                                 assinatura={assinaturas[orc.id]}
+                                onPromoverPrimeiro={() => promoverParaPrimeiro(`orc-${orc.id}`)}
                                 onSalvarArte={(url) => salvarArteOrcamento(orc.id, url)}
                                 onSalvarObservacao={(obs) => salvarObservacaoOrcamento(orc.id, obs)}
                                 onMudarStatus={(status) =>
@@ -1239,18 +1357,27 @@ function PedidoCardArrastavel({
   id: string
   children: ReactNode
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id,
+    data: { tipo: "card", cardId: id },
+  })
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: `card:${id}`,
+    data: { tipo: "card", cardId: id },
   })
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setDragRef(node)
+        setDropRef(node)
+      }}
       {...listeners}
       {...attributes}
       className={cn(
-        "cursor-grab touch-none active:cursor-grabbing",
-        isDragging && "opacity-30"
+        "cursor-grab touch-none active:cursor-grabbing transition-all duration-150",
+        isDragging && "opacity-30",
+        isOver && "ring-2 ring-primary ring-offset-2 scale-[1.01] rounded-xl"
       )}
     >
       {children}
@@ -1547,6 +1674,7 @@ function PedidoCardConteudo({
   atrasado,
   coluna,
   posicaoFila,
+  onPromoverPrimeiro,
   onMudarStatus,
   onSalvarArte,
   onSalvarObservacao,
@@ -1556,6 +1684,7 @@ function PedidoCardConteudo({
   atrasado: boolean
   coluna: (typeof colunas)[number]
   posicaoFila?: number
+  onPromoverPrimeiro?: () => void
   onMudarStatus: (status: StatusPedidoRapido) => void
   onSalvarArte: (url: string | null) => Promise<void>
   onSalvarObservacao?: (obs: string) => Promise<void>
@@ -1595,9 +1724,30 @@ function PedidoCardConteudo({
                 Rápida
               </span>
               {typeof posicaoFila === "number" && (
-                <span className="rounded bg-primary/10 text-primary font-bold px-1.5 py-0.2 text-[10px]" title="Posição na fila">
-                  {posicaoFila}º na fila
-                </span>
+                posicaoFila === 1 ? (
+                  <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 font-bold px-1.5 py-0.2 text-[10px] border border-amber-500/30 shadow-2xs" title="1º lugar da fila">
+                    🥇 1º da fila
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <span className="rounded bg-primary/10 text-primary font-bold px-1.5 py-0.2 text-[10px]" title="Posição na fila">
+                      {posicaoFila}º na fila
+                    </span>
+                    {onPromoverPrimeiro && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onPromoverPrimeiro()
+                        }}
+                        className="inline-flex items-center gap-0.5 rounded border border-border/80 bg-background/90 hover:bg-primary hover:text-white px-1.5 py-0.2 text-[9px] font-semibold transition-colors cursor-pointer"
+                        title="Priorizar: colocar em 1º lugar"
+                      >
+                        🔝 1º
+                      </button>
+                    )}
+                  </div>
+                )
               )}
               {atrasado && (
                 <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
@@ -1702,6 +1852,7 @@ function OrcamentoCardConteudo({
   coluna,
   assinatura,
   posicaoFila,
+  onPromoverPrimeiro,
   onMudarStatus,
   onSalvarArte,
   onSalvarObservacao,
@@ -1711,6 +1862,7 @@ function OrcamentoCardConteudo({
   coluna: (typeof colunas)[number]
   assinatura?: { pdfUrl: string | null; assinado: boolean }
   posicaoFila?: number
+  onPromoverPrimeiro?: () => void
   onMudarStatus: (status: StatusPedidoRapido) => void
   onSalvarArte: (url: string | null) => Promise<void>
   onSalvarObservacao?: (obs: string) => Promise<void>
@@ -1749,9 +1901,30 @@ function OrcamentoCardConteudo({
                 OS
               </span>
               {typeof posicaoFila === "number" && (
-                <span className="rounded bg-primary/10 text-primary font-bold px-1.5 py-0.2 text-[10px]" title="Posição na fila">
-                  {posicaoFila}º na fila
-                </span>
+                posicaoFila === 1 ? (
+                  <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 font-bold px-1.5 py-0.2 text-[10px] border border-amber-500/30 shadow-2xs" title="1º lugar da fila">
+                    🥇 1º da fila
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <span className="rounded bg-primary/10 text-primary font-bold px-1.5 py-0.2 text-[10px]" title="Posição na fila">
+                      {posicaoFila}º na fila
+                    </span>
+                    {onPromoverPrimeiro && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onPromoverPrimeiro()
+                        }}
+                        className="inline-flex items-center gap-0.5 rounded border border-border/80 bg-background/90 hover:bg-primary hover:text-white px-1.5 py-0.2 text-[9px] font-semibold transition-colors cursor-pointer"
+                        title="Priorizar: colocar em 1º lugar"
+                      >
+                        🔝 1º
+                      </button>
+                    )}
+                  </div>
+                )
               )}
             </div>
           </div>

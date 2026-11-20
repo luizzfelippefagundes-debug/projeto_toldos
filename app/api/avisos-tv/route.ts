@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
+import { notificarAvisoTvEquipe } from "@/lib/notificacoes-producao"
 
 export async function GET() {
   try {
@@ -34,6 +35,13 @@ export async function POST(req: Request) {
       INSERT INTO avisos_tv (id, mensagem, criado_em, cor, icone, som, ativo)
       VALUES (${id}, ${mensagem}, ${criado_em}, ${cor ?? "azul"}, ${icone ?? "📢"}, ${som ?? false}, ${ativo ?? true})
     `
+
+    if (mensagem && (ativo ?? true)) {
+      notificarAvisoTvEquipe(mensagem, icone).catch((err) =>
+        console.error("[avisos-tv] erro ao notificar equipe no WhatsApp:", err)
+      )
+    }
+
     return NextResponse.json({ ok: true }, { status: 201 })
   } catch (error) {
     console.error("Erro ao criar aviso da TV:", error)
