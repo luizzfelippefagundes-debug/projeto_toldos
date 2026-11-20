@@ -1,5 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { buscarMidiaBase64, enviarDocumentoWhatsapp, enviarMensagemWhatsapp } from "@/lib/evolution-api"
+import { buscarMidiaBase64, enviarDocumentoWhatsapp, enviarMensagemWhatsapp, resolverNumero } from "@/lib/evolution-api"
+
+describe("resolverNumero", () => {
+  it("coloca o 55 em número cadastrado só com DDD", () => {
+    expect(resolverNumero("(27) 99750-1517")).toBe("5527997501517")
+    expect(resolverNumero("27998740126")).toBe("5527998740126")
+    expect(resolverNumero("2733334444")).toBe("552733334444")
+    expect(resolverNumero("027 99750-1517")).toBe("5527997501517")
+  })
+  it("mantém número que já tem o código do país", () => {
+    expect(resolverNumero("5527997501517")).toBe("5527997501517")
+    expect(resolverNumero("+55 (27) 99750-1517")).toBe("5527997501517")
+  })
+})
 
 // Sem EVOLUTION_API_URL/EVOLUTION_API_KEY/EVOLUTION_INSTANCE configurados
 // (ex.: ambiente de teste, ou antes da instância estar pronta), tudo vira

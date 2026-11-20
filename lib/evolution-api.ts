@@ -11,9 +11,14 @@ function configurada() {
   return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, instancia }
 }
 
-// Normaliza o número de destino para envio direto ao cliente
-function resolverNumero(numero: string): string {
-  return numero.replace(/\D/g, "")
+// Normaliza o número de destino para envio direto ao cliente. Os clientes são
+// cadastrados sem o código do país ("(27) 99750-1517"); sem o 55 a Evolution
+// lê "27..." como outro país e a mensagem não chega. DDD + número (10 ou 11
+// dígitos) ganha o 55; quem já tem código do país fica como está.
+export function resolverNumero(numero: string): string {
+  const digitos = numero.replace(/\D/g, "").replace(/^0+/, "")
+  if (digitos.length === 10 || digitos.length === 11) return `55${digitos}`
+  return digitos
 }
 
 export async function enviarMensagemWhatsapp(
