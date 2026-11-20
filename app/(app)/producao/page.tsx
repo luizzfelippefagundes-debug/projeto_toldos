@@ -240,6 +240,7 @@ function iniciais(nome: string) {
 }
 
 export default function ProducaoPage() {
+  const { papel } = usePapelAtivo()
   const {
     pedidosRapidos,
     produtosRapidos,
@@ -261,6 +262,7 @@ export default function ProducaoPage() {
   const [filtroPreset, setFiltroPreset] = useState<"todos" | "recentes_5" | "os" | "rapida" | "atrasados" | "hoje">("todos")
   const [ocultarVazias, setOcultarVazias] = useState(false)
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
+  const [abaColaborador, setAbaColaborador] = useState<"fila" | "prontos">("fila")
   const [confirmando, setConfirmando] = useState<{
     clienteNome: string
     clienteTelefone: string | null
@@ -712,6 +714,94 @@ export default function ProducaoPage() {
     return pHoje + oHoje
   }, [pedidosRapidos, orcamentos, hoje])
 
+  const itensColaborador = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+
+    const pedidos = pedidosRapidos
+      .filter((p) => {
+        if (p.status === "entregue") return false
+        if (abaColaborador === "fila" && p.status === "pronto") return false
+        if (abaColaborador === "prontos" && p.status !== "pronto") return false
+        if (!termo) return true
+        return (
+          p.clienteNome.toLowerCase().includes(termo) ||
+          String(p.numero).includes(termo)
+        )
+      })
+      .map((p) => ({
+        tipo: "pedido" as const,
+        id: p.id,
+        numero: p.numero,
+        clienteNome: p.clienteNome,
+        produtoNome: p.produtoNome || "Gráfica Rápida",
+        varianteNome: p.varianteNome,
+        acabamento: p.acabamento,
+        largura: null as number | null,
+        altura: null as number | null,
+        quantidade: 1,
+        observacao: p.observacao,
+        arteUrl: p.arteUrl,
+        fotoProntoUrl: p.fotoProntoUrl,
+        status: p.status,
+        dataCriacao: p.criadoEm ? new Date(p.criadoEm).getTime() : 0,
+      }))
+
+    const orcs = orcamentos
+      .filter((o) => {
+        if (!o.statusProducao || o.statusProducao === "entregue") return false
+        if (abaColaborador === "fila" && o.statusProducao === "pronto") return false
+        if (abaColaborador === "prontos" && o.statusProducao !== "pronto") return false
+        if (!termo) return true
+        const cli = clientes.find((c) => c.id === o.clienteId)
+        return (
+          (cli?.nome || "").toLowerCase().includes(termo) ||
+          String(o.numero).includes(termo)
+        )
+      })
+      .map((o) => {
+        const cli = clientes.find((c) => c.id === o.clienteId)
+        return {
+          tipo: "orcamento" as const,
+          id: o.id,
+          numero: o.numero,
+          clienteNome: cli?.nome || "Cliente",
+          produtoNome:
+            o.servicoFechado?.nome ||
+            (o.item.servicoId && o.item.servicoId !== "nenhum"
+              ? "Serviço + Material"
+              : "Comunicação Visual"),
+          varianteNome: o.materialFechado?.nome,
+          acabamento: null as string | null,
+          largura: o.item.largura,
+          altura: o.item.altura,
+          quantidade: o.item.quantidadeUnidades || 1,
+          observacao: o.observacao,
+          arteUrl: o.arteUrl,
+          fotoProntoUrl: o.fotoProntoUrl,
+          status: o.statusProducao as StatusPedidoRapido,
+          dataCriacao: new Date(o.osEmitidaEm || o.fechadoEm || o.criadoEm || 0).getTime(),
+        }
+      })
+
+    return [...pedidos, ...orcs].sort(compararItensFila)
+  }, [pedidosRapidos, orcamentos, clientes, busca, abaColaborador, compararItensFila])
+
+  const totalFilaColaborador = useMemo(() => {
+    const p = pedidosRapidos.filter(
+      (item) => item.status !== "pronto" && item.status !== "entregue"
+    ).length
+    const o = orcamentos.filter(
+      (item) => item.statusProducao && item.statusProducao !== "pronto" && item.statusProducao !== "entregue"
+    ).length
+    return p + o
+  }, [pedidosRapidos, orcamentos])
+
+  const totalProntosColaborador = useMemo(() => {
+    const p = pedidosRapidos.filter((item) => item.status === "pronto").length
+    const o = orcamentos.filter((item) => item.statusProducao === "pronto").length
+    return p + o
+  }, [pedidosRapidos, orcamentos])
+
   const pedidoArrastando = arrastandoId && !arrastandoId.startsWith("orc-")
     ? pedidosRapidos.find((p) => p.id === arrastandoId)
     : null
@@ -864,6 +954,235 @@ export default function ProducaoPage() {
         activeId
       )
     }
+  }
+
+  // Visão Ultralimpa e Direta para o Colaborador (Chão de Fábrica)
+  if (papel === "operador") {
+    return (
+      <div className="flex flex-col gap-4 max-w-2xl mx-auto pb-12">
+        {/* Header Colaborador */}
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Fila da Produção</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Demandas da fábrica. Ao finalizar uma peça, marque como pronto.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+            Atualizar
+          </Button>
+        </div>
+
+        {/* Mural da Fábrica (Recados do Kaio / Telão) */}
+        {avisosTv.length > 0 && (
+          <div className="flex flex-col gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 p-3 shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-base">📢</span>
+              <h3 className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                Recados do Kaio / Telão da Fábrica:
+              </h3>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {avisosTv.map((aviso) => (
+                <div key={aviso.id} className="rounded-xl border border-amber-500/20 bg-background/90 p-2.5 text-xs text-foreground shadow-2xs">
+                  <p className="font-semibold">{aviso.mensagem}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Campo de Busca Simples */}
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por cliente ou número..."
+            className="pl-9 pr-7 h-10 text-sm bg-background"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+          {busca && (
+            <button
+              type="button"
+              onClick={() => setBusca("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Abas: Fila vs Prontos */}
+        <div className="grid grid-cols-2 gap-2 p-1 bg-muted/60 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setAbaColaborador("fila")}
+            className={cn(
+              "py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+              abaColaborador === "fila"
+                ? "bg-background text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <span>🔥 Fila de Produção</span>
+            <span className="rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 px-1.5 py-0.2 text-[10px]">
+              {totalFilaColaborador}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAbaColaborador("prontos")}
+            className={cn(
+              "py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+              abaColaborador === "prontos"
+                ? "bg-background text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <span>✅ Já Prontos</span>
+            <span className="rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 text-[10px]">
+              {totalProntosColaborador}
+            </span>
+          </button>
+        </div>
+
+        {/* Lista de Cards para o Colaborador */}
+        <div className="flex flex-col gap-3">
+          {itensColaborador.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border/80 p-8 text-center text-sm text-muted-foreground">
+              {abaColaborador === "fila" ? "🎉 Nenhuma demanda pendente na fila da fábrica!" : "Nenhuma peça finalizada nesta lista."}
+            </div>
+          ) : (
+            itensColaborador.map((item) => (
+              <div
+                key={`${item.tipo}-${item.id}`}
+                className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-card p-4 shadow-sm"
+              >
+                {/* Cabeçalho do Card */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-foreground">
+                      #{item.numero}
+                    </span>
+                    <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                      {item.tipo === "pedido" ? "Gráfica Rápida" : "Ordem de Serviço"}
+                    </span>
+                  </div>
+                  {item.status === "pronto" && (
+                    <span className="rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold px-2 py-0.5 text-xs">
+                      ✅ Pronto
+                    </span>
+                  )}
+                </div>
+
+                {/* Cliente */}
+                <div>
+                  <p className="text-xs text-muted-foreground">Cliente:</p>
+                  <p className="text-sm font-bold text-foreground truncate">{item.clienteNome}</p>
+                </div>
+
+                {/* Medidas em Destaque */}
+                {item.largura != null && item.altura != null && (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 px-3 py-1.5 text-xs font-bold text-amber-900 dark:text-amber-200">
+                      📏 Medidas: {item.largura}m × {item.altura}m {item.quantidade > 1 ? `(${item.quantidade} unidades)` : ""}
+                    </span>
+                  </div>
+                )}
+
+                {/* Produto / Material / Acabamento */}
+                <div className="flex flex-col gap-1 text-xs">
+                  <p className="font-semibold text-foreground">
+                    {item.produtoNome}
+                  </p>
+                  {(item.varianteNome || item.acabamento) && (
+                    <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-muted-foreground">
+                      {item.varianteNome && <span>• Material: {item.varianteNome}</span>}
+                      {item.acabamento && <span>• Acabamento: {item.acabamento}</span>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Instrução da Fábrica deixada pelo Kaio */}
+                {item.observacao && (
+                  <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs">
+                    <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1 mb-1">
+                      <FileText className="h-3.5 w-3.5" />
+                      Instrução p/ Fábrica:
+                    </span>
+                    <p className="text-foreground/90 whitespace-pre-wrap">{item.observacao}</p>
+                  </div>
+                )}
+
+                {/* Botões de Ação */}
+                <div className="flex flex-col gap-2 pt-1 border-t border-border/60">
+                  {/* Botão Ver Arte (se houver) */}
+                  {item.arteUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setModalArtePreview({ url: item.arteUrl!, titulo: `Arte #${item.numero} - ${item.clienteNome}` })}
+                      className="w-full py-2 px-3 rounded-xl bg-muted/70 hover:bg-muted border border-border/80 text-foreground text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Eye className="h-4 w-4 text-primary" />
+                      <span>Ver Arte no Celular</span>
+                    </button>
+                  )}
+
+                  {/* O Botão Principal: Marcar como Pronto */}
+                  {item.status !== "pronto" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (item.tipo === "pedido") {
+                          moverPedidoRapido(item.id, "pronto")
+                        } else {
+                          moverOrcamentoProducao(item.id, "pronto")
+                        }
+                        tocarAlertaNovaDemanda()
+                        dispararVibracaoCelular()
+                        toast.success(`Peça #${item.numero} marcada como PRONTA! O Kaio já foi avisado.`)
+                      }}
+                      className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-sm font-bold shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+                    >
+                      <CheckCircle2 className="h-5 w-5" />
+                      <span>Marcar como Peça Pronta</span>
+                    </button>
+                  ) : (
+                    <div className="w-full py-2.5 px-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center justify-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>✅ Peça Pronta (Avisado ao Kaio)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Modal de Arte também disponível para o colaborador */}
+        <Dialog open={!!modalArtePreview} onOpenChange={(open) => { if (!open) setModalArtePreview(null) }}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-4">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-bold truncate">
+                {modalArtePreview?.titulo || "Arte"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 min-h-[250px] max-h-[60vh] overflow-auto flex items-center justify-center bg-black/5 dark:bg-black/30 rounded-xl p-2">
+              {modalArtePreview?.url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={modalArtePreview.url} alt="Arte" className="max-h-full max-w-full object-contain rounded-lg" />
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setModalArtePreview(null)}>
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    )
   }
 
   return (
@@ -2729,7 +3048,7 @@ function OrcamentoCardConteudo({
             : "Orçamento de serviço"}
         </span>
         <div className="flex items-center gap-1.5 shrink-0">
-          {assinatura && (
+          {papel !== "operador" && assinatura && (
             <div onPointerDown={(e) => e.stopPropagation()}>
               {assinatura.assinado ? (
                 <Link
@@ -2794,25 +3113,27 @@ function OrcamentoCardConteudo({
         />
       )}
 
-      {/* Botões de Acesso Rápido ao Contrato e OS */}
-      <div className="flex items-center gap-1.5 pt-1 border-t border-border/40" onPointerDown={(e) => e.stopPropagation()}>
-        <Link
-          href={`/orcamentos/${orcamento.id}/contrato`}
-          className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold transition-colors flex items-center justify-center gap-1 border border-emerald-500/20 shadow-2xs"
-          title="Abrir Contrato de Prestação de Serviços"
-        >
-          <FileText className="h-3 w-3" />
-          Ver Contrato
-        </Link>
-        <Link
-          href={`/orcamentos/${orcamento.id}/os`}
-          className="py-1 px-2.5 rounded-lg bg-muted/60 hover:bg-muted text-foreground text-[11px] font-medium transition-colors flex items-center justify-center gap-1 border border-border/60"
-          title="Ver Ordem de Serviço (PDF)"
-        >
-          <Printer className="h-3 w-3" />
-          OS
-        </Link>
-      </div>
+      {/* Botões de Acesso Rápido ao Contrato e OS (Somente para Gestores/Donos) */}
+      {papel !== "operador" && (
+        <div className="flex items-center gap-1.5 pt-1 border-t border-border/40" onPointerDown={(e) => e.stopPropagation()}>
+          <Link
+            href={`/orcamentos/${orcamento.id}/contrato`}
+            className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold transition-colors flex items-center justify-center gap-1 border border-emerald-500/20 shadow-2xs"
+            title="Abrir Contrato de Prestação de Serviços"
+          >
+            <FileText className="h-3 w-3" />
+            Ver Contrato
+          </Link>
+          <Link
+            href={`/orcamentos/${orcamento.id}/os`}
+            className="py-1 px-2.5 rounded-lg bg-muted/60 hover:bg-muted text-foreground text-[11px] font-medium transition-colors flex items-center justify-center gap-1 border border-border/60"
+            title="Ver Ordem de Serviço (PDF)"
+          >
+            <Printer className="h-3 w-3" />
+            OS
+          </Link>
+        </div>
+      )}
 
       {/* Botão de Avanço Rápido de 1 Toque (Otimizado p/ Chão de Fábrica) */}
       <div className="pt-1 flex flex-col gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
