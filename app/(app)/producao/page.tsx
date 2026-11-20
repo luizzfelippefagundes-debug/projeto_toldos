@@ -1104,30 +1104,84 @@ export default function ProducaoPage() {
                   )}
                 </div>
 
-                {/* Instrução da Fábrica deixada pelo Kaio */}
+                {/* Instrução da Fábrica ou Problema Reportado */}
                 {item.observacao && (
-                  <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs">
-                    <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1 mb-1">
-                      <FileText className="h-3.5 w-3.5" />
-                      Instrução p/ Fábrica:
+                  <div
+                    className={cn(
+                      "rounded-xl p-2.5 text-xs",
+                      item.observacao.includes("ALERTA DA FÁBRICA")
+                        ? "border-2 border-red-500 bg-red-500/15 text-red-900 dark:text-red-200"
+                        : "border border-amber-500/40 bg-amber-500/10 text-foreground/90"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "font-bold flex items-center gap-1 mb-1",
+                        item.observacao.includes("ALERTA DA FÁBRICA")
+                          ? "text-red-700 dark:text-red-400"
+                          : "text-amber-800 dark:text-amber-300"
+                      )}
+                    >
+                      {item.observacao.includes("ALERTA DA FÁBRICA") ? (
+                        <>
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          ⚠️ PROBLEMA REPORTADO NA PEÇA:
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-3.5 w-3.5" />
+                          Instrução p/ Fábrica:
+                        </>
+                      )}
                     </span>
-                    <p className="text-foreground/90 whitespace-pre-wrap">{item.observacao}</p>
+                    <p className="whitespace-pre-wrap">{item.observacao}</p>
                   </div>
                 )}
 
                 {/* Botões de Ação */}
                 <div className="flex flex-col gap-2 pt-1 border-t border-border/60">
-                  {/* Botão Ver Arte (se houver) */}
-                  {item.arteUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setModalArtePreview({ url: item.arteUrl!, titulo: `Arte #${item.numero} - ${item.clienteNome}` })}
-                      className="w-full py-2 px-3 rounded-xl bg-muted/70 hover:bg-muted border border-border/80 text-foreground text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Eye className="h-4 w-4 text-primary" />
-                      <span>Ver Arte no Celular</span>
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {/* Botão Ver Arte (se houver) */}
+                    {item.arteUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setModalArtePreview({ url: item.arteUrl!, titulo: `Arte #${item.numero} - ${item.clienteNome}` })}
+                        className="flex-1 py-2 px-3 rounded-xl bg-muted/70 hover:bg-muted border border-border/80 text-foreground text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Eye className="h-4 w-4 text-primary" />
+                        <span>Ver Arte</span>
+                      </button>
+                    )}
+
+                    {/* Botão Relatar Problema (Sempre disponível se não estiver pronto) */}
+                    {item.status !== "pronto" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModalProblemaItem({
+                            id: item.id,
+                            tipo: item.tipo,
+                            numero: item.numero,
+                            clienteNome: item.clienteNome,
+                            obsAtual: item.observacao,
+                          })
+                          setMotivoProblema("")
+                          setDetalheProblema("")
+                        }}
+                        className={cn(
+                          "py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer",
+                          item.arteUrl ? "flex-1" : "w-full",
+                          item.observacao?.includes("ALERTA DA FÁBRICA")
+                            ? "bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/25"
+                            : "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-800 dark:text-amber-300"
+                        )}
+                        title="Relatar falta de material, problema na arte ou máquina parada"
+                      >
+                        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <span>{item.observacao?.includes("ALERTA DA FÁBRICA") ? "Adicionar Alerta" : "Relatar Problema"}</span>
+                      </button>
+                    )}
+                  </div>
 
                   {/* O Botão Principal: Marcar como Pronto */}
                   {item.status !== "pronto" ? (
@@ -1177,6 +1231,76 @@ export default function ProducaoPage() {
             <DialogFooter>
               <Button variant="outline" size="sm" onClick={() => setModalArtePreview(null)}>
                 Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Reportar Problema / Retrabalho para Colaborador */}
+        <Dialog open={!!modalProblemaItem} onOpenChange={(open) => { if (!open && !salvandoProblema) setModalProblemaItem(null) }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base font-bold text-destructive">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                <span>Reportar Problema na Demanda</span>
+              </DialogTitle>
+              <DialogDescription>
+                Informe o que está travando o item #{modalProblemaItem?.numero} ({modalProblemaItem?.clienteNome}). O Kaio será notificado imediatamente.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-3 py-1">
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-semibold">Motivo do Problema:</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    "Falta de material / Bobina",
+                    "Erro de impressão / Cabeçote",
+                    "Medidas incorretas",
+                    "Máquina / Plotter parada",
+                    "Arquivo de arte corrompido",
+                    "Outro problema",
+                  ].map((motivo) => (
+                    <button
+                      key={motivo}
+                      type="button"
+                      onClick={() => setMotivoProblema(motivo)}
+                      className={cn(
+                        "rounded-lg p-2 text-left text-xs font-medium border transition-colors",
+                        motivoProblema === motivo
+                          ? "border-destructive bg-destructive/10 text-destructive font-bold"
+                          : "border-border/80 bg-background hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {motivo}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-semibold">Detalhes adicionais (opcional):</Label>
+                <Textarea
+                  rows={3}
+                  placeholder="Ex: lona 440g acabou, ilhós soltando, arquivo com corte invertido..."
+                  value={detalheProblema}
+                  onChange={(e) => setDetalheProblema(e.target.value)}
+                  className="text-xs resize-none"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setModalProblemaItem(null)} disabled={salvandoProblema}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleRegistrarProblema}
+                disabled={salvandoProblema || (!motivoProblema && !detalheProblema.trim())}
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold"
+              >
+                <AlertTriangle className="mr-1.5 h-4 w-4" />
+                <span>{salvandoProblema ? "Salvando..." : "Emitir Alerta ao Kaio"}</span>
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -29,7 +29,7 @@ const abasRapidas: {
   { label: "Início", href: "/dashboard", icon: LayoutDashboard },
   { label: "Rápida", href: "/grafica-rapida", icon: Zap },
   { label: "Produção", href: "/producao", icon: Factory, papeis: ["producao", "operador"] },
-  { label: "Painel TV", href: "/tv", icon: Tv2, papeis: ["operador"] },
+  { label: "Painel TV", href: "/tv?colaborador=1", icon: Tv2, papeis: ["operador"] },
   { label: "Financeiro", href: "/financeiro", icon: Wallet, papeis: ["financeiro"] },
 ]
 

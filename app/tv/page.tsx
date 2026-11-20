@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useTheme } from "next-themes"
+import { useUser } from "@clerk/nextjs"
 import { interpretarDataLocal } from "@/lib/date"
 
 type StatusPedido = "aguardando" | "aprovado" | "ag_confirmacao" | "impressao" | "acabamento" | "pronto"
@@ -485,6 +486,25 @@ function dispararVibracaoCelular() {
 }
 
 export default function TvPage() {
+  const { user } = useUser()
+  const [paramColaborador, setParamColaborador] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search)
+      if (sp.get("colaborador") === "1") {
+        setParamColaborador(true)
+      }
+    }
+  }, [])
+
+  const papelUsuario = (user?.publicMetadata?.papel as string) || ""
+  const isColaborador = papelUsuario === "operador" || paramColaborador
+  const isColaboradorRef = useRef(isColaborador)
+  useEffect(() => {
+    isColaboradorRef.current = isColaborador
+  }, [isColaborador])
+
   const [pedidos, setPedidos] = useState<PedidoTV[]>([])
   const [avisos, setAvisos] = useState<AvisoTV[]>([])
   const [filtroStatusMobile, setFiltroStatusMobile] = useState<string>("todos")
@@ -510,10 +530,14 @@ export default function TvPage() {
         const data = await res.json()
         const novosPedidos: PedidoTV[] = data.pedidos ?? data
 
+        const novosFiltrados = isColaboradorRef.current
+          ? novosPedidos.filter((p) => p.status !== "aguardando")
+          : novosPedidos
+
         if (pedidosConhecidosRef.current === null) {
-          pedidosConhecidosRef.current = new Set(novosPedidos.map((p) => p.id))
+          pedidosConhecidosRef.current = new Set(novosFiltrados.map((p) => p.id))
         } else {
-          const novatos = novosPedidos.filter((p) => !pedidosConhecidosRef.current!.has(p.id))
+          const novatos = novosFiltrados.filter((p) => !pedidosConhecidosRef.current!.has(p.id))
           if (novatos.length > 0) {
             novatos.forEach((p) => pedidosConhecidosRef.current!.add(p.id))
             // Disparar Som & Vibração no celular
@@ -608,18 +632,30 @@ export default function TvPage() {
     return () => clearInterval(t)
   }, [avisos, config])
 
-  const totalAtivos = pedidos.length
-  const totalAtrasados = pedidos.filter((p) => estaAtrasado(p)).length
+  const pedidosEfetivos = useMemo(() => {
+    if (isColaborador) {
+      return pedidos.filter((p) => p.status !== "aguardando")
+    }
+    return pedidos
+  }, [pedidos, isColaborador])
+
+  const totalAtivos = pedidosEfetivos.length
+  const totalAtrasados = pedidosEfetivos.filter((p) => estaAtrasado(p)).length
 
   // Se ocultarVazias estiver ativo, expande as colunas com pedidos para ocupar a tela toda
   const colunasFiltradas = useMemo(() => {
-    const autorizadas = COLUNAS.filter((c) =>
+    let autorizadas = COLUNAS.filter((c) =>
       (config?.statusVisiveis ?? COLUNAS.map((col) => col.status)).includes(c.status)
     )
 
+    // O colaborador nunca vê a etapa de Aguardando Assinatura
+    if (isColaborador) {
+      autorizadas = autorizadas.filter((c) => c.status !== "aguardando")
+    }
+
     if (config?.ocultarVazias) {
       const comPedidos = autorizadas.filter((c) => {
-        const count = pedidos.filter(
+        const count = pedidosEfetivos.filter(
           (p) => p.status === c.status || (c.status === "aprovado" && (p.status as string) === "arte")
         ).length
         return count > 0
@@ -628,14 +664,14 @@ export default function TvPage() {
     }
 
     return autorizadas
-  }, [config?.statusVisiveis, config?.ocultarVazias, pedidos])
+  }, [config?.statusVisiveis, config?.ocultarVazias, pedidosEfetivos, isColaborador])
 
   const pedidosMobile = useMemo(() => {
-    if (filtroStatusMobile === "todos") return pedidos
-    return pedidos.filter(
+    if (filtroStatusMobile === "todos") return pedidosEfetivos
+    return pedidosEfetivos.filter(
       (p) => p.status === filtroStatusMobile || (filtroStatusMobile === "aprovado" && (p.status as string) === "arte")
     )
-  }, [pedidos, filtroStatusMobile])
+  }, [pedidosEfetivos, filtroStatusMobile])
 
   return (
     <div className="group/tv flex h-screen max-h-screen w-screen overflow-hidden flex-col gap-2.5 sm:gap-3 p-2.5 sm:p-4 bg-background">
@@ -694,10 +730,10 @@ export default function TvPage() {
         </button>
 
         <Link
-          href="/dashboard"
+          href={isColaborador ? "/producao" : "/dashboard"}
           className="rounded-lg bg-card/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm border border-border/80 backdrop-blur hover:bg-muted"
         >
-          ← Voltar ao Sistema
+          {isColaborador ? "← Voltar à Produção" : "← Voltar ao Sistema"}
         </Link>
       </div>
 
@@ -720,10 +756,10 @@ export default function TvPage() {
               Painel de Produção
             </span>
             <Link
-              href="/dashboard"
+              href={isColaborador ? "/producao" : "/dashboard"}
               className="sm:hidden ml-auto rounded-lg bg-card/90 px-2 py-1 text-[11px] font-black text-foreground border border-border/80 shadow-2xs"
             >
-              ← Sair
+              {isColaborador ? "← Produção" : "← Sair"}
             </Link>
           </div>
 
@@ -815,12 +851,12 @@ export default function TvPage() {
                 filtroStatusMobile === "todos" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
               }`}
             >
-              {pedidos.length}
+              {pedidosEfetivos.length}
             </span>
           </button>
 
           {colunasFiltradas.map((coluna) => {
-            const count = pedidos.filter(
+            const count = pedidosEfetivos.filter(
               (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
             ).length
             const ativo = filtroStatusMobile === coluna.status
@@ -872,7 +908,7 @@ export default function TvPage() {
       {/* Visualização DESKTOP / TV: Kanban lado a lado com auto-scroll infinito */}
       <div className="flex-1 min-h-0 hidden md:flex flex-row gap-2 sm:gap-3 w-full overflow-hidden">
         {colunasFiltradas.map((coluna) => {
-          const colPedidos = pedidos.filter(
+          const colPedidos = pedidosEfetivos.filter(
             (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
           )
           return (
@@ -889,7 +925,7 @@ export default function TvPage() {
         })}
       </div>
 
-      {pedidos.length === 0 && (
+      {pedidosEfetivos.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-muted-foreground/40 sm:text-2xl pointer-events-none">
           Nenhum pedido em andamento no momento
         </div>
