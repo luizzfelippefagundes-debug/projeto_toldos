@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { dispararNotificacaoNativa } from "@/lib/notificacoes-app"
 
 interface Aviso {
   id: string
@@ -230,7 +231,12 @@ export default function CentralTvPage() {
       if (!res.ok) throw new Error()
       setAvisos((atual) => [novo, ...atual])
       setMensagem("")
-      toast.success("Aviso publicado no telão da TV!")
+      dispararNotificacaoNativa(
+        `${tipoSelecionado.icone} Comunicado no Telão`,
+        novo.mensagem,
+        "/avisos-tv"
+      )
+      toast.success("Aviso publicado no Telão, enviado no WhatsApp da equipe e notificado no sistema!")
     } catch {
       toast.error("Erro ao publicar aviso")
     } finally {
@@ -474,6 +480,16 @@ export default function CentralTvPage() {
               </h2>
               <span className="text-xs text-muted-foreground">
                 {140 - mensagem.length} caracteres
+              </span>
+            </div>
+
+            {/* Aviso sobre canais integrados */}
+            <div className="flex flex-wrap items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300">
+              <span className="flex items-center gap-1 font-semibold">
+                📢 Integração Direta:
+              </span>
+              <span>
+                O que você digitar aqui vai direto para o <strong>Telão da Fábrica</strong>, dispara no <strong>WhatsApp dos Colaboradores</strong> e fica registrado como <strong>Notificação no Sistema</strong>.
               </span>
             </div>
 

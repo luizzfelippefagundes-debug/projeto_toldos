@@ -11,6 +11,7 @@ import { filtrarGruposPorPapel, gruposNavegacao } from "./nav-groups"
 import { ThemeToggle } from "./theme-toggle"
 import { Logo } from "@/components/brand/logo"
 import { NotificacoesBell } from "./notificacoes-bell"
+import { NotificacoesPermissaoCard } from "./notificacoes-permissao-card"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import type { Papel } from "@/lib/types"
 import { ROTULO_PAPEL } from "@/lib/papel"
@@ -93,6 +94,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         />
 
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 pb-24 md:p-8 md:pb-8 print:p-0 print:pb-0">
+          {papel === "dono" && (
+            <div className="mb-4 print:hidden">
+              <NotificacoesPermissaoCard variante="banner" />
+            </div>
+          )}
           {children}
         </main>
 

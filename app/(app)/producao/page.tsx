@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
+import { dispararNotificacaoNativa } from "@/lib/notificacoes-app"
 import type { Orcamento, Cliente, PedidoRapido, ProdutoRapido, StatusPedidoRapido } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
@@ -353,6 +354,11 @@ export default function ProducaoPage() {
       toast.info("🔔 Nova Demanda na Produção!", {
         description: `${novos.length} novo(s) item(ns) na fila de produção.`,
       })
+      dispararNotificacaoNativa(
+        "🔔 Nova Demanda na Produção!",
+        `${novos.length} novo(s) item(ns) entraram na fila de produção.`,
+        "/producao"
+      )
     }
   }, [pedidosRapidos, orcamentos])
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Factory, FileClock, PhoneCall, Wallet, Warehouse, type LucideIcon } from "lucide-react"
+import { Factory, FileClock, PhoneCall, Wallet, Warehouse, Tv2, type LucideIcon } from "lucide-react"
 import { useData } from "@/context/data-context"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { estaNosProximosDias } from "@/lib/date-window"
@@ -27,9 +27,18 @@ export function useAlertas(): Alerta[] {
   // para a explicação completa do hydration mismatch); começa nulo e só
   // calcula depois de montar.
   const [hoje, setHoje] = useState<Date | null>(null)
+  const [avisosTv, setAvisosTv] = useState<{ id: string; mensagem: string; icone?: string; ativo?: boolean }[]>([])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHoje(new Date())
+
+    fetch("/api/avisos-tv")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((dados) => {
+        if (Array.isArray(dados)) setAvisosTv(dados)
+      })
+      .catch(() => {})
   }, [])
 
   const estoqueBaixo = materiais.filter(
@@ -122,15 +131,25 @@ export function useAlertas(): Alerta[] {
         quantidade: orcamentosValidadeVencendo,
         Icon: FileClock,
       },
+      ...avisosTv
+        .filter((a) => a.ativo !== false)
+        .map((a) => ({
+          id: `aviso-${a.id}`,
+          texto: `${a.icone || "📢"} Telão: "${a.mensagem}"`,
+          href: "/avisos-tv",
+          quantidade: 1,
+          Icon: Tv2,
+        })),
     ]
 
     return todos.filter((a) => a.quantidade > 0).filter((a) => {
       // Colaborador não deve ver alertas administrativos, de vendas ou financeiros
       if (papel === "operador") return false
       if (papel === "dono") return true
+      if (a.id.startsWith("aviso-")) return true
       if (papel === "financeiro") return a.id === "boletos" || a.id === "financeiro-vencido"
       if (papel === "producao") return a.id === "estoque" || a.id === "producao"
       return a.id === "retornos"
     })
-  }, [retornosPendentes, estoqueBaixo, pedidosAtrasados, boletosVencendo, lancamentosVencidos, orcamentosValidadeVencendo, papel])
+  }, [retornosPendentes, estoqueBaixo, pedidosAtrasados, boletosVencendo, lancamentosVencidos, orcamentosValidadeVencendo, avisosTv, papel])
 }

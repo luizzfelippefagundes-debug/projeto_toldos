@@ -130,3 +130,25 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(redePrimeiro(request))
   }
 })
+
+// Clique em notificações push/nativas do app: abre ou foca a janela
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close()
+  const destino = (event.notification.data && event.notification.data.url) || "/dashboard"
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && "focus" in client) {
+          if ("navigate" in client) {
+            client.navigate(destino)
+          }
+          return client.focus()
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(destino)
+      }
+    })
+  )
+})

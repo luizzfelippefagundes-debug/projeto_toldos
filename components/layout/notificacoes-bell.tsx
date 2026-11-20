@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Bell, Check, X } from "lucide-react"
 import { useAlertas } from "@/hooks/use-alertas"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
+import { NotificacoesPermissaoCard } from "./notificacoes-permissao-card"
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,9 @@ export function NotificacoesBell() {
             Notificações
           </DialogTitle>
         </DialogHeader>
+
+        {/* Card para os donos habilitarem notificações no aparelho (push/celular) */}
+        <NotificacoesPermissaoCard />
 
         {alertas.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
