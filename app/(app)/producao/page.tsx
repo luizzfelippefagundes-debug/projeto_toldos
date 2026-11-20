@@ -75,6 +75,8 @@ import {
   ShieldCheck,
   Calendar,
   Flame,
+  Send,
+  Info,
 } from "lucide-react"
 import { linkWhatsapp } from "@/lib/whatsapp"
 import { toast } from "sonner"
@@ -326,6 +328,27 @@ export default function ProducaoPage() {
   const [motivoProblema, setMotivoProblema] = useState("")
   const [detalheProblema, setDetalheProblema] = useState("")
   const [salvandoProblema, setSalvandoProblema] = useState(false)
+
+  const [modalDetalhesItem, setModalDetalhesItem] = useState<{
+    tipo: "pedido" | "orcamento"
+    id: string
+    numero: number
+    clienteNome: string
+    clienteTelefone?: string | null
+    total?: number
+    largura?: number | null
+    altura?: number | null
+    quantidade?: number
+    produtoNome?: string
+    varianteNome?: string
+    acabamento?: string | null
+    observacao?: string
+    arteUrl?: string | null
+    status: string
+    contratoAssinado?: boolean
+    osUrl?: string
+    contratoUrl?: string
+  } | null>(null)
 
   const abrirQc = useCallback(
     (item: {
@@ -1781,6 +1804,22 @@ export default function ProducaoPage() {
                           })
                         }
                         onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
+                        onAbrirMaisDetalhes={() =>
+                          setModalDetalhesItem({
+                            tipo: "pedido",
+                            id: pedido.id,
+                            numero: pedido.numero,
+                            clienteNome: pedido.clienteNome,
+                            clienteTelefone: pedido.clienteTelefone,
+                            total: pedido.total,
+                            produtoNome: pedido.produtoNome ?? produtoDoPedido(pedido)?.nome,
+                            varianteNome: pedido.varianteNome,
+                            acabamento: pedido.acabamento,
+                            observacao: pedido.observacao,
+                            arteUrl: pedido.arteUrl,
+                            status: pedido.status,
+                          })
+                        }
                         onAbrirProblema={() =>
                           setModalProblemaItem({
                             tipo: "pedido",
@@ -1826,6 +1865,31 @@ export default function ProducaoPage() {
                         })
                       }
                       onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
+                      onAbrirMaisDetalhes={() =>
+                        setModalDetalhesItem({
+                          tipo: "orcamento",
+                          id: orc.id,
+                          numero: orc.numero,
+                          clienteNome: cli?.nome || "Cliente",
+                          clienteTelefone: cli?.telefone || null,
+                          total: orc.totalFechado,
+                          largura: orc.item.largura,
+                          altura: orc.item.altura,
+                          quantidade: orc.item.quantidadeUnidades,
+                          produtoNome:
+                            orc.servicoFechado?.nome ||
+                            (orc.item.servicoId && orc.item.servicoId !== "nenhum"
+                              ? "Serviço + Material"
+                              : "Comunicação Visual"),
+                          varianteNome: orc.materialFechado?.nome,
+                          observacao: orc.observacao,
+                          arteUrl: orc.arteUrl,
+                          status: orc.statusProducao || "aprovado",
+                          contratoAssinado: assinaturas[orc.id]?.assinado,
+                          contratoUrl: `/orcamentos/${orc.id}/contrato`,
+                          osUrl: `/orcamentos/${orc.id}/os`,
+                        })
+                      }
                       onAbrirProblema={() =>
                         setModalProblemaItem({
                           tipo: "orcamento",
@@ -2065,6 +2129,22 @@ export default function ProducaoPage() {
                                     })
                                   }
                                   onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
+                                  onAbrirMaisDetalhes={() =>
+                                    setModalDetalhesItem({
+                                      tipo: "pedido",
+                                      id: pedido.id,
+                                      numero: pedido.numero,
+                                      clienteNome: pedido.clienteNome,
+                                      clienteTelefone: pedido.clienteTelefone,
+                                      total: pedido.total,
+                                      produtoNome: pedido.produtoNome ?? produtoDoPedido(pedido)?.nome,
+                                      varianteNome: pedido.varianteNome,
+                                      acabamento: pedido.acabamento,
+                                      observacao: pedido.observacao,
+                                      arteUrl: pedido.arteUrl,
+                                      status: pedido.status,
+                                    })
+                                  }
                                   onAbrirProblema={() =>
                                     setModalProblemaItem({
                                       tipo: "pedido",
@@ -2111,6 +2191,31 @@ export default function ProducaoPage() {
                                   })
                                 }
                                 onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
+                                onAbrirMaisDetalhes={() =>
+                                  setModalDetalhesItem({
+                                    tipo: "orcamento",
+                                    id: orc.id,
+                                    numero: orc.numero,
+                                    clienteNome: cli?.nome || "Cliente",
+                                    clienteTelefone: cli?.telefone || null,
+                                    total: orc.totalFechado,
+                                    largura: orc.item.largura,
+                                    altura: orc.item.altura,
+                                    quantidade: orc.item.quantidadeUnidades,
+                                    produtoNome:
+                                      orc.servicoFechado?.nome ||
+                                      (orc.item.servicoId && orc.item.servicoId !== "nenhum"
+                                        ? "Serviço + Material"
+                                        : "Comunicação Visual"),
+                                    varianteNome: orc.materialFechado?.nome,
+                                    observacao: orc.observacao,
+                                    arteUrl: orc.arteUrl,
+                                    status: orc.statusProducao || "aprovado",
+                                    contratoAssinado: assinaturas[orc.id]?.assinado,
+                                    contratoUrl: `/orcamentos/${orc.id}/contrato`,
+                                    osUrl: `/orcamentos/${orc.id}/os`,
+                                  })
+                                }
                                 onAbrirProblema={() =>
                                   setModalProblemaItem({
                                     tipo: "orcamento",
@@ -2407,6 +2512,143 @@ export default function ProducaoPage() {
             >
               <AlertTriangle className="mr-1.5 h-4 w-4" />
               <span>{salvandoProblema ? "Salvando..." : "Emitir Alerta"}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Mais Detalhes (Ficha Completa, OS, Contrato, Problema) */}
+      <Dialog open={!!modalDetalhesItem} onOpenChange={(open) => { if (!open) setModalDetalhesItem(null) }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <span className="rounded-md bg-primary/10 text-primary px-2 py-0.5 text-xs font-bold">
+                {modalDetalhesItem?.tipo === "orcamento" ? "Ordem de Serviço" : "Pedido Rápido"} #{modalDetalhesItem?.numero}
+              </span>
+              {modalDetalhesItem?.contratoAssinado && (
+                <span className="rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-xs font-bold">
+                  ✓ Assinado
+                </span>
+              )}
+            </div>
+            <DialogTitle className="text-base font-bold text-foreground">
+              {modalDetalhesItem?.clienteNome || "Cliente"}
+            </DialogTitle>
+            <DialogDescription>
+              Ficha detalhada com especificações técnicas, documentação e suporte.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 py-2 text-xs">
+            {/* Medidas e Especificações */}
+            <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Especificações Técnicas
+              </span>
+
+              {modalDetalhesItem?.largura != null && modalDetalhesItem?.altura != null && (
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-muted-foreground">Medidas:</span>
+                  <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 font-bold text-amber-900 dark:text-amber-300">
+                    📏 {modalDetalhesItem.largura}m × {modalDetalhesItem.altura}m
+                    {modalDetalhesItem.quantidade && modalDetalhesItem.quantidade > 1 ? ` (${modalDetalhesItem.quantidade} un)` : ""}
+                  </span>
+                </div>
+              )}
+
+              {modalDetalhesItem?.produtoNome && (
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-muted-foreground shrink-0">Produto / Serviço:</span>
+                  <span className="font-medium text-foreground">{modalDetalhesItem.produtoNome}</span>
+                </div>
+              )}
+
+              {modalDetalhesItem?.varianteNome && (
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-muted-foreground shrink-0">Material / Variante:</span>
+                  <span className="font-bold text-foreground">{modalDetalhesItem.varianteNome}</span>
+                </div>
+              )}
+
+              {modalDetalhesItem?.acabamento && (
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold text-muted-foreground shrink-0">Acabamento:</span>
+                  <span className="font-medium text-foreground">{modalDetalhesItem.acabamento}</span>
+                </div>
+              )}
+
+              {modalDetalhesItem?.total != null && (
+                <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+                  <span className="font-semibold text-muted-foreground">Valor Fechado:</span>
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatarMoeda(modalDetalhesItem.total)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Observações / Instruções da Fábrica */}
+            {modalDetalhesItem?.observacao && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20 p-3 flex flex-col gap-1">
+                <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                  <FileText className="h-3.5 w-3.5" />
+                  Instruções e Observações da Fábrica
+                </span>
+                <p className="font-medium text-foreground whitespace-pre-wrap leading-relaxed">
+                  {modalDetalhesItem.observacao}
+                </p>
+              </div>
+            )}
+
+            {/* Documentos: OS e Contrato */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              {modalDetalhesItem?.osUrl && (
+                <Link
+                  href={modalDetalhesItem.osUrl}
+                  className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border/80 transition-colors"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Ver OS (PDF)</span>
+                </Link>
+              )}
+
+              {modalDetalhesItem?.contratoUrl && (
+                <Link
+                  href={modalDetalhesItem.contratoUrl}
+                  className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/30 transition-colors"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Ver Contrato</span>
+                </Link>
+              )}
+            </div>
+
+            {/* Botão de Reportar Problema */}
+            <button
+              type="button"
+              onClick={() => {
+                const item = modalDetalhesItem
+                setModalDetalhesItem(null)
+                if (item) {
+                  setModalProblemaItem({
+                    tipo: item.tipo,
+                    id: item.id,
+                    numero: item.numero,
+                    clienteNome: item.clienteNome,
+                    obsAtual: item.observacao,
+                  })
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-bold border border-red-500/30 transition-colors cursor-pointer"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              <span>Reportar Problema / Retrabalho</span>
+            </button>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalDetalhesItem(null)}>
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2769,6 +3011,7 @@ function PedidoCardConteudo({
   onSalvarObservacao,
   onAbrirQc,
   onAbrirArte,
+  onAbrirMaisDetalhes,
   onAbrirProblema,
 }: {
   pedido: PedidoRapido
@@ -2782,6 +3025,7 @@ function PedidoCardConteudo({
   onSalvarObservacao?: (obs: string) => Promise<void>
   onAbrirQc?: () => void
   onAbrirArte?: (url: string, titulo: string) => void
+  onAbrirMaisDetalhes?: () => void
   onAbrirProblema?: () => void
 }) {
   // Colaborador (papel "operador") vê o pedido e instruções, mas não o valor financeiro em reais.
@@ -2866,7 +3110,7 @@ function PedidoCardConteudo({
       {/* Produto + Especificações + Prazo */}
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2 text-xs">
-          <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[150px]", coluna.corFundo, coluna.corTexto)}>
+          <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-medium break-words leading-tight", coluna.corFundo, coluna.corTexto)}>
             {pedido.produtoNome ?? produto?.nome ?? "Produto"}
           </span>
           <div className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
@@ -2946,7 +3190,7 @@ function PedidoCardConteudo({
             <Scissors className="h-4 w-4" />
             <span>✂️ Ir p/ Acabamento</span>
           </button>
-        ) : pedido.status === "aprovado" || pedido.status === "arte" || pedido.status === "ag_confirmacao" ? (
+        ) : pedido.status === "ag_confirmacao" ? (
           <button
             type="button"
             onClick={() => onMudarStatus("impressao")}
@@ -2954,6 +3198,15 @@ function PedidoCardConteudo({
           >
             <Printer className="h-4 w-4" />
             <span>🖨️ Iniciar Impressão</span>
+          </button>
+        ) : pedido.status === "aprovado" || pedido.status === "arte" ? (
+          <button
+            type="button"
+            onClick={() => onMudarStatus("ag_confirmacao")}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <Send className="h-4 w-4" />
+            <span>🎨 Arte Enviada p/ Cliente</span>
           </button>
         ) : pedido.status === "aguardando" ? (
           <button
@@ -2980,7 +3233,7 @@ function PedidoCardConteudo({
           </div>
         ) : null}
 
-        {/* Linha de Ações Rápidas: Ver Arte & Reportar Problema */}
+        {/* Linha de Ações Rápidas: Ver Arte & Mais Detalhes */}
         <div className="flex items-center gap-1.5">
           {pedido.arteUrl && onAbrirArte && (
             <button
@@ -3005,15 +3258,15 @@ function PedidoCardConteudo({
             </button>
           )}
 
-          {onAbrirProblema && (
+          {onAbrirMaisDetalhes && (
             <button
               type="button"
-              onClick={onAbrirProblema}
-              className="py-1 px-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors shrink-0 cursor-pointer"
-              title="Reportar problema ou retrabalho na fábrica"
+              onClick={onAbrirMaisDetalhes}
+              className="flex-1 py-1 px-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/25 text-primary text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+              title="Ver detalhes da peça, OS e reportar problemas"
             >
-              <AlertTriangle className="h-3 w-3" />
-              <span>Problema</span>
+              <Info className="h-3 w-3" />
+              <span>Mais Detalhes</span>
             </button>
           )}
         </div>
@@ -3063,6 +3316,7 @@ function OrcamentoCardConteudo({
   onSalvarObservacao,
   onAbrirQc,
   onAbrirArte,
+  onAbrirMaisDetalhes,
   onAbrirProblema,
 }: {
   orcamento: Orcamento
@@ -3076,6 +3330,7 @@ function OrcamentoCardConteudo({
   onSalvarObservacao?: (obs: string) => Promise<void>
   onAbrirQc?: () => void
   onAbrirArte?: (url: string, titulo: string) => void
+  onAbrirMaisDetalhes?: () => void
   onAbrirProblema?: () => void
 }) {
   const { papel } = usePapelAtivo()
@@ -3158,7 +3413,7 @@ function OrcamentoCardConteudo({
           {orcamento.item.quantidadeUnidades > 1 && ` (${orcamento.item.quantidadeUnidades} un)`}
         </span>
         {orcamento.materialFechado?.nome && (
-          <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground truncate max-w-[160px]" title={orcamento.materialFechado.nome}>
+          <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground break-words leading-tight" title={orcamento.materialFechado.nome}>
             🧵 {orcamento.materialFechado.nome}
           </span>
         )}
@@ -3166,7 +3421,7 @@ function OrcamentoCardConteudo({
 
       {/* Descrição + Data + Assinatura */}
       <div className="flex items-center justify-between gap-2 text-xs">
-        <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate max-w-[150px]", coluna.corFundo, coluna.corTexto)}>
+        <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-medium break-words leading-tight", coluna.corFundo, coluna.corTexto)}>
           {orcamento.item.servicoId && orcamento.item.servicoId !== "nenhum"
             ? "Serviço + material"
             : "Orçamento de serviço"}
@@ -3237,28 +3492,6 @@ function OrcamentoCardConteudo({
         />
       )}
 
-      {/* Botões de Acesso Rápido ao Contrato e OS (Somente para Gestores/Donos) */}
-      {papel !== "operador" && (
-        <div className="flex items-center gap-1.5 pt-1 border-t border-border/40" onPointerDown={(e) => e.stopPropagation()}>
-          <Link
-            href={`/orcamentos/${orcamento.id}/contrato`}
-            className="flex-1 py-1 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold transition-colors flex items-center justify-center gap-1 border border-emerald-500/20 shadow-2xs"
-            title="Abrir Contrato de Prestação de Serviços"
-          >
-            <FileText className="h-3 w-3" />
-            Ver Contrato
-          </Link>
-          <Link
-            href={`/orcamentos/${orcamento.id}/os`}
-            className="py-1 px-2.5 rounded-lg bg-muted/60 hover:bg-muted text-foreground text-[11px] font-medium transition-colors flex items-center justify-center gap-1 border border-border/60"
-            title="Ver Ordem de Serviço (PDF)"
-          >
-            <Printer className="h-3 w-3" />
-            OS
-          </Link>
-        </div>
-      )}
-
       {/* Botão de Avanço Rápido de 1 Toque (Otimizado p/ Chão de Fábrica) */}
       <div className="pt-1 flex flex-col gap-1.5" onPointerDown={(e) => e.stopPropagation()}>
         {statusAtual === "acabamento" ? (
@@ -3279,7 +3512,7 @@ function OrcamentoCardConteudo({
             <Scissors className="h-4 w-4" />
             <span>✂️ Ir p/ Acabamento</span>
           </button>
-        ) : statusAtual === "aprovado" || statusAtual === "arte" || statusAtual === "ag_confirmacao" ? (
+        ) : statusAtual === "ag_confirmacao" ? (
           <button
             type="button"
             onClick={() => onMudarStatus("impressao")}
@@ -3287,6 +3520,15 @@ function OrcamentoCardConteudo({
           >
             <Printer className="h-4 w-4" />
             <span>🖨️ Iniciar Impressão</span>
+          </button>
+        ) : statusAtual === "aprovado" || statusAtual === "arte" ? (
+          <button
+            type="button"
+            onClick={() => onMudarStatus("ag_confirmacao")}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+          >
+            <Send className="h-4 w-4" />
+            <span>🎨 Arte Enviada p/ Cliente</span>
           </button>
         ) : statusAtual === "aguardando" ? (
           <button
@@ -3313,7 +3555,7 @@ function OrcamentoCardConteudo({
           </div>
         ) : null}
 
-        {/* Linha de Ações Rápidas: Ver Arte & Reportar Problema */}
+        {/* Linha de Ações Rápidas: Ver Arte & Mais Detalhes */}
         <div className="flex items-center gap-1.5">
           {orcamento.arteUrl && onAbrirArte && (
             <button
@@ -3338,15 +3580,15 @@ function OrcamentoCardConteudo({
             </button>
           )}
 
-          {onAbrirProblema && (
+          {onAbrirMaisDetalhes && (
             <button
               type="button"
-              onClick={onAbrirProblema}
-              className="py-1 px-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors shrink-0 cursor-pointer"
-              title="Reportar problema ou retrabalho na fábrica"
+              onClick={onAbrirMaisDetalhes}
+              className="flex-1 py-1 px-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/25 text-primary text-[11px] font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+              title="Ver detalhes da peça, contrato, OS e reportar problemas"
             >
-              <AlertTriangle className="h-3 w-3" />
-              <span>Problema</span>
+              <Info className="h-3 w-3" />
+              <span>Mais Detalhes</span>
             </button>
           )}
         </div>

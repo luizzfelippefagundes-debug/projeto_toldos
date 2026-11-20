@@ -332,27 +332,29 @@ export default function RetornosPage() {
       {/* Desktop: kanban com arrastar e soltar */}
       <div className="hidden md:block">
         <DndContext sensors={sensores} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {colunas.map((col) => {
-              const daColuna = cards.filter((c) => c.retorno.etapa === col.etapa)
-              return (
-                <ColunaDroppable key={col.etapa} coluna={col}>
-                  <TituloColuna coluna={col} quantidade={daColuna.length} />
-                  <div className="flex flex-col gap-2 p-2">
-                    {daColuna.length === 0 && (
-                      <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                        Vazio
-                      </div>
-                    )}
-                    {daColuna.map((card) => (
-                      <CardArrastavel key={card.orcamento.id} id={card.orcamento.id}>
-                        <CardConteudo card={card} assinatura={assinaturas[card.orcamento.id]} onAbrir={() => setEditandoId(card.orcamento.id)} />
-                      </CardArrastavel>
-                    ))}
-                  </div>
-                </ColunaDroppable>
-              )
-            })}
+          <div className="h-[calc(100vh-270px)] min-h-[500px] max-h-[760px] w-full overflow-hidden">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 h-full">
+              {colunas.map((col) => {
+                const daColuna = cards.filter((c) => c.retorno.etapa === col.etapa)
+                return (
+                  <ColunaDroppable key={col.etapa} coluna={col}>
+                    <TituloColuna coluna={col} quantidade={daColuna.length} />
+                    <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 min-h-0 [scrollbar-width:thin]">
+                      {daColuna.length === 0 && (
+                        <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                          Vazio
+                        </div>
+                      )}
+                      {daColuna.map((card) => (
+                        <CardArrastavel key={card.orcamento.id} id={card.orcamento.id}>
+                          <CardConteudo card={card} assinatura={assinaturas[card.orcamento.id]} onAbrir={() => setEditandoId(card.orcamento.id)} />
+                        </CardArrastavel>
+                      ))}
+                    </div>
+                  </ColunaDroppable>
+                )
+              })}
+            </div>
           </div>
           <DragOverlay>
             {cardArrastando ? (
@@ -487,14 +489,14 @@ function TituloColuna({
   quantidade: number
 }) {
   return (
-    <div className={cn("flex items-center justify-between rounded-t-lg px-3 py-2", coluna.corFundo)}>
+    <div className={cn("shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-border/60", coluna.corFundo)}>
       <div className="flex items-center gap-2">
-        <div className={cn("h-2 w-2 rounded-full", coluna.cor)} />
+        <div className={cn("h-2.5 w-2.5 rounded-full shrink-0 shadow-2xs", coluna.cor)} />
         <span className={cn("text-xs font-bold uppercase tracking-wide", coluna.corTexto)}>
           {coluna.titulo}
         </span>
       </div>
-      <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold", coluna.corFundo, coluna.corTexto)}>
+      <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold shadow-2xs", coluna.corFundo, coluna.corTexto)}>
         {quantidade}
       </span>
     </div>
@@ -513,7 +515,7 @@ function ColunaDroppable({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex min-h-40 flex-col rounded-lg border border-border bg-muted/30 transition-colors",
+        "flex flex-col h-full rounded-xl border border-border/80 bg-card shadow-xs overflow-hidden transition-colors",
         isOver && `${coluna.corFundo} ring-2 ring-inset ${coluna.corBorda}`
       )}
     >
