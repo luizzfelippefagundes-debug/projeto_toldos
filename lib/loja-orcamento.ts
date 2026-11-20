@@ -210,3 +210,26 @@ export function resumirPedidoLoja(observacao: string | null | undefined): Resumo
     itens,
   }
 }
+
+export interface PrecoMaterial {
+  unidade: string
+  preco: number
+}
+
+/**
+ * Valor estimado só do material de um orçamento (área x preço por m2, ou
+ * quantidade x preço por unidade), somando o item principal e os adicionais.
+ * Itens sem material cadastrado não entram; sem nenhum material, devolve null.
+ */
+export function estimarTotalMaterial(item: OrcamentoItem, materiais: Map<string, PrecoMaterial>): number | null {
+  let total = 0
+  let algum = false
+  for (const parte of [item, ...(item.itensAdicionais ?? [])]) {
+    const m = materiais.get(parte.materialId)
+    if (!m) continue
+    algum = true
+    const qtd = parte.quantidadeUnidades > 0 ? parte.quantidadeUnidades : 1
+    total += m.unidade === "m2" ? parte.largura * parte.altura * qtd * m.preco : qtd * m.preco
+  }
+  return algum ? Math.round(total * 100) / 100 : null
+}

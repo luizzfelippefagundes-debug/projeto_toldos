@@ -5,6 +5,7 @@ import {
   montarOrcamentoLoja,
   observacaoDoPedido,
   resumirPedidoLoja,
+  estimarTotalMaterial,
   validarPedidoLoja,
   type MaterialResumo,
 } from "@/lib/loja-orcamento"
@@ -130,5 +131,31 @@ describe("conta do cliente no site", () => {
   })
   it("pedido sem conta continua valendo", () => {
     expect(validarPedidoLoja(base).ok).toBe(true)
+  })
+})
+
+describe("estimarTotalMaterial", () => {
+  const precos = new Map([
+    ["m2", { unidade: "m2", preco: 250 }],
+    ["un", { unidade: "unidade", preco: 900 }],
+  ])
+  const base = { servicoId: "", horasEstimadas: 0 }
+  it("soma área x preço por m2, com quantidade", () => {
+    const t = estimarTotalMaterial({ ...base, materialId: "m2", largura: 2, altura: 1, quantidadeUnidades: 3 }, precos)
+    expect(t).toBe(1500)
+  })
+  it("usa quantidade x preço para material por unidade e soma os adicionais", () => {
+    const t = estimarTotalMaterial(
+      {
+        ...base, materialId: "un", largura: 1, altura: 1, quantidadeUnidades: 2,
+        itensAdicionais: [{ id: "a", ...base, materialId: "m2", largura: 1, altura: 2, quantidadeUnidades: 1 }],
+      },
+      precos
+    )
+    expect(t).toBe(2 * 900 + 2 * 250)
+  })
+  it("ignora item sem material e devolve null se nenhum tiver", () => {
+    expect(estimarTotalMaterial({ ...base, materialId: "", largura: 1, altura: 1, quantidadeUnidades: 1 }, precos)).toBeNull()
+    expect(estimarTotalMaterial({ ...base, materialId: "x", largura: 1, altura: 1, quantidadeUnidades: 1 }, precos)).toBeNull()
   })
 })
