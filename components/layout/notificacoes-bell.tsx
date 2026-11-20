@@ -35,38 +35,51 @@ export function NotificacoesBell() {
           )}
         </span>
       </DialogTrigger>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Notificações
+      <DialogContent className="w-[94vw] max-w-sm sm:max-w-md max-h-[85vh] flex flex-col p-4 sm:p-6 overflow-hidden">
+        <DialogHeader className="shrink-0 pb-2 border-b border-border/50">
+          <DialogTitle className="flex items-center justify-between text-base font-bold">
+            <span className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-primary" />
+              Notificações
+            </span>
+            {alertas.length > 0 && (
+              <span className="rounded-full bg-destructive/15 text-destructive font-bold text-xs px-2 py-0.5">
+                {alertas.length} {alertas.length === 1 ? "alerta" : "alertas"}
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
-        {/* Card para os donos habilitarem notificações no aparelho (push/celular) */}
-        <NotificacoesPermissaoCard />
+        {/* Conteúdo com rolagem fluida e responsiva para qualquer celular */}
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pt-2 pr-1 pb-2 [scrollbar-width:thin]">
+          {/* Card para os donos habilitarem notificações no aparelho (push/celular) */}
+          <NotificacoesPermissaoCard />
 
-        {alertas.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
-            <Check className="h-8 w-8 text-green-500" />
-            <p className="font-medium">Tudo em ordem!</p>
-            <p>Nenhum alerta no momento.</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {alertas.map((alerta) => (
-              <Link
-                key={alerta.id}
-                href={alerta.href}
-                onClick={() => setAberto(false)}
-                className="flex items-start gap-3 rounded-lg border border-border bg-accent/30 p-3 text-sm transition-colors hover:bg-accent"
-              >
-                <alerta.Icon className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                <span>{alerta.texto}</span>
-              </Link>
-            ))}
-          </div>
-        )}
+          {alertas.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center text-sm text-muted-foreground">
+              <Check className="h-8 w-8 text-emerald-500" />
+              <p className="font-medium text-foreground">Tudo em ordem!</p>
+              <p className="text-xs">Nenhum alerta pendente no momento.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {alertas.map((alerta) => (
+                <Link
+                  key={alerta.id}
+                  href={alerta.href}
+                  onClick={() => setAberto(false)}
+                  className="flex items-start justify-between gap-3 rounded-xl border border-border/80 bg-accent/30 p-3 text-xs sm:text-sm transition-colors hover:bg-accent active:scale-[0.99]"
+                >
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <alerta.Icon className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                    <span className="leading-snug text-foreground font-medium break-words">{alerta.texto}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0 font-semibold self-center">Ver →</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   )
