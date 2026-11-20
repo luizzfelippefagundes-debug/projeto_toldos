@@ -149,14 +149,39 @@ function apiPost(url: string, body: unknown) {
   )
 }
 
-function apiPut(url: string, body: unknown) {
+function apiPut(url: string, body: unknown, aoResponder?: (json: any) => void) {
   fetch(url, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  }).catch(() =>
-    toast.error("Erro ao salvar no banco. Recarregue se o problema persistir.")
-  )
+  })
+    .then(async (r) => {
+      if (aoResponder && r.ok) aoResponder(await r.json().catch(() => null))
+    })
+    .catch(() =>
+      toast.error("Erro ao salvar no banco. Recarregue se o problema persistir.")
+    )
+}
+
+// O servidor manda o recibo em PDF sozinho quando um recebimento vira "pago"
+// (PUT /api/lancamentos/[id]) e devolve o resultado aqui. Falha precisa ficar
+// visível: senão o cliente fica sem recibo e ninguém percebe.
+function avisarReciboAutomatico(lancamentoId: string) {
+  return (json: any) => {
+    const r = json?.reciboWhatsapp
+    if (!r) return
+    if (r.ok) {
+      toast.success(`Recibo em PDF enviado no WhatsApp para ${r.cliente}.`)
+    } else {
+      toast.error(`Pagamento salvo, mas o recibo NÃO foi enviado: ${r.erro}`, {
+        duration: 20000,
+        action: {
+          label: "Abrir recibo",
+          onClick: () => window.location.assign(`/financeiro/${lancamentoId}/recibo`),
+        },
+      })
+    }
+  }
 }
 
 function apiDelete(url: string) {
@@ -867,7 +892,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       atual.map((l) => {
         if (l.id !== id) return l
         const atualizado = { ...l, ...dados }
-        apiPut(`/api/lancamentos/${id}`, atualizado)
+        apiPut(`/api/lancamentos/${id}`, atualizado, avisarReciboAutomatico(id))
         return atualizado
       })
     )
@@ -891,7 +916,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           status,
           ...(pagoEm ? { pagoEm } : { pagoEm: undefined }),
         }
-        apiPut(`/api/lancamentos/${id}`, atualizado)
+        apiPut(`/api/lancamentos/${id}`, atualizado, avisarReciboAutomatico(id))
         return atualizado
       })
     )

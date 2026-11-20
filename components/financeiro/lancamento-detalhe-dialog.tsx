@@ -204,8 +204,8 @@ export function LancamentoDetalheDialog({
     marcarLancamentoStatus(lancamento.id, vaiPagar ? "pago" : "pendente")
     if (vaiPagar && lancamento.tipo === "receita") {
       const id = lancamento.id
-      toast.success("Pagamento registrado.", {
-        action: { label: "Gerar recibo", onClick: () => router.push(`/financeiro/${id}/recibo`) },
+      toast.success("Pagamento registrado. Enviando o recibo em PDF no WhatsApp…", {
+        action: { label: "Ver recibo", onClick: () => router.push(`/financeiro/${id}/recibo`) },
         duration: 10000,
       })
     }

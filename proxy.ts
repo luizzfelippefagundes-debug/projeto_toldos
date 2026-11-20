@@ -27,8 +27,10 @@ const rotaPublica = createRouteMatcher([
   "/api/assinar(.*)",
   // Protegida pelo CRON_SECRET dentro da própria rota.
   "/api/cron(.*)",
-  // Protegida pelo EVOLUTION_WEBHOOK_SECRET dentro da própria rota.
-  "/api/whatsapp(.*)",
+  // Só o webhook é público (protegido pelo EVOLUTION_WEBHOOK_SECRET dentro da
+  // própria rota). As outras rotas de /api/whatsapp mandam mensagem pelo
+  // número da loja e exigem login.
+  "/api/whatsapp/webhook(.*)",
   // Webhook e serviços públicos do Mercado Pago
   "/api/mercadopago(.*)",
 ])
