@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { LancamentoFinanceiro } from "@/lib/types"
-import { MessageCircle, Pencil, Receipt, Trash2, CheckCircle2, Clock, DollarSign, Copy, Check } from "lucide-react"
+import { MessageCircle, Pencil, Receipt, Trash2, CheckCircle2, Clock, DollarSign, Copy, Check, Loader2, Send } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -67,6 +67,7 @@ export function LancamentoDetalheDialog({
   const [formaPagamentoRecebida, setFormaPagamentoRecebida] = useState<string>("pix")
   const [copiadoBoleto, setCopiadoBoleto] = useState(false)
   const [copiadoPix, setCopiadoPix] = useState(false)
+  const [enviandoRecibo, setEnviandoRecibo] = useState(false)
 
   if (!lancamento) return null
 
@@ -196,6 +197,27 @@ export function LancamentoDetalheDialog({
 
     setModoBaixaFlexivel(false)
     onOpenChange(false)
+  }
+
+  // Manda o recibo em PDF direto pro WhatsApp do cliente (mesma rota do
+  // botão da tela do recibo).
+  async function enviarRecibo() {
+    if (!lancamento) return
+    setEnviandoRecibo(true)
+    try {
+      const res = await fetch("/api/whatsapp/enviar-recibo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lancamentoId: lancamento.id }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.erro || "Falha ao enviar recibo")
+      toast.success(`Recibo em PDF enviado no WhatsApp para ${data.cliente ?? cliente?.nome ?? "o cliente"}.`)
+    } catch (err: any) {
+      toast.error(`Recibo NÃO enviado: ${err?.message || "erro ao enviar pelo WhatsApp"}`, { duration: 20000 })
+    } finally {
+      setEnviandoRecibo(false)
+    }
   }
 
   function alternarStatus() {
@@ -618,14 +640,31 @@ export function LancamentoDetalheDialog({
               )}
 
               {lancamento.status === "pago" && lancamento.tipo === "receita" && (
-                <Button
-                  size="sm"
-                  nativeButton={false}
-                  render={<Link href={`/financeiro/${lancamento.id}/recibo`} />}
-                >
-                  <Receipt className="mr-2 h-4 w-4" />
-                  Gerar recibo
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    disabled={enviandoRecibo || !cliente?.telefone}
+                    title={cliente?.telefone ? undefined : "Cliente sem telefone cadastrado"}
+                    onClick={enviarRecibo}
+                  >
+                    {enviandoRecibo ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="mr-2 h-4 w-4" />
+                    )}
+                    {enviandoRecibo ? "Enviando..." : "Enviar recibo no WhatsApp"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={<Link href={`/financeiro/${lancamento.id}/recibo`} />}
+                  >
+                    <Receipt className="mr-2 h-4 w-4" />
+                    Ver recibo
+                  </Button>
+                </>
               )}
 
               {lancamento.status === "pendente" && cliente && (
