@@ -14,7 +14,7 @@ import {
   type ConversaBot,
   type MensagemHistorico,
 } from "./bot-conversa"
-import { enviarDocumentoWhatsapp, enviarMensagemWhatsapp } from "./evolution-api"
+import { buscarNomeNaAgenda, enviarDocumentoWhatsapp, enviarMensagemWhatsapp } from "./evolution-api"
 import { formatarData, formatarMoeda } from "./format"
 import { gerarPdfOrcamentoServidor } from "./pdf-orcamento-servidor"
 import { formatarNumeroOrcamento } from "./orcamento-pdf"
@@ -294,14 +294,16 @@ export function resolverFluxoAtendimento(
 
   // 2. CONTATOS CONHECIDOS (cliente já cadastrado no sistema ou com nome já identificado):
   // NUNCA perguntar nome ou cidade! O Kaio e a empresa já sabem quem é o cliente.
-  if (ehContatoConhecido && nomeEfetivo) {
+  if (ehContatoConhecido) {
+    // Cadastrado com nome em branco/inválido (ex.: "."): cumprimenta sem nome.
+    const vocativo = nomeEfetivo ? `, ${nomeEfetivo}` : ""
     // Se o cliente apenas mandou saudação ("Oi", "Olá", "Bom dia", etc.)
     if (eSaudacao) {
       return {
         resposta:
-          `Olá, ${nomeEfetivo}! Seja muito bem-vindo(a) à Toldos Print. 🤝✨\n\n` +
+          `Olá${vocativo}! Seja muito bem-vindo(a) à Toldos Print. 🤝✨\n\n` +
           `Como podemos te ajudar hoje?`,
-        nome: nomeEfetivo,
+        nome: nomeEfetivo || undefined,
         local: localSalvo || undefined,
       }
     }
@@ -310,11 +312,11 @@ export function resolverFluxoAtendimento(
     if (pedeOrcamento) {
       return {
         resposta:
-          `Perfeito, ${nomeEfetivo}! Para agilizar o seu orçamento:\n` +
+          `Perfeito${vocativo}! Para agilizar o seu orçamento:\n` +
           `📸 Tire uma foto do local ou do que deseja;\n` +
           `📏 Se tiver, envie também as medidas aproximadas ou projeto.\n\n` +
           `Já estou transferindo o seu atendimento para nossa equipe técnica. Em instantes vamos te responder por aqui! ⏳🧑‍💼`,
-        nome: nomeEfetivo,
+        nome: nomeEfetivo || undefined,
         local: localSalvo || undefined,
         transferir: true,
         assunto: assuntoDetectado || "Solicitação de Orçamento",
@@ -324,9 +326,9 @@ export function resolverFluxoAtendimento(
     // Se mandou mensagem em andamento (ex: "Semana que vem iremos finalizar a sua frente", "fechou, vamos marcar")
     return {
       resposta:
-        `Olá, ${nomeEfetivo}! Mensagem recebida. 🤝\n` +
+        `Olá${vocativo}! Mensagem recebida. 🤝\n` +
         `Já encaminhei diretamente para o Kaio e nossa equipe técnica. Em instantes vamos te responder por aqui! ⏳🧑‍💼`,
-      nome: nomeEfetivo,
+      nome: nomeEfetivo || undefined,
       local: localSalvo || undefined,
       transferir: true,
       assunto: assuntoDetectado || undefined,
@@ -442,10 +444,13 @@ async function processarComTravaAdquirida(
     }
   }
 
-  // 1. Verifica se já é cliente cadastrado na base do Kaio/Toldos Print
+  // 1. Verifica se já é cliente cadastrado na base do Kaio/Toldos Print ou se
+  // o número está salvo na agenda do WhatsApp da loja. Em qualquer um dos
+  // dois casos o bot NÃO pergunta nome nem cidade.
   const clienteCadastrado = await buscarClientePorTelefone(telefone)
-  const ehClienteCadastrado = Boolean(clienteCadastrado)
   const nomeClienteCadastrado = clienteCadastrado?.nome?.trim()
+  const nomeAgenda = ehNomeValido(nomeClienteCadastrado) ? null : await buscarNomeNaAgenda(telefone)
+  const ehClienteCadastrado = Boolean(clienteCadastrado) || ehNomeValido(nomeAgenda)
 
   const HORAS_PARA_EXPIRAR = 6
   const sessaoExpirada = Date.now() - new Date(conversa.atualizadoEm).getTime() > HORAS_PARA_EXPIRAR * 3600_000
@@ -454,6 +459,7 @@ async function processarComTravaAdquirida(
 
   let nomeTemp =
     (ehNomeValido(nomeClienteCadastrado) ? nomeClienteCadastrado : null) ||
+    (ehNomeValido(nomeAgenda) ? nomeAgenda : null) ||
     (ehNomeValido(conversa.nomeTemp) ? conversa.nomeTemp : null) ||
     (ehNomeValido(pushName) ? pushName?.trim() : null) ||
     null

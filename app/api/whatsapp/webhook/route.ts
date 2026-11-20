@@ -114,7 +114,7 @@ export async function POST(request: Request) {
 
     // Se não foi um comando específico de retorno/aprovação, o Robô de Atendimento responde
     if (!retornoProcessado) {
-      const respostaBot = await processarMensagemWhatsapp(telefone, texto, cliente?.nome || pushName)
+      const respostaBot = await processarMensagemWhatsapp(telefone, texto, pushName)
       if (respostaBot) {
         const envio = await enviarMensagemWhatsapp(telefone, respostaBot)
         await registrarMensagemBot({

@@ -270,3 +270,30 @@ export async function buscarMidiaBase64(chaveMensagem: Record<string, unknown>):
   const dados = (await resposta.json()) as { base64?: string }
   return dados.base64 ?? null
 }
+
+// Nome do contato como está salvo no WhatsApp da loja (agenda sincronizada na
+// Evolution). Devolve null se não achar, se vier só o número ou se a API
+// falhar/demorar: o bot segue normal sem essa informação.
+export async function buscarNomeNaAgenda(numero: string): Promise<string | null> {
+  const cfg = configurada()
+  if (!cfg) return null
+  const digitos = numero.replace(/\D/g, "")
+  try {
+    const resposta = await fetch(`${cfg.baseUrl}/chat/findContacts/${cfg.instancia}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: cfg.apiKey },
+      body: JSON.stringify({ where: { remoteJid: `${resolverNumero(digitos)}@s.whatsapp.net` } }),
+      signal: AbortSignal.timeout(3000),
+    })
+    if (!resposta.ok) return null
+    const dados = (await resposta.json().catch(() => null)) as unknown
+    const lista = Array.isArray(dados) ? dados : []
+    for (const c of lista as Record<string, unknown>[]) {
+      const nome = String(c.pushName ?? c.name ?? "").trim()
+      if (nome && !/^[\d\s+()-]+$/.test(nome)) return nome
+    }
+    return null
+  } catch {
+    return null
+  }
+}

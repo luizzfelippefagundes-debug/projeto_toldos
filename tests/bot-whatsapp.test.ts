@@ -167,6 +167,19 @@ describe("resolverFluxoAtendimento (Motor de Regras Infalível do Robô)", () =>
     expect(res.transferir).toBe(true)
   })
 
+  it("cliente cadastrado com nome inválido (ex.: '.') não recebe pergunta de nome nem cidade", () => {
+    const res = resolverFluxoAtendimento("opa, to finalizando a correção", [], ".", null, ".", true)
+    expect(res.resposta).not.toMatch(/com quem temos o prazer|cidade\/bairro/i)
+    expect(res.resposta).toMatch(/^Olá! Mensagem recebida/)
+    expect(res.transferir).toBe(true)
+  })
+
+  it("cliente cadastrado sem nome que só manda 'oi' é cumprimentado sem pedir dados", () => {
+    const res = resolverFluxoAtendimento("oi", [], null, null, null, true)
+    expect(res.resposta).not.toMatch(/com quem temos o prazer|cidade\/bairro/i)
+    expect(res.resposta).toMatch(/Como podemos te ajudar/)
+  })
+
   it("ao receber nome e cidade de contato novo, apresenta os serviços mais utilizados e pergunta como ajudar", () => {
     const res = resolverFluxoAtendimento("Sou o Lucas de Colatina Centro", [{ role: "assistant", content: "Qual seu nome?" }])
     expect(res.resposta).toContain("SERVIÇOS mais utilizados:")
