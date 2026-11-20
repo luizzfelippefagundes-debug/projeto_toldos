@@ -39,13 +39,14 @@ export async function POST(req: Request) {
   // Reenvio do mesmo pedido (cliente clicou duas vezes ou a rede falhou):
   // devolve o orçamento que já existe em vez de criar outro.
   const existente = await sql`
-    SELECT numero, criado_em FROM orcamentos
+    SELECT id, numero, criado_em FROM orcamentos
     WHERE origem = 'loja' AND observacao LIKE ${`Pedido pelo site (${pedido.codigo})%`} LIMIT 1
   `
   if (existente.length > 0) {
     return NextResponse.json({
       ok: true,
       repetido: true,
+      id: existente[0].id,
       numero: existente[0].numero,
       numeroFormatado: formatarNumeroOrcamento(Number(existente[0].numero), String(existente[0].criado_em)),
     })
@@ -89,6 +90,7 @@ export async function POST(req: Request) {
   return NextResponse.json(
     {
       ok: true,
+      id: orc.id,
       numero,
       numeroFormatado: formatarNumeroOrcamento(numero, String(gravado[0].criado_em)),
       clienteNovo,
