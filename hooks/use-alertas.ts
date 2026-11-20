@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Factory, FileClock, PhoneCall, Wallet, Warehouse, Tv2, type LucideIcon } from "lucide-react"
+import { Factory, FileClock, PhoneCall, Wallet, Warehouse, Tv2, AlertTriangle, type LucideIcon } from "lucide-react"
 import { useData } from "@/context/data-context"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { estaNosProximosDias } from "@/lib/date-window"
@@ -20,7 +20,7 @@ export interface Alerta {
 // Lista de alertas usada no card "Alertas" do dashboard e no sininho de
 // notificação — um único lugar pra não desalinhar contagem e conteúdo.
 export function useAlertas(): Alerta[] {
-  const { materiais, pedidosRapidos, produtosRapidos, lancamentos, orcamentos } = useData()
+  const { materiais, pedidosRapidos, produtosRapidos, lancamentos, orcamentos, clientes } = useData()
   const { papel } = usePapelAtivo()
 
   // `new Date()` não pode entrar no primeiro render (ver dashboard/page.tsx
@@ -87,8 +87,38 @@ export function useAlertas(): Alerta[] {
     }).length
   }, [orcamentos, hoje])
 
+  const problemasProducao = useMemo(() => {
+    const pedidos = pedidosRapidos
+      .filter((p) => p.status !== "pronto" && p.status !== "entregue" && p.observacao?.includes("ALERTA DA FÁBRICA"))
+      .map((p) => ({
+        id: `prob-ped-${p.id}`,
+        numero: p.numero,
+        cliente: p.clienteNome,
+      }))
+
+    const orcs = orcamentos
+      .filter((o) => o.statusProducao && o.statusProducao !== "pronto" && o.statusProducao !== "entregue" && o.observacao?.includes("ALERTA DA FÁBRICA"))
+      .map((o) => {
+        const cli = clientes.find((c) => c.id === o.clienteId)
+        return {
+          id: `prob-orc-${o.id}`,
+          numero: o.numero,
+          cliente: cli?.nome || "Cliente",
+        }
+      })
+
+    return [...pedidos, ...orcs]
+  }, [pedidosRapidos, orcamentos, clientes])
+
   return useMemo(() => {
     const todos: Alerta[] = [
+      ...problemasProducao.map((prob) => ({
+        id: prob.id,
+        texto: `⚠️ Problema na fábrica no #${prob.numero} (${prob.cliente})`,
+        href: "/producao",
+        quantidade: 1,
+        Icon: AlertTriangle,
+      })),
       {
         id: "retornos",
         texto: `${retornosPendentes} cliente${retornosPendentes === 1 ? "" : "s"} pra retornar sobre orçamento (hoje ou atrasado)`,
@@ -147,9 +177,10 @@ export function useAlertas(): Alerta[] {
       if (papel === "operador") return false
       if (papel === "dono") return true
       if (a.id.startsWith("aviso-")) return true
+      if (a.id.startsWith("prob-")) return true
       if (papel === "financeiro") return a.id === "boletos" || a.id === "financeiro-vencido"
-      if (papel === "producao") return a.id === "estoque" || a.id === "producao"
+      if (papel === "producao") return a.id === "estoque" || a.id === "producao" || a.id.startsWith("prob-")
       return a.id === "retornos"
     })
-  }, [retornosPendentes, estoqueBaixo, pedidosAtrasados, boletosVencendo, lancamentosVencidos, orcamentosValidadeVencendo, avisosTv, papel])
+  }, [retornosPendentes, estoqueBaixo, pedidosAtrasados, boletosVencendo, lancamentosVencidos, orcamentosValidadeVencendo, avisosTv, problemasProducao, papel])
 }
