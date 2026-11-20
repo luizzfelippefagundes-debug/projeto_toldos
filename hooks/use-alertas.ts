@@ -125,10 +125,12 @@ export function useAlertas(): Alerta[] {
     ]
 
     return todos.filter((a) => a.quantidade > 0).filter((a) => {
-      // Retornos é pra todo mundo da loja correr atrás.
-      if (papel === "dono" || a.id === "retornos") return true
+      // Colaborador não deve ver alertas administrativos, de vendas ou financeiros
+      if (papel === "operador") return false
+      if (papel === "dono") return true
       if (papel === "financeiro") return a.id === "boletos" || a.id === "financeiro-vencido"
-      return a.id === "estoque" || a.id === "producao"
+      if (papel === "producao") return a.id === "estoque" || a.id === "producao"
+      return a.id === "retornos"
     })
   }, [retornosPendentes, estoqueBaixo, pedidosAtrasados, boletosVencendo, lancamentosVencidos, orcamentosValidadeVencendo, papel])
 }

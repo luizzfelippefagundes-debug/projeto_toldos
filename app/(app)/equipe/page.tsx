@@ -36,7 +36,7 @@ const rotuloPapel: Record<string, string> = {
   producao: "Produção",
   financeiro: "Financeiro",
   dono: "Dono",
-  operador: "Produção e TV",
+  operador: "Colaborador",
 }
 
 function Avatar({ nome, imagemUrl }: { nome: string; imagemUrl: string }) {
@@ -177,9 +177,9 @@ export default function EquipePage() {
       {/* Prévia: o dono vê o sistema como o funcionário veria */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
         <div className="min-w-0">
-          <p className="text-sm font-medium">Ver como funcionário</p>
+          <p className="text-sm font-medium">Ver como Colaborador</p>
           <p className="text-xs text-muted-foreground">
-            Mostra só a Produção e o Painel TV, igual ao que o papel &quot;Produção e TV&quot; enxerga.
+            Mostra o app focado do Colaborador (Produção e Painel TV, sem valores financeiros).
             Seu acesso de dono não muda.
           </p>
         </div>
@@ -190,7 +190,7 @@ export default function EquipePage() {
             router.push("/producao")
           }}
         >
-          Ver como Produção e TV
+          Ver como Colaborador
         </Button>
       </div>
 
@@ -214,7 +214,7 @@ export default function EquipePage() {
         </div>
       </div>
 
-      {/* WhatsApp Notificações Automáticas para a Equipe de Produção e TV */}
+      {/* WhatsApp Notificações Automáticas para os Colaboradores */}
       <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600">
@@ -222,7 +222,7 @@ export default function EquipePage() {
           </div>
           <div>
             <h2 className="text-sm font-semibold flex items-center gap-1.5">
-              Notificações no WhatsApp (Produção e TV)
+              Notificações no WhatsApp (Colaboradores)
               <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
                 Ativo
               </span>

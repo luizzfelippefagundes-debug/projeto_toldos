@@ -61,7 +61,7 @@ describe("Produção: valores em reais", () => {
     expect(texto).toContain(formatarMoeda(pedido.total))
   })
 
-  it("o funcionário (Produção e TV) vê os pedidos, mas nenhum valor em reais", async () => {
+  it("o colaborador vê os pedidos, mas nenhum valor em reais", async () => {
     const texto = await abrirProducao("operador")
     expect(texto).toContain("#5001")
     for (const pedido of pedidosRapidosSeed) {

@@ -1,8 +1,9 @@
-import { timingSafeEqual, randomUUID } from "node:crypto"
+import { randomUUID } from "node:crypto"
 import { NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
 import { garantirColunasOrcamentos } from "@/lib/migracoes"
 import { formatarNumeroOrcamento } from "@/lib/orcamento-pdf"
+import { segredoDaLojaValido } from "@/lib/loja-segredo"
 import {
   formatarTelefoneLoja,
   mesmoTelefone,
@@ -14,20 +15,11 @@ import {
 // Recebe o pedido de orçamento do site da loja e grava como orçamento ABERTO,
 // com origem "loja". Só o servidor do site chama esta rota (cabeçalho
 // x-loja-secret); o navegador do cliente nunca fala direto com o sistema.
-function segredoValido(req: Request) {
-  const esperado = process.env.LOJA_API_SECRET
-  const recebido = req.headers.get("x-loja-secret")
-  if (!esperado || !recebido) return false
-  const a = Buffer.from(recebido)
-  const b = Buffer.from(esperado)
-  return a.length === b.length && timingSafeEqual(a, b)
-}
-
 export async function POST(req: Request) {
   if (!process.env.LOJA_API_SECRET) {
     return NextResponse.json({ erro: "Integração da loja não configurada" }, { status: 503 })
   }
-  if (!segredoValido(req)) return NextResponse.json({ erro: "Não autorizado" }, { status: 401 })
+  if (!segredoDaLojaValido(req)) return NextResponse.json({ erro: "Não autorizado" }, { status: 401 })
 
   const bruto = await req.text()
   if (bruto.length > 30_000) return NextResponse.json({ erro: "Pedido grande demais" }, { status: 413 })

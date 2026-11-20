@@ -1689,7 +1689,7 @@ function PedidoCardConteudo({
   onSalvarArte: (url: string | null) => Promise<void>
   onSalvarObservacao?: (obs: string) => Promise<void>
 }) {
-  // Funcionário (papel "Produção e TV") vê o pedido, mas não o valor em reais.
+  // Colaborador (papel "operador") vê o pedido e instruções, mas não o valor financeiro em reais.
   const { papel } = usePapelAtivo()
   const prazo = obterPrazoEntregaPedido(pedido, produto?.prazoDias)
   const nome = pedido.clienteNome?.trim() || ""

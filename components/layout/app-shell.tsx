@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Zap, Factory, Wallet, Menu } from "lucide-react"
+import { LayoutDashboard, Zap, Factory, Wallet, Menu, Tv2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Sidebar } from "./sidebar"
 import { NavSheet } from "./nav-sheet"
@@ -28,6 +28,7 @@ const abasRapidas: {
   { label: "Início", href: "/dashboard", icon: LayoutDashboard },
   { label: "Rápida", href: "/grafica-rapida", icon: Zap },
   { label: "Produção", href: "/producao", icon: Factory, papeis: ["producao", "operador"] },
+  { label: "Painel TV", href: "/tv", icon: Tv2, papeis: ["operador"] },
   { label: "Financeiro", href: "/financeiro", icon: Wallet, papeis: ["financeiro"] },
 ]
 
@@ -75,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card px-4 py-3 md:hidden print:hidden">
           <div className="flex min-w-0 flex-1 items-center">
-            <Link href="/dashboard" className="w-32 max-w-full">
+            <Link href={papel === "operador" ? "/producao" : "/dashboard"} className="w-32 max-w-full">
               <Logo className="px-2 py-1" />
             </Link>
           </div>

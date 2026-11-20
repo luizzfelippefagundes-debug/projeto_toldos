@@ -186,7 +186,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
           autor: "bot",
         })
       }
-      // Notifica a equipe de produção (Produção e TV) no WhatsApp
+      // Notifica a equipe de produção (Colaboradores) no WhatsApp
       notificarNovaDemandaOrcamento({
         numero: orcamento.numero,
         clienteNome,

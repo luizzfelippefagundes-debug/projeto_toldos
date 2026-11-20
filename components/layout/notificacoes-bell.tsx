@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { Bell, Check, X } from "lucide-react"
 import { useAlertas } from "@/hooks/use-alertas"
+import { usePapelAtivo } from "@/context/papel-ativo-context"
 import {
   Dialog,
   DialogContent,
@@ -14,8 +15,12 @@ import {
 import { Button } from "@/components/ui/button"
 
 export function NotificacoesBell() {
+  const { papel } = usePapelAtivo()
   const alertas = useAlertas()
   const [aberto, setAberto] = useState(false)
+
+  // Colaborador não deve ter sininho de notificações de gestão/retornos/financeiro
+  if (papel === "operador") return null
 
   return (
     <Dialog open={aberto} onOpenChange={setAberto}>

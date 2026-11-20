@@ -6,7 +6,7 @@ export const ROTULO_PAPEL: Record<Papel, string> = {
   dono: "Dono",
   producao: "Produção",
   financeiro: "Financeiro",
-  operador: "Produção e TV",
+  operador: "Colaborador",
 }
 
 // "operador" só enxerga a Produção e o Painel TV — qualquer outra página
