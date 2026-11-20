@@ -1,7 +1,16 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Factory, FileClock, PhoneCall, Wallet, Warehouse, Tv2, AlertTriangle, type LucideIcon } from "lucide-react"
+import { useEffect, useMemo, useState, useCallback } from "react"
+import {
+  Factory,
+  FileClock,
+  PhoneCall,
+  Wallet,
+  Warehouse,
+  Tv2,
+  AlertTriangle,
+  type LucideIcon,
+} from "lucide-react"
 import { useData } from "@/context/data-context"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { estaNosProximosDias } from "@/lib/date-window"
@@ -9,29 +18,103 @@ import { estaLancamentoVencido } from "@/lib/financeiro"
 import { pedidoRapidoEstaAtrasado } from "@/lib/pedidos-rapidos"
 import { entraNoQuadro, retornoDoOrcamento, situacaoContato } from "@/lib/retornos"
 
+export type CategoriaAlerta =
+  | "problema"
+  | "telao"
+  | "producao"
+  | "retorno"
+  | "financeiro"
+  | "estoque"
+
 export interface Alerta {
   id: string
   texto: string
   href: string
   quantidade: number
   Icon: LucideIcon
+  categoria: CategoriaAlerta
 }
 
-// Lista de alertas usada no card "Alertas" do dashboard e no sininho de
-// notificação — um único lugar pra não desalinhar contagem e conteúdo.
-export function useAlertas(): Alerta[] {
+export interface SecaoAlertas {
+  categoria: CategoriaAlerta
+  titulo: string
+  icone: LucideIcon
+  corTexto: string
+  corBadge: string
+  alertas: Alerta[]
+}
+
+export const ORDEM_CATEGORIAS: CategoriaAlerta[] = [
+  "problema",
+  "telao",
+  "producao",
+  "retorno",
+  "financeiro",
+  "estoque",
+]
+
+export const SECOES_CONFIG: Record<
+  CategoriaAlerta,
+  { titulo: string; icone: LucideIcon; corTexto: string; corBadge: string }
+> = {
+  problema: {
+    titulo: "Problemas na Fábrica",
+    icone: AlertTriangle,
+    corTexto: "text-red-600 dark:text-red-400",
+    corBadge: "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30",
+  },
+  telao: {
+    titulo: "Comunicados do Telão",
+    icone: Tv2,
+    corTexto: "text-amber-600 dark:text-amber-400",
+    corBadge: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
+  },
+  producao: {
+    titulo: "Prazos & Produção",
+    icone: Factory,
+    corTexto: "text-blue-600 dark:text-blue-400",
+    corBadge: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30",
+  },
+  retorno: {
+    titulo: "Retornos de Vendas",
+    icone: PhoneCall,
+    corTexto: "text-purple-600 dark:text-purple-400",
+    corBadge: "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30",
+  },
+  financeiro: {
+    titulo: "Financeiro & Contas",
+    icone: Wallet,
+    corTexto: "text-emerald-600 dark:text-emerald-400",
+    corBadge: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+  },
+  estoque: {
+    titulo: "Estoque de Materiais",
+    icone: Warehouse,
+    corTexto: "text-orange-600 dark:text-orange-400",
+    corBadge: "bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30",
+  },
+}
+
+const STORAGE_DISPENSADOS = "alertas_dispensados_v1"
+
+export function useAlertas() {
   const { materiais, pedidosRapidos, produtosRapidos, lancamentos, orcamentos, clientes } = useData()
   const { papel } = usePapelAtivo()
 
-  // `new Date()` não pode entrar no primeiro render (ver dashboard/page.tsx
-  // para a explicação completa do hydration mismatch); começa nulo e só
-  // calcula depois de montar.
   const [hoje, setHoje] = useState<Date | null>(null)
   const [avisosTv, setAvisosTv] = useState<{ id: string; mensagem: string; icone?: string; ativo?: boolean }[]>([])
+  const [dispensados, setDispensados] = useState<string[]>([])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHoje(new Date())
+
+    try {
+      const salvo = localStorage.getItem(STORAGE_DISPENSADOS)
+      if (salvo) {
+        setDispensados(JSON.parse(salvo))
+      }
+    } catch {}
 
     fetch("/api/avisos-tv")
       .then((r) => (r.ok ? r.json() : []))
@@ -39,6 +122,43 @@ export function useAlertas(): Alerta[] {
         if (Array.isArray(dados)) setAvisosTv(dados)
       })
       .catch(() => {})
+  }, [])
+
+  const apagarAlerta = useCallback(async (id: string) => {
+    setDispensados((prev) => {
+      const novo = prev.includes(id) ? prev : [...prev, id]
+      try {
+        localStorage.setItem(STORAGE_DISPENSADOS, JSON.stringify(novo))
+      } catch {}
+      return novo
+    })
+
+    // Se for aviso do telão da TV, remove também do banco de dados
+    if (id.startsWith("aviso-")) {
+      const avisoId = id.replace("aviso-", "")
+      setAvisosTv((prev) => prev.filter((a) => a.id !== avisoId))
+      try {
+        await fetch(`/api/avisos-tv/${avisoId}`, { method: "DELETE" })
+      } catch {}
+    }
+  }, [])
+
+  const limparTodos = useCallback((idsParaLimpar: string[]) => {
+    setDispensados((prev) => {
+      const set = new Set([...prev, ...idsParaLimpar])
+      const novo = Array.from(set)
+      try {
+        localStorage.setItem(STORAGE_DISPENSADOS, JSON.stringify(novo))
+      } catch {}
+      return novo
+    })
+  }, [])
+
+  const restaurarTodos = useCallback(() => {
+    setDispensados([])
+    try {
+      localStorage.removeItem(STORAGE_DISPENSADOS)
+    } catch {}
   }, [])
 
   const estoqueBaixo = materiais.filter(
@@ -123,7 +243,7 @@ export function useAlertas(): Alerta[] {
     return [...pedidos, ...orcs]
   }, [pedidosRapidos, orcamentos, clientes])
 
-  return useMemo(() => {
+  const { alertas, secoes } = useMemo(() => {
     const todos: Alerta[] = [
       ...problemasProducao.map((prob) => ({
         id: prob.id,
@@ -131,6 +251,7 @@ export function useAlertas(): Alerta[] {
         href: `/producao?busca=${encodeURIComponent(String(prob.numero))}`,
         quantidade: 1,
         Icon: AlertTriangle,
+        categoria: "problema" as CategoriaAlerta,
       })),
       {
         id: "retornos",
@@ -138,6 +259,7 @@ export function useAlertas(): Alerta[] {
         href: "/retornos",
         quantidade: retornosPendentes,
         Icon: PhoneCall,
+        categoria: "retorno" as CategoriaAlerta,
       },
       {
         id: "estoque",
@@ -145,6 +267,7 @@ export function useAlertas(): Alerta[] {
         href: "/estoque",
         quantidade: estoqueBaixo,
         Icon: Warehouse,
+        categoria: "estoque" as CategoriaAlerta,
       },
       {
         id: "producao",
@@ -152,6 +275,7 @@ export function useAlertas(): Alerta[] {
         href: "/producao",
         quantidade: pedidosAtrasados,
         Icon: Factory,
+        categoria: "producao" as CategoriaAlerta,
       },
       {
         id: "boletos",
@@ -159,6 +283,7 @@ export function useAlertas(): Alerta[] {
         href: "/financeiro",
         quantidade: boletosVencendo,
         Icon: Wallet,
+        categoria: "financeiro" as CategoriaAlerta,
       },
       {
         id: "financeiro-vencido",
@@ -166,6 +291,7 @@ export function useAlertas(): Alerta[] {
         href: "/financeiro",
         quantidade: lancamentosVencidos,
         Icon: Wallet,
+        categoria: "financeiro" as CategoriaAlerta,
       },
       {
         id: "validade",
@@ -173,6 +299,7 @@ export function useAlertas(): Alerta[] {
         href: "/orcamentos",
         quantidade: orcamentosValidadeVencendo,
         Icon: FileClock,
+        categoria: "producao" as CategoriaAlerta,
       },
       ...avisosTv
         .filter((a) => a.ativo !== false)
@@ -182,18 +309,63 @@ export function useAlertas(): Alerta[] {
           href: "/avisos-tv",
           quantidade: 1,
           Icon: Tv2,
+          categoria: "telao" as CategoriaAlerta,
         })),
     ]
 
-    return todos.filter((a) => a.quantidade > 0).filter((a) => {
-      // Colaborador não deve ver alertas administrativos, de vendas ou financeiros
-      if (papel === "operador") return false
-      if (papel === "dono") return true
-      if (a.id.startsWith("aviso-")) return true
-      if (a.id.startsWith("prob-")) return true
-      if (papel === "financeiro") return a.id === "boletos" || a.id === "financeiro-vencido"
-      if (papel === "producao") return a.id === "estoque" || a.id === "producao" || a.id.startsWith("prob-")
-      return a.id === "retornos"
-    })
-  }, [retornosPendentes, estoqueBaixo, pedidosAtrasados, boletosVencendo, lancamentosVencidos, orcamentosValidadeVencendo, avisosTv, problemasProducao, papel])
+    const filtrados = todos
+      .filter((a) => a.quantidade > 0)
+      .filter((a) => !dispensados.includes(a.id))
+      .filter((a) => {
+        // Colaborador não deve ver alertas administrativos, de vendas ou financeiros
+        if (papel === "operador") return false
+        if (papel === "dono") return true
+        if (a.id.startsWith("aviso-")) return true
+        if (a.id.startsWith("prob-")) return true
+        if (papel === "financeiro") return a.id === "boletos" || a.id === "financeiro-vencido"
+        if (papel === "producao") return a.id === "estoque" || a.id === "producao" || a.id.startsWith("prob-")
+        return a.id === "retornos"
+      })
+
+    // Monta seções categorizadas ordenadas por urgência
+    const grupos: SecaoAlertas[] = []
+    for (const cat of ORDEM_CATEGORIAS) {
+      const itens = filtrados.filter((a) => a.categoria === cat)
+      if (itens.length > 0) {
+        const conf = SECOES_CONFIG[cat]
+        grupos.push({
+          categoria: cat,
+          titulo: conf.titulo,
+          icone: conf.icone,
+          corTexto: conf.corTexto,
+          corBadge: conf.corBadge,
+          alertas: itens,
+        })
+      }
+    }
+
+    return { alertas: filtrados, secoes: grupos }
+  }, [
+    problemasProducao,
+    retornosPendentes,
+    estoqueBaixo,
+    pedidosAtrasados,
+    boletosVencendo,
+    lancamentosVencidos,
+    orcamentosValidadeVencendo,
+    avisosTv,
+    dispensados,
+    papel,
+  ])
+
+  return {
+    alertas,
+    secoes,
+    apagarAlerta,
+    limparTodos: () => limparTodos(alertas.map((a) => a.id)),
+    restaurarTodos,
+    total: alertas.length,
+    temDispensados: dispensados.length > 0,
+    hoje,
+  }
 }
