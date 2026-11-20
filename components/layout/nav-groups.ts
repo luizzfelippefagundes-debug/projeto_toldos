@@ -21,6 +21,7 @@ import {
   PhoneCall,
   Radio,
   SlidersHorizontal,
+  Store,
   type LucideIcon,
 } from "lucide-react"
 import type { Papel } from "@/lib/types"
@@ -69,6 +70,7 @@ export const gruposNavegacao: NavGroup[] = [
         icon: Factory,
         papeis: ["producao"],
       },
+      { label: "Site da loja", href: "/site-loja", icon: Store, papeis: ["financeiro"] },
       { label: "Central do Bot", href: "/bot", icon: Bot },
       { label: "Transmissão", href: "/transmissao", icon: Radio, donoApenas: true },
       { label: "Clientes", href: "/clientes", icon: Users },

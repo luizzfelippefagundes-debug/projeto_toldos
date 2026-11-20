@@ -4,6 +4,7 @@ import {
   mesmoTelefone,
   montarOrcamentoLoja,
   observacaoDoPedido,
+  resumirPedidoLoja,
   validarPedidoLoja,
   type MaterialResumo,
 } from "@/lib/loja-orcamento"
@@ -95,5 +96,21 @@ describe("montarOrcamentoLoja", () => {
   })
   it("a observação lista todos os itens", () => {
     expect(observacaoDoPedido(validado.pedido)).toContain("1× Toldo cortina")
+  })
+})
+
+describe("resumirPedidoLoja", () => {
+  it("lê de volta o que observacaoDoPedido gravou", () => {
+    const v = validarPedidoLoja({ ...base, observacao: "medir de manhã" })
+    if (!v.ok) throw new Error("inválido")
+    const r = resumirPedidoLoja(observacaoDoPedido(v.pedido))
+    expect(r.codigo).toBe("TP-ABC12")
+    expect(r.cidade).toBe("Águia Branca")
+    expect(r.recebimento).toBe("Precisa de instalação")
+    expect(r.observacaoCliente).toBe("medir de manhã")
+    expect(r.itens).toEqual(["1× Toldo cortina"])
+  })
+  it("aguenta observação vazia", () => {
+    expect(resumirPedidoLoja(null)).toEqual({ codigo: "", cidade: undefined, recebimento: undefined, observacaoCliente: undefined, itens: [] })
   })
 })

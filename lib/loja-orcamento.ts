@@ -170,3 +170,34 @@ export function montarOrcamentoLoja(
     origem: "loja",
   }
 }
+
+export interface ResumoPedidoLoja {
+  codigo: string
+  cidade?: string
+  recebimento?: string
+  observacaoCliente?: string
+  itens: string[]
+}
+
+/** Lê de volta o texto gravado por observacaoDoPedido, para o painel do site. */
+export function resumirPedidoLoja(observacao: string | null | undefined): ResumoPedidoLoja {
+  const linhas = (observacao ?? "").split("\n")
+  const codigo = /^Pedido pelo site \(([^)]+)\)/.exec(linhas[0] ?? "")?.[1] ?? ""
+  const pegar = (prefixo: string) =>
+    linhas.find((l) => l.startsWith(prefixo))?.slice(prefixo.length).trim() || undefined
+  const iniciaItens = linhas.findIndex((l) => l.trim() === "Itens:")
+  const itens =
+    iniciaItens >= 0
+      ? linhas
+          .slice(iniciaItens + 1)
+          .filter((l) => l.startsWith("- "))
+          .map((l) => l.slice(2).trim())
+      : []
+  return {
+    codigo,
+    cidade: pegar("Cidade:"),
+    recebimento: pegar("Recebimento:"),
+    observacaoCliente: pegar("Observação do cliente:"),
+    itens,
+  }
+}
