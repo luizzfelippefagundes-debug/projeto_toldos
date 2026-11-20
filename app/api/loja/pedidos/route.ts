@@ -9,5 +9,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ erro: "Integração da loja não configurada" }, { status: 503 })
   }
   if (!segredoDaLojaValido(req)) return NextResponse.json({ erro: "Não autorizado" }, { status: 401 })
-  return NextResponse.json({ atualizadoEm: new Date().toISOString(), pedidos: await listarPedidosDoSite() }, { headers: { "Cache-Control": "no-store" } })
+  // ?conta=user_xxx devolve só os pedidos daquele login (usado em "Meus pedidos").
+  const conta = new URL(req.url).searchParams.get("conta") ?? undefined
+  if (conta !== undefined && !/^user_[A-Za-z0-9]+$/.test(conta)) {
+    return NextResponse.json({ erro: "Conta inválida" }, { status: 400 })
+  }
+  return NextResponse.json(
+    { atualizadoEm: new Date().toISOString(), pedidos: await listarPedidosDoSite({ conta }) },
+    { headers: { "Cache-Control": "no-store" } }
+  )
 }

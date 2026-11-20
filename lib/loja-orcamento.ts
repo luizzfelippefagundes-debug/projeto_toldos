@@ -16,6 +16,8 @@ export interface PedidoLojaItem {
 
 export interface PedidoLoja {
   codigo: string
+  /** Conta (login) do cliente no site, ex.: user_2abc... Liga o pedido ao "Meus pedidos". */
+  conta?: string
   cliente: { nome: string; telefone: string; cidade?: string }
   recebimento?: string
   observacao?: string
@@ -56,6 +58,9 @@ export function validarPedidoLoja(entrada: unknown): Validacao {
   const codigo = texto(b.codigo, 24)
   if (!codigo) return { ok: false, erro: "Código do pedido ausente" }
 
+  const conta = texto(b.conta, 64)
+  if (conta && !/^user_[A-Za-z0-9]+$/.test(conta)) return { ok: false, erro: "Conta inválida" }
+
   const c = (b.cliente ?? {}) as Record<string, unknown>
   const nome = texto(c.nome, 80)
   const telefone = texto(c.telefone, 30)
@@ -87,6 +92,7 @@ export function validarPedidoLoja(entrada: unknown): Validacao {
     ok: true,
     pedido: {
       codigo,
+      conta: conta || undefined,
       cliente: { nome, telefone, cidade: texto(c.cidade, 80) || undefined },
       recebimento: texto(b.recebimento, 60) || undefined,
       observacao: texto(b.observacao, 1000) || undefined,
@@ -119,6 +125,7 @@ function itemDoPedido(
 export function observacaoDoPedido(p: PedidoLoja) {
   return [
     `Pedido pelo site (${p.codigo})`,
+    p.conta ? `Conta: ${p.conta}` : "",
     p.cliente.cidade ? `Cidade: ${p.cliente.cidade}` : "",
     p.recebimento ? `Recebimento: ${p.recebimento}` : "",
     p.observacao ? `Observação do cliente: ${p.observacao}` : "",
@@ -173,6 +180,7 @@ export function montarOrcamentoLoja(
 
 export interface ResumoPedidoLoja {
   codigo: string
+  conta?: string
   cidade?: string
   recebimento?: string
   observacaoCliente?: string
@@ -195,6 +203,7 @@ export function resumirPedidoLoja(observacao: string | null | undefined): Resumo
       : []
   return {
     codigo,
+    conta: pegar("Conta:"),
     cidade: pegar("Cidade:"),
     recebimento: pegar("Recebimento:"),
     observacaoCliente: pegar("Observação do cliente:"),

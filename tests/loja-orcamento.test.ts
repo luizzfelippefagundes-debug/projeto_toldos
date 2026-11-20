@@ -114,3 +114,21 @@ describe("resumirPedidoLoja", () => {
     expect(resumirPedidoLoja(null)).toEqual({ codigo: "", cidade: undefined, recebimento: undefined, observacaoCliente: undefined, itens: [] })
   })
 })
+
+describe("conta do cliente no site", () => {
+  it("guarda a conta no pedido e lê de volta", () => {
+    const v = validarPedidoLoja({ ...base, conta: "user_2abcXYZ123" })
+    if (!v.ok) throw new Error("inválido")
+    expect(v.pedido.conta).toBe("user_2abcXYZ123")
+    const r = resumirPedidoLoja(observacaoDoPedido(v.pedido))
+    expect(r.conta).toBe("user_2abcXYZ123")
+    expect(observacaoDoPedido(v.pedido)).toContain("\nConta: user_2abcXYZ123\n")
+  })
+  it("recusa conta com formato estranho", () => {
+    expect(validarPedidoLoja({ ...base, conta: "x; DROP TABLE" }).ok).toBe(false)
+    expect(validarPedidoLoja({ ...base, conta: "outro_123" }).ok).toBe(false)
+  })
+  it("pedido sem conta continua valendo", () => {
+    expect(validarPedidoLoja(base).ok).toBe(true)
+  })
+})

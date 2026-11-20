@@ -15,15 +15,22 @@ export interface PedidoSite {
   resumo: ResumoPedidoLoja
 }
 
-/** Pedidos que chegaram pelo site (orçamentos com origem "loja"), do mais novo ao mais antigo. */
-export async function listarPedidosDoSite(limite = 200): Promise<PedidoSite[]> {
+/**
+ * Pedidos que chegaram pelo site (orçamentos com origem "loja"), do mais novo ao
+ * mais antigo. Com `conta`, só os pedidos feitos por aquele login.
+ */
+export async function listarPedidosDoSite(opcoes: { conta?: string; limite?: number } = {}): Promise<PedidoSite[]> {
   await garantirColunasOrcamentos()
+  const limite = opcoes.limite ?? 200
+  // strpos (e não LIKE) porque o "_" do id da conta valeria como curinga no LIKE.
+  const marcador = opcoes.conta ? `\nConta: ${opcoes.conta}\n` : ""
   const linhas = await getSql()`
     SELECT o.id, o.numero, o.criado_em, o.status, o.retorno, o.total_fechado, o.observacao,
            c.id AS cliente_id, c.nome AS cliente_nome, c.telefone AS cliente_telefone
     FROM orcamentos o
     LEFT JOIN clientes c ON c.id = o.cliente_id
     WHERE o.origem = 'loja'
+      AND (${marcador}::text = '' OR strpos(o.observacao, ${marcador}::text) > 0)
     ORDER BY o.numero DESC
     LIMIT ${limite}
   `
