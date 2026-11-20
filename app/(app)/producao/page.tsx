@@ -348,6 +348,8 @@ export default function ProducaoPage() {
     contratoAssinado?: boolean
     osUrl?: string
     contratoUrl?: string
+    dataEmissao?: string | null
+    tipoServico?: string
   } | null>(null)
 
   const abrirQc = useCallback(
@@ -1818,6 +1820,8 @@ export default function ProducaoPage() {
                             observacao: pedido.observacao,
                             arteUrl: pedido.arteUrl,
                             status: pedido.status,
+                            dataEmissao: pedido.criadoEm,
+                            tipoServico: "Gráfica Rápida",
                           })
                         }
                         onAbrirProblema={() =>
@@ -1888,6 +1892,11 @@ export default function ProducaoPage() {
                           contratoAssinado: assinaturas[orc.id]?.assinado,
                           contratoUrl: `/orcamentos/${orc.id}/contrato`,
                           osUrl: `/orcamentos/${orc.id}/os`,
+                          dataEmissao: orc.fechadoEm || orc.criadoEm,
+                          tipoServico:
+                            orc.item.servicoId && orc.item.servicoId !== "nenhum"
+                              ? "Serviço + material"
+                              : "Orçamento de serviço",
                         })
                       }
                       onAbrirProblema={() =>
@@ -2143,6 +2152,8 @@ export default function ProducaoPage() {
                                       observacao: pedido.observacao,
                                       arteUrl: pedido.arteUrl,
                                       status: pedido.status,
+                                      dataEmissao: pedido.criadoEm,
+                                      tipoServico: "Gráfica Rápida",
                                     })
                                   }
                                   onAbrirProblema={() =>
@@ -2214,6 +2225,11 @@ export default function ProducaoPage() {
                                     contratoAssinado: assinaturas[orc.id]?.assinado,
                                     contratoUrl: `/orcamentos/${orc.id}/contrato`,
                                     osUrl: `/orcamentos/${orc.id}/os`,
+                                    dataEmissao: orc.fechadoEm || orc.criadoEm,
+                                    tipoServico:
+                                      orc.item.servicoId && orc.item.servicoId !== "nenhum"
+                                        ? "Serviço + material"
+                                        : "Orçamento de serviço",
                                   })
                                 }
                                 onAbrirProblema={() =>
@@ -2521,14 +2537,22 @@ export default function ProducaoPage() {
       <Dialog open={!!modalDetalhesItem} onOpenChange={(open) => { if (!open) setModalDetalhesItem(null) }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="rounded-md bg-primary/10 text-primary px-2 py-0.5 text-xs font-bold">
                 {modalDetalhesItem?.tipo === "orcamento" ? "Ordem de Serviço" : "Pedido Rápido"} #{modalDetalhesItem?.numero}
               </span>
-              {modalDetalhesItem?.contratoAssinado && (
-                <span className="rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-xs font-bold">
-                  ✓ Assinado
-                </span>
+              {modalDetalhesItem?.tipo === "orcamento" && (
+                modalDetalhesItem?.contratoAssinado ? (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-xs font-bold border border-emerald-500/30">
+                    <FileCheck className="h-3.5 w-3.5" />
+                    ✓ Documento Assinado
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-xs font-bold border border-amber-500/30">
+                    <FileCheck className="h-3.5 w-3.5" />
+                    ⏳ Ag. Assinatura
+                  </span>
+                )
               )}
             </div>
             <DialogTitle className="text-base font-bold text-foreground">
@@ -2542,13 +2566,30 @@ export default function ProducaoPage() {
           <div className="flex flex-col gap-3 py-2 text-xs">
             {/* Medidas e Especificações */}
             <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                Especificações Técnicas
-              </span>
+              <div className="flex items-center justify-between text-xs pb-1.5 border-b border-border/40">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Especificações Técnicas
+                </span>
+                {modalDetalhesItem?.dataEmissao && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5 text-primary" />
+                    <span>{formatarData(modalDetalhesItem.dataEmissao)}</span>
+                  </span>
+                )}
+              </div>
+
+              {modalDetalhesItem?.tipoServico && (
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-muted-foreground shrink-0">Tipo:</span>
+                  <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+                    {modalDetalhesItem.tipoServico}
+                  </span>
+                </div>
+              )}
 
               {modalDetalhesItem?.largura != null && modalDetalhesItem?.altura != null && (
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-muted-foreground">Medidas:</span>
+                  <span className="font-semibold text-muted-foreground shrink-0">Medidas:</span>
                   <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 font-bold text-amber-900 dark:text-amber-300">
                     📏 {modalDetalhesItem.largura}m × {modalDetalhesItem.altura}m
                     {modalDetalhesItem.quantidade && modalDetalhesItem.quantidade > 1 ? ` (${modalDetalhesItem.quantidade} un)` : ""}
@@ -2600,28 +2641,48 @@ export default function ProducaoPage() {
               </div>
             )}
 
-            {/* Documentos: OS e Contrato */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-              {modalDetalhesItem?.osUrl && (
-                <Link
-                  href={modalDetalhesItem.osUrl}
-                  className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border/80 transition-colors"
-                >
-                  <Printer className="h-4 w-4" />
-                  <span>Ver OS (PDF)</span>
-                </Link>
-              )}
+            {/* Documentos: OS e Contrato/Assinatura */}
+            {(modalDetalhesItem?.osUrl || modalDetalhesItem?.contratoUrl) && (
+              <div className="flex flex-col gap-1.5 pt-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Documentos & Assinatura
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {modalDetalhesItem?.osUrl && (
+                    <a
+                      href={modalDetalhesItem.osUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border/80 transition-all active:scale-[0.98]"
+                    >
+                      <Printer className="h-4 w-4 text-primary shrink-0" />
+                      <span>Abrir OS (PDF)</span>
+                    </a>
+                  )}
 
-              {modalDetalhesItem?.contratoUrl && (
-                <Link
-                  href={modalDetalhesItem.contratoUrl}
-                  className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/30 transition-colors"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>Ver Contrato</span>
-                </Link>
-              )}
-            </div>
+                  {modalDetalhesItem?.contratoUrl && (
+                    <a
+                      href={modalDetalhesItem.contratoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold border transition-all active:scale-[0.98]",
+                        modalDetalhesItem?.contratoAssinado
+                          ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                          : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                      )}
+                    >
+                      <FileCheck className="h-4 w-4 shrink-0" />
+                      <span>
+                        {modalDetalhesItem?.contratoAssinado
+                          ? "Ver Contrato Assinado"
+                          : "Abrir p/ Assinar (Ag. Assinatura)"}
+                      </span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Botão de Marcar Problema como Resolvido (quando houver alerta ativo) */}
             {temProblemaReportado(modalDetalhesItem?.observacao) && (
@@ -3447,9 +3508,6 @@ function OrcamentoCardConteudo({
               <span className="text-xs font-bold text-foreground">
                 ORC #{String(orcamento.numero).padStart(4, "0")}
               </span>
-              <span className="rounded bg-violet-500/15 text-violet-700 dark:text-violet-300 px-1.5 py-0.2 text-[10px] font-semibold">
-                OS
-              </span>
               {typeof posicaoFila === "number" && (
                 posicaoFila === 1 ? (
                   <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 font-bold px-1.5 py-0.2 text-[10px] border border-amber-500/30 shadow-2xs" title="1º lugar da fila">
@@ -3535,43 +3593,6 @@ function OrcamentoCardConteudo({
         )}
       </div>
 
-      {/* Descrição + Data + Assinatura */}
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <span className={cn("rounded-md px-1.5 py-0.5 text-[11px] font-medium break-words leading-tight", coluna.corFundo, coluna.corTexto)}>
-          {orcamento.item.servicoId && orcamento.item.servicoId !== "nenhum"
-            ? "Serviço + material"
-            : "Orçamento de serviço"}
-        </span>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {papel !== "operador" && assinatura && (
-            <div onPointerDown={(e) => e.stopPropagation()}>
-              {assinatura.assinado ? (
-                <Link
-                  href={`/orcamentos/${orcamento.id}/contrato`}
-                  className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/25"
-                  title="Contrato e OS Assinados - Ver Documento"
-                >
-                  <FileCheck className="h-3 w-3" />
-                  Assinada
-                </Link>
-              ) : (
-                <Link
-                  href={`/orcamentos/${orcamento.id}/contrato`}
-                  className="inline-flex items-center gap-0.5 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 hover:bg-amber-500/20"
-                  title="Aguardando Assinatura - Ver Contrato"
-                >
-                  <FileCheck className="h-3 w-3" />
-                  Ag. Assinatura
-                </Link>
-              )}
-            </div>
-          )}
-          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>{orcamento.fechadoEm ? formatarData(orcamento.fechadoEm) : "—"}</span>
-          </div>
-        </div>
-      </div>
 
       {/* Badge de Foto da Peça Pronta (se houver) */}
       {orcamento.fotoProntoUrl && (
