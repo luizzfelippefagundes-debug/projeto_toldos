@@ -4,6 +4,8 @@ import "./globals.css"
 import { ClerkProvider } from "@clerk/nextjs"
 import { ptBR } from "@clerk/localizations"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,6 +54,8 @@ export default function RootLayout({
             storageKey="toldosprint-theme"
           >
             {children}
+            <Analytics />
+            <SpeedInsights />
           </ThemeProvider>
         </ClerkProvider>
       </body>

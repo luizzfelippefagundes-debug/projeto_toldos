@@ -36,6 +36,8 @@ const rotaPublica = createRouteMatcher([
   // Site da loja: preços (só leitura) e pedido de orçamento. O pedido exige o
   // segredo LOJA_API_SECRET dentro da própria rota.
   "/api/loja(.*)",
+  // Vercel Analytics e Speed Insights
+  "/_vercel(.*)",
 ])
 
 const rotaApi = createRouteMatcher(["/api(.*)"])
