@@ -18,6 +18,7 @@ import { buscarNomeNaAgenda, enviarDocumentoWhatsapp, enviarMensagemWhatsapp } f
 import { formatarData, formatarMoeda } from "./format"
 import { gerarPdfOrcamentoServidor } from "./pdf-orcamento-servidor"
 import { formatarNumeroOrcamento } from "./orcamento-pdf"
+import { verificarHorarioAtendimento, formatarMensagemForaDoHorario } from "./bot-horario"
 import type { Orcamento, StatusPedidoRapido } from "./types"
 
 const STATUS_PRODUCAO_LEGIVEL: Record<StatusPedidoRapido, string> = {
@@ -266,7 +267,8 @@ export function resolverFluxoAtendimento(
   nomeSalvo?: string | null,
   localSalvo?: string | null,
   pushName?: string | null,
-  ehClienteCadastrado?: boolean
+  ehClienteCadastrado?: boolean,
+  dataReferencia?: Date
 ): { resposta: string; nome?: string; local?: string; transferir?: boolean; assunto?: string } {
   const limpo = textoRecebido.trim().toLowerCase()
   const eSaudacao = /^(oi+|ol[aá]+|e a[ií]|bom dia|boa tarde|boa noite|hey|hello|al[oô]+|opa|fala)[\s!?.]*$/i.test(limpo)
@@ -291,6 +293,41 @@ export function resolverFluxoAtendimento(
 
   const ehContatoConhecido = Boolean(ehClienteCadastrado || nomeEfetivo)
   const assuntoDetectado = extrairAssuntoInteresse(textoRecebido)
+
+  // 2. FINS DE SEMANA E FORA DO HORÁRIO COMERCIAL (Seg a Sex das 07:30 às 17:00):
+  // Se for sábado, domingo ou fora do expediente, o robô avisa que a loja está fechada,
+  // informa os horários e que a equipe técnica entrará em contato logo que abrir.
+  if (dataReferencia) {
+    const statusHorario = verificarHorarioAtendimento(dataReferencia)
+    if (!statusHorario.estaAberto) {
+      const vocativo = nomeEfetivo ? `, ${nomeEfetivo}` : ""
+      const jaAvisouFechado = historico.some(
+        (h) => h.role === "assistant" && h.content.includes("Nosso horário de funcionamento é")
+      )
+
+      if (jaAvisouFechado) {
+        return {
+          resposta: `Anotado${vocativo}! 📝 Já deixei tudo salvo aqui. Logo que nossa equipe iniciar o atendimento ${statusHorario.proximaAberturaDescricao}, vamos te responder por aqui! ⏳🧑‍💼`,
+          nome: nomeEfetivo || undefined,
+          local: localSalvo || undefined,
+          transferir: true,
+          assunto: assuntoDetectado || undefined,
+        }
+      }
+
+      return {
+        resposta: formatarMensagemForaDoHorario({
+          nome: nomeEfetivo,
+          status: statusHorario,
+          assunto: assuntoDetectado,
+        }),
+        nome: nomeEfetivo || undefined,
+        local: localSalvo || undefined,
+        transferir: true,
+        assunto: assuntoDetectado || (statusHorario.ehFimDeSemana ? "Fim de Semana" : "Fora do Horário"),
+      }
+    }
+  }
 
   // 2. CONTATOS CONHECIDOS (cliente já cadastrado no sistema ou com nome já identificado):
   // NUNCA perguntar nome ou cidade! O Kaio e a empresa já sabem quem é o cliente.
@@ -503,6 +540,7 @@ OUTRAS CONSULTAS RÁPIDAS (Sem transferir):
 - Se pedir o PDF do orçamento ("manda o orçamento", "quero o pdf"), chame enviar_pdf_orcamento.
 
 REGRAS GERAIS:
+- Horário de atendimento da empresa: Segunda a Sexta, das 07:30 às 17:00 (5 horas). Sábados, domingos e fora desse horário a empresa está fechada; avise gentilmente o horário de funcionamento e que a equipe responderá logo no início do expediente.
 - Não fique repetindo saudações desnecessárias.
 - Seja direto, claro e educado.
 - Se o cliente já mandar tudo na primeira mensagem (ex: "Sou João de Colatina e quero toldo cortina"), já salve os dados, apresente a orientação de fotos/medidas e transfira de uma vez.`
@@ -615,7 +653,8 @@ REGRAS GERAIS:
     nomeTemp,
     localTemp,
     pushName,
-    ehClienteCadastrado
+    ehClienteCadastrado,
+    new Date()
   )
   let respostaFinal: string = reg.resposta
 

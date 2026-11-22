@@ -9,6 +9,7 @@ import {
   extrairAssuntoInteresse,
   formatarAlertaTransferencia,
 } from "@/lib/bot-whatsapp"
+import { verificarHorarioAtendimento } from "@/lib/bot-horario"
 
 describe("normalizarTelefone", () => {
   it("tira tudo que não é dígito", () => {
@@ -230,5 +231,113 @@ describe("resolverFluxoAtendimento (Motor de Regras Infalível do Robô)", () =>
     const res = resolverFluxoAtendimento("Vocês fazem outdoor?", [], "Poliany", "Colatina")
     expect(res.transferir).toBe(true)
     expect(res.resposta).toContain("transferindo")
+  })
+})
+
+describe("Horário de Funcionamento e Atendimento nos Fins de Semana", () => {
+  it("detecta sábado e domingo como fechado (fim de semana)", () => {
+    // Sábado 21/11/2026 às 15:00 BRT (18:00 UTC)
+    const sabado = new Date("2026-11-21T18:00:00Z")
+    const stSab = verificarHorarioAtendimento(sabado)
+    expect(stSab.ehFimDeSemana).toBe(true)
+    expect(stSab.estaAberto).toBe(false)
+    expect(stSab.proximaAberturaDescricao).toContain("segunda-feira")
+
+    // Domingo 22/11/2026 às 10:00 BRT (13:00 UTC)
+    const domingo = new Date("2026-11-22T13:00:00Z")
+    const stDom = verificarHorarioAtendimento(domingo)
+    expect(stDom.ehFimDeSemana).toBe(true)
+    expect(stDom.estaAberto).toBe(false)
+    expect(stDom.proximaAberturaDescricao).toContain("segunda-feira")
+  })
+
+  it("detecta dias úteis dentro do horário comercial (07:30 às 17:00) como aberto", () => {
+    // Quarta-feira às 10:00 BRT (13:00 UTC)
+    const quartaAberto = new Date("2026-11-25T13:00:00Z")
+    const stQuarta = verificarHorarioAtendimento(quartaAberto)
+    expect(stQuarta.ehFimDeSemana).toBe(false)
+    expect(stQuarta.estaAberto).toBe(true)
+
+    // Segunda-feira às 07:35 BRT (10:35 UTC)
+    const segundaInicio = new Date("2026-11-23T10:35:00Z")
+    expect(verificarHorarioAtendimento(segundaInicio).estaAberto).toBe(true)
+  })
+
+  it("detecta dias úteis fora do horário (antes das 07:30 ou após as 17:00) como fechado", () => {
+    // Quarta-feira às 07:15 BRT (10:15 UTC) - antes de abrir
+    const quartaCedo = new Date("2026-11-25T10:15:00Z")
+    const stCedo = verificarHorarioAtendimento(quartaCedo)
+    expect(stCedo.estaAberto).toBe(false)
+    expect(stCedo.proximaAberturaDescricao).toContain("hoje a partir das 07:30")
+
+    // Quarta-feira às 18:30 BRT (21:30 UTC) - após fechar
+    const quartaNoite = new Date("2026-11-25T21:30:00Z")
+    const stNoite = verificarHorarioAtendimento(quartaNoite)
+    expect(stNoite.estaAberto).toBe(false)
+    expect(stNoite.proximaAberturaDescricao).toContain("amanhã a partir das 07:30")
+  })
+
+  it("no fim de semana o robô avisa que está fechado, informa os horários (07:30 às 17:00) e que responderá na segunda", () => {
+    const sabado = new Date("2026-11-21T18:00:00Z") // Sábado à tarde
+    const res = resolverFluxoAtendimento(
+      "Olá, gostaria de saber o valor de um toldo",
+      [],
+      "Carlos",
+      "Colatina",
+      null,
+      false,
+      sabado
+    )
+
+    expect(res.resposta).toContain("fechados para o fim de semana")
+    expect(res.resposta).toContain("07:30 às 17:00")
+    expect(res.resposta).toContain("segunda-feira")
+    expect(res.resposta).toContain("fotos")
+    expect(res.resposta).toContain("medidas")
+    expect(res.transferir).toBe(true)
+  })
+
+  it("em dia de semana à noite avisa que encerrou o expediente e responderá no dia seguinte", () => {
+    const quartaNoite = new Date("2026-11-25T22:00:00Z") // Quarta às 19h BRT
+    const res = resolverFluxoAtendimento(
+      "Boa noite!",
+      [],
+      "Mariana",
+      null,
+      null,
+      false,
+      quartaNoite
+    )
+
+    expect(res.resposta).toContain("encerrou o expediente por hoje")
+    expect(res.resposta).toContain("07:30 às 17:00")
+    expect(res.resposta).toContain("amanhã")
+    expect(res.transferir).toBe(true)
+  })
+
+  it("anti-flood: se o robô já avisou que está fechado, mensagens subsequentes não reenviam o aviso repetido", () => {
+    const sabado = new Date("2026-11-21T18:00:00Z")
+    const historicoComAviso = [
+      { role: "user" as const, content: "oi" },
+      {
+        role: "assistant" as const,
+        content: "Olá! Seja muito bem-vindo à Toldos Print. Nosso horário de funcionamento é: De segunda a sexta-feira, das 07:30 às 17:00.",
+      },
+    ]
+
+    const res = resolverFluxoAtendimento(
+      "Seguem as fotos do local",
+      historicoComAviso,
+      "Carlos",
+      null,
+      null,
+      false,
+      sabado
+    )
+
+    expect(res.resposta).toContain("Anotado")
+    expect(res.resposta).toContain("Já deixei tudo salvo")
+    expect(res.resposta).not.toContain("Nosso horário de funcionamento é:")
+    expect(res.transferir).toBe(true)
   })
 })
