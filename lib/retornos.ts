@@ -80,16 +80,15 @@ export function identificarIntencaoMensagem(texto: string): IntencaoRetorno | nu
     return "perdido"
   }
 
-  // 2. Aprovação
+  // 2. Aprovação (exige intenção explícita de fechamento/produção do serviço)
   const padroesAprovado = [
     /\b(aprovado|aprovada|aprovo|aprovamos)\b/,
     /\b(pode\s+(fazer|iniciar|produzir|rodar|mandar|dar\s+inicio|tocar|prosseguir))\b/,
-    /\b(fechado|fechou|vamos\s+fechar|pode\s+fechar)\b/,
+    /\b(fechado|fechou|vamos\s+fechar|pode\s+fechar|quero\s+fechar)\b/,
     /\b(ta\s+aprovado|esta\s+aprovado|tudo\s+certo\s+pode\s+fazer)\b/,
     /\b(confirmado|confirmo|confirmar|autorizado|autorizo)\b/,
     /\b(manda\s+bala|bora\s+produzir|bora\s+fazer)\b/,
-    /^(sim|ok|beleza|blz|combinado|show|perfeito|positivo|otimo|fechou)[\s!.]*$/,
-    /^(sim|ok|beleza|show|perfeito)\s*,\s*(pode\s+fazer|aprovado|manda\s+bala)/,
+    /^(sim|ok|beleza|show|perfeito|combinado)\s*,\s*(pode\s+fazer|aprovado|manda\s+bala|bora|pode\s+mandar|vamos\s+fechar)/,
   ]
   if (padroesAprovado.some((p) => p.test(limpo))) {
     return "aprovado"

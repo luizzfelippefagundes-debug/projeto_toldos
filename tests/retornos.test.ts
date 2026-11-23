@@ -62,10 +62,16 @@ describe("retornos", () => {
       expect(identificarIntencaoMensagem("Pode mandar rodar")).toBe("aprovado")
       expect(identificarIntencaoMensagem("fechado!")).toBe("aprovado")
       expect(identificarIntencaoMensagem("vamos fechar")).toBe("aprovado")
-      expect(identificarIntencaoMensagem("Sim")).toBe("aprovado")
-      expect(identificarIntencaoMensagem("OK")).toBe("aprovado")
       expect(identificarIntencaoMensagem("sim, pode fazer")).toBe("aprovado")
+      expect(identificarIntencaoMensagem("ok, aprovado")).toBe("aprovado")
       expect(identificarIntencaoMensagem("Confirmado!")).toBe("aprovado")
+    })
+
+    it("não considera respostas genéricas curtas como aprovação contratual", () => {
+      expect(identificarIntencaoMensagem("Sim")).toBeNull()
+      expect(identificarIntencaoMensagem("OK")).toBeNull()
+      expect(identificarIntencaoMensagem("beleza")).toBeNull()
+      expect(identificarIntencaoMensagem("show")).toBeNull()
     })
 
     it("identifica negociação e dúvidas de preço/prazo", () => {

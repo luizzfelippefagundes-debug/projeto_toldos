@@ -79,25 +79,23 @@ export async function processarRetornoWhatsapp({
   const numeroOrc = orcamentoAlvo.numero as number
 
   if (intencao === "aprovado") {
+    // TRAVA DE SEGURANÇA DO DONO (Kaio):
+    // Quando o cliente sinaliza aprovação no WhatsApp, o robô NÃO emite a OS e NÃO joga direto na produção sozinho.
+    // Ele registra a sinalização para o Kaio aprovar e notifica o cliente que o Kaio vai validar o pedido.
     const novoRetorno = {
       ...retAntigo,
-      etapa: "aprovado",
-      anotacao: `Aprovado pelo cliente via WhatsApp: "${texto.slice(0, 80)}"`,
+      clienteSinalizouAprovacao: true,
+      anotacao: `🔔 Cliente confirmou no WhatsApp: "${texto.slice(0, 80)}" — Aguardando Kaio conferir e aprovar`,
       atualizadoEm: agora,
     }
-    const osEmitidaEm = (orcamentoAlvo.os_emitida_em as string | null) ?? agora
-    // Cai direto em Ag. Assinatura na Produção
-    const statusProducao = (orcamentoAlvo.status_producao as string | null) || "aguardando"
 
     await sql`
       UPDATE orcamentos SET
-        retorno = ${JSON.stringify(novoRetorno)},
-        os_emitida_em = ${osEmitidaEm},
-        status_producao = ${statusProducao}
+        retorno = ${JSON.stringify(novoRetorno)}
       WHERE id = ${orcamentoAlvo.id}
     `
 
-    const msgConfirma = `Perfeito, ${primeiroNome}! 🎉 Seu orçamento nº ${numeroOrc} foi aprovado com sucesso!\n\nJá geramos sua Ordem de Serviço e encaminhamos para a produção. Em instantes enviamos o link para sua conferência e assinatura! 📋✍️`
+    const msgConfirma = `Perfeito, ${primeiroNome}! 🎉 Recebemos sua mensagem confirmando o orçamento nº ${numeroOrc}!\n\nJá notifiquei o Kaio para validar o seu pedido e conferir os detalhes técnicos. Em instantes entramos em contato para formalizar e dar início! 🤝📋`
     await enviarMensagemWhatsapp(telefone, msgConfirma).catch(() => {})
     await registrarMensagemBot({
       clienteId,
@@ -108,7 +106,7 @@ export async function processarRetornoWhatsapp({
       autor: "bot",
     }).catch(() => {})
 
-    return { processado: true, acao: "orcamento_aprovado", orcamentoNumero: numeroOrc }
+    return { processado: true, acao: "sinalizou_aprovacao", orcamentoNumero: numeroOrc }
   }
 
   if (intencao === "negociacao") {

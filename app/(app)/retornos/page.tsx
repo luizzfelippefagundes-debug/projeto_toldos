@@ -45,6 +45,8 @@ import {
   CalendarClock,
   FileText,
   MessageCircle,
+  Globe,
+  Store,
   PenLine,
   Search,
   StickyNote,
@@ -599,6 +601,18 @@ function CardConteudo({
               WhatsApp
             </Badge>
           )}
+          {card.orcamento.origem === "loja" && (
+            <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30 gap-1 font-semibold">
+              <Globe className="h-2.5 w-2.5" />
+              Site
+            </Badge>
+          )}
+          {(!card.orcamento.origem || card.orcamento.origem === "balcao") && card.cliente?.origem !== "whatsapp" && (
+            <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30 gap-1 font-semibold">
+              <Store className="h-2.5 w-2.5" />
+              Balcão
+            </Badge>
+          )}
         </div>
         <BadgeContato retorno={card.retorno} situacao={card.situacao} />
       </div>
@@ -609,7 +623,15 @@ function CardConteudo({
       </div>
 
       {card.retorno.anotacao && (
-        <p className="line-clamp-2 flex gap-1.5 rounded-md bg-muted/60 px-2 py-1 text-xs text-muted-foreground">
+        <p
+          className={cn(
+            "line-clamp-2 flex gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
+            (card.retorno as any).clienteSinalizouAprovacao ||
+              card.retorno.anotacao.includes("Cliente confirmou no WhatsApp")
+              ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-semibold"
+              : "bg-muted/60 text-muted-foreground"
+          )}
+        >
           <StickyNote className="mt-0.5 h-3 w-3 shrink-0" />
           {card.retorno.anotacao}
         </p>

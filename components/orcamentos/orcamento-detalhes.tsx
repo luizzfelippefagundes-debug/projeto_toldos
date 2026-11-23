@@ -9,6 +9,7 @@ import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { equipamentosAcessoSeed } from "@/lib/seed-data"
 import type { Orcamento, StatusOrcamento } from "@/lib/types"
 import { ItensAdicionaisLista } from "./itens-adicionais-lista"
+import { MessageCircle, Globe, Store } from "lucide-react"
 
 const statusLabel: Record<StatusOrcamento, string> = {
   aberto: "Aberto",
@@ -75,8 +76,28 @@ export function OrcamentoDetalhes({ orcamento }: { orcamento: Orcamento }) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-lg font-semibold">Orçamento #{orcamento.numero}</p>
-          <p className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-lg font-semibold">Orçamento #{orcamento.numero}</p>
+            {orcamento.origem === "whatsapp" && (
+              <Badge variant="outline" className="text-[11px] h-5 px-2 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold">
+                <MessageCircle className="h-3 w-3" />
+                WhatsApp / Bot
+              </Badge>
+            )}
+            {orcamento.origem === "loja" && (
+              <Badge variant="outline" className="text-[11px] h-5 px-2 bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30 gap-1 font-semibold">
+                <Globe className="h-3 w-3" />
+                Site / Catálogo
+              </Badge>
+            )}
+            {(!orcamento.origem || orcamento.origem === "balcao") && (
+              <Badge variant="outline" className="text-[11px] h-5 px-2 bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30 gap-1 font-semibold">
+                <Store className="h-3 w-3" />
+                Balcão / Manual (Kaio)
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Criado em {formatarData(orcamento.criadoEm)}
           </p>
         </div>

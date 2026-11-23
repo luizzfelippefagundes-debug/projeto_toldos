@@ -17,7 +17,8 @@ import { OrcamentoDetalheDialog } from "@/components/orcamentos/orcamento-detalh
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import type { StatusOrcamento } from "@/lib/types"
-import { Search, MessageCircle } from "lucide-react"
+import { Search, MessageCircle, Globe, Store } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const statusLabel: Record<StatusOrcamento, string> = {
   aberto: "Aberto",
@@ -34,6 +35,31 @@ const statusVariant: Record<
   cancelado: "destructive",
 }
 
+export function BadgeOrigemOrcamento({ origem }: { origem?: string }) {
+  if (origem === "whatsapp") {
+    return (
+      <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold">
+        <MessageCircle className="h-2.5 w-2.5" />
+        WhatsApp
+      </Badge>
+    )
+  }
+  if (origem === "loja") {
+    return (
+      <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30 gap-1 font-semibold">
+        <Globe className="h-2.5 w-2.5" />
+        Site
+      </Badge>
+    )
+  }
+  return (
+    <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30 gap-1 font-semibold">
+      <Store className="h-2.5 w-2.5" />
+      Balcão
+    </Badge>
+  )
+}
+
 export default function HistoricoOrcamentosPage() {
   const { orcamentos, clientes, materiais, servicos } = useData()
 
@@ -41,13 +67,25 @@ export default function HistoricoOrcamentosPage() {
   const [clienteId, setClienteId] = useState<string>("todos")
   const [dataDe, setDataDe] = useState("")
   const [dataAte, setDataAte] = useState("")
+  const [filtroOrigem, setFiltroOrigem] = useState<"todos" | "whatsapp" | "loja" | "balcao">("todos")
   const [detalheId, setDetalheId] = useState<string | null>(null)
+
+  const qtdWhatsApp = useMemo(() => orcamentos.filter((o) => o.origem === "whatsapp").length, [orcamentos])
+  const qtdLoja = useMemo(() => orcamentos.filter((o) => o.origem === "loja").length, [orcamentos])
+  const qtdBalcao = useMemo(() => orcamentos.filter((o) => !o.origem || o.origem === "balcao").length, [orcamentos])
 
   const orcamentosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     return orcamentos.filter((orcamento) => {
       if (clienteId !== "todos" && orcamento.clienteId !== clienteId)
         return false
+      if (filtroOrigem === "whatsapp" && orcamento.origem !== "whatsapp")
+        return false
+      if (filtroOrigem === "loja" && orcamento.origem !== "loja")
+        return false
+      if (filtroOrigem === "balcao" && orcamento.origem && orcamento.origem !== "balcao")
+        return false
+
       const criado = new Date(orcamento.criadoEm)
       if (dataDe && criado < new Date(dataDe)) return false
       if (dataAte && criado > new Date(`${dataAte}T23:59:59`)) return false
@@ -70,7 +108,7 @@ export default function HistoricoOrcamentosPage() {
 
       return true
     })
-  }, [orcamentos, clienteId, dataDe, dataAte, busca, clientes])
+  }, [orcamentos, clienteId, dataDe, dataAte, busca, clientes, filtroOrigem])
 
   function nomeCliente(id: string) {
     return clientes.find((c) => c.id === id)?.nome ?? "Cliente removido"
@@ -181,6 +219,49 @@ export default function HistoricoOrcamentosPage() {
         )}
       </div>
 
+      {/* Abas de filtro rápido por Origem (WhatsApp, Site, Balcão) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        <Button
+          type="button"
+          size="sm"
+          variant={filtroOrigem === "todos" ? "default" : "outline"}
+          className="h-8 text-xs rounded-lg shrink-0"
+          onClick={() => setFiltroOrigem("todos")}
+        >
+          Todos ({orcamentos.length})
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={filtroOrigem === "whatsapp" ? "default" : "outline"}
+          className="h-8 text-xs rounded-lg shrink-0 gap-1"
+          onClick={() => setFiltroOrigem("whatsapp")}
+        >
+          <MessageCircle className="h-3 w-3 text-emerald-500" />
+          WhatsApp ({qtdWhatsApp})
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={filtroOrigem === "loja" ? "default" : "outline"}
+          className="h-8 text-xs rounded-lg shrink-0 gap-1"
+          onClick={() => setFiltroOrigem("loja")}
+        >
+          <Globe className="h-3 w-3 text-sky-500" />
+          Site / Loja ({qtdLoja})
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={filtroOrigem === "balcao" ? "default" : "outline"}
+          className="h-8 text-xs rounded-lg shrink-0 gap-1"
+          onClick={() => setFiltroOrigem("balcao")}
+        >
+          <Store className="h-3 w-3 text-slate-500" />
+          Balcão / Manual ({qtdBalcao})
+        </Button>
+      </div>
+
       {/* Celular: lista de cartões */}
       <div className="flex flex-col gap-2 md:hidden">
         {orcamentosFiltrados.length === 0 ? (
@@ -197,20 +278,10 @@ export default function HistoricoOrcamentosPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className="font-medium">#{orcamento.numero}</p>
-                    {orcamento.origem === "whatsapp" && (
-                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold">
-                        <MessageCircle className="h-2.5 w-2.5" />
-                        WhatsApp
-                      </Badge>
-                    )}
-                    {orcamento.origem === "loja" && (
-                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30 font-semibold">
-                        Site
-                      </Badge>
-                    )}
+                    <p className="font-semibold text-foreground">#{orcamento.numero}</p>
+                    <BadgeOrigemOrcamento origem={orcamento.origem} />
                   </div>
-                  <p className="truncate text-sm text-muted-foreground">
+                  <p className="truncate text-sm text-muted-foreground mt-0.5">
                     {nomeCliente(orcamento.clienteId)}
                   </p>
                 </div>
@@ -243,7 +314,8 @@ export default function HistoricoOrcamentosPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nº</TableHead>
+              <TableHead className="w-20">Nº</TableHead>
+              <TableHead className="w-32">Origem</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Válido até</TableHead>
@@ -258,21 +330,11 @@ export default function HistoricoOrcamentosPage() {
                 onClick={() => setDetalheId(orcamento.id)}
                 className="cursor-pointer"
               >
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-1.5">
-                    <span>#{orcamento.numero}</span>
-                    {orcamento.origem === "whatsapp" && (
-                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold">
-                        <MessageCircle className="h-2.5 w-2.5" />
-                        WhatsApp
-                      </Badge>
-                    )}
-                    {orcamento.origem === "loja" && (
-                      <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/30 font-semibold">
-                        Site
-                      </Badge>
-                    )}
-                  </div>
+                <TableCell className="font-semibold">
+                  #{orcamento.numero}
+                </TableCell>
+                <TableCell>
+                  <BadgeOrigemOrcamento origem={orcamento.origem} />
                 </TableCell>
                 <TableCell>{nomeCliente(orcamento.clienteId)}</TableCell>
                 <TableCell>{formatarData(orcamento.criadoEm)}</TableCell>
@@ -289,7 +351,7 @@ export default function HistoricoOrcamentosPage() {
             ))}
             {orcamentosFiltrados.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                   Nenhum orçamento encontrado para esse filtro.
                 </TableCell>
               </TableRow>

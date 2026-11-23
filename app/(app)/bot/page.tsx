@@ -38,21 +38,24 @@ import {
   RotateCcw,
   AlertCircle,
   HelpCircle,
+  FileText,
 } from "lucide-react"
 import { toast } from "sonner"
-import type { MensagemBot } from "@/lib/types"
+import type { MensagemBot, Orcamento } from "@/lib/types"
 
 interface ContatoBot {
   id: string
   telefone: string
   nome: string
   clienteId?: string
-  statusConversao: "fechado" | "aberto" | "nao_fechou"
+  statusConversao: "fechado" | "sinalizou_aprovacao" | "aberto" | "nao_fechou"
   categoriaInteresse: "Toldo" | "Comunicação Visual" | "Outro"
   valorTotalFechado: number
   valorTotalAberto: number
   qtdOrcamentos: number
   qtdPedidos: number
+  temComprasAnteriores?: boolean
+  orcamentoAtivo?: Orcamento
   ultimoContato: Date
   ultimaMensagem: MensagemBot
   mensagens: MensagemBot[]
@@ -191,7 +194,7 @@ export default function BotPage() {
   }
 
   // Filtros do levantamento
-  const [filtroStatus, setFiltroStatus] = useState<"todos" | "fechado" | "aberto" | "nao_fechou">("todos")
+  const [filtroStatus, setFiltroStatus] = useState<"todos" | "fechado" | "sinalizou_aprovacao" | "aberto" | "nao_fechou">("todos")
   const [busca, setBusca] = useState("")
 
   // Modal de histórico da conversa com o bot
@@ -273,7 +276,7 @@ export default function BotPage() {
 
       const tel = cliente?.telefone || ultima.telefone
 
-      // Orçamentos e pedidos desse contato
+      // Orçamentos e pedidos vinculados a este contato
       const orcsDoCliente = cliente ? orcamentos.filter((o) => o.clienteId === cliente.id) : []
       const pedsDoCliente = pedidosRapidos.filter(
         (p) =>
@@ -281,36 +284,56 @@ export default function BotPage() {
           (cliente && p.clienteNome.toLowerCase().trim() === cliente.nome.toLowerCase().trim())
       )
 
-      const orcsFechados = orcsDoCliente.filter((o) => o.status === "fechado")
+      // Data de referência do início da conversa no WhatsApp (com margem de segurança de 24h)
+      const dataInicioConversa = new Date(primeira.criadoEm).getTime() - 24 * 60 * 60 * 1000
+
+      // Orçamentos originados ou criados a partir desta demanda
+      const orcsDestaConversa = orcsDoCliente.filter(
+        (o) => o.origem === "whatsapp" || new Date(o.criadoEm).getTime() >= dataInicioConversa
+      )
+      const pedsDestaConversa = pedsDoCliente.filter(
+        (p) => new Date(p.criadoEm).getTime() >= dataInicioConversa
+      )
+
+      // Orçamentos e pedidos FECHADOS (Aprovados pelo Kaio!)
+      const orcsFechadosConversa = orcsDestaConversa.filter((o) => o.status === "fechado")
+      const pedsFechadosConversa = pedsDestaConversa
+
+      // Orçamentos em aberto ativos do cliente
       const orcsAbertos = orcsDoCliente.filter((o) => o.status === "aberto")
-      const pedsValidos = pedsDoCliente
+      const orcamentoAtivo = orcsAbertos[0] || orcsFechadosConversa[0] || orcsDoCliente[0]
 
       const valorFechado =
-        orcsFechados.reduce((acc, o) => acc + (o.totalFechado || 0), 0) +
-        pedsValidos.reduce((acc, p) => acc + p.total, 0)
+        orcsFechadosConversa.reduce((acc, o) => acc + (o.totalFechado || 0), 0) +
+        pedsFechadosConversa.reduce((acc, p) => acc + p.total, 0)
 
       const valorAberto = orcsAbertos.reduce((acc, o) => acc + (o.totalFechado || 0), 0)
 
-      // Análise temporal inteligente (Caso Simone Breda):
-      // Um cliente que fechou no passado mas enviou mensagem recente tem nova demanda em aberto!
-      const datasFechados = [
-        ...orcsFechados.map((o) => new Date(o.fechadoEm || o.criadoEm).getTime()),
-        ...pedsValidos.map((p) => new Date(p.criadoEm).getTime()),
-      ].filter((t) => !isNaN(t) && t > 0)
-      const ultimoFechamentoTimestamp = datasFechados.length > 0 ? Math.max(...datasFechados) : 0
-      const ultimaMsgTimestamp = new Date(ultima.criadoEm).getTime()
+      const temComprasAnteriores =
+        orcsDoCliente.some((o) => o.status === "fechado") || pedsDoCliente.length > 0
 
-      let statusConversao: "fechado" | "aberto" | "nao_fechou" = "nao_fechou"
-      if (orcsAbertos.length > 0) {
-        statusConversao = "aberto"
-      } else if (ultimoFechamentoTimestamp > 0) {
-        // Se a conversa continuou ou houve nova mensagem pelo menos 12 horas após a última compra fechada,
-        // trata-se de um novo atendimento / nova dúvida do cliente.
-        const dozeHorasMs = 12 * 60 * 60 * 1000
-        if (ultimaMsgTimestamp > ultimoFechamentoTimestamp + dozeHorasMs) {
-          statusConversao = "nao_fechou"
+      // TRAVA DO DONO (Kaio):
+      // 1. Só é "fechado" se existe orçamento desta demanda fechado/aprovado pelo Kaio (status === 'fechado')!
+      // 2. Se o cliente sinalizou no WhatsApp que quer fechar, mas o Kaio ainda não clicou em fechar: "sinalizou_aprovacao"
+      // 3. Se existe orçamento em aberto cadastrado: "aberto"
+      // 4. Se não existe orçamento cadastrado para este contato: "nao_fechou" (Em atendimento)
+      let statusConversao: "fechado" | "sinalizou_aprovacao" | "aberto" | "nao_fechou" = "nao_fechou"
+
+      if (orcsFechadosConversa.length > 0 || pedsFechadosConversa.length > 0) {
+        statusConversao = "fechado"
+      } else if (orcsAbertos.length > 0) {
+        const clienteSinalizou = orcsAbertos.some((o) => {
+          const ret = o.retorno as unknown as Record<string, unknown> | null
+          return Boolean(
+            ret?.clienteSinalizouAprovacao ||
+              ret?.etapa === "aprovado" ||
+              (typeof ret?.anotacao === "string" && ret.anotacao.includes("confirmou no WhatsApp"))
+          )
+        })
+        if (clienteSinalizou) {
+          statusConversao = "sinalizou_aprovacao"
         } else {
-          statusConversao = "fechado"
+          statusConversao = "aberto"
         }
       } else {
         statusConversao = "nao_fechou"
@@ -333,6 +356,8 @@ export default function BotPage() {
         valorTotalAberto: valorAberto,
         qtdOrcamentos: orcsDoCliente.length,
         qtdPedidos: pedsDoCliente.length,
+        temComprasAnteriores,
+        orcamentoAtivo,
         ultimoContato: new Date(ultima.criadoEm),
         ultimaMensagem: ultima,
         mensagens: msgsOrdenadas,
@@ -346,6 +371,7 @@ export default function BotPage() {
   // Métricas de funil
   const totalContatos = contatosBot.length
   const fechados = useMemo(() => contatosBot.filter((c) => c.statusConversao === "fechado"), [contatosBot])
+  const sinalizaram = useMemo(() => contatosBot.filter((c) => c.statusConversao === "sinalizou_aprovacao"), [contatosBot])
   const abertos = useMemo(() => contatosBot.filter((c) => c.statusConversao === "aberto"), [contatosBot])
   const naoFecharam = useMemo(() => contatosBot.filter((c) => c.statusConversao === "nao_fechou"), [contatosBot])
 
@@ -645,13 +671,29 @@ export default function BotPage() {
               >
                 Fecharam ({fechados.length})
               </Button>
+              {sinalizaram.length > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={filtroStatus === "sinalizou_aprovacao" ? "default" : "outline"}
+                  className={cn(
+                    "h-8 text-xs rounded-lg animate-pulse",
+                    filtroStatus === "sinalizou_aprovacao"
+                      ? "bg-amber-600 hover:bg-amber-700 text-white"
+                      : "border-amber-500/40 text-amber-600 dark:text-amber-400"
+                  )}
+                  onClick={() => setFiltroStatus("sinalizou_aprovacao")}
+                >
+                  🔔 Querem Fechar ({sinalizaram.length})
+                </Button>
+              )}
               <Button
                 type="button"
                 size="sm"
                 variant={filtroStatus === "aberto" ? "default" : "outline"}
                 className={cn(
                   "h-8 text-xs rounded-lg",
-                  filtroStatus === "aberto" ? "bg-amber-600 hover:bg-amber-700 text-white" : ""
+                  filtroStatus === "aberto" ? "bg-sky-600 hover:bg-sky-700 text-white" : ""
                 )}
                 onClick={() => setFiltroStatus("aberto")}
               >
@@ -664,7 +706,7 @@ export default function BotPage() {
                 className="h-8 text-xs rounded-lg"
                 onClick={() => setFiltroStatus("nao_fechou")}
               >
-                Não Fecharam ({naoFecharam.length})
+                Em Atendimento ({naoFecharam.length})
               </Button>
             </div>
 
@@ -700,18 +742,25 @@ export default function BotPage() {
                           {contato.nome}
                         </span>
                         {contato.statusConversao === "fechado" && (
-                          <Badge className="bg-emerald-600/10 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-500/20 text-[11px] h-5">
+                          <Badge className="bg-emerald-600/10 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-500/20 text-[11px] h-5 font-semibold">
                             ✓ Fechou Venda ({formatarMoeda(contato.valorTotalFechado)})
                           </Badge>
                         )}
+                        {contato.statusConversao === "sinalizou_aprovacao" && (
+                          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-[11px] h-5 font-semibold animate-pulse">
+                            🔔 Cliente Quer Fechar (Aguardando Kaio)
+                          </Badge>
+                        )}
                         {contato.statusConversao === "aberto" && (
-                          <Badge className="bg-amber-600/10 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 border-amber-500/20 text-[11px] h-5">
+                          <Badge className="bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20 text-[11px] h-5">
                             ⏳ Orçamento Aberto ({formatarMoeda(contato.valorTotalAberto)})
                           </Badge>
                         )}
                         {contato.statusConversao === "nao_fechou" && (
                           <Badge variant="outline" className="text-muted-foreground text-[11px] h-5">
-                            ⚪ Apenas Contato (Sem Venda)
+                            {contato.temComprasAnteriores
+                              ? "💬 Cliente Recorrente (Sem Orçamento Aberto)"
+                              : "💬 Contato Inicial (Sem Orçamento)"}
                           </Badge>
                         )}
 
@@ -773,6 +822,17 @@ export default function BotPage() {
                       Ver Conversa ({contato.mensagens.length})
                     </Button>
 
+                    {contato.orcamentoAtivo && (
+                      <Link
+                        href={`/orcamentos?busca=${contato.orcamentoAtivo.numero}`}
+                        className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-sky-500/30 text-xs font-medium text-sky-600 hover:bg-sky-500/10 transition-colors"
+                        title="Ver orçamento no sistema"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        Ver #{contato.orcamentoAtivo.numero}
+                      </Link>
+                    )}
+
                     {contato.statusConversao === "nao_fechou" && (
                       <Link
                         href={
@@ -821,18 +881,23 @@ export default function BotPage() {
                 <DialogTitle className="text-base font-semibold truncate flex items-center gap-2 flex-wrap">
                   <span>{conversaAberta?.nome}</span>
                   {conversaAberta?.statusConversao === "fechado" && (
-                    <Badge className="bg-emerald-600/10 text-emerald-600 border-emerald-500/20 text-[10px]">
-                      Fechou Venda
+                    <Badge className="bg-emerald-600/10 text-emerald-600 border-emerald-500/20 text-[10px] font-semibold">
+                      ✓ Fechou Venda (Aprovado pelo Kaio)
+                    </Badge>
+                  )}
+                  {conversaAberta?.statusConversao === "sinalizou_aprovacao" && (
+                    <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 text-[10px] font-semibold animate-pulse">
+                      🔔 Cliente Quer Fechar (Aguardando Kaio)
                     </Badge>
                   )}
                   {conversaAberta?.statusConversao === "aberto" && (
-                    <Badge className="bg-amber-600/10 text-amber-600 border-amber-500/20 text-[10px]">
+                    <Badge className="bg-sky-500/10 text-sky-700 border-sky-500/20 text-[10px]">
                       Orçamento Aberto
                     </Badge>
                   )}
                   {conversaAberta?.statusConversao === "nao_fechou" && (
                     <Badge variant="outline" className="text-muted-foreground text-[10px]">
-                      Não Fechou / Em Atendimento
+                      {conversaAberta.temComprasAnteriores ? "Cliente Recorrente (Sem Orçamento Aberto)" : "Contato Inicial (Sem Orçamento)"}
                     </Badge>
                   )}
                   {conversaAberta && (
