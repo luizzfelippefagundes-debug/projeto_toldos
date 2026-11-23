@@ -16,6 +16,7 @@ interface PedidoItemRaw {
   quantidadeUnidades?: number | string
   observacoes?: string
   observacao?: string
+  comissaoPercent?: number | string
 }
 
 interface OrcamentoRaw {
@@ -140,6 +141,7 @@ export async function GET() {
     criado_em: p.criado_em,
     prazo_entrega_em: p.prazo_entrega_em,
     total: Number(p.total) || 0,
+    comissao_percent: null,
     tipo: "rapido" as const,
   }))
 
@@ -167,6 +169,7 @@ export async function GET() {
       criado_em: o.criado_em,
       prazo_entrega_em: null,
       total: Number(o.total) || 0,
+      comissao_percent: item.comissaoPercent ? Number(item.comissaoPercent) : null,
       tipo: "orcamento" as const,
     }
   })

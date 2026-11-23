@@ -14,3 +14,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   `
   return NextResponse.json({ id, ...b })
 }
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  await getSql()`DELETE FROM materiais WHERE id=${id}`
+  return NextResponse.json({ ok: true, id })
+}

@@ -81,6 +81,14 @@ export default function FinanceiroPage() {
 
   const saldo = resumo.recebido - resumo.pago
 
+  const orcamentosAbertos = useMemo(() => {
+    return orcamentos.filter((o) => o.status === "aberto")
+  }, [orcamentos])
+
+  const totalOrcamentosAbertos = useMemo(() => {
+    return orcamentosAbertos.reduce((acc, o) => acc + (o.totalFechado || 0), 0)
+  }, [orcamentosAbertos])
+
   const ordenados = useMemo(() => {
     const termo = busca.trim().toLowerCase()
     return lancamentos
@@ -195,6 +203,32 @@ export default function FinanceiroPage() {
             </div>
           </div>
         </div>
+
+        {/* Banner Explícito: Orçamentos em Aberto (Propostas comerciais em negociação) */}
+        {orcamentosAbertos.length > 0 && (
+          <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 dark:bg-blue-950/30 p-3.5 sm:p-4 text-xs sm:text-sm text-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-start gap-2.5">
+              <span className="text-xl shrink-0">📋</span>
+              <div>
+                <div className="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1.5 flex-wrap">
+                  <span>Propostas Comerciais em Aberto:</span>
+                  <span className="font-black text-foreground">
+                    {orcamentosAbertos.length} orçamento{orcamentosAbertos.length !== 1 ? "s" : ""} ({formatarMoeda(totalOrcamentosAbertos)})
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  <strong>Nota contábil:</strong> Orçamentos em aberto são propostas em negociação e não entram no &quot;A Receber&quot; abaixo para não inflar o fluxo de caixa real antes de serem fechados pelo cliente.
+                </p>
+              </div>
+            </div>
+            <a
+              href="/orcamentos"
+              className="shrink-0 self-end sm:self-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 text-xs font-bold transition-all shadow-xs"
+            >
+              Ver Orçamentos →
+            </a>
+          </div>
+        )}
 
         {/* Grid 2x2 com cards principais de ação */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">

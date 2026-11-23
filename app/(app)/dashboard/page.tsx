@@ -40,6 +40,9 @@ export default function DashboardPage() {
   const progresso = Math.round((concluidos / passos.length) * 100)
 
   const abertos = orcamentos.filter((o) => o.status === "aberto").length
+  const totalAbertosValor = orcamentos
+    .filter((o) => o.status === "aberto")
+    .reduce((acc, o) => acc + (o.totalFechado || 0), 0)
   const estoqueBaixo = materiais.filter(
     (m) => m.quantidadeEstoque < m.estoqueMinimo
   ).length
@@ -366,7 +369,11 @@ export default function DashboardPage() {
 
       {papel === "dono" && (
         <div className="grid gap-4 sm:grid-cols-3">
-          <Indicador titulo="Orçamentos abertos" valor={String(abertos)} />
+          <Indicador
+            titulo="Orçamentos abertos (Propostas)"
+            valor={String(abertos)}
+            subtitulo={totalAbertosValor > 0 ? `${formatarMoeda(totalAbertosValor)} em negociação` : "Propostas comerciais na mesa"}
+          />
           <Indicador
             titulo="Fechados no mês"
             valor={String(fechadosNoMes ?? "—")}
@@ -402,7 +409,7 @@ export default function DashboardPage() {
   )
 }
 
-function Indicador({ titulo, valor }: { titulo: string; valor: string }) {
+function Indicador({ titulo, valor, subtitulo }: { titulo: string; valor: string; subtitulo?: string }) {
   return (
     <Card>
       <CardHeader>
@@ -410,7 +417,10 @@ function Indicador({ titulo, valor }: { titulo: string; valor: string }) {
           {titulo}
         </CardTitle>
       </CardHeader>
-      <CardContent className="text-3xl font-bold">{valor}</CardContent>
+      <CardContent>
+        <div className="text-3xl font-bold">{valor}</div>
+        {subtitulo && <p className="text-xs text-muted-foreground mt-1 font-medium">{subtitulo}</p>}
+      </CardContent>
     </Card>
   )
 }

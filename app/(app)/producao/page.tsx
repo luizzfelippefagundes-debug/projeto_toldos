@@ -77,7 +77,9 @@ import {
   Flame,
   Send,
   Info,
+  Coins,
 } from "lucide-react"
+import { comemorarComissao } from "@/lib/som-comissao"
 import { linkWhatsapp } from "@/lib/whatsapp"
 import { toast } from "sonner"
 
@@ -312,11 +314,33 @@ export default function ProducaoPage() {
     clienteNome: string
     clienteTelefone: string | null
     fotoAtual?: string
+    comissaoPercent?: number
+    valorTotal?: number
   } | null>(null)
   const [qcChecks, setQcChecks] = useState({ medidas: true, acabamento: true, visual: true })
   const [qcUploading, setQcUploading] = useState(false)
   const [qcFotomUrl, setQcFotomUrl] = useState<string | null>(null)
   const qcFileInputRef = useRef<HTMLInputElement>(null)
+  const [equipeDisponivel, setEquipeDisponivel] = useState<string[]>([
+    "Marcos",
+    "Lucas",
+    "Kaio",
+    "Serralheria",
+    "Impressão / Acabamento",
+  ])
+  const [colaboradoresSelecionados, setColaboradoresSelecionados] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch("/api/equipe")
+      .then((r) => r.json())
+      .then((dados) => {
+        if (Array.isArray(dados) && dados.length > 0) {
+          const nomes = dados.map((u: any) => u.nome).filter(Boolean)
+          setEquipeDisponivel((prev) => Array.from(new Set([...prev, ...nomes])))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const [modalProblemaItem, setModalProblemaItem] = useState<{
     tipo: "pedido" | "orcamento"
@@ -344,12 +368,14 @@ export default function ProducaoPage() {
     acabamento?: string | null
     observacao?: string
     arteUrl?: string | null
+    fotosLocal?: string[]
     status: string
     contratoAssinado?: boolean
     osUrl?: string
     contratoUrl?: string
     dataEmissao?: string | null
     tipoServico?: string
+    comissaoPercent?: number
   } | null>(null)
 
   const abrirQc = useCallback(
@@ -360,10 +386,13 @@ export default function ProducaoPage() {
       clienteNome: string
       clienteTelefone: string | null
       fotoAtual?: string
+      comissaoPercent?: number
+      valorTotal?: number
     }) => {
       setModalQcItem(item)
       setQcChecks({ medidas: true, acabamento: true, visual: true })
       setQcFotomUrl(item.fotoAtual || null)
+      setColaboradoresSelecionados([])
     },
     []
   )
@@ -393,6 +422,11 @@ export default function ProducaoPage() {
 
   const handleConcluirQc = async () => {
     if (!modalQcItem) return
+    if (!qcFotomUrl) {
+      toast.error("É OBRIGATÓRIO tirar ou anexar a foto da peça pronta para concluir e liberar a comissão!")
+      return
+    }
+
     if (qcFotomUrl && qcFotomUrl !== modalQcItem.fotoAtual) {
       if (modalQcItem.tipo === "pedido") {
         await salvarFotoProntoPedidoRapido(modalQcItem.id, qcFotomUrl)
@@ -400,6 +434,24 @@ export default function ProducaoPage() {
         await salvarFotoProntoOrcamento(modalQcItem.id, qcFotomUrl)
       }
     }
+
+    // Se houve comissão configurada (Regra do Kaio: integral para cada um, NÃO dividido!)
+    if (modalQcItem.comissaoPercent && modalQcItem.comissaoPercent > 0) {
+      const valorUnitario = ((modalQcItem.valorTotal || 0) * modalQcItem.comissaoPercent) / 100
+      comemorarComissao()
+      if (colaboradoresSelecionados.length > 0) {
+        toast.success(
+          `🪙 BÔNUS CREDITADO! R$ ${valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} integral para cada (${colaboradoresSelecionados.join(", ")})!`,
+          { duration: 6000 }
+        )
+      } else {
+        toast.success(
+          `🪙 BÔNUS DE ${modalQcItem.comissaoPercent}% CONCLUÍDO! (R$ ${valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cada)`,
+          { duration: 5000 }
+        )
+      }
+    }
+
     const item = modalQcItem
     setModalQcItem(null)
 
@@ -420,6 +472,170 @@ export default function ProducaoPage() {
         item.id
       )
     }
+  }
+
+  const handleImprimirFicha = (item: typeof modalDetalhesItem) => {
+    if (!item) return
+    const printWindow = window.open("", "_blank")
+    if (!printWindow) {
+      toast.error("Permita pop-ups no navegador para imprimir a ficha.")
+      return
+    }
+
+    const dataHoje = new Date().toLocaleDateString("pt-BR")
+    const horaHoje = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    const fotoLocal = item.fotosLocal?.[0]
+    const arteUrl = item.arteUrl
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Ficha de Produção - #${item.numero} ${item.clienteNome}</title>
+        <style>
+          @page { size: A4; margin: 12mm; }
+          * { box-sizing: border-box; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 13px; line-height: 1.4; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+          .logo { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
+          .logo span { color: #f59e0b; }
+          .badge-os { background: #000; color: #fff; font-size: 15px; font-weight: 800; padding: 4px 10px; border-radius: 6px; }
+          .grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+          .box { border: 1px solid #ccc; border-radius: 6px; padding: 8px 10px; background: #fafafa; }
+          .box-title { font-size: 10px; text-transform: uppercase; font-weight: bold; color: #666; margin-bottom: 3px; }
+          .box-val { font-size: 14px; font-weight: 700; color: #000; }
+          .box-destaque { border: 2px solid #000; background: #fffbe6; padding: 10px 12px; margin-bottom: 12px; border-radius: 6px; }
+          .dimensoes-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #b45309; }
+          .dimensoes-val { font-size: 20px; font-weight: 900; color: #000; margin-top: 2px; }
+          .instrucoes { border: 1.5px solid #d97706; background: #fffbeb; padding: 10px 12px; border-radius: 6px; margin-bottom: 14px; }
+          .instrucoes-title { font-size: 11px; font-weight: 800; color: #b45309; text-transform: uppercase; margin-bottom: 4px; }
+          .instrucoes-text { font-size: 13px; font-weight: 600; white-space: pre-wrap; }
+          .fotos-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+          .foto-box { border: 1px solid #ccc; border-radius: 6px; padding: 6px; text-align: center; }
+          .foto-box img { max-width: 100%; max-height: 220px; object-fit: contain; border-radius: 4px; }
+          .foto-label { font-size: 11px; font-weight: 700; color: #444; margin-top: 4px; }
+          .checklist { border: 1px solid #000; border-radius: 6px; padding: 10px 12px; margin-top: 14px; }
+          .check-item { display: inline-block; width: 32%; font-size: 12px; font-weight: 600; }
+          .assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 30px; }
+          .campo-ass { border-top: 1px solid #000; text-align: center; font-size: 11px; font-weight: bold; padding-top: 4px; }
+          @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="logo">TOLDOS <span>PRINT</span></div>
+            <div style="font-size: 11px; color: #555;">toldosprint@outlook.com · Ficha de Instrução para Bancada</div>
+          </div>
+          <div class="badge-os">
+            ${item.tipo === "pedido" ? "PEDIDO RAPIDO #" : "ORDEM DE SERVIÇO #"}${item.numero}
+          </div>
+        </div>
+
+        <div class="grid-info">
+          <div class="box">
+            <div class="box-title">Cliente</div>
+            <div class="box-val">${item.clienteNome}</div>
+            <div style="font-size: 11px; color: #555;">${item.clienteTelefone || "Sem telefone"}</div>
+          </div>
+          <div class="box">
+            <div class="box-title">Emissão / Entrada</div>
+            <div class="box-val">${item.dataEmissao ? new Date(item.dataEmissao).toLocaleDateString("pt-BR") : dataHoje}</div>
+            <div style="font-size: 11px; color: #555;">Impresso em: ${dataHoje} às ${horaHoje}</div>
+          </div>
+        </div>
+
+        ${
+          item.largura != null && item.altura != null
+            ? `
+          <div class="box-destaque">
+            <div class="dimensoes-title">📏 Medidas Exatas para Produção (Trena)</div>
+            <div class="dimensoes-val">${item.largura} m (Largura) × ${item.altura} m (Altura) ${item.quantidade && item.quantidade > 1 ? `· ${item.quantidade} unidades` : ""}</div>
+          </div>
+        `
+            : ""
+        }
+
+        <div class="grid-info">
+          <div class="box">
+            <div class="box-title">Produto / Serviço</div>
+            <div class="box-val">${item.produtoNome || "Comunicação Visual"}</div>
+          </div>
+          <div class="box">
+            <div class="box-title">Material / Acabamento</div>
+            <div class="box-val">${[item.varianteNome, item.acabamento].filter(Boolean).join(" · ") || "Conforme especificação"}</div>
+          </div>
+        </div>
+
+        ${
+          item.observacao
+            ? `
+          <div class="instrucoes">
+            <div class="instrucoes-title">⚠️ Instruções Técnicas da Fábrica / Kaio</div>
+            <div class="instrucoes-text">${item.observacao}</div>
+          </div>
+        `
+            : ""
+        }
+
+        ${
+          fotoLocal || arteUrl
+            ? `
+          <div class="fotos-container">
+            ${
+              fotoLocal
+                ? `
+              <div class="foto-box">
+                <img src="${fotoLocal}" alt="Foto do Local" />
+                <div class="foto-label">📸 Foto do Local / Fachada (Levantamento)</div>
+              </div>
+            `
+                : `<div class="foto-box" style="display:flex;align-items:center;justify-content:center;color:#888;">Sem foto do local</div>`
+            }
+            ${
+              arteUrl
+                ? `
+              <div class="foto-box">
+                <img src="${arteUrl}" alt="Arte Aprovada" />
+                <div class="foto-label">🎨 Arte Aprovada / Layout Final</div>
+              </div>
+            `
+                : `<div class="foto-box" style="display:flex;align-items:center;justify-content:center;color:#888;">Sem arte anexada</div>`
+            }
+          </div>
+        `
+            : ""
+        }
+
+        <div class="checklist">
+          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 6px;">
+            Conferência de Qualidade de Bancada (QC):
+          </div>
+          <div class="check-item">[ &nbsp; ] Medidas no Esquadro</div>
+          <div class="check-item">[ &nbsp; ] Solda / Acabamento OK</div>
+          <div class="check-item">[ &nbsp; ] Limpeza e Sem Riscos</div>
+        </div>
+
+        <div class="assinaturas">
+          <div class="campo-ass">Colaborador Responsável</div>
+          <div class="campo-ass">Visto do Kaio / Conferência</div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          }
+        </script>
+      </body>
+      </html>
+    `)
+    printWindow.document.close()
   }
 
   const handleRegistrarProblema = async () => {
@@ -758,6 +974,7 @@ export default function ProducaoPage() {
         id: p.id,
         numero: p.numero,
         clienteNome: p.clienteNome,
+        clienteTelefone: p.clienteTelefone,
         produtoNome: p.produtoNome || "Gráfica Rápida",
         varianteNome: p.varianteNome,
         acabamento: p.acabamento,
@@ -767,7 +984,10 @@ export default function ProducaoPage() {
         observacao: p.observacao,
         arteUrl: p.arteUrl,
         fotoProntoUrl: p.fotoProntoUrl,
+        fotosLocal: [] as string[],
         status: p.status,
+        comissaoPercent: p.comissaoPercent,
+        valorTotal: p.total,
         dataCriacao: p.criadoEm ? new Date(p.criadoEm).getTime() : 0,
       }))
 
@@ -790,6 +1010,7 @@ export default function ProducaoPage() {
           id: o.id,
           numero: o.numero,
           clienteNome: cli?.nome || "Cliente",
+          clienteTelefone: cli?.telefone || null,
           produtoNome:
             o.servicoFechado?.nome ||
             (o.item.servicoId && o.item.servicoId !== "nenhum"
@@ -803,7 +1024,10 @@ export default function ProducaoPage() {
           observacao: o.observacao,
           arteUrl: o.arteUrl,
           fotoProntoUrl: o.fotoProntoUrl,
+          fotosLocal: o.item.fotos?.map((f) => f.url) || (o.anexoUrl ? [o.anexoUrl] : []),
           status: o.statusProducao as StatusPedidoRapido,
+          comissaoPercent: o.item.comissaoPercent,
+          valorTotal: o.totalFechado || 0,
           dataCriacao: new Date(o.osEmitidaEm || o.fechadoEm || o.criadoEm || 0).getTime(),
         }
       })
@@ -1116,6 +1340,19 @@ export default function ProducaoPage() {
                   </div>
                 )}
 
+                {/* Bônus / Comissão do Colaborador (Regra do Kaio: integral para cada um) */}
+                {item.comissaoPercent != null && item.comissaoPercent > 0 && (
+                  <div className="flex items-center justify-between gap-1.5 p-2 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold text-xs shadow-2xs">
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-sm">🪙</span>
+                      <span>BÔNUS DO COLABORADOR: {item.comissaoPercent}%</span>
+                    </span>
+                    <span className="text-[11px] font-black bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
+                      R$ {(((item.valorTotal || 0) * item.comissaoPercent) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cada
+                    </span>
+                  </div>
+                )}
+
                 {/* Produto / Material / Acabamento */}
                 <div className="flex flex-col gap-1 text-xs">
                   <p className="font-semibold text-foreground">
@@ -1166,6 +1403,36 @@ export default function ProducaoPage() {
                 {/* Botões de Ação */}
                 <div className="flex flex-col gap-2 pt-1 border-t border-border/60">
                   <div className="flex items-center gap-2">
+                    {/* Botão Ficha / Instruções e Imprimir */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalDetalhesItem({
+                          tipo: item.tipo,
+                          id: item.id,
+                          numero: item.numero,
+                          clienteNome: item.clienteNome,
+                          clienteTelefone: item.clienteTelefone,
+                          total: item.valorTotal,
+                          largura: item.largura,
+                          altura: item.altura,
+                          quantidade: item.quantidade,
+                          produtoNome: item.produtoNome,
+                          varianteNome: item.varianteNome,
+                          acabamento: item.acabamento,
+                          observacao: item.observacao,
+                          arteUrl: item.arteUrl,
+                          fotosLocal: item.fotosLocal,
+                          status: item.status,
+                          comissaoPercent: item.comissaoPercent,
+                        })
+                      }}
+                      className="flex-1 py-2 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Printer className="h-4 w-4" />
+                      <span>Ficha / Imprimir</span>
+                    </button>
+
                     {/* Botão Ver Arte (se houver) */}
                     {item.arteUrl && (
                       <button
@@ -1195,7 +1462,7 @@ export default function ProducaoPage() {
                         }}
                         className={cn(
                           "py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer",
-                          item.arteUrl ? "flex-1" : "w-full",
+                          item.arteUrl ? "flex-1" : "flex-1",
                           item.observacao?.includes("ALERTA DA FÁBRICA")
                             ? "bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/25"
                             : "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-800 dark:text-amber-300"
@@ -1203,24 +1470,26 @@ export default function ProducaoPage() {
                         title="Relatar falta de material, problema na arte ou máquina parada"
                       >
                         <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                        <span>{item.observacao?.includes("ALERTA DA FÁBRICA") ? "Adicionar Alerta" : "Relatar Problema"}</span>
+                        <span>{item.observacao?.includes("ALERTA DA FÁBRICA") ? "Alerta" : "Problema"}</span>
                       </button>
                     )}
                   </div>
 
-                  {/* O Botão Principal: Marcar como Pronto */}
+                  {/* O Botão Principal: Marcar como Pronto (Abre QC com Foto Obrigatória) */}
                   {item.status !== "pronto" ? (
                     <button
                       type="button"
                       onClick={() => {
-                        if (item.tipo === "pedido") {
-                          moverPedidoRapido(item.id, "pronto")
-                        } else {
-                          moverOrcamentoProducao(item.id, "pronto")
-                        }
-                        tocarAlertaNovaDemanda()
-                        dispararVibracaoCelular()
-                        toast.success(`Peça #${item.numero} marcada como PRONTA! O Kaio já foi avisado.`)
+                        abrirQc({
+                          tipo: item.tipo,
+                          id: item.id,
+                          numero: item.numero,
+                          clienteNome: item.clienteNome,
+                          clienteTelefone: item.clienteTelefone || null,
+                          fotoAtual: item.fotoProntoUrl,
+                          comissaoPercent: item.comissaoPercent,
+                          valorTotal: item.valorTotal,
+                        })
                       }}
                       className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-sm font-bold shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
                     >
@@ -1803,6 +2072,8 @@ export default function ProducaoPage() {
                             clienteNome: pedido.clienteNome,
                             clienteTelefone: pedido.clienteTelefone,
                             fotoAtual: pedido.fotoProntoUrl,
+                            comissaoPercent: pedido.comissaoPercent,
+                            valorTotal: pedido.total,
                           })
                         }
                         onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -1822,6 +2093,7 @@ export default function ProducaoPage() {
                             status: pedido.status,
                             dataEmissao: pedido.criadoEm,
                             tipoServico: "Gráfica Rápida",
+                            comissaoPercent: pedido.comissaoPercent,
                           })
                         }
                         onAbrirProblema={() =>
@@ -1866,6 +2138,8 @@ export default function ProducaoPage() {
                           clienteNome: cli?.nome || "Cliente",
                           clienteTelefone: cli?.telefone || null,
                           fotoAtual: orc.fotoProntoUrl,
+                          comissaoPercent: orc.item.comissaoPercent,
+                          valorTotal: orc.totalFechado || 0,
                         })
                       }
                       onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -1888,7 +2162,9 @@ export default function ProducaoPage() {
                           varianteNome: orc.materialFechado?.nome,
                           observacao: orc.observacao,
                           arteUrl: orc.arteUrl,
+                          fotosLocal: orc.item.fotos?.map((f) => f.url) || (orc.anexoUrl ? [orc.anexoUrl] : []),
                           status: orc.statusProducao || "aprovado",
+                          comissaoPercent: orc.item.comissaoPercent,
                           contratoAssinado: assinaturas[orc.id]?.assinado,
                           contratoUrl: `/orcamentos/${orc.id}/contrato`,
                           osUrl: `/orcamentos/${orc.id}/os`,
@@ -2135,6 +2411,8 @@ export default function ProducaoPage() {
                                       clienteNome: pedido.clienteNome,
                                       clienteTelefone: pedido.clienteTelefone,
                                       fotoAtual: pedido.fotoProntoUrl,
+                                      comissaoPercent: pedido.comissaoPercent,
+                                      valorTotal: pedido.total,
                                     })
                                   }
                                   onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -2154,6 +2432,7 @@ export default function ProducaoPage() {
                                       status: pedido.status,
                                       dataEmissao: pedido.criadoEm,
                                       tipoServico: "Gráfica Rápida",
+                                      comissaoPercent: pedido.comissaoPercent,
                                     })
                                   }
                                   onAbrirProblema={() =>
@@ -2199,6 +2478,8 @@ export default function ProducaoPage() {
                                     clienteNome: cli?.nome || "Cliente",
                                     clienteTelefone: cli?.telefone || null,
                                     fotoAtual: orc.fotoProntoUrl,
+                                    comissaoPercent: orc.item.comissaoPercent,
+                                    valorTotal: orc.totalFechado || 0,
                                   })
                                 }
                                 onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -2221,6 +2502,7 @@ export default function ProducaoPage() {
                                     varianteNome: orc.materialFechado?.nome,
                                     observacao: orc.observacao,
                                     arteUrl: orc.arteUrl,
+                                    fotosLocal: orc.item.fotos?.map((f) => f.url) || (orc.anexoUrl ? [orc.anexoUrl] : []),
                                     status: orc.statusProducao || "aprovado",
                                     contratoAssinado: assinaturas[orc.id]?.assinado,
                                     contratoUrl: `/orcamentos/${orc.id}/contrato`,
@@ -2230,6 +2512,7 @@ export default function ProducaoPage() {
                                       orc.item.servicoId && orc.item.servicoId !== "nenhum"
                                         ? "Serviço + material"
                                         : "Orçamento de serviço",
+                                    comissaoPercent: orc.item.comissaoPercent,
                                   })
                                 }
                                 onAbrirProblema={() =>
@@ -2380,11 +2663,71 @@ export default function ProducaoPage() {
               </label>
             </div>
 
-            {/* Foto da Peça Pronta */}
+            {/* Gamificação / Comissão do Colaborador (Regra: integral para cada um) */}
+            {modalQcItem?.comissaoPercent != null && modalQcItem.comissaoPercent > 0 && (
+              <div className="rounded-xl border-2 border-amber-500 bg-gradient-to-br from-amber-500/20 via-yellow-500/10 to-amber-500/25 p-3.5 flex flex-col gap-2.5 shadow-md">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl animate-bounce">🪙</span>
+                    <div>
+                      <span className="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 block">
+                        BÔNUS DA DEMANDA: {modalQcItem.comissaoPercent}%
+                      </span>
+                      <span className="text-[11px] font-bold text-muted-foreground">
+                        R$ {(((modalQcItem.valorTotal || 0) * modalQcItem.comissaoPercent) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} para CADA colaborador (não dividido)
+                      </span>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-amber-500 text-slate-950 font-black text-xs px-2.5 py-1 shadow-xs shrink-0">
+                    R$ {(((modalQcItem.valorTotal || 0) * modalQcItem.comissaoPercent) / 100).toFixed(2)} cada
+                  </span>
+                </div>
+
+                <div className="pt-2 border-t border-amber-500/30 flex flex-col gap-1.5">
+                  <span className="text-[11px] font-bold text-foreground">
+                    Quem produziu esta peça? (Selecione para creditar):
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {equipeDisponivel.map((membro) => {
+                      const sel = colaboradoresSelecionados.includes(membro)
+                      return (
+                        <button
+                          key={`colab-${membro}`}
+                          type="button"
+                          onClick={() => {
+                            setColaboradoresSelecionados((prev) =>
+                              prev.includes(membro)
+                                ? prev.filter((m) => m !== membro)
+                                : [...prev, membro]
+                            )
+                          }}
+                          className={cn(
+                            "px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1",
+                            sel
+                              ? "bg-amber-500 text-slate-950 border-amber-600 shadow-xs"
+                              : "bg-background/80 text-foreground border-border hover:bg-muted"
+                          )}
+                        >
+                          <span>{sel ? "✓" : "+"}</span>
+                          <span>{membro}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Foto da Peça Pronta (OBRIGATÓRIA) */}
             <div className="flex flex-col gap-2 rounded-xl border border-dashed border-border/80 bg-muted/20 p-3">
-              <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                <Camera className="h-4 w-4 text-primary" />
-                <span>Foto da Peça Pronta (Evidência da Produção)</span>
+              <span className="text-xs font-bold text-foreground flex items-center justify-between gap-1.5">
+                <span className="flex items-center gap-1.5">
+                  <Camera className="h-4 w-4 text-primary" />
+                  <span>Foto da Peça Pronta (Evidência Obrigatória)</span>
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-destructive bg-destructive/10 px-2 py-0.5 rounded-full border border-destructive/20">
+                  Obrigatória
+                </span>
               </span>
               <p className="text-[11px] text-muted-foreground">
                 Tire uma foto com a câmera do celular da peça pronta antes de embalar ou entregar.
@@ -2445,6 +2788,13 @@ export default function ProducaoPage() {
                 </label>
               )}
             </div>
+
+            {!qcFotomUrl && (
+              <div className="p-2.5 rounded-xl border border-destructive/40 bg-destructive/10 text-destructive text-xs font-semibold flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>Foto obrigatória! Tire ou anexe a foto da peça finalizada para liberar a conclusão.</span>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
@@ -2453,7 +2803,7 @@ export default function ProducaoPage() {
             </Button>
             <Button
               onClick={handleConcluirQc}
-              disabled={qcUploading || !(qcChecks.medidas && qcChecks.acabamento && qcChecks.visual)}
+              disabled={qcUploading || !qcFotomUrl || !(qcChecks.medidas && qcChecks.acabamento && qcChecks.visual)}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
             >
               <CheckCircle2 className="mr-1.5 h-4 w-4" />
@@ -2626,7 +2976,75 @@ export default function ProducaoPage() {
                   </span>
                 </div>
               )}
+
+              {modalDetalhesItem?.comissaoPercent != null && modalDetalhesItem.comissaoPercent > 0 && (
+                <div className="flex items-center justify-between gap-1.5 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs font-bold text-amber-800 dark:text-amber-300">
+                  <span className="flex items-center gap-1.5">
+                    <span>🪙</span>
+                    <span>Bônus do Colaborador: {modalDetalhesItem.comissaoPercent}%</span>
+                  </span>
+                  <span className="bg-amber-500/20 px-2 py-0.5 rounded text-[11px] font-black">
+                    {formatarMoeda(((modalDetalhesItem.total || 0) * modalDetalhesItem.comissaoPercent) / 100)} cada (integral)
+                  </span>
+                </div>
+              )}
             </div>
+
+            {/* Botão Principal de Imprimir Ficha de Produção */}
+            <button
+              type="button"
+              onClick={() => handleImprimirFicha(modalDetalhesItem)}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+            >
+              <Printer className="h-4 w-4" />
+              <span>🖨️ Imprimir Ficha de Produção (Instrução para Bancada)</span>
+            </button>
+
+            {/* Fotos Lado a Lado: Foto do Local (Orçamento) e Arte Aprovada */}
+            {((modalDetalhesItem?.fotosLocal && modalDetalhesItem.fotosLocal.length > 0) || modalDetalhesItem?.arteUrl) && (
+              <div className="flex flex-col gap-1.5 pt-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Fotos & Referências da Demanda
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {modalDetalhesItem?.fotosLocal && modalDetalhesItem.fotosLocal.length > 0 ? (
+                    <div className="flex flex-col gap-1 rounded-xl border border-border/80 bg-muted/20 p-2">
+                      <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                        <Camera className="h-3 w-3 text-primary" />
+                        Foto do Local (Orçamento)
+                      </span>
+                      <div className="h-36 rounded-lg overflow-hidden bg-black/10 flex items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={modalDetalhesItem.fotosLocal[0]}
+                          alt="Foto do Local"
+                          className="max-h-full max-w-full object-contain cursor-pointer"
+                          onClick={() => setModalArtePreview({ url: modalDetalhesItem.fotosLocal![0], titulo: `Foto do Local - #${modalDetalhesItem.numero}` })}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {modalDetalhesItem?.arteUrl ? (
+                    <div className="flex flex-col gap-1 rounded-xl border border-border/80 bg-muted/20 p-2">
+                      <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                        <ImageIcon className="h-3 w-3 text-emerald-600" />
+                        Arte Aprovada (Layout)
+                      </span>
+                      <div className="h-36 rounded-lg overflow-hidden bg-black/10 flex items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={modalDetalhesItem.arteUrl}
+                          alt="Arte Aprovada"
+                          className="max-h-full max-w-full object-contain cursor-pointer"
+                          onClick={() => setModalArtePreview({ url: modalDetalhesItem.arteUrl!, titulo: `Arte Aprovada - #${modalDetalhesItem.numero}` })}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
 
             {/* Observações / Instruções da Fábrica */}
             {modalDetalhesItem?.observacao && (
@@ -3221,6 +3639,19 @@ function PedidoCardConteudo({
         {nome || <span className="italic text-muted-foreground font-normal">Sem cliente</span>}
       </p>
 
+      {/* Badge de Bônus / Comissão do Colaborador (Regra do Kaio: integral para cada um) */}
+      {pedido.comissaoPercent != null && pedido.comissaoPercent > 0 && (
+        <div className="flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold text-xs shadow-2xs">
+          <span className="flex items-center gap-1.5">
+            <span className="text-sm">🪙</span>
+            <span>BÔNUS: {pedido.comissaoPercent}%</span>
+          </span>
+          <span className="text-[11px] font-black bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
+            {formatarMoeda((pedido.total * pedido.comissaoPercent) / 100)} cada
+          </span>
+        </div>
+      )}
+
       {/* Tarja de Alerta de Problema na Peça */}
       {temProblema && (
         <div className="rounded-xl border border-red-500/60 bg-red-500/15 dark:bg-red-950/40 p-2.5 flex flex-col gap-1 text-xs shadow-2xs">
@@ -3549,6 +3980,19 @@ function OrcamentoCardConteudo({
       <p className="font-semibold text-foreground truncate text-xs leading-tight">
         {nome || <span className="italic text-muted-foreground font-normal">Sem cliente</span>}
       </p>
+
+      {/* Badge de Bônus / Comissão do Colaborador (Regra do Kaio: integral para cada um) */}
+      {orcamento.item.comissaoPercent != null && orcamento.item.comissaoPercent > 0 && (
+        <div className="flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold text-xs shadow-2xs">
+          <span className="flex items-center gap-1.5">
+            <span className="text-sm">🪙</span>
+            <span>BÔNUS: {orcamento.item.comissaoPercent}%</span>
+          </span>
+          <span className="text-[11px] font-black bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
+            {formatarMoeda(((orcamento.totalFechado || 0) * orcamento.item.comissaoPercent) / 100)} cada
+          </span>
+        </div>
+      )}
 
       {/* Tarja de Alerta de Problema na Peça */}
       {temProblema && (

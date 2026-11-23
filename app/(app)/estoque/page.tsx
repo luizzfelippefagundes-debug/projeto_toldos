@@ -14,8 +14,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { NovaEntradaDialog } from "@/components/estoque/nova-entrada-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { formatarData } from "@/lib/format"
-import type { TipoMaterial } from "@/lib/types"
+import type { Material, TipoMaterial } from "@/lib/types"
+import { toast } from "sonner"
 import {
   Boxes,
   AlertTriangle,
@@ -29,6 +38,7 @@ import {
   Tag,
   History,
   Layers,
+  Trash2,
 } from "lucide-react"
 
 const TIPOS_FILTRO: TipoMaterial[] = [
@@ -41,10 +51,19 @@ const TIPOS_FILTRO: TipoMaterial[] = [
 ]
 
 export default function EstoquePage() {
-  const { materiais, entradasEstoque } = useData()
+  const { materiais, entradasEstoque, removeMaterial } = useData()
   const [abaAtiva, setAbaAtiva] = useState<"materiais" | "entradas">("materiais")
   const [busca, setBusca] = useState("")
   const [filtroTipo, setFiltroTipo] = useState<string>("todos")
+  const [materialParaExcluir, setMaterialParaExcluir] = useState<Material | null>(null)
+
+  function confirmarExcluirMaterial() {
+    if (!materialParaExcluir) return
+    const nome = materialParaExcluir.nome
+    removeMaterial(materialParaExcluir.id)
+    toast.success(`Material "${nome}" removido do estoque com sucesso!`)
+    setMaterialParaExcluir(null)
+  }
 
   const totalMateriais = materiais.length
   const totalBaixoEstoque = useMemo(
@@ -397,19 +416,30 @@ export default function EstoquePage() {
                           </Badge>
                         )}
 
-                        <NovaEntradaDialog
-                          materialIdInicial={material.id}
-                          trigger={
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 px-2.5 text-xs font-semibold gap-1.5 rounded-lg border-border/80 hover:bg-muted"
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                              Dar Entrada
-                            </Button>
-                          }
-                        />
+                        <div className="flex items-center gap-1.5">
+                          <NovaEntradaDialog
+                            materialIdInicial={material.id}
+                            trigger={
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-2.5 text-xs font-semibold gap-1.5 rounded-lg border-border/80 hover:bg-muted"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                Dar Entrada
+                              </Button>
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setMaterialParaExcluir(material)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
+                            title="Remover material do estoque"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )
@@ -481,19 +511,30 @@ export default function EstoquePage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <NovaEntradaDialog
-                          materialIdInicial={material.id}
-                          trigger={
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 px-2.5 text-xs font-semibold gap-1.5"
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                              Entrada
-                            </Button>
-                          }
-                        />
+                        <div className="flex items-center justify-end gap-1.5">
+                          <NovaEntradaDialog
+                            materialIdInicial={material.id}
+                            trigger={
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-2.5 text-xs font-semibold gap-1.5"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                Entrada
+                              </Button>
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setMaterialParaExcluir(material)}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            title="Remover material do estoque"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -653,6 +694,38 @@ export default function EstoquePage() {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmação de exclusão de material */}
+      <Dialog
+        open={!!materialParaExcluir}
+        onOpenChange={(v) => !v && setMaterialParaExcluir(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Remover Material do Estoque?
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-sm leading-relaxed">
+              Tem certeza que deseja remover o material{" "}
+              <strong className="text-foreground">{materialParaExcluir?.nome}</strong> do estoque?
+              <br />
+              <span className="text-xs text-muted-foreground mt-1 block">
+                Saldo atual: {materialParaExcluir?.quantidadeEstoque}{" "}
+                {materialParaExcluir?.unidade === "m2" ? "m²" : "un"}.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setMaterialParaExcluir(null)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmarExcluirMaterial}>
+              Sim, Remover Material
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

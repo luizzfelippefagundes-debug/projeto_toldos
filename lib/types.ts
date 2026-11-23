@@ -125,6 +125,8 @@ export interface OrcamentoItem extends ItemProduto {
   // % cobrado como entrada ao fechar; o resto é cobrado na entrega. Sem o
   // campo (orçamentos antigos) ou 0/100, é um pagamento único.
   entradaPercent?: number
+  // % de comissão/bônus para cada colaborador que produzir a peça na fábrica (não dividido).
+  comissaoPercent?: number
 }
 
 // Acompanhamento comercial depois de emitir o orçamento (quadro Retornos).
@@ -172,6 +174,7 @@ export interface Orcamento {
   observacao?: string
   origem?: "whatsapp" | "balcao" | "loja" | string
   fotoProntoUrl?: string
+  comissaoPercent?: number
 }
 
 export interface EntradaEstoque {
@@ -237,6 +240,7 @@ export interface PedidoRapido {
   arteUrl?: string
   arteAprovadaEm?: string
   fotoProntoUrl?: string
+  comissaoPercent?: number
 }
 
 export type Papel = "dono" | "producao" | "financeiro" | "operador"

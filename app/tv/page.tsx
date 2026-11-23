@@ -32,6 +32,7 @@ interface PedidoTV {
   prazo_entrega_em: string | null
   total: number
   tipo?: "rapido" | "orcamento"
+  comissao_percent?: number | null
 }
 
 interface AvisoTV {
@@ -80,6 +81,11 @@ function formatarPrazo(prazo: string | null) {
   const data = interpretarDataLocal(prazo)
   if (!Number.isFinite(data.getTime())) return null
   return data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+}
+
+function temProblemaReportado(obs?: string | null): boolean {
+  if (!obs) return false
+  return obs.includes("ALERTA DA FÁBRICA") || obs.includes("PROBLEMA REPORTADO")
 }
 
 function PedidoCard({
@@ -228,6 +234,30 @@ function PedidoCard({
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Bônus / Comissão do Colaborador (Regra: integral para cada um) */}
+        {pedido.comissao_percent != null && pedido.comissao_percent > 0 && (
+          <div className="pt-2 border-t border-amber-500/30 min-w-0 max-w-full">
+            <div className="rounded-xl border-2 border-amber-500/70 bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-500/20 p-2 sm:p-2.5 shadow-sm flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-base sm:text-xl shrink-0 animate-bounce">🪙</span>
+                <div className="flex flex-col min-w-0 leading-tight">
+                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                    BÔNUS COLABORADOR: {pedido.comissao_percent}%
+                  </span>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground truncate">
+                    Para cada um que produzir (integral)
+                  </span>
+                </div>
+              </div>
+              {pedido.total > 0 && (
+                <span className="shrink-0 rounded-lg bg-amber-500 text-slate-950 font-black text-xs sm:text-sm px-2.5 py-1 shadow-xs">
+                  R$ {((pedido.total * pedido.comissao_percent) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cada
+                </span>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -597,6 +627,7 @@ export default function TvPage() {
     densidade?: "normal" | "compacto"
     tamanhoFonte?: "normal" | "grande"
     ocultarVazias?: boolean
+    mostrarColunaAlertas?: boolean
   } | null>(null)
 
   const carregar = useCallback(async () => {
@@ -742,18 +773,46 @@ export default function TvPage() {
     return autorizadas
   }, [config?.statusVisiveis, config?.ocultarVazias, pedidosEfetivos, isColaborador])
 
+  const pedidosAlertas = useMemo(() => {
+    return pedidosEfetivos.filter(
+      (p) => temProblemaReportado(p.observacao) || (p.prazo_entrega_em && new Date(p.prazo_entrega_em).getTime() < Date.now())
+    )
+  }, [pedidosEfetivos])
+
   const pedidosMobile = useMemo(() => {
+    if (filtroStatusMobile === "urgencias") return pedidosAlertas
     if (filtroStatusMobile === "todos") return pedidosEfetivos
     return pedidosEfetivos.filter(
       (p) => p.status === filtroStatusMobile || (filtroStatusMobile === "aprovado" && (p.status as string) === "arte")
     )
-  }, [pedidosEfetivos, filtroStatusMobile])
+  }, [pedidosEfetivos, filtroStatusMobile, pedidosAlertas])
 
   return (
     <div className="group/tv flex h-screen max-h-screen w-screen overflow-hidden flex-col gap-2.5 sm:gap-3 p-2.5 sm:p-4 bg-background">
 
       {/* Barra flutuante de utilitários da TV — visível ao passar o mouse ou interagir */}
       <div className="fixed top-2.5 right-3 z-50 flex items-center gap-2 opacity-0 sm:group-hover/tv:opacity-100 transition-opacity duration-200">
+        <button
+          type="button"
+          onClick={() => {
+            const novo = config?.mostrarColunaAlertas === false ? true : false
+            setConfig((prev) => (prev ? { ...prev, mostrarColunaAlertas: novo } : prev))
+            fetch("/api/tv/config", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...config, mostrarColunaAlertas: novo }),
+            }).catch(() => {})
+          }}
+          className={`rounded-lg px-2.5 py-1 text-xs font-bold shadow-sm border backdrop-blur transition-colors ${
+            config?.mostrarColunaAlertas !== false
+              ? "bg-red-600 text-white border-red-600"
+              : "bg-card/90 text-foreground border-border/80 hover:bg-muted"
+          }`}
+          title="Exibir ou ocultar coluna de alertas e urgências no Telão"
+        >
+          {config?.mostrarColunaAlertas !== false ? "🚨 Coluna Alertas: ON" : "🚨 Coluna Alertas: OFF"}
+        </button>
+
         <button
           type="button"
           onClick={() => {
@@ -952,6 +1011,23 @@ export default function TvPage() {
             </span>
           </button>
 
+          {config?.mostrarColunaAlertas !== false && pedidosAlertas.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setFiltroStatusMobile("urgencias")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold shrink-0 border transition-all ${
+                filtroStatusMobile === "urgencias"
+                  ? "bg-red-600 text-white border-red-600 shadow-xs font-black"
+                  : "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/20"
+              }`}
+            >
+              <span>🚨 Urgências</span>
+              <span className="rounded-full px-1.5 py-0.2 text-[10px] font-black bg-red-600 text-white">
+                {pedidosAlertas.length}
+              </span>
+            </button>
+          )}
+
           {colunasFiltradas.map((coluna) => {
             const count = pedidosEfetivos.filter(
               (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
@@ -1004,6 +1080,19 @@ export default function TvPage() {
 
       {/* Visualização DESKTOP / TV: Kanban lado a lado com auto-scroll infinito */}
       <div className="flex-1 min-h-0 hidden md:flex flex-row gap-2 sm:gap-3 w-full overflow-hidden">
+        {/* Coluna Opcional de Alertas & Urgências (Configurável para TV) */}
+        {config?.mostrarColunaAlertas !== false && pedidosAlertas.length > 0 && (
+          <TvColuna
+            key="coluna-urgencias-destaque"
+            status={"aprovado" as any}
+            label={`🚨 Urgências (${pedidosAlertas.length})`}
+            borda="border-red-600 ring-2 ring-red-500/60 shadow-lg"
+            fundo="bg-red-500/10 dark:bg-red-950/40"
+            pedidos={pedidosAlertas}
+            tamanhoGrande={config?.tamanhoFonte !== "normal"}
+          />
+        )}
+
         {colunasFiltradas.map((coluna) => {
           const colPedidos = pedidosEfetivos.filter(
             (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")

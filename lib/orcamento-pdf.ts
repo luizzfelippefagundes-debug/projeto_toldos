@@ -8,7 +8,7 @@ export const EMPRESA_ORCAMENTO = {
   nome: "TOLDOSPRINT",
   cnpj: "CNPJ: 09.141.206/0001-06  /  63.177.134/0001-00",
   endereco: ["Avenida João Quiuqui", "29795-000 - Águia Branca/ES"],
-  email: "contato@toldosprint.com.br",
+  email: "toldosprint@outlook.com",
   contato: "27997489714",
 } as const
 

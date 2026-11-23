@@ -52,6 +52,7 @@ interface TvConfig {
   densidade?: "normal" | "compacto"
   tamanhoFonte?: "normal" | "grande"
   ocultarVazias?: boolean
+  mostrarColunaAlertas?: boolean
 }
 
 const DEFAULT_TV_CONFIG: TvConfig = {
@@ -64,6 +65,7 @@ const DEFAULT_TV_CONFIG: TvConfig = {
   densidade: "normal",
   tamanhoFonte: "grande",
   ocultarVazias: true,
+  mostrarColunaAlertas: true,
 }
 
 const TIPOS = [
@@ -986,6 +988,22 @@ export default function CentralTvPage() {
                   <Switch
                     checked={config.mostrarAtrasados}
                     onCheckedChange={(checked) => salvarConfiguracoes({ mostrarAtrasados: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background text-xs">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                    <div>
+                      <span className="font-medium text-foreground block">Coluna de Alertas & Urgências (Telão)</span>
+                      <span className="text-[11px] text-muted-foreground block">
+                        Cria uma coluna de destaque no início do Telão agrupando pedidos com problemas ou atrasados
+                      </span>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={config.mostrarColunaAlertas ?? true}
+                    onCheckedChange={(checked) => salvarConfiguracoes({ mostrarColunaAlertas: checked })}
                   />
                 </div>
               </div>

@@ -66,6 +66,7 @@ export interface DataContextValue {
   carregado: boolean
   addMaterial: (dados: Omit<Material, "id">) => Material
   updateMaterial: (id: string, dados: Omit<Material, "id">) => void
+  removeMaterial: (id: string) => void
   addAcabamento: (dados: Omit<Acabamento, "id">) => Acabamento
   updateAcabamento: (id: string, dados: Omit<Acabamento, "id">) => void
   removeAcabamento: (id: string) => void
@@ -322,6 +323,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       atual.map((m) => (m.id === id ? atualizado : m))
     )
     apiPut(`/api/materiais/${id}`, dados)
+  }
+
+  const removeMaterial: DataContextValue["removeMaterial"] = (id) => {
+    setMateriais((atual) => atual.filter((m) => m.id !== id))
+    apiDelete(`/api/materiais/${id}`)
   }
 
   const addAcabamento: DataContextValue["addAcabamento"] = (dados) => {
@@ -966,6 +972,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       carregado,
       addMaterial,
       updateMaterial,
+      removeMaterial,
       addAcabamento,
       updateAcabamento,
       removeAcabamento,

@@ -48,6 +48,7 @@ interface ContatoBot {
   nome: string
   clienteId?: string
   statusConversao: "fechado" | "aberto" | "nao_fechou"
+  categoriaInteresse: "Toldo" | "Comunicação Visual" | "Outro"
   valorTotalFechado: number
   valorTotalAberto: number
   qtdOrcamentos: number
@@ -62,8 +63,58 @@ function normalizarTel(tel?: string): string {
   return tel.replace(/\D/g, "").slice(-8)
 }
 
+function detectarCategoria(msgs: MensagemBot[]): "Toldo" | "Comunicação Visual" | "Outro" {
+  const texto = msgs.map((m) => m.texto.toLowerCase()).join(" ")
+  if (
+    texto.includes("toldo") ||
+    texto.includes("cortina") ||
+    texto.includes("lona") ||
+    texto.includes("braço") ||
+    texto.includes("policarbonato") ||
+    texto.includes("articulado")
+  ) {
+    return "Toldo"
+  }
+  if (
+    texto.includes("adesivo") ||
+    texto.includes("banner") ||
+    texto.includes("placa") ||
+    texto.includes("fachada") ||
+    texto.includes("acrílico") ||
+    texto.includes("letra") ||
+    texto.includes("envelopamento") ||
+    texto.includes("impressão")
+  ) {
+    return "Comunicação Visual"
+  }
+  return "Outro"
+}
+
 export default function BotPage() {
   const { mensagensBot, clientes, orcamentos, pedidosRapidos } = useData()
+
+  // Categorias manuais salvas no navegador
+  const [categoriasManuais, setCategoriasManuais] = useState<Record<string, "Toldo" | "Comunicação Visual" | "Outro">>({})
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const salvo = localStorage.getItem("bot_categorias_contatos")
+        if (salvo) setCategoriasManuais(JSON.parse(salvo))
+      } catch {}
+    }
+  }, [])
+
+  const salvarCategoriaManual = (idOuTel: string, cat: "Toldo" | "Comunicação Visual" | "Outro") => {
+    setCategoriasManuais((prev) => {
+      const atualizado = { ...prev, [idOuTel]: cat }
+      try {
+        localStorage.setItem("bot_categorias_contatos", JSON.stringify(atualizado))
+      } catch {}
+      return atualizado
+    })
+    toast.success(`Categoria definida como ${cat}`)
+  }
 
   // Conexão por código de pareamento
   const [numeroPareamento, setNumeroPareamento] = useState("27997489714")
@@ -240,19 +291,44 @@ export default function BotPage() {
 
       const valorAberto = orcsAbertos.reduce((acc, o) => acc + (o.totalFechado || 0), 0)
 
+      // Análise temporal inteligente (Caso Simone Breda):
+      // Um cliente que fechou no passado mas enviou mensagem recente tem nova demanda em aberto!
+      const datasFechados = [
+        ...orcsFechados.map((o) => new Date(o.fechadoEm || o.criadoEm).getTime()),
+        ...pedsValidos.map((p) => new Date(p.criadoEm).getTime()),
+      ].filter((t) => !isNaN(t) && t > 0)
+      const ultimoFechamentoTimestamp = datasFechados.length > 0 ? Math.max(...datasFechados) : 0
+      const ultimaMsgTimestamp = new Date(ultima.criadoEm).getTime()
+
       let statusConversao: "fechado" | "aberto" | "nao_fechou" = "nao_fechou"
-      if (orcsFechados.length > 0 || pedsValidos.length > 0) {
-        statusConversao = "fechado"
-      } else if (orcsAbertos.length > 0) {
+      if (orcsAbertos.length > 0) {
         statusConversao = "aberto"
+      } else if (ultimoFechamentoTimestamp > 0) {
+        // Se a conversa continuou ou houve nova mensagem pelo menos 12 horas após a última compra fechada,
+        // trata-se de um novo atendimento / nova dúvida do cliente.
+        const dozeHorasMs = 12 * 60 * 60 * 1000
+        if (ultimaMsgTimestamp > ultimoFechamentoTimestamp + dozeHorasMs) {
+          statusConversao = "nao_fechou"
+        } else {
+          statusConversao = "fechado"
+        }
+      } else {
+        statusConversao = "nao_fechou"
       }
 
+      const idContato = cliente?.id || chave
+      const categoriaInteresse =
+        categoriasManuais[idContato] ||
+        categoriasManuais[tel] ||
+        detectarCategoria(msgsOrdenadas)
+
       lista.push({
-        id: cliente?.id || chave,
+        id: idContato,
         telefone: tel,
         nome,
         clienteId: cliente?.id,
         statusConversao,
+        categoriaInteresse,
         valorTotalFechado: valorFechado,
         valorTotalAberto: valorAberto,
         qtdOrcamentos: orcsDoCliente.length,
@@ -265,7 +341,7 @@ export default function BotPage() {
 
     // Ordena pelo último contato mais recente
     return lista.sort((a, b) => b.ultimoContato.getTime() - a.ultimoContato.getTime())
-  }, [mensagensBot, clientes, orcamentos, pedidosRapidos])
+  }, [mensagensBot, clientes, orcamentos, pedidosRapidos, categoriasManuais])
 
   // Métricas de funil
   const totalContatos = contatosBot.length
@@ -638,6 +714,34 @@ export default function BotPage() {
                             ⚪ Apenas Contato (Sem Venda)
                           </Badge>
                         )}
+
+                        {/* Categoria do Interesse (Toldo / Comunicação Visual) */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const proxima =
+                              contato.categoriaInteresse === "Toldo"
+                                ? "Comunicação Visual"
+                                : contato.categoriaInteresse === "Comunicação Visual"
+                                ? "Outro"
+                                : "Toldo"
+                            salvarCategoriaManual(contato.id, proxima)
+                          }}
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold border transition-all cursor-pointer hover:scale-105",
+                            contato.categoriaInteresse === "Toldo"
+                              ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30"
+                              : contato.categoriaInteresse === "Comunicação Visual"
+                              ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30"
+                              : "bg-muted text-muted-foreground border-border"
+                          )}
+                          title="Clique para alternar: Toldo / Comunicação Visual / Outro"
+                        >
+                          {contato.categoriaInteresse === "Toldo" && "🎪 Toldo"}
+                          {contato.categoriaInteresse === "Comunicação Visual" && "🎨 Comunicação Visual"}
+                          {contato.categoriaInteresse === "Outro" && "📦 Outro"}
+                          <span className="text-[9px] opacity-60">✎</span>
+                        </button>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
@@ -714,17 +818,27 @@ export default function BotPage() {
           <DialogHeader className="p-4 sm:p-5 pb-3 border-b border-border bg-card">
             <div className="flex items-center justify-between pr-8">
               <div className="min-w-0">
-                <DialogTitle className="text-base font-semibold truncate flex items-center gap-2">
+                <DialogTitle className="text-base font-semibold truncate flex items-center gap-2 flex-wrap">
                   <span>{conversaAberta?.nome}</span>
                   {conversaAberta?.statusConversao === "fechado" && (
                     <Badge className="bg-emerald-600/10 text-emerald-600 border-emerald-500/20 text-[10px]">
                       Fechou Venda
                     </Badge>
                   )}
+                  {conversaAberta?.statusConversao === "aberto" && (
+                    <Badge className="bg-amber-600/10 text-amber-600 border-amber-500/20 text-[10px]">
+                      Orçamento Aberto
+                    </Badge>
+                  )}
                   {conversaAberta?.statusConversao === "nao_fechou" && (
                     <Badge variant="outline" className="text-muted-foreground text-[10px]">
-                      Não Fechou
+                      Não Fechou / Em Atendimento
                     </Badge>
+                  )}
+                  {conversaAberta && (
+                    <span className="rounded-full bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 text-[10px] font-bold">
+                      {conversaAberta.categoriaInteresse === "Toldo" ? "🎪 Toldo" : conversaAberta.categoriaInteresse === "Comunicação Visual" ? "🎨 Comunicação Visual" : "📦 Outro"}
+                    </span>
                   )}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">

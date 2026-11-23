@@ -45,6 +45,7 @@ import {
   type ItemAdicionalForm,
 } from "@/lib/item-adicional-form"
 import { ehImagem, formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
+import { SimuladorMercadoPagoDialog } from "@/components/orcamentos/simulador-mercadopago-dialog"
 
 // Id que o orçamento feito sem internet terá no servidor (mesmo formato do data-context).
 function gerarIdOrcamentoOffline() {
@@ -161,6 +162,7 @@ export function NovoOrcamentoForm() {
   const [impostoPercent, setImpostoPercent] = useState("6")
   const [validadeDias, setValidadeDias] = useState("7")
   const [entradaDinheiro, setEntradaDinheiro] = useState("")
+  const [comissaoColaborador, setComissaoColaborador] = useState("0")
 
   // "Válido até" depende de "hoje" (new Date()) — mesmo cuidado do Dashboard
   // e da Produção: calcular isso direto no render travaria a data numa
@@ -215,6 +217,7 @@ export function NovoOrcamentoForm() {
     setImpostoPercent(String(orcamentoEditando.item.impostoPercent ?? 0))
     setCondicoesPagamento(orcamentoEditando.item.condicoesPagamento ?? "")
     setEntradaPercent(String(orcamentoEditando.item.entradaPercent ?? 100))
+    setComissaoColaborador(String(orcamentoEditando.item.comissaoPercent ?? 0))
     setFotos(orcamentoEditando.item.fotos ?? [])
     setExtras((orcamentoEditando.item.itensAdicionais ?? []).map(itemParaForm))
   // Os orçamentos chegam do servidor depois da página montar; roda de novo
@@ -324,6 +327,7 @@ export function NovoOrcamentoForm() {
       impostoPercent: numeroOuZero(impostoPercent),
       condicoesPagamento: condicoesPagamento.trim() || undefined,
       entradaPercent: numeroOuZero(entradaPercent),
+      comissaoPercent: numeroOuZero(comissaoColaborador) > 0 ? numeroOuZero(comissaoColaborador) : undefined,
       fotos: fotos.length > 0 ? fotos : undefined,
       observacao: observacaoItem.trim() || undefined,
       itensAdicionais: extras.length > 0 ? extras.map(formParaItem) : undefined,
@@ -355,6 +359,7 @@ export function NovoOrcamentoForm() {
       impostoPercent,
       condicoesPagamento,
       entradaPercent,
+      comissaoColaborador,
       fotos,
       extras,
     ]
@@ -1468,6 +1473,41 @@ export function NovoOrcamentoForm() {
                     </div>
                   </div>
 
+                  {/* Comissão do Colaborador na Fábrica */}
+                  <div className="flex flex-col gap-2 p-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-950/20 shadow-2xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <Label htmlFor="comissaoColaborador" className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                        <span className="text-base">🪙</span>
+                        <span>Comissão por Colaborador na Produção (%)</span>
+                      </Label>
+                      <span className="rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-black px-2 py-0.5">
+                        Não dividido (para cada)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="comissaoColaborador"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={comissaoColaborador}
+                        onChange={(e) => setComissaoColaborador(e.target.value)}
+                        placeholder="Ex: 5"
+                        className="h-10 text-sm font-bold bg-card"
+                      />
+                      <span className="text-sm font-black text-muted-foreground">%</span>
+                    </div>
+                    {resultado && Number(comissaoColaborador) > 0 && (
+                      <p className="text-xs text-amber-700 dark:text-amber-300 font-bold mt-0.5">
+                        👉 Cada colaborador que produzir esta peça receberá:{" "}
+                        <strong className="text-sm underline text-amber-800 dark:text-amber-200">
+                          {formatarMoeda((resultado.total * Number(comissaoColaborador)) / 100)}
+                        </strong>
+                      </p>
+                    )}
+                  </div>
+
                   {(() => {
                     const pct = entradaEfetiva(numeroOuZero(entradaPercent))
                     const tot = resultado?.total ?? 0
@@ -1541,6 +1581,15 @@ export function NovoOrcamentoForm() {
                       <span>Total</span>
                       <span>{formatarMoeda(resultado.total)}</span>
                     </div>
+
+                    {resultado.total > 0 && (
+                      <div className="pt-2 flex justify-end">
+                        <SimuladorMercadoPagoDialog
+                          valorInicial={resultado.total}
+                          nomeCliente={cliente?.nome}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>

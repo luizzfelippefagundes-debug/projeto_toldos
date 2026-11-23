@@ -73,7 +73,6 @@ export const gruposNavegacao: NavGroup[] = [
       { label: "Transmissão", href: "/transmissao", icon: Radio, donoApenas: true },
       { label: "Clientes", href: "/clientes", icon: Users },
       { label: "Central do Telão", href: "/avisos-tv", icon: SlidersHorizontal, donoApenas: true },
-      { label: "Portfólio", href: "/portfolio-fotos", icon: Images, donoApenas: true },
       { label: "Painel TV", href: "/tv", icon: Tv2, externo: true, donoApenas: true },
       { label: "Equipe", href: "/equipe", icon: Users2, donoApenas: true },
       { label: "Exclusões", href: "/exclusoes", icon: ArchiveX, donoApenas: true },
