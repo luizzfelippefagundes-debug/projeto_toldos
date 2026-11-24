@@ -39,6 +39,8 @@ const rotaPublica = createRouteMatcher([
   // Site da loja: preços (só leitura) e pedido de orçamento. O pedido exige o
   // segredo LOJA_API_SECRET dentro da própria rota.
   "/api/loja(.*)",
+  // PDFs públicos informativos e de apresentação
+  "/(.*).pdf",
   // Vercel Analytics e Speed Insights
   "/_vercel(.*)",
 ])
@@ -91,7 +93,7 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|pdf)).*)",
     "/(api|trpc)(.*)",
     "/__clerk/(.*)",
   ],
