@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useData } from "@/context/data-context"
@@ -10,7 +10,7 @@ import { formatarData, formatarMoeda } from "@/lib/format"
 import { formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { linkWhatsapp } from "@/lib/whatsapp"
-import { ArrowLeft, MessageCircle, Printer, FileCheck } from "lucide-react"
+import { ArrowLeft, MessageCircle, Printer, FileCheck, QrCode, Copy, Check, RefreshCw } from "lucide-react"
 
 export default function OrdemDeServicoPage() {
   const { id } = useParams<{ id: string }>()
@@ -45,7 +45,56 @@ export default function OrdemDeServicoPage() {
   const saldoEntrega = Math.round((totalFinal / 2) * 100) / 100
   const hoje = new Date()
   const [enviando, setEnviando] = useState(false)
+  const [pixQrBase64, setPixQrBase64] = useState<string | null>(orcamento.pixQrCodeBase64 ?? null)
+  const [pixCopiaCola, setPixCopiaCola] = useState<string | null>(orcamento.pixCopiaECola ?? null)
+  const [gerandoPix, setGerandoPix] = useState(false)
+  const [copiadoPix, setCopiadoPix] = useState(false)
+  const [opcaoValor, setOpcaoValor] = useState<"total" | "entrada">("total")
   const numeroFormatado = formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)
+
+  async function handleGerarPix(tipo: "total" | "entrada" = opcaoValor) {
+    if (!orcamento) return
+    const valorCobrar = tipo === "entrada" ? saldoEntrega : totalFinal
+    setGerandoPix(true)
+    try {
+      const res = await fetch("/api/mercadopago/criar-pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orcamentoId: orcamento.id,
+          valor: valorCobrar,
+          descricao: `OS #${numeroFormatado} (${tipo === "entrada" ? "Entrada 50%" : "Total"}) - Toldos Print`,
+        }),
+      })
+      const data = await res.json()
+      if (data.ok && data.pix?.sucesso) {
+        setPixQrBase64(data.pix.qrCodeBase64 || null)
+        setPixCopiaCola(data.pix.qrCode || null)
+        toast.success(`Pix do Mercado Pago pronto! (${formatarMoeda(valorCobrar)})`)
+      } else {
+        toast.error(data.erro || "Não foi possível gerar o Pix do Mercado Pago")
+      }
+    } catch {
+      toast.error("Erro ao gerar Pix do Mercado Pago.")
+    } finally {
+      setGerandoPix(false)
+    }
+  }
+
+  // Se ainda não tiver Pix gerado na OS, gera automaticamente ao abrir
+  useEffect(() => {
+    if (!pixQrBase64 && totalFinal > 0 && orcamento?.id) {
+      handleGerarPix("total")
+    }
+  }, [orcamento?.id])
+
+  function handleCopiarPix() {
+    if (!pixCopiaCola) return
+    navigator.clipboard.writeText(pixCopiaCola)
+    setCopiadoPix(true)
+    toast.success("Código Pix Copia e Cola copiado!")
+    setTimeout(() => setCopiadoPix(false), 2500)
+  }
 
   const adicionaisParaPdf = (orcamento.item.itensAdicionais ?? []).map((extra) => {
     const materialExtra = materiais.find((m) => m.id === extra.materialId)
@@ -91,7 +140,8 @@ export default function OrdemDeServicoPage() {
         console.warn("Falha gerando token de assinatura:", e)
       }
 
-      const mensagem = `Olá, ${cliente.nome.split(" ")[0]}! Segue a Ordem de Serviço nº ${numeroFormatado} da Toldos Print.${linkAssinatura ? `\n\nVocê pode assinar digitalmente pelo link abaixo:\n${linkAssinatura}` : ""}`
+      const pixTexto = pixCopiaCola ? `\n\n💰 *Pague via Pix (Mercado Pago):*\n${pixCopiaCola}` : ""
+      const mensagem = `Olá, ${cliente.nome.split(" ")[0]}! Segue a Ordem de Serviço nº ${numeroFormatado} da Toldos Print.\n\nValor: ${formatarMoeda(totalFinal)}${pixTexto}${linkAssinatura ? `\n\n✍️ Você pode assinar digitalmente pelo link abaixo:\n${linkAssinatura}` : ""}`
 
       // Envia PDF pelo bot
       await fetch("/api/whatsapp/enviar-os", {
@@ -305,6 +355,138 @@ export default function OrdemDeServicoPage() {
             )}
           </div>
         )}
+
+        {/* ──────────── PAGAMENTO VIA PIX (MERCADO PAGO) ──────────── */}
+        <div className="mt-5 rounded-lg border-2 border-sky-600/30 bg-sky-50/40 p-4 print:border-gray-400 print:bg-white print:p-3">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            {/* QR Code */}
+            <div className="flex flex-col items-center justify-center shrink-0">
+              {pixQrBase64 ? (
+                <div className="rounded-lg border border-sky-200 bg-white p-2 shadow-xs print:border-gray-500 print:p-1">
+                  <img
+                    src={`data:image/png;base64,${pixQrBase64}`}
+                    alt="QR Code Pix Mercado Pago"
+                    className="h-28 w-28 object-contain print:h-24 print:w-24"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-28 w-28 flex-col items-center justify-center rounded-lg border border-dashed border-sky-300 bg-white text-center p-2">
+                  <QrCode className="h-8 w-8 text-sky-500 mb-1" />
+                  <span className="text-[10px] text-gray-500">
+                    {gerandoPix ? "Gerando..." : "Pix Mercado Pago"}
+                  </span>
+                </div>
+              )}
+              <span className="mt-1 text-[9px] font-semibold text-sky-800 uppercase tracking-wider print:text-gray-700">
+                Pague via Pix
+              </span>
+            </div>
+
+            {/* Informações de Pagamento */}
+            <div className="flex-1 text-center sm:text-left">
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-bold text-sky-800 print:border print:border-gray-400 print:bg-white print:text-gray-800">
+                  <span className="h-1.5 w-1.5 rounded-full bg-sky-600"></span>
+                  PAGAMENTO VIA PIX · MERCADO PAGO
+                </span>
+                {orcamento.pagoEm && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+                    ✓ PAGO VIA PIX
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-gray-700 mt-1">
+                Aponte a câmera do celular ou app do banco para o QR Code ao lado ou utilize a chave oficial:
+              </p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                <div>
+                  <span className="text-gray-500">Chave Pix: </span>
+                  <span className="font-bold text-gray-900 select-all">toldosprint@outlook.com</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Beneficiário: </span>
+                  <span className="font-semibold text-gray-800">Toldos Print</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Valor {opcaoValor === "entrada" ? "Entrada (50%)" : "Total"}: </span>
+                  <span className="font-bold text-sky-700 print:text-gray-900">
+                    {formatarMoeda(opcaoValor === "entrada" ? saldoEntrega : totalFinal)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Ações em tela */}
+              <div className="mt-3 flex flex-wrap items-center gap-2 print:hidden">
+                {pixCopiaCola && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCopiarPix}
+                    className="h-8 border-sky-300 text-sky-700 hover:bg-sky-100 text-xs"
+                  >
+                    {copiadoPix ? (
+                      <>
+                        <Check className="mr-1.5 h-3.5 w-3.5 text-emerald-600" />
+                        Código Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="mr-1.5 h-3.5 w-3.5" />
+                        Copiar Pix Copia e Cola
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                <div className="inline-flex items-center rounded-md border border-gray-200 bg-white p-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpcaoValor("total")
+                      handleGerarPix("total")
+                    }}
+                    className={`px-2 py-1 rounded text-[11px] font-medium transition ${
+                      opcaoValor === "total"
+                        ? "bg-sky-600 text-white"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Total ({formatarMoeda(totalFinal)})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpcaoValor("entrada")
+                      handleGerarPix("entrada")
+                    }}
+                    className={`px-2 py-1 rounded text-[11px] font-medium transition ${
+                      opcaoValor === "entrada"
+                        ? "bg-sky-600 text-white"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Entrada 50% ({formatarMoeda(saldoEntrega)})
+                  </button>
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleGerarPix(opcaoValor)}
+                  disabled={gerandoPix}
+                  title="Atualizar cobrança Pix no Mercado Pago"
+                  className="h-8 text-xs text-gray-500 hover:text-gray-800"
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${gerandoPix ? "animate-spin" : ""}`} />
+                  {gerandoPix ? "Gerando..." : "Recarregar Pix"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* ──────────── ASSINATURAS ──────────── */}
         <div className="mt-10 grid grid-cols-2 gap-8">

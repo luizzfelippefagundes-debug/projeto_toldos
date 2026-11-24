@@ -175,6 +175,10 @@ export interface Orcamento {
   origem?: "whatsapp" | "balcao" | "loja" | string
   fotoProntoUrl?: string
   comissaoPercent?: number
+  pixCopiaECola?: string
+  pixQrCodeBase64?: string
+  mpPaymentId?: string
+  pagoEm?: string
 }
 
 export interface EntradaEstoque {

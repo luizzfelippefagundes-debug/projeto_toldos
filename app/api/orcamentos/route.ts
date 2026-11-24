@@ -28,6 +28,11 @@ function rowToOrcamento(r: Record<string, unknown>): Orcamento {
     observacao: (r.observacao as string) ?? undefined,
     origem: (r.origem as string) ?? undefined,
     fotoProntoUrl: (r.foto_pronto_url as string) ?? undefined,
+    comissaoPercent: r.comissao_percent != null ? Number(r.comissao_percent) : undefined,
+    pixCopiaECola: (r.pix_copia_cola as string) ?? undefined,
+    pixQrCodeBase64: (r.pix_qr_code_base64 as string) ?? undefined,
+    mpPaymentId: (r.mp_payment_id as string) ?? undefined,
+    pagoEm: (r.pago_em as string) ?? undefined,
   }
 }
 
