@@ -622,10 +622,8 @@ REGRAS GERAIS:
       inputSchema: z.object({ resumo: z.string().describe("Nome, local e o que a pessoa pediu, pro atendente ler rápido") }),
       execute: async ({ resumo }) => {
         transferido = true
-        // Notificação de transferência para o WhatsApp da empresa desabilitada por solicitação do usuário.
-        // Para reativar futuramente, basta definir WHATSAPP_NOTIFICAR_TRANSFERENCIA=true
-        if (process.env.WHATSAPP_NOTIFICAR_TRANSFERENCIA === "true") {
-          const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
+        if (process.env.WHATSAPP_NOTIFICAR_TRANSFERENCIA !== "false") {
+          const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO || "5527997488023"
           if (telEmpresa) {
             const alerta = formatarAlertaTransferencia({
               nome: (ehNomeValido(nomeTemp) ? nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null),
@@ -662,10 +660,8 @@ REGRAS GERAIS:
   if (reg.local && !localTemp) localTemp = reg.local
   if (reg.transferir) {
     transferido = true
-    // Notificação de transferência para o WhatsApp da empresa desabilitada por solicitação do usuário.
-    // Para reativar futuramente, basta definir WHATSAPP_NOTIFICAR_TRANSFERENCIA=true
-    if (process.env.WHATSAPP_NOTIFICAR_TRANSFERENCIA === "true") {
-      const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
+    if (process.env.WHATSAPP_NOTIFICAR_TRANSFERENCIA !== "false") {
+      const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO || "5527997488023"
       if (telEmpresa) {
         const alerta = formatarAlertaTransferencia({
           nome: (ehNomeValido(nomeTemp) ? nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null),
