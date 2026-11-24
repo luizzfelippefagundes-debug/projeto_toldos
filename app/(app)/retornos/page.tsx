@@ -51,6 +51,8 @@ import {
   Search,
   StickyNote,
   UserRound,
+  CheckCircle2,
+  Zap,
 } from "lucide-react"
 
 const colunas: {
@@ -310,6 +312,29 @@ export default function RetornosPage() {
         />
       </div>
 
+      {/* Alerta de Urgência: Clientes que confirmaram pelo WhatsApp */}
+      {cards.some(
+        (c) =>
+          (c.retorno as any).clienteSinalizouAprovacao ||
+          c.retorno.anotacao?.includes("Cliente confirmou no WhatsApp")
+      ) && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 text-amber-950 dark:text-amber-100">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-white shrink-0 font-bold text-sm shadow">
+              ⚡
+            </span>
+            <div>
+              <p className="text-sm font-bold">
+                Cliente confirmou orçamento no WhatsApp!
+              </p>
+              <p className="text-xs text-amber-800/90 dark:text-amber-200/90">
+                O robô segurou a emissão para sua conferência. Clique em <strong>&quot;⚡ Aprovar e Emitir OS Agora&quot;</strong> no card para formalizar e liberar para a fábrica.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Celular: lista por etapa, troca de etapa pelo card */}
       <div className="flex flex-col gap-5 md:hidden">
         {colunas.map((col) => {
@@ -323,7 +348,20 @@ export default function RetornosPage() {
                 </p>
               ) : (
                 daColuna.map((card) => (
-                  <CardConteudo key={card.orcamento.id} card={card} assinatura={assinaturas[card.orcamento.id]} onAbrir={() => setEditandoId(card.orcamento.id)} />
+                  <CardConteudo
+                    key={card.orcamento.id}
+                    card={card}
+                    assinatura={assinaturas[card.orcamento.id]}
+                    onAbrir={() => setEditandoId(card.orcamento.id)}
+                    onAprovar={() =>
+                      setConfirmando({
+                        card,
+                        etapa: "aprovado",
+                        mensagem: mensagemWhatsApp(card, "aprovado"),
+                        enviando: false,
+                      })
+                    }
+                  />
                 ))
               )}
             </section>
@@ -349,7 +387,19 @@ export default function RetornosPage() {
                       )}
                       {daColuna.map((card) => (
                         <CardArrastavel key={card.orcamento.id} id={card.orcamento.id}>
-                          <CardConteudo card={card} assinatura={assinaturas[card.orcamento.id]} onAbrir={() => setEditandoId(card.orcamento.id)} />
+                          <CardConteudo
+                            card={card}
+                            assinatura={assinaturas[card.orcamento.id]}
+                            onAbrir={() => setEditandoId(card.orcamento.id)}
+                            onAprovar={() =>
+                              setConfirmando({
+                                card,
+                                etapa: "aprovado",
+                                mensagem: mensagemWhatsApp(card, "aprovado"),
+                                enviando: false,
+                              })
+                            }
+                          />
                         </CardArrastavel>
                       ))}
                     </div>
@@ -570,12 +620,20 @@ function CardConteudo({
   card,
   assinatura,
   onAbrir,
+  onAprovar,
 }: {
   card: CardRetorno
   assinatura?: { pdfUrl: string | null; assinado: boolean }
   onAbrir: () => void
+  onAprovar?: () => void
 }) {
   const whatsapp = card.cliente?.telefone ? linkWhatsApp(card.cliente.telefone, mensagemWhatsApp(card, card.retorno.etapa)) : null
+  const querFechar =
+    card.retorno.etapa !== "aprovado" &&
+    Boolean(
+      (card.retorno as any).clienteSinalizouAprovacao ||
+        card.retorno.anotacao?.includes("Cliente confirmou no WhatsApp")
+    )
 
   return (
     <div
@@ -587,7 +645,13 @@ function CardConteudo({
       }}
       className={cn(
         "flex flex-col gap-2 rounded-lg border bg-card p-3 text-left text-sm shadow-sm transition-colors hover:bg-accent/40",
-        card.situacao === "atrasado" ? "border-destructive/50" : card.situacao === "hoje" ? "border-amber-500/60" : "border-border"
+        querFechar
+          ? "border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5 shadow-md"
+          : card.situacao === "atrasado"
+          ? "border-destructive/50"
+          : card.situacao === "hoje"
+          ? "border-amber-500/60"
+          : "border-border"
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
@@ -595,6 +659,12 @@ function CardConteudo({
           <span className="text-xs font-bold text-muted-foreground">
             #{formatarNumeroOrcamento(card.orcamento.numero, card.orcamento.criadoEm)}
           </span>
+          {querFechar && (
+            <Badge className="bg-amber-500 text-white font-bold text-[10px] h-4 gap-0.5 animate-pulse">
+              <Zap className="h-2.5 w-2.5" />
+              Quer Fechar
+            </Badge>
+          )}
           {(card.orcamento.origem === "whatsapp" || card.cliente?.origem === "whatsapp") && (
             <Badge variant="outline" className="text-[10px] h-4 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold">
               <MessageCircle className="h-2.5 w-2.5" />
@@ -626,8 +696,7 @@ function CardConteudo({
         <p
           className={cn(
             "line-clamp-2 flex gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
-            (card.retorno as any).clienteSinalizouAprovacao ||
-              card.retorno.anotacao.includes("Cliente confirmou no WhatsApp")
+            querFechar
               ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-semibold"
               : "bg-muted/60 text-muted-foreground"
           )}
@@ -635,6 +704,22 @@ function CardConteudo({
           <StickyNote className="mt-0.5 h-3 w-3 shrink-0" />
           {card.retorno.anotacao}
         </p>
+      )}
+
+      {onAprovar && querFechar && (
+        <Button
+          type="button"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation()
+            onAprovar()
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="w-full h-8 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow gap-1.5 cursor-pointer mt-1"
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          ⚡ Aprovar e Emitir OS Agora
+        </Button>
       )}
 
       <div className="flex items-center justify-between gap-2">

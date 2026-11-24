@@ -9,6 +9,7 @@ import {
   Warehouse,
   Tv2,
   AlertTriangle,
+  Zap,
   type LucideIcon,
 } from "lucide-react"
 import { useData } from "@/context/data-context"
@@ -198,6 +199,17 @@ export function useAlertas() {
     }).length
   }, [orcamentos, hoje])
 
+  const orcsAprovacaoPendente = useMemo(() => {
+    return orcamentos.filter((o) => {
+      const ret = o.retorno as unknown as Record<string, unknown> | null
+      return Boolean(
+        o.status === "aberto" &&
+          (ret?.clienteSinalizouAprovacao ||
+            (typeof ret?.anotacao === "string" && ret.anotacao.includes("Cliente confirmou no WhatsApp")))
+      )
+    })
+  }, [orcamentos])
+
   const retornosPendentes = useMemo(() => {
     if (!hoje) return 0
     return orcamentos.filter((o) => {
@@ -245,6 +257,20 @@ export function useAlertas() {
 
   const { alertas, secoes } = useMemo(() => {
     const todos: Alerta[] = [
+      ...(orcsAprovacaoPendente.length > 0
+        ? [
+            {
+              id: "aprovacao-whatsapp",
+              texto: `⚡ ${orcsAprovacaoPendente.length} ${
+                orcsAprovacaoPendente.length === 1 ? "cliente confirmou" : "clientes confirmaram"
+              } o orçamento no WhatsApp — clique para aprovar e emitir a OS!`,
+              href: "/retornos",
+              quantidade: orcsAprovacaoPendente.length,
+              Icon: Zap,
+              categoria: "problema" as CategoriaAlerta,
+            },
+          ]
+        : []),
       ...problemasProducao.map((prob) => ({
         id: prob.id,
         texto: `⚠️ Problema na fábrica no #${prob.numero} (${prob.cliente})`,
@@ -347,6 +373,7 @@ export function useAlertas() {
     return { alertas: filtrados, secoes: grupos }
   }, [
     problemasProducao,
+    orcsAprovacaoPendente,
     retornosPendentes,
     estoqueBaixo,
     pedidosAtrasados,
