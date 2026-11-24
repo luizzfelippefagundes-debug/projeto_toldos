@@ -1156,18 +1156,18 @@ export default function TvPage() {
 
       {/* Modal de Instalação e Criação de Atalho na TV / PC */}
       <Dialog open={modalInstalacaoAberto} onOpenChange={setModalInstalacaoAberto}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <span className="rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 px-2 py-0.5 text-xs font-bold">
-                📺 Smart TV & Computador
+              <span className="rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 px-2.5 py-1 text-xs font-bold">
+                📺 Smart TV & Fábrica
               </span>
             </div>
-            <DialogTitle className="text-base font-bold text-foreground">
-              Instalar Atalho do Painel TV
+            <DialogTitle className="text-lg font-bold text-foreground">
+              Como fixar o Painel TV como um Aplicativo / Programa
             </DialogTitle>
-            <DialogDescription>
-              Instale o aplicativo da TV para abrir direto da Área de Trabalho ou tela inicial sem barras de navegador.
+            <DialogDescription className="text-xs">
+              Abra o painel direto da tela inicial da sua Smart TV ou do computador sem barras de navegador.
             </DialogDescription>
           </DialogHeader>
 
@@ -1190,30 +1190,54 @@ export default function TvPage() {
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] cursor-pointer"
               >
                 <Download className="h-4 w-4" />
-                <span>Instalar Aplicativo Agora (1 Clique)</span>
+                <span>Instalar Aplicativo Agora no Aparelho (1 Clique)</span>
               </button>
             )}
 
-            <div className="rounded-xl border border-border/80 bg-muted/30 p-3 flex flex-col gap-2">
-              <span className="font-bold text-foreground text-xs flex items-center gap-1.5">
-                🖥️ No PC ou Notebook conectado à TV:
+            {/* Samsung */}
+            <div className="rounded-xl border border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20 p-3.5 flex flex-col gap-1.5">
+              <span className="font-bold text-blue-900 dark:text-blue-300 text-xs flex items-center gap-2">
+                📺 Se a sua TV for SAMSUNG (Tizen):
               </span>
-              <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground text-[11px] leading-relaxed">
-                <li>No Chrome ou Edge, clique no ícone de <strong>Instalar</strong> no canto direito da barra de endereço (ícone com seta ⬇️).</li>
-                <li>Ou clique nos <strong>3 pontinhos (⋮)</strong> no canto superior direito do navegador.</li>
-                <li>Vá em <strong>Salvar e Compartilhar</strong> &gt; <strong>Criar Atalho...</strong> e marque a caixinha <strong>&quot;Abrir como janela&quot;</strong>.</li>
-                <li>Pronto! O ícone da Toldos Print fica na Área de Trabalho e abre direto em tela cheia como um aplicativo de verdade.</li>
+              <ol className="list-decimal list-inside space-y-1 text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed">
+                <li>No controle da TV, no navegador, clique no menu superior <strong>(⋮ ou ⚙️)</strong> ou na <strong>Estrela (Favoritos)</strong>.</li>
+                <li>Selecione a opção <strong>&quot;Adicionar à Tela Inicial&quot;</strong> (ou &quot;Fixar na barra de aplicativos&quot;).</li>
+                <li>Pronto! O ícone da <strong>Toldos Print</strong> fica na barra principal da TV ao lado de YouTube e Netflix.</li>
               </ol>
             </div>
 
-            <div className="rounded-xl border border-border/80 bg-muted/30 p-3 flex flex-col gap-2">
-              <span className="font-bold text-foreground text-xs flex items-center gap-1.5">
-                📺 Direto no Navegador da Smart TV:
+            {/* LG */}
+            <div className="rounded-xl border border-pink-500/30 bg-pink-50/50 dark:bg-pink-950/20 p-3.5 flex flex-col gap-1.5">
+              <span className="font-bold text-pink-900 dark:text-pink-300 text-xs flex items-center gap-2">
+                📺 Se a sua TV for LG (webOS):
               </span>
-              <ol className="list-decimal list-inside space-y-1.5 text-muted-foreground text-[11px] leading-relaxed">
-                <li>No controle remoto da TV, abra as opções do navegador (ícone <strong>⋮</strong> ou <strong>⭐</strong>).</li>
-                <li>Clique em <strong>Adicionar à Tela Inicial</strong> ou <strong>Fixar aos Favoritos</strong>.</li>
-                <li>Para esconder as barras da TV e deixar limpo, use o botão de tela cheia abaixo.</li>
+              <ol className="list-decimal list-inside space-y-1 text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed">
+                <li>No navegador web da LG, abra o menu de opções no canto superior direito.</li>
+                <li>Clique em <strong>&quot;Adicionar aos Favoritos&quot;</strong> ou acesse a tela inicial (Home) e adicione o atalho na barra.</li>
+                <li>Ative o modo tela cheia no botão abaixo para esconder as abas e o controle do navegador.</li>
+              </ol>
+            </div>
+
+            {/* Android TV / TV Box / Fire TV */}
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 flex flex-col gap-1.5">
+              <span className="font-bold text-emerald-900 dark:text-emerald-300 text-xs flex items-center gap-2">
+                📱 Se for ANDROID TV, TCL, PHILIPS ou TV BOX (Fire TV / Mi Box):
+              </span>
+              <ol className="list-decimal list-inside space-y-1 text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed">
+                <li>No navegador (Chrome ou TV Bro), clique nos <strong>3 pontinhos (⋮)</strong> e escolha <strong>&quot;Instalar App&quot;</strong> ou <strong>&quot;Adicionar à tela inicial&quot;</strong>.</li>
+                <li><strong>Dica de ouro:</strong> O navegador gratuito <strong>TV Bro</strong> (disponível na Play Store da TV) é o melhor para fábricas, pois já abre automático em tela cheia e sem barras.</li>
+              </ol>
+            </div>
+
+            {/* PC conectado via HDMI */}
+            <div className="rounded-xl border border-border/80 bg-muted/40 p-3.5 flex flex-col gap-1.5">
+              <span className="font-bold text-foreground text-xs flex items-center gap-2">
+                💻 No Computador / Mini PC ligado à TV via cabo HDMI:
+              </span>
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground text-[11px] leading-relaxed">
+                <li>No Chrome ou Edge, clique no ícone <strong>Instalar</strong> no canto direito da barra de endereço (ícone de computador com seta 🖥️⬇️).</li>
+                <li>Ou vá em Menu <strong>(⋮)</strong> &gt; <strong>Salvar e Compartilhar</strong> &gt; <strong>Criar Atalho...</strong> e marque <strong>&quot;Abrir como janela&quot;</strong>.</li>
+                <li>O sistema vira um programa com ícone próprio na Área de Trabalho e barra de tarefas do Windows.</li>
               </ol>
             </div>
 
@@ -1227,15 +1251,15 @@ export default function TvPage() {
                 }
                 setModalInstalacaoAberto(false)
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-border/80 bg-card hover:bg-muted font-bold text-foreground text-xs transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs shadow transition-all cursor-pointer mt-1"
             >
-              <span>⛶ Alternar Modo Tela Cheia (F11)</span>
+              <span>⛶ Ativar Modo Tela Cheia Agora (Esconder Barras e Abas)</span>
             </button>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalInstalacaoAberto(false)}>
-              Fechar
+              Entendi / Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
