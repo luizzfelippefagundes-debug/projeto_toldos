@@ -7,6 +7,7 @@ import {
   ehNomeValido,
   extrairLocalizacao,
   extrairAssuntoInteresse,
+  extrairResumoDemanda,
   formatarAlertaTransferencia,
 } from "@/lib/bot-whatsapp"
 import { verificarHorarioAtendimento } from "@/lib/bot-horario"
@@ -131,6 +132,68 @@ describe("formatarAlertaTransferencia", () => {
     expect(alerta).toContain("📍 *Local:* Colatina")
     expect(alerta).toContain("🎯 *Assunto:* Outdoor / Painel Externo")
     expect(alerta).toContain('💬 *Mensagem do cliente:* "Outdoor"')
+  })
+
+  it("inclui Resumo da Demanda analisado quando fornecido", () => {
+    const alerta = formatarAlertaTransferencia({
+      nome: "Carlos",
+      ehClienteCadastrado: false,
+      local: "São Gabriel da Palha",
+      telefone: "5527999998888",
+      textoRecebido: "ok, fico no aguardo",
+      assunto: "Toldo Cortina (de enrolar)",
+      resumoAnalise: "Interesse em Toldo Cortina (de enrolar) para varanda (medidas citadas: 4x2.5) - com visor transparente.",
+    })
+
+    expect(alerta).toContain("👤 *Cliente:* Carlos")
+    expect(alerta).toContain("📍 *Local:* São Gabriel da Palha")
+    expect(alerta).toContain("🎯 *Assunto:* Toldo Cortina (de enrolar)")
+    expect(alerta).toContain("📋 *Resumo da Demanda:* Interesse em Toldo Cortina (de enrolar) para varanda (medidas citadas: 4x2.5) - com visor transparente.")
+    expect(alerta).toContain('💬 *Mensagem do cliente:* "ok, fico no aguardo"')
+  })
+})
+
+describe("extrairResumoDemanda", () => {
+  it("extrai produto, ambiente, medidas e especificações da conversa", () => {
+    const historico = [
+      { role: "user", content: "Olá, gostaria de saber quanto fica um toldo cortina de enrolar" },
+      { role: "assistant", content: "Olá! Qual o tamanho aproximado?" },
+      { role: "user", content: "É para minha varanda, mede 4x2.5 metros com visor transparente" },
+    ]
+    const resumo = extrairResumoDemanda({
+      historico,
+      textoRecebido: "beleza, aguardo o contato",
+      assunto: "Toldo Cortina (de enrolar)",
+    })
+
+    expect(resumo).toContain("Toldo Cortina (de enrolar)")
+    expect(resumo).toContain("varanda")
+    expect(resumo).toContain("4x2.5")
+    expect(resumo).toContain("com visor transparente")
+  })
+
+  it("recupera a frase relevante anterior quando o texto final for só confirmação curta", () => {
+    const historico = [
+      { role: "user", content: "preciso trocar a lona do meu toldo fixo" },
+    ]
+    const resumo = extrairResumoDemanda({
+      historico,
+      textoRecebido: "sim",
+    })
+
+    expect(resumo).toContain("troca de lona")
+  })
+
+  it("faz fallback para a última frase do usuário quando não houver produto pré-definido", () => {
+    const historico = [
+      { role: "user", content: "vocês atendem na próxima semana para instalar algo personalizado?" },
+    ]
+    const resumo = extrairResumoDemanda({
+      historico,
+      textoRecebido: "ok",
+    })
+
+    expect(resumo).toBe("vocês atendem na próxima semana para instalar algo personalizado?")
   })
 })
 

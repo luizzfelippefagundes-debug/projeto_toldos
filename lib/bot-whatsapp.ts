@@ -203,6 +203,75 @@ export function extrairAssuntoInteresse(texto: string): string | null {
   return null
 }
 
+export function extrairResumoDemanda({
+  historico = [],
+  textoRecebido,
+  assunto,
+  local,
+}: {
+  historico?: { role: string; content: string }[]
+  textoRecebido: string
+  assunto?: string | null
+  local?: string | null
+}): string {
+  const msgsUsuario = [
+    ...historico.filter((h) => h.role === "user").map((h) => h.content),
+    textoRecebido,
+  ]
+  const textoCompleto = msgsUsuario.join(" ")
+  const limpo = textoCompleto.toLowerCase()
+
+  // 1. Detecta medidas/dimensões (ex: 4x2.5, 3m x 2m, 5 metros, etc.)
+  const mMedidas = textoCompleto.match(/\b\d+(?:[.,]\d+)?\s*(?:m|metros?|cm)?\s*(?:x|por|\*)\s*\d+(?:[.,]\d+)?\s*(?:m|metros?|cm)?\b/i)
+    || textoCompleto.match(/\b\d+(?:[.,]\d+)?\s*(?:m|metros|cm)\b/i)
+  const medidasEncontradas = mMedidas ? mMedidas[0].trim() : null
+
+  // 2. Detecta ambiente/local de instalação
+  const ambientes: string[] = []
+  if (/\b(varanda|sacada)\b/i.test(limpo)) ambientes.push("varanda")
+  if (/\b(garagem|estacionamento)\b/i.test(limpo)) ambientes.push("garagem")
+  if (/\b(churrasqueira|churrasco|gourmet|área gourmet)\b/i.test(limpo)) ambientes.push("área gourmet")
+  if (/\b(janela|janelas)\b/i.test(limpo)) ambientes.push("janela")
+  if (/\b(fachada|frente|frente de loja|vitrine)\b/i.test(limpo)) ambientes.push("fachada de loja")
+  if (/\b(porta|portão|entrada)\b/i.test(limpo)) ambientes.push("entrada/portão")
+
+  // 3. Detecta características específicas
+  const detalhes: string[] = []
+  if (/\b(visor|transparente|cristal)\b/i.test(limpo)) detalhes.push("com visor transparente")
+  if (/\b(motorizado|automático|controle)\b/i.test(limpo)) detalhes.push("motorizado")
+  if (/\b(manual|manivela)\b/i.test(limpo)) detalhes.push("manual com manivela")
+  if (/\b(policarbonato)\b/i.test(limpo)) detalhes.push("em policarbonato")
+  if (/\b(acm|alumínio)\b/i.test(limpo)) detalhes.push("em ACM")
+  if (/\b(troca(?:r)?(?:\s+a)?\s+lona)\b/i.test(limpo)) {
+    detalhes.push("troca de lona")
+  } else if (/\b(lona|banner)\b/i.test(limpo)) {
+    detalhes.push("em lona")
+  }
+  if (/\b(reforma|conserto|manuten[çc][ãa]o)\b/i.test(limpo)) detalhes.push("serviço de reforma/manutenção")
+
+  // 4. Produto principal
+  const prod = assunto || extrairAssuntoInteresse(textoCompleto)
+
+  if (prod || medidasEncontradas || ambientes.length > 0 || detalhes.length > 0) {
+    const partes: string[] = []
+    partes.push(`Interesse em ${prod || "Orçamento comercial"}`)
+    if (ambientes.length > 0) partes.push(`para ${ambientes.join("/")}`)
+    if (medidasEncontradas) partes.push(`(medidas citadas: ${medidasEncontradas})`)
+    if (detalhes.length > 0) partes.push(`- ${detalhes.join(", ")}`)
+    return partes.join(" ") + "."
+  }
+
+  const frasesRelevantes = msgsUsuario
+    .map((m) => m.trim())
+    .filter((m) => m.length > 3 && !/^(oi|ol[áa]|bom dia|boa tarde|boa noite|ok|sim|n[ãa]o|beleza|obrigad[oa])$/i.test(m))
+
+  if (frasesRelevantes.length > 0) {
+    return frasesRelevantes[frasesRelevantes.length - 1]
+  }
+
+  return textoRecebido.trim()
+}
+
 export function formatarAlertaTransferencia({
   nome,
   ehClienteCadastrado,
@@ -210,6 +279,7 @@ export function formatarAlertaTransferencia({
   telefone,
   textoRecebido,
   assunto,
+  resumoAnalise,
 }: {
   nome?: string | null
   ehClienteCadastrado?: boolean
@@ -217,6 +287,7 @@ export function formatarAlertaTransferencia({
   telefone: string
   textoRecebido: string
   assunto?: string | null
+  resumoAnalise?: string | null
 }): string {
   const nomeEfetivo = ehNomeValido(nome) ? nome?.trim() : null
   const rotuloCliente = nomeEfetivo
@@ -233,6 +304,7 @@ export function formatarAlertaTransferencia({
 
   const localLinha = localValido ? `📍 *Local:* ${localValido}\n` : ""
   const assuntoLinha = assunto ? `🎯 *Assunto:* ${assunto}\n` : ""
+  const resumoLinha = resumoAnalise ? `📋 *Resumo da Demanda:* ${resumoAnalise.trim()}\n` : ""
 
   return (
     `🔔 *Novo Atendimento Transferido!*\n\n` +
@@ -240,6 +312,7 @@ export function formatarAlertaTransferencia({
     localLinha +
     `📱 *WhatsApp:* ${formatarTelefoneBrasil(telefone)}\n` +
     assuntoLinha +
+    resumoLinha +
     `💬 *Mensagem do cliente:* "${textoRecebido.trim()}"\n\n` +
     `👉 Acesse o WhatsApp para responder!`
   )
@@ -625,13 +698,21 @@ REGRAS GERAIS:
         if (process.env.WHATSAPP_NOTIFICAR_TRANSFERENCIA !== "false") {
           const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO || "5527997488023"
           if (telEmpresa) {
+            const assuntoDetectado = extrairAssuntoInteresse(resumo) || extrairAssuntoInteresse(textoRecebido)
+            const resumoAnalise = extrairResumoDemanda({
+              historico,
+              textoRecebido: resumo || textoRecebido,
+              assunto: assuntoDetectado,
+              local: localTemp,
+            })
             const alerta = formatarAlertaTransferencia({
               nome: (ehNomeValido(nomeTemp) ? nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null),
               ehClienteCadastrado,
               local: localTemp,
               telefone,
-              textoRecebido: resumo,
-              assunto: extrairAssuntoInteresse(resumo) || extrairAssuntoInteresse(textoRecebido),
+              textoRecebido,
+              assunto: assuntoDetectado,
+              resumoAnalise: resumo || resumoAnalise,
             })
             enviarMensagemWhatsapp(telEmpresa, alerta).catch((err) =>
               console.error("[bot] erro ao notificar empresa de transferência:", err)
@@ -663,13 +744,21 @@ REGRAS GERAIS:
     if (process.env.WHATSAPP_NOTIFICAR_TRANSFERENCIA !== "false") {
       const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO || "5527997488023"
       if (telEmpresa) {
+        const assuntoDetectado = reg.assunto || extrairAssuntoInteresse(textoRecebido)
+        const resumoAnalise = extrairResumoDemanda({
+          historico,
+          textoRecebido,
+          assunto: assuntoDetectado,
+          local: localTemp,
+        })
         const alerta = formatarAlertaTransferencia({
           nome: (ehNomeValido(nomeTemp) ? nomeTemp : null) || (ehNomeValido(pushName) ? pushName : null),
           ehClienteCadastrado,
           local: localTemp,
           telefone,
           textoRecebido,
-          assunto: reg.assunto || extrairAssuntoInteresse(textoRecebido),
+          assunto: assuntoDetectado,
+          resumoAnalise,
         })
         enviarMensagemWhatsapp(telEmpresa, alerta).catch((e) =>
           console.error("[bot] erro ao notificar empresa:", e)
