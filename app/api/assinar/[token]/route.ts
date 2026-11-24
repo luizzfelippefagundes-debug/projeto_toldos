@@ -31,8 +31,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   }
 
   const r = orcRows[0]
-  const clienteRows = await sql`SELECT nome, telefone FROM clientes WHERE id = ${r.cliente_id} LIMIT 1`
+  const clienteRows = await sql`SELECT nome, telefone, cpf FROM clientes WHERE id = ${r.cliente_id} LIMIT 1`
   const clienteNome = (clienteRows[0]?.nome as string) ?? "Cliente"
+  const clienteCpf = (clienteRows[0]?.cpf as string) ?? null
 
   return NextResponse.json({
     assinado: !!reg.assinado_em,
@@ -42,6 +43,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
     orcamentoNumero: r.numero,
     orcamentoCriadoEm: r.criado_em,
     clienteNome,
+    clienteCpf,
     totalFechado: r.total_fechado ? Number(r.total_fechado) : null,
   })
 }
@@ -50,7 +52,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   const { token } = await params
   await garantirTabelaAssinaturasOs()
 
-  const { assinaturaData } = await req.json()
+  const { assinaturaData, documentoIdentificacao } = await req.json()
   if (!assinaturaData) {
     return NextResponse.json({ erro: "assinaturaData obrigatório" }, { status: 400 })
   }
@@ -74,9 +76,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
 
   await sql`
     UPDATE assinaturas_os
-    SET assinado_em = ${agora}, assinatura_data = ${assinaturaData}, ip_assinante = ${ip}
+    SET assinado_em = ${agora}, assinatura_data = ${assinaturaData}, ip_assinante = ${ip}, documento_assinante = ${documentoIdentificacao || null}
     WHERE id = ${token}
   `
+
+  // Atualiza o CPF/CNPJ do cliente se foi fornecido na assinatura
+  if (documentoIdentificacao && reg.orcamento_id) {
+    const oRows = await sql`SELECT cliente_id FROM orcamentos WHERE id = ${reg.orcamento_id} LIMIT 1`
+    if (oRows.length > 0 && oRows[0].cliente_id) {
+      await sql`
+        UPDATE clientes
+        SET cpf = ${documentoIdentificacao}
+        WHERE id = ${oRows[0].cliente_id}
+      `
+    }
+  }
 
   // Cliente assinou → entra na produção agora
   await sql`

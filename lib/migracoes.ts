@@ -65,6 +65,7 @@ export async function garantirTabelaAssinaturasOs() {
     )
   `
   await getSql()`ALTER TABLE assinaturas_os ADD COLUMN IF NOT EXISTS pdf_url TEXT`
+  await getSql()`ALTER TABLE assinaturas_os ADD COLUMN IF NOT EXISTS documento_assinante TEXT`
   assinaturasOsProntas = true
 }
 

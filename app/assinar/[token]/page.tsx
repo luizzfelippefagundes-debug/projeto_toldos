@@ -12,6 +12,7 @@ interface DadosOs {
   orcamentoNumero: number
   orcamentoCriadoEm: string
   clienteNome: string
+  clienteCpf?: string | null
   totalFechado: number | null
 }
 
@@ -24,16 +25,39 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
   const [concluido, setConcluido] = useState(false)
   const [desenhando, setDesenhando] = useState(false)
   const [temAssinatura, setTemAssinatura] = useState(false)
+  const [cpfCnpj, setCpfCnpj] = useState("")
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const ultimoPonto = useRef<{ x: number; y: number } | null>(null)
+
+  function formatarCpfCnpjInput(valor: string) {
+    const limpo = valor.replace(/\D/g, "")
+    if (limpo.length <= 11) {
+      return limpo
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+    }
+    return limpo
+      .slice(0, 14)
+      .replace(/(\d{2})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1/$2")
+      .replace(/(\d{4})(\d{1,2})$/, "$1-$2")
+  }
 
   useEffect(() => {
     fetch(`/api/assinar/${token}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.erro) setErro(d.erro)
-        else setDados(d)
+        if (d.erro) {
+          setErro(d.erro)
+        } else {
+          setDados(d)
+          if (d.clienteCpf) {
+            setCpfCnpj(d.clienteCpf)
+          }
+        }
       })
       .catch(() => setErro("Erro ao carregar documento"))
   }, [token])
@@ -102,7 +126,10 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
     const res = await fetch(`/api/assinar/${token}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assinaturaData }),
+      body: JSON.stringify({
+        assinaturaData,
+        documentoIdentificacao: cpfCnpj.trim() || undefined,
+      }),
     })
 
     const json = await res.json()
@@ -216,7 +243,24 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
           <p className="text-sm text-blue-800">
             📋 Leia o documento enviado pelo WhatsApp e, se concordar com os termos,
-            assine abaixo com o dedo para confirmar a Ordem de Serviço.
+            confirme seus dados e assine abaixo com o dedo para confirmar a Ordem de Serviço.
+          </p>
+        </div>
+
+        {/* Identificação CPF / CNPJ do Assinante */}
+        <div className="bg-white rounded-xl border p-4 shadow-sm">
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+            CPF ou CNPJ do Titular / Assinante
+          </label>
+          <input
+            type="text"
+            value={cpfCnpj}
+            onChange={(e) => setCpfCnpj(formatarCpfCnpjInput(e.target.value))}
+            placeholder="000.000.000-00 ou 00.000.000/0000-00"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <p className="mt-1 text-[11px] text-gray-500">
+            Seu documento será vinculado ao Contrato e à Ordem de Serviço formal.
           </p>
         </div>
 

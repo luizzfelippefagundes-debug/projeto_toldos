@@ -32,16 +32,20 @@ export default function OrdemDeServicoPage() {
   }
 
   const cliente = clientes.find((c) => c.id === orcamento.clienteId)
-  const material = materiais.find((m) => m.id === orcamento.item.materialId)
+  const material = materiais.find((m) => m.id === orcamento.item?.materialId)
 
   const resultado = calcularOrcamentoSalvo(orcamento, materiais, servicos)
 
   const unidadeMaterial = orcamento.materialFechado?.unidade ?? material?.unidade
-  const nomeMaterial = orcamento.materialFechado?.nome ?? material?.nome ?? "Material removido"
-  const validadeAte = new Date(orcamento.criadoEm)
+  const nomeMaterial = orcamento.materialFechado?.nome ?? material?.nome ?? "Material"
+  const validadeAte = new Date(orcamento.criadoEm || Date.now())
   validadeAte.setDate(validadeAte.getDate() + (orcamento.validadeDias ?? 7))
 
-  const totalFinal = orcamento.totalFechado ?? resultado?.total ?? 0
+  const totalFinal = orcamento.totalFechado != null && !isNaN(orcamento.totalFechado)
+    ? orcamento.totalFechado
+    : resultado?.total != null && !isNaN(resultado.total)
+    ? resultado.total
+    : 0
   const saldoEntrega = Math.round((totalFinal / 2) * 100) / 100
   const hoje = new Date()
   const [enviando, setEnviando] = useState(false)
@@ -96,7 +100,7 @@ export default function OrdemDeServicoPage() {
     setTimeout(() => setCopiadoPix(false), 2500)
   }
 
-  const adicionaisParaPdf = (orcamento.item.itensAdicionais ?? []).map((extra) => {
+  const adicionaisParaPdf = (orcamento.item?.itensAdicionais ?? []).map((extra) => {
     const materialExtra = materiais.find((m) => m.id === extra.materialId)
     return {
       item: extra,
@@ -107,7 +111,7 @@ export default function OrdemDeServicoPage() {
 
   const linhas = resultado
     ? gerarLinhasOrcamento({
-        item: orcamento.item,
+        item: orcamento.item || ({} as any),
         nomeMaterial,
         unidadeMaterial: (unidadeMaterial as any) ?? "un",
         acabamentosDisponiveis: acabamentos,
@@ -229,7 +233,7 @@ export default function OrdemDeServicoPage() {
       >
         {/* ──────────── CABEÇALHO ──────────── */}
         <div className="flex items-center justify-between border-b-2 border-gray-800 pb-5">
-          <Logo className="w-44 rounded-lg" />
+          <img src="/brand/logo-orcamento.png" alt="Toldos Print" className="h-12 max-w-[200px] object-contain" />
           <div className="text-right">
             <p className="text-2xl font-bold tracking-tight text-gray-800">ORDEM DE SERVIÇO</p>
             <p className="mt-1 text-lg font-semibold text-gray-600">Nº {String(orcamento.numero).padStart(4, "0")}</p>

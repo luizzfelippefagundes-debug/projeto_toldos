@@ -527,9 +527,12 @@ export default function ProducaoPage() {
       </head>
       <body>
         <div class="header">
-          <div>
-            <div class="logo">TOLDOS <span>PRINT</span></div>
-            <div style="font-size: 11px; color: #555;">toldosprint@outlook.com · Ficha de Instrução para Bancada</div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="/brand/logo-orcamento.png" alt="Toldos Print" style="height: 48px; max-width: 175px; object-fit: contain;" />
+            <div style="border-left: 1.5px solid #ccc; padding-left: 10px;">
+              <div style="font-size: 13px; font-weight: 800; color: #111; letter-spacing: -0.3px;">TOLDOS PRINT</div>
+              <div style="font-size: 10.5px; color: #555;">toldosprint@outlook.com · Ficha de Instrução para Bancada</div>
+            </div>
           </div>
           <div class="badge-os">
             ${item.tipo === "pedido" ? "PEDIDO RAPIDO #" : "ORDEM DE SERVIÇO #"}${item.numero}
