@@ -8,5 +8,18 @@
       "path": "/api/cron/lembretes-whatsapp",
       "schedule": "0 12 * * *"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "tv.toldosprint.com.br"
+        }
+      ],
+      "destination": "/tv",
+      "permanent": false
+    }
   ]
 }
