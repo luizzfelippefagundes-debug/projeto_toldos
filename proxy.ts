@@ -25,6 +25,9 @@ const rotaPublica = createRouteMatcher([
   // Página pública de assinatura digital de OS (cliente recebe link por WhatsApp).
   "/assinar(.*)",
   "/api/assinar(.*)",
+  // Página pública de aprovação de arte pelo cliente (link enviado por WhatsApp).
+  "/arte(.*)",
+  "/api/arte(.*)",
   // Protegida pelo CRON_SECRET dentro da própria rota.
   "/api/cron(.*)",
   // Só o webhook é público (protegido pelo EVOLUTION_WEBHOOK_SECRET dentro da
