@@ -39,6 +39,9 @@ import {
   Coins,
   ShieldCheck,
   FileText,
+  Layers,
+  LayoutList,
+  UserCheck,
 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -169,6 +172,7 @@ export default function EquipePage() {
   const [carregandoComissoes, setCarregandoComissoes] = useState(true)
 
   // Filtros do Histórico
+  const [modoVisualizacao, setModoVisualizacao] = useState<"demandas" | "detalhada">("demandas")
   const [filtroPeriodo, setFiltroPeriodo] = useState<string>("todos")
   const [dataInicioCustom, setDataInicioCustom] = useState("")
   const [dataFimCustom, setDataFimCustom] = useState("")
@@ -466,6 +470,57 @@ export default function EquipePage() {
       valorPendenteTotal,
       valorPagoTotal,
     }
+  }, [historicoFiltrado])
+
+  // Demandas agrupadas para não duplicar linhas quando vários colaboradores trabalham na mesma OS
+  const demandasAgrupadas = useMemo(() => {
+    const mapa = new Map<string, {
+      chave: string
+      origem_tipo: "pedido" | "orcamento"
+      numero: number
+      cliente_nome: string
+      produto_nome: string
+      valor_pedido: number
+      criado_em: string
+      comissoes: Array<{
+        id: string
+        colaborador_nome: string
+        valor_comissao: number
+        comissao_percent: number
+        status: "pendente" | "pago"
+        recibo_id?: string | null
+      }>
+      totalComissaoDemanda: number
+    }>()
+
+    historicoFiltrado.forEach((c) => {
+      const chave = `${c.origem_tipo}_${c.numero}_${c.produto_nome}`
+      if (!mapa.has(chave)) {
+        mapa.set(chave, {
+          chave,
+          origem_tipo: c.origem_tipo,
+          numero: c.numero,
+          cliente_nome: c.cliente_nome,
+          produto_nome: c.produto_nome,
+          valor_pedido: Number(c.valor_pedido) || 0,
+          criado_em: c.criado_em,
+          comissoes: [],
+          totalComissaoDemanda: 0,
+        })
+      }
+      const grupo = mapa.get(chave)!
+      grupo.comissoes.push({
+        id: c.id,
+        colaborador_nome: c.colaborador_nome,
+        valor_comissao: Number(c.valor_comissao) || 0,
+        comissao_percent: c.comissao_percent,
+        status: c.status,
+        recibo_id: c.recibo_id,
+      })
+      grupo.totalComissaoDemanda += Number(c.valor_comissao) || 0
+    })
+
+    return Array.from(mapa.values())
   }, [historicoFiltrado])
 
   const temFiltrosAtivos =
@@ -1314,8 +1369,38 @@ export default function EquipePage() {
                 />
               </div>
 
-              {/* Filtros em Dropdown */}
+              {/* Filtros e Modos de Exibição */}
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Alternância de Modo: Por Demanda Agrupada vs Detalhado */}
+                <div className="flex items-center bg-muted/60 p-0.5 rounded-xl border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setModoVisualizacao("demandas")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      modoVisualizacao === "demandas"
+                        ? "bg-background text-foreground shadow-2xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title="Agrupa por demanda: 1 linha por OS com a lista dos colaboradores que ganharam nela"
+                  >
+                    <Layers className="h-3.5 w-3.5 text-primary" />
+                    <span>Por Demanda (Sem duplicar)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModoVisualizacao("detalhada")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      modoVisualizacao === "detalhada"
+                        ? "bg-background text-foreground shadow-2xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    title="Exibe 1 linha por comissão individual"
+                  >
+                    <LayoutList className="h-3.5 w-3.5" />
+                    <span>Linha a Linha</span>
+                  </button>
+                </div>
+
                 {/* Período */}
                 <div className="flex items-center gap-1.5">
                   <Select value={filtroPeriodo} onValueChange={(v) => { if (v) setFiltroPeriodo(v) }}>
@@ -1337,11 +1422,12 @@ export default function EquipePage() {
 
                 {/* Colaborador */}
                 <Select value={filtroColaborador} onValueChange={(v) => { if (v) setFiltroColaborador(v) }}>
-                  <SelectTrigger className="w-[155px] text-xs font-bold h-9">
-                    <SelectValue placeholder="Colaborador" />
+                  <SelectTrigger className="w-[160px] text-xs font-bold h-9 border-primary/30">
+                    <UserCheck className="h-3.5 w-3.5 mr-1 text-primary" />
+                    <SelectValue placeholder="Filtrar Funcionário" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todos">Toda a Equipe</SelectItem>
+                    <SelectItem value="todos">Todos Funcionários</SelectItem>
                     {resumoColaboradores.map((c) => (
                       <SelectItem key={c.colaborador_nome} value={c.colaborador_nome}>
                         {c.colaborador_nome}
@@ -1416,7 +1502,82 @@ export default function EquipePage() {
             <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center text-muted-foreground text-xs font-medium print:border-slate-300">
               Nenhum registro encontrado para estes filtros.
             </div>
+          ) : modoVisualizacao === "demandas" ? (
+            /* ======================================================== */
+            /* MODO 1: AGRUPADO POR DEMANDA (1 LINHA POR OS - SEM REPETIÇÃO) */
+            /* ======================================================== */
+            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs print:border-none print:shadow-none print:rounded-none">
+              <div className="overflow-x-auto print:overflow-visible">
+                <table className="w-full text-left text-xs print:text-[9.5pt]">
+                  <thead className="bg-muted/50 border-b border-border/80 font-black text-muted-foreground uppercase text-[10px] print:bg-slate-100 print:text-slate-900 print:border-b-2 print:border-slate-400">
+                    <tr>
+                      <th className="p-3 print:p-1.5">Demanda</th>
+                      <th className="p-3 print:p-1.5">Cliente</th>
+                      <th className="p-3 print:p-1.5">Produto / Serviço</th>
+                      <th className="p-3 print:p-1.5">Valor Pedido</th>
+                      <th className="p-3 print:p-1.5">Equipe / Colaboradores Bonificados</th>
+                      <th className="p-3 print:p-1.5 text-right">Total em Bônus</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60 print:divide-slate-200">
+                    {demandasAgrupadas.map((demanda) => (
+                      <tr key={demanda.chave} className="hover:bg-muted/30 transition-colors print:hover:bg-transparent">
+                        <td className="p-3 whitespace-nowrap print:p-1.5">
+                          <span className="font-black text-primary print:text-slate-950 block">
+                            {demanda.origem_tipo === "orcamento" ? `OS #${demanda.numero}` : `#${demanda.numero}`}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground print:text-slate-500 block">
+                            {formatarDataHora(demanda.criado_em)}
+                          </span>
+                        </td>
+                        <td className="p-3 font-semibold text-foreground truncate max-w-[150px] print:p-1.5 print:text-slate-900">
+                          {demanda.cliente_nome}
+                        </td>
+                        <td className="p-3 text-foreground font-medium truncate max-w-[200px] print:p-1.5 print:text-slate-800" title={demanda.produto_nome}>
+                          {demanda.produto_nome || "Produção"}
+                        </td>
+                        <td className="p-3 text-muted-foreground whitespace-nowrap font-bold print:p-1.5 print:text-slate-700">
+                          {formatarMoeda(demanda.valor_pedido)}
+                        </td>
+                        <td className="p-3 print:p-1.5">
+                          {/* Pílulas de cada colaborador com seu respectivo bônus */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {demanda.comissoes.map((c) => (
+                              <div
+                                key={c.id}
+                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-xs font-bold ${
+                                  c.status === "pago"
+                                    ? "bg-slate-500/10 border-slate-500/20 text-muted-foreground print:bg-slate-100 print:text-slate-800"
+                                    : "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 print:bg-emerald-50 print:text-emerald-950"
+                                }`}
+                              >
+                                <span className="font-extrabold">{c.colaborador_nome}:</span>
+                                <span className="font-black">{formatarMoeda(c.valor_comissao)}</span>
+                                {c.status === "pago" && (
+                                  <span className="text-[10px] text-muted-foreground">✓</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-3 text-right whitespace-nowrap print:p-1.5">
+                          <span className="font-black text-sm text-emerald-600 dark:text-emerald-400 print:text-slate-950 block">
+                            + {formatarMoeda(demanda.totalComissaoDemanda)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground print:text-slate-500 block">
+                            {demanda.comissoes.length} pessoa{demanda.comissoes.length !== 1 ? "s" : ""}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           ) : (
+            /* ======================================================== */
+            /* MODO 2: DETALHADO LINHA A LINHA */
+            /* ======================================================== */
             <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs print:border-none print:shadow-none print:rounded-none">
               <div className="overflow-x-auto print:overflow-visible">
                 <table className="w-full text-left text-xs print:text-[9.5pt] print:table-fixed">
