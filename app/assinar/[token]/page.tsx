@@ -224,7 +224,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
                 </span>
               </div>
               <div className="mt-1 text-[11px] text-gray-600">
-                Favorecido: <strong>Toldos Print & Comunicação Visual</strong>
+                Favorecido: <strong>Luis Carlos Loterio (Toldos Print & Comunicação Visual)</strong>
               </div>
             </div>
 

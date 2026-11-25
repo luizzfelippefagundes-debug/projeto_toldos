@@ -116,7 +116,7 @@ export async function POST(req: Request) {
       })
     : ""
 
-  const legenda = `📋 Segue a Ordem de Serviço nº ${numeroOS} da Toldos Print!\n\n💰 *Valor Total:* ${formatarMoeda(totalFinal)}\n\n💳 *Chave Pix (CNPJ):* ${chavePix}\nFavorecido: Toldos Print & Comunicação Visual`
+  const legenda = `📋 Segue a Ordem de Serviço nº ${numeroOS} da Toldos Print!\n\n💰 *Valor Total:* ${formatarMoeda(totalFinal)}\n\n💳 *Chave Pix (CNPJ):* ${chavePix}\nFavorecido: Luis Carlos Loterio (Toldos Print & Comunicação Visual)`
 
   // 5. Envia o documento PDF
   const envio = await enviarDocumentoWhatsapp(
@@ -138,7 +138,7 @@ export async function POST(req: Request) {
     `1️⃣ *Pix (à vista):*\n` +
     `👉 Chave Pix (CNPJ): *${chavePix}*\n` +
     `👉 Chave para copiar: *${chaveNumeros}*\n` +
-    `👤 Favorecido: Toldos Print & Comunicação Visual\n` +
+    `👤 Favorecido: Luis Carlos Loterio (Toldos Print & Comunicação Visual)\n` +
     (pixCopiaCola ? `\n📋 *Pix Copia e Cola:*\n\`\`\`${pixCopiaCola}\`\`\`\n` : "") +
     (linkPagamento ? `\n2️⃣ *Cartão de Crédito (em até 12x):*\n👉 ${linkPagamento}\n` : "") +
     (linkAssinatura ? `\n✍️ *Assinatura Digital da OS:*\n👉 ${linkAssinatura}\n\n` : jaAssinado ? `\n✍️ *Assinatura da OS:* Documento já assinado digitalmente ✓\n\n` : "\n") +

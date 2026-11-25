@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 
     const legenda =
       mensagem ||
-      `📄 Segue em anexo o seu Orçamento nº ${numeroFormatado} da Toldos Print!\n\n💳 *Chave Pix (CNPJ):* 63.177.134/0001-00\nFavorecido: Toldos Print & Comunicação Visual\n\nQualquer dúvida estamos à disposição.`
+      `📄 Segue em anexo o seu Orçamento nº ${numeroFormatado} da Toldos Print!\n\n💳 *Chave Pix (CNPJ):* 63.177.134/0001-00\nFavorecido: Luis Carlos Loterio (Toldos Print & Comunicação Visual)\n\nQualquer dúvida estamos à disposição.`
 
     const envio = await enviarDocumentoWhatsapp(
       destinoTelefone,

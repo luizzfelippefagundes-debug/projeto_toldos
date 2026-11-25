@@ -35,7 +35,7 @@ export function mensagemOrcamentoWhatsapp({
     `💳 *Dados para Pagamento via Pix:*\n` +
     `👉 *Chave Pix (CNPJ):* 63.177.134/0001-00\n` +
     `👉 *Chave para copiar:* 63177134000100\n` +
-    `Favorecido: Toldos Print & Comunicação Visual\n\n` +
+    `Favorecido: Luis Carlos Loterio (Toldos Print & Comunicação Visual)\n\n` +
     `Qualquer dúvida é só chamar por aqui!`
   )
 }

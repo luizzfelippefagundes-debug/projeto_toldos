@@ -368,7 +368,7 @@ export function resolverFluxoAtendimento(
         "⚡ *PAGAMENTO VIA PIX:*\n\n" +
         `Nossa chave PIX oficial é o CNPJ:\n👉 *${chavePix}*\n` +
         "Chave sem pontuação (para copiar): *63177134000100*\n" +
-        "Favorecido: *Toldos Print & Comunicação Visual*\n\n" +
+        "Favorecido: *Luis Carlos Loterio (Toldos Print & Comunicação Visual)*\n\n" +
         "Assim que realizar o pagamento, pode mandar o comprovante por aqui mesmo que confirmamos o seu pedido na hora! 🤝✨",
     }
   }
@@ -381,7 +381,7 @@ export function resolverFluxoAtendimento(
         "Qual forma você prefere?\n\n" +
         `1️⃣ *Pix (à vista):*\n` +
         `• Chave CNPJ: *${chavePix}* (números: *63177134000100*)\n` +
-        `• Favorecido: *Toldos Print & Comunicação Visual*\n\n` +
+        `• Favorecido: *Luis Carlos Loterio (Toldos Print & Comunicação Visual)*\n\n` +
         `2️⃣ *Cartão de Crédito (em até 12x):*\n` +
         `• Link seguro online via Mercado Pago ou na nossa maquininha física!\n\n` +
         "Basta nos informar a opção escolhida ou responder por aqui! 🤝✨",

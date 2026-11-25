@@ -154,7 +154,7 @@ export async function POST(req: Request) {
       `1️⃣ *Pix (à vista):*\n` +
       `👉 Chave Pix (CNPJ): *${chavePix}*\n` +
       `👉 Chave para copiar: *${chaveNumeros}*\n` +
-      `👤 Favorecido: Toldos Print & Comunicação Visual\n` +
+      `👤 Favorecido: Luis Carlos Loterio (Toldos Print & Comunicação Visual)\n` +
       pixCopiaColaBloco +
       linkCartaoBloco +
       linkAssinaturaBloco +

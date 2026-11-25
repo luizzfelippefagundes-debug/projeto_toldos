@@ -260,7 +260,7 @@ export async function gerarPdfOsServidor(
     doc.setFont("helvetica", "normal").setTextColor(70)
     doc.text("Favorecido:", textoX, y + 39)
     doc.setFont("helvetica", "bold").setTextColor(20)
-    doc.text("Toldos Print & Comunicação Visual", textoX + 50, y + 39)
+    doc.text("Luis Carlos Loterio (Toldos Print)", textoX + 50, y + 39)
 
     doc.setFont("helvetica", "normal").setTextColor(70)
     doc.text("Valor:", textoX, y + 51)
