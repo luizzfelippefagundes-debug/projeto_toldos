@@ -684,14 +684,14 @@ function TvColunaEmergencias({
       className="flex h-full min-h-0 flex-1 flex-col gap-2 min-w-0"
     >
       {/* Cabeçalho da Coluna de Emergências */}
-      <div className="flex shrink-0 items-center justify-between rounded-xl border-2 border-red-600 bg-gradient-to-r from-red-600/20 via-red-500/15 to-red-600/20 dark:bg-red-950/70 px-3 py-2 shadow-lg ring-2 ring-red-500/50">
-        <div className="flex items-center gap-2 truncate">
+      <div className="flex shrink-0 items-center justify-between rounded-xl border-2 border-red-600 bg-gradient-to-r from-red-600/20 via-red-500/15 to-red-600/20 dark:bg-red-950/70 px-2.5 sm:px-3 py-2 shadow-lg ring-2 ring-red-500/50">
+        <div className="flex items-center gap-1.5 min-w-0">
           <span className="text-base sm:text-lg animate-bounce leading-none shrink-0">🚨</span>
-          <span className="text-sm sm:text-base lg:text-lg font-black tracking-tight truncate text-red-700 dark:text-red-300 uppercase">
-            Avisos & Emergências
+          <span className="text-xs sm:text-sm lg:text-base font-black tracking-tight truncate text-red-700 dark:text-red-300 uppercase">
+            Emergências
           </span>
         </div>
-        <span className="shrink-0 rounded-full bg-red-600 text-white px-2.5 py-0.5 text-xs sm:text-sm font-black shadow-xs">
+        <span className="shrink-0 rounded-full bg-red-600 text-white px-2 py-0.5 text-xs sm:text-sm font-black shadow-xs">
           {totalItens}
         </span>
       </div>
@@ -1463,8 +1463,8 @@ export default function TvPage() {
         </div>
       )}
 
-      {/* Ticker de avisos rodapé com velocidade suave e pausa ao passar mouse/interagir */}
-      {avisosAtivos.length > 0 && (
+      {/* Ticker de avisos rodapé: só exibe como fallback se a coluna de emergências for desativada */}
+      {avisosAtivos.length > 0 && config?.mostrarColunaAlertas === false && (
         <div className="shrink-0 overflow-hidden rounded-xl border border-border/80 bg-card py-2 shadow-xs group/ticker">
           <div
             className="ticker-track hover:[animation-play-state:paused]"
