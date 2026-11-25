@@ -630,11 +630,32 @@ export default function ProducaoPage() {
       setModalQcItem(item)
       setQcChecks({ medidas: true, acabamento: true, visual: true })
       setQcFotomUrl(item.fotoAtual || null)
-      if (meuNome && equipeDisponivel.includes(meuNome)) {
-        setColaboradoresPecas({ [meuNome]: item.quantidadeTotal || 1 })
-      } else {
-        setColaboradoresPecas({})
+      // Na fábrica da Toldos Print, Josué e Alessandro (Lelé) produzem juntos na bancada
+      const membrosPadrao = ["josue batista alves", "Alessandro Da Cruz Lima"]
+      const iniciaisSel: Record<string, number> = {}
+
+      membrosPadrao.forEach((nomePadrao) => {
+        const achou = equipeDisponivel.find(
+          (e) => e.toLowerCase().includes("josue") || e.toLowerCase().includes("alessandro")
+        )
+      })
+
+      // Adiciona Josué e Alessandro que existirem na lista de equipe
+      equipeDisponivel.forEach((e) => {
+        const eLower = e.toLowerCase()
+        if (eLower.includes("josue") || eLower.includes("alessandro")) {
+          iniciaisSel[e] = item.quantidadeTotal || 1
+        }
+      })
+
+      // Se nenhum dos dois estiver na lista, seleciona o usuário atual
+      if (Object.keys(iniciaisSel).length === 0) {
+        if (meuNome && equipeDisponivel.includes(meuNome)) {
+          iniciaisSel[meuNome] = item.quantidadeTotal || 1
+        }
       }
+
+      setColaboradoresPecas(iniciaisSel)
     },
     [meuNome, equipeDisponivel]
   )
