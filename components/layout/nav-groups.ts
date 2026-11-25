@@ -21,6 +21,7 @@ import {
   PhoneCall,
   Radio,
   SlidersHorizontal,
+  Coins,
   type LucideIcon,
 } from "lucide-react"
 import type { Papel } from "@/lib/types"
@@ -68,6 +69,11 @@ export const gruposNavegacao: NavGroup[] = [
         href: "/producao",
         icon: Factory,
         papeis: ["producao"],
+      },
+      {
+        label: "💰 Meu Extrato",
+        href: "/meu-extrato",
+        icon: Coins,
       },
       { label: "Central do Bot", href: "/bot", icon: Bot },
       { label: "Transmissão", href: "/transmissao", icon: Radio, donoApenas: true },

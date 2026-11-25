@@ -31,6 +31,7 @@ import {
   Search,
 } from "lucide-react"
 import { toast } from "sonner"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -68,6 +69,7 @@ interface ComissaoItem {
   comissao_percent: number
   valor_comissao: number
   status: "pendente" | "pago"
+  recibo_id?: string | null
   pago_em?: string | null
   pago_por?: string | null
   criado_em: string
@@ -154,6 +156,8 @@ export default function EquipePage() {
   const [modalPagamento, setModalPagamento] = useState<{
     colaborador: ResumoColaborador
     lancarFinanceiro: boolean
+    formaPagamento: "pix" | "dinheiro" | "deposito" | "outro"
+    tipoAssinatura: "fisica" | "digital"
     observacao: string
   } | null>(null)
   const [salvandoPagamento, setSalvandoPagamento] = useState(false)
@@ -268,7 +272,7 @@ export default function EquipePage() {
     }
   }
 
-  // Ação de Pagamento de Comissões
+  // Ação de Pagamento de Comissões e Emissão de Recibo
   async function confirmarPagamento() {
     if (!modalPagamento) return
     setSalvandoPagamento(true)
@@ -279,6 +283,8 @@ export default function EquipePage() {
         body: JSON.stringify({
           comissao_ids: modalPagamento.colaborador.comissoes_pendentes_ids,
           colaborador_nome: modalPagamento.colaborador.colaborador_nome,
+          forma_pagamento: modalPagamento.formaPagamento,
+          tipo_assinatura: modalPagamento.tipoAssinatura,
           criar_lancamento_financeiro: modalPagamento.lancarFinanceiro,
           observacao: modalPagamento.observacao,
         }),
@@ -287,11 +293,16 @@ export default function EquipePage() {
       if (!res.ok) throw new Error()
       const data = await res.json()
       toast.success(
-        `✓ Pagamento de R$ ${data.totalPago.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} registrado com sucesso!`,
+        `✓ Pagamento registrado! Recibo ${data.numeroRecibo || ""} gerado com sucesso.`,
         { duration: 5000 }
       )
+      const reciboId = data.reciboId
       setModalPagamento(null)
       carregarDadosComissoes()
+
+      if (reciboId) {
+        router.push(`/equipe/recibo/${reciboId}`)
+      }
     } catch {
       toast.error("Erro ao registrar pagamento de comissões.")
     } finally {
@@ -562,6 +573,8 @@ export default function EquipePage() {
                                   setModalPagamento({
                                     colaborador: colab,
                                     lancarFinanceiro: true,
+                                    formaPagamento: "pix",
+                                    tipoAssinatura: "fisica",
                                     observacao: `Pagamento semanal de bônus de produção (${colab.quantidade_pendente} peças)`,
                                   })
                                 }
@@ -743,9 +756,20 @@ export default function EquipePage() {
                         </td>
                         <td className="p-3 text-center whitespace-nowrap">
                           {item.status === "pago" ? (
-                            <span className="rounded-full bg-slate-500/20 text-muted-foreground px-2 py-0.5 font-bold text-[10px]">
-                              Pago ✓
-                            </span>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <span className="rounded-full bg-slate-500/20 text-muted-foreground px-2 py-0.5 font-bold text-[10px]">
+                                Pago ✓
+                              </span>
+                              {item.recibo_id && (
+                                <Link
+                                  href={`/equipe/recibo/${item.recibo_id}`}
+                                  className="text-[10px] font-bold text-primary hover:underline inline-flex items-center gap-0.5"
+                                  title="Abrir Recibo Oficial"
+                                >
+                                  Recibo ↗
+                                </Link>
+                              )}
+                            </div>
                           ) : (
                             <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-black text-[10px]">
                               Pendente
@@ -948,6 +972,61 @@ export default function EquipePage() {
                 <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
                   R$ {modalPagamento.colaborador.total_pendente.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </span>
+              </div>
+
+              {/* Forma de Pagamento */}
+              <div className="flex flex-col gap-1.5">
+                <span className="font-bold text-foreground text-[11px]">Forma de Pagamento:</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "pix", label: "PIX", icon: "⚡" },
+                    { id: "dinheiro", label: "Dinheiro", icon: "💵" },
+                    { id: "deposito", label: "Depósito", icon: "🏦" },
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() =>
+                        setModalPagamento((prev) => (prev ? { ...prev, formaPagamento: f.id as any } : prev))
+                      }
+                      className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all ${
+                        modalPagamento.formaPagamento === f.id
+                          ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                          : "bg-muted/40 hover:bg-muted text-muted-foreground border-border/80"
+                      }`}
+                    >
+                      <span>{f.icon}</span>
+                      <span>{f.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tipo de Assinatura */}
+              <div className="flex flex-col gap-1.5">
+                <span className="font-bold text-foreground text-[11px]">Tipo de Assinatura no Recibo:</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "fisica", label: "Imprimir (Caneta)", icon: "🖨️" },
+                    { id: "digital", label: "Assinar na Tela", icon: "✍️" },
+                  ].map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() =>
+                        setModalPagamento((prev) => (prev ? { ...prev, tipoAssinatura: a.id as any } : prev))
+                      }
+                      className={`p-2 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all ${
+                        modalPagamento.tipoAssinatura === a.id
+                          ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                          : "bg-muted/40 hover:bg-muted text-muted-foreground border-border/80"
+                      }`}
+                    >
+                      <span>{a.icon}</span>
+                      <span>{a.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-card">

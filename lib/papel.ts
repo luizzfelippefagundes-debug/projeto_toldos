@@ -9,9 +9,8 @@ export const ROTULO_PAPEL: Record<Papel, string> = {
   operador: "Colaborador",
 }
 
-// "operador" só enxerga a Produção e o Painel TV — qualquer outra página
-// redireciona pra Produção (ver proxy.ts).
-export const PAGINAS_OPERADOR = ["/producao", "/tv"]
+// "operador" enxerga Produção, Painel TV e seu próprio Extrato / Recibos
+export const PAGINAS_OPERADOR = ["/producao", "/tv", "/meu-extrato", "/equipe/recibo"]
 
 export function operadorPodeAcessar(pathname: string) {
   return PAGINAS_OPERADOR.some((p) => pathname === p || pathname.startsWith(`${p}/`))
