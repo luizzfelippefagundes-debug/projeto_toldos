@@ -32,7 +32,7 @@ import {
   isPositiveNumberInput,
 } from "@/lib/number"
 import { toast } from "sonner"
-import { Upload, FileCheck2, Printer, ArrowLeft, ArrowRight, Plus, X } from "lucide-react"
+import { Upload, FileCheck2, Printer, ArrowLeft, ArrowRight, Plus, X, Sparkles, Trash2, ExternalLink } from "lucide-react"
 import type { FotoOrcamento } from "@/lib/types"
 import { entradaEfetiva, textoCondicoesPagamento } from "@/lib/parcelas"
 import { OrcamentoOficial } from "@/components/orcamentos/orcamento-oficial"
@@ -164,6 +164,14 @@ export function NovoOrcamentoForm() {
   const [entradaDinheiro, setEntradaDinheiro] = useState("")
   const [comissaoColaborador, setComissaoColaborador] = useState("0")
 
+  // Chave para persistência automática de rascunho em localStorage
+  const chaveArmazenamento = editarId
+    ? `toldosprint_rascunho_edicao_${editarId}`
+    : "toldosprint_rascunho_orcamento_v2"
+  const carregamentoInicialConcluido = useRef(false)
+  const [rascunhoRecuperadoInfo, setRascunhoRecuperadoInfo] = useState<{ salvoEm: number; clienteId?: string } | null>(null)
+  const [ultimoSalvo, setUltimoSalvo] = useState<Date | null>(null)
+
   // "Válido até" depende de "hoje" (new Date()) — mesmo cuidado do Dashboard
   // e da Produção: calcular isso direto no render travaria a data numa
   // pré-renderização estática. Começa nulo e só calcula depois de montar.
@@ -281,6 +289,246 @@ export function NovoOrcamentoForm() {
     setExtras((rascunho.item.itensAdicionais ?? []).map(itemParaForm))
     consumirRascunho()
   }, [rascunho, consumirRascunho])
+
+  // Recupera rascunho salvo do localStorage ao montar
+  useEffect(() => {
+    // Se for duplicação vinda do histórico (data-context rascunho), não sobrescreve
+    if (rascunho) {
+      carregamentoInicialConcluido.current = true
+      return
+    }
+
+    try {
+      const salvo = typeof window !== "undefined" ? localStorage.getItem(chaveArmazenamento) : null
+      if (salvo) {
+        const dados = JSON.parse(salvo)
+        const temDados = Boolean(
+          dados.clienteId ||
+          dados.materialId ||
+          dados.servicoId ||
+          dados.largura ||
+          dados.altura ||
+          (dados.extras && dados.extras.length > 0) ||
+          dados.observacaoItem ||
+          (dados.ajusteManual && dados.ajusteManual !== "0") ||
+          (dados.acabamentosAtivos && Object.values(dados.acabamentosAtivos).some(Boolean))
+        )
+
+        if (temDados && (!modoEdicao || orcamentoEditando)) {
+          if (dados.passoAtual && !editarId) setPassoAtual(Number(dados.passoAtual))
+          if (dados.clienteId) setClienteId(dados.clienteId)
+          if (dados.materialId) setMaterialId(dados.materialId)
+          if (dados.servicoId) setServicoId(dados.servicoId)
+          if (dados.largura) setLargura(dados.largura)
+          if (dados.altura) setAltura(dados.altura)
+          if (dados.quantidadeUnidades) setQuantidadeUnidades(dados.quantidadeUnidades)
+          if (dados.horasEstimadas) setHorasEstimadas(dados.horasEstimadas)
+          if (dados.observacaoItem) setObservacaoItem(dados.observacaoItem)
+          if (dados.extras) setExtras(dados.extras)
+          if (dados.ajusteManual) setAjusteManual(dados.ajusteManual)
+          if (dados.entradaPercent) setEntradaPercent(dados.entradaPercent)
+          if (dados.condicoesPagamento) setCondicoesPagamento(dados.condicoesPagamento)
+          if (dados.fotos) setFotos(dados.fotos)
+          if (dados.acabamentosAtivos) setAcabamentosAtivos(dados.acabamentosAtivos)
+          if (dados.acabamentosQtd) setAcabamentosQtd(dados.acabamentosQtd)
+          if (dados.acabamentosModo) setAcabamentosModo(dados.acabamentosModo)
+          if (dados.acabamentosValorDireto) setAcabamentosValorDireto(dados.acabamentosValorDireto)
+          if (dados.instalacaoIncluida != null) setInstalacaoIncluida(dados.instalacaoIncluida)
+          if (dados.horasInstalacao) setHorasInstalacao(dados.horasInstalacao)
+          if (dados.custoHoraInstalacao) setCustoHoraInstalacao(dados.custoHoraInstalacao)
+          if (dados.numAjudantes) setNumAjudantes(dados.numAjudantes)
+          if (dados.diariaAjudante) setDiariaAjudante(dados.diariaAjudante)
+          if (dados.equipamentoId) setEquipamentoId(dados.equipamentoId)
+          if (dados.deslocamentoIncluido != null) setDeslocamentoIncluido(dados.deslocamentoIncluido)
+          if (dados.distanciaKm) setDistanciaKm(dados.distanciaKm)
+          if (dados.custoPorKm) setCustoPorKm(dados.custoPorKm)
+          if (dados.pedagio) setPedagio(dados.pedagio)
+          if (dados.alimentacao) setAlimentacao(dados.alimentacao)
+          if (dados.margemPercent) setMargemPercent(dados.margemPercent)
+          if (dados.acrescimoPercent) setAcrescimoPercent(dados.acrescimoPercent)
+          if (dados.descontoPercent) setDescontoPercent(dados.descontoPercent)
+          if (dados.impostoPercent) setImpostoPercent(dados.impostoPercent)
+          if (dados.validadeDias) setValidadeDias(dados.validadeDias)
+          if (dados.comissaoColaborador) setComissaoColaborador(dados.comissaoColaborador)
+
+          setRascunhoRecuperadoInfo({
+            salvoEm: dados.salvoEm || Date.now(),
+            clienteId: dados.clienteId,
+          })
+          setUltimoSalvo(new Date(dados.salvoEm || Date.now()))
+        }
+      }
+    } catch (err) {
+      console.warn("Falha ao recuperar rascunho local:", err)
+    } finally {
+      carregamentoInicialConcluido.current = true
+    }
+  }, [chaveArmazenamento, rascunho, editarId, modoEdicao, orcamentoEditando])
+
+  // Salva automaticamente no localStorage a cada alteração
+  useEffect(() => {
+    if (!carregamentoInicialConcluido.current) return
+    if (salvoOffline) return
+
+    const temDados = Boolean(
+      clienteId ||
+      materialId ||
+      servicoId ||
+      largura ||
+      altura ||
+      extras.length > 0 ||
+      observacaoItem ||
+      (ajusteManual && ajusteManual !== "0") ||
+      Object.values(acabamentosAtivos).some(Boolean)
+    )
+
+    if (!temDados) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      try {
+        const dadosParaSalvar = {
+          passoAtual,
+          clienteId,
+          materialId,
+          servicoId,
+          largura,
+          altura,
+          quantidadeUnidades,
+          horasEstimadas,
+          observacaoItem,
+          extras,
+          ajusteManual,
+          entradaPercent,
+          condicoesPagamento,
+          fotos,
+          acabamentosAtivos,
+          acabamentosQtd,
+          acabamentosModo,
+          acabamentosValorDireto,
+          instalacaoIncluida,
+          horasInstalacao,
+          custoHoraInstalacao,
+          numAjudantes,
+          diariaAjudante,
+          equipamentoId,
+          deslocamentoIncluido,
+          distanciaKm,
+          custoPorKm,
+          pedagio,
+          alimentacao,
+          margemPercent,
+          acrescimoPercent,
+          descontoPercent,
+          impostoPercent,
+          validadeDias,
+          comissaoColaborador,
+          salvoEm: Date.now(),
+        }
+        localStorage.setItem(chaveArmazenamento, JSON.stringify(dadosParaSalvar))
+        setUltimoSalvo(new Date())
+      } catch (e) {
+        console.warn("Falha ao salvar rascunho:", e)
+      }
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [
+    chaveArmazenamento,
+    salvoOffline,
+    passoAtual,
+    clienteId,
+    materialId,
+    servicoId,
+    largura,
+    altura,
+    quantidadeUnidades,
+    horasEstimadas,
+    observacaoItem,
+    extras,
+    ajusteManual,
+    entradaPercent,
+    condicoesPagamento,
+    fotos,
+    acabamentosAtivos,
+    acabamentosQtd,
+    acabamentosModo,
+    acabamentosValorDireto,
+    instalacaoIncluida,
+    horasInstalacao,
+    custoHoraInstalacao,
+    numAjudantes,
+    diariaAjudante,
+    equipamentoId,
+    deslocamentoIncluido,
+    distanciaKm,
+    custoPorKm,
+    pedagio,
+    alimentacao,
+    margemPercent,
+    acrescimoPercent,
+    descontoPercent,
+    impostoPercent,
+    validadeDias,
+    comissaoColaborador,
+  ])
+
+  // Evita fechar a aba por engano com dados preenchidos
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const temDados = Boolean(clienteId || materialId || largura || altura || extras.length > 0 || (ajusteManual && ajusteManual !== "0"))
+      if (temDados && !salvoOffline) {
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [clienteId, materialId, largura, altura, extras.length, ajusteManual, salvoOffline])
+
+  function descartarRascunho() {
+    try {
+      localStorage.removeItem(chaveArmazenamento)
+    } catch {}
+    setPassoAtual(1)
+    setClienteId("")
+    setMaterialId("")
+    setServicoId("")
+    setLargura("")
+    setAltura("")
+    setQuantidadeUnidades("1")
+    setHorasEstimadas("")
+    setObservacaoItem("")
+    setExtras([])
+    setAjusteManual("0")
+    setEntradaPercent("50")
+    setCondicoesPagamento("")
+    setFotos([])
+    setAcabamentosAtivos({})
+    setAcabamentosQtd({})
+    setAcabamentosModo({})
+    setAcabamentosValorDireto({})
+    setInstalacaoIncluida(false)
+    setHorasInstalacao("")
+    setCustoHoraInstalacao("")
+    setNumAjudantes("0")
+    setDiariaAjudante("")
+    setDeslocamentoIncluido(false)
+    setDistanciaKm("")
+    setCustoPorKm("")
+    setPedagio("")
+    setAlimentacao("")
+    setMargemPercent("0")
+    setAcrescimoPercent("0")
+    setDescontoPercent("0")
+    setImpostoPercent("6")
+    setValidadeDias("7")
+    setComissaoColaborador("0")
+    setRascunhoRecuperadoInfo(null)
+    setUltimoSalvo(null)
+    toast.info("Rascunho descartado. O formulário foi limpo.")
+  }
 
   const material = materiais.find((m) => m.id === materialId)
   const servico = servicos.find((s) => s.id === servicoId)
@@ -597,6 +845,9 @@ export function NovoOrcamentoForm() {
         toast.error("Este orçamento já tem pagamento registrado no financeiro e não pode ser editado.")
         return
       }
+      try {
+        localStorage.removeItem(chaveArmazenamento)
+      } catch {}
       toast.success(fechar ? "Orçamento fechado." : "Orçamento atualizado.")
       router.push("/orcamentos")
     } catch {
@@ -636,6 +887,9 @@ export function NovoOrcamentoForm() {
         criadoEm: new Date().toISOString(),
       })
       setSalvoOffline({ clienteNome: cliente.nome, total: resultado?.total ?? 0 })
+      try {
+        localStorage.removeItem(chaveArmazenamento)
+      } catch {}
     } catch {
       toast.error("Não foi possível salvar no aparelho. Tente de novo.")
     } finally {
@@ -697,6 +951,9 @@ export function NovoOrcamentoForm() {
       }
 
       toast.success(`Orçamento fechado para ${cliente.nome}`)
+      try {
+        localStorage.removeItem(chaveArmazenamento)
+      } catch {}
       router.push(`/orcamentos/${orcamento.id}/orcamento`)
     } catch {
       toast.error("Erro ao enviar arquivo. Tente novamente.")
@@ -757,39 +1014,119 @@ export function NovoOrcamentoForm() {
       {!salvoOffline && (
       <div className="flex flex-wrap items-start justify-between gap-3 print:hidden">
         <div>
-          <h1 className="text-2xl font-semibold">
-            {modoEdicao ? `Editar Orçamento #${orcamentoEditando?.numero}` : "Novo Orçamento"}
-          </h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-semibold">
+              {modoEdicao ? `Editar Orçamento #${orcamentoEditando?.numero}` : "Novo Orçamento"}
+            </h1>
+            {ultimoSalvo && !modoEdicao && (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Rascunho salvo às {ultimoSalvo.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">
             {modoEdicao
               ? "Altere o que precisar e salve. O total ao lado atualiza na hora."
-              : "Preencha os passos abaixo — o valor é calculado automaticamente."}
+              : "Preencha os passos abaixo — o valor é calculado automaticamente e salvo como rascunho contínuo."}
           </p>
         </div>
-        {modoEdicao && (
-          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-            <Button variant="outline" onClick={() => router.push("/orcamentos")}>
-              Cancelar
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href="/materiais"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-all shadow-2xs"
+            title="Abre a consulta de materiais em uma nova aba sem fechar o orçamento atual"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-primary" />
+            <span>Consultar Materiais ↗</span>
+          </a>
+          <a
+            href="/estoque"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-all shadow-2xs"
+            title="Abre a consulta de estoque em uma nova aba sem fechar o orçamento atual"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-amber-500" />
+            <span>Consultar Estoque ↗</span>
+          </a>
+
+          {!modoEdicao && Boolean(clienteId || materialId || extras.length > 0 || (ajusteManual && ajusteManual !== "0")) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={descartarRascunho}
+              className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              title="Limpar todos os campos e começar um orçamento do zero"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" />
+              Limpar Rascunho
             </Button>
-            <Button variant="outline" onClick={handleGerarPdf}>
-              <Printer className="mr-2 h-4 w-4" />
-              PDF
+          )}
+
+          {modoEdicao && (
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+              <Button variant="outline" onClick={() => router.push("/orcamentos")}>
+                Cancelar
+              </Button>
+              <Button variant="outline" onClick={handleGerarPdf}>
+                <Printer className="mr-2 h-4 w-4" />
+                PDF
+              </Button>
+              <Button
+                variant={orcamentoEditando?.status === "aberto" ? "outline" : "default"}
+                disabled={!podeFechar || enviando}
+                onClick={() => handleSalvarEdicao()}
+              >
+                {enviando ? "Salvando..." : "Salvar"}
+              </Button>
+              {orcamentoEditando?.status === "aberto" && (
+                <Button disabled={!podeFechar || enviando} onClick={() => handleSalvarEdicao(true)}>
+                  Salvar e fechar
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      )}
+
+      {rascunhoRecuperadoInfo && !salvoOffline && !modoEdicao && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200 print:hidden animate-in fade-in slide-in-from-top-1">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="text-xs sm:text-sm font-semibold">
+                Rascunho recuperado de onde você parou!
+              </p>
+              <p className="text-[11px] opacity-80">
+                Seus itens, medidas manuais e dados foram restaurados automaticamente (salvo às {new Date(rascunhoRecuperadoInfo.salvoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}).
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRascunhoRecuperadoInfo(null)}
+              className="h-7 text-xs font-semibold border-amber-500/30 bg-background/50 hover:bg-background"
+            >
+              Continuar editando
             </Button>
             <Button
-              variant={orcamentoEditando?.status === "aberto" ? "outline" : "default"}
-              disabled={!podeFechar || enviando}
-              onClick={() => handleSalvarEdicao()}
+              variant="ghost"
+              size="sm"
+              onClick={descartarRascunho}
+              className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
-              {enviando ? "Salvando..." : "Salvar"}
+              <Trash2 className="h-3 w-3 mr-1" />
+              Descartar rascunho
             </Button>
-            {orcamentoEditando?.status === "aberto" && (
-              <Button disabled={!podeFechar || enviando} onClick={() => handleSalvarEdicao(true)}>
-                Salvar e fechar
-              </Button>
-            )}
           </div>
-        )}
-      </div>
+        </div>
       )}
 
       {!modoEdicao && !salvoOffline && (
@@ -893,7 +1230,18 @@ export function NovoOrcamentoForm() {
                 )}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="flex min-w-0 flex-col gap-2">
-                    <Label>Material</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Material</Label>
+                      <a
+                        href="/materiais"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
+                        title="Abre a lista completa de materiais e valores em uma nova aba para conferir sem sair deste orçamento"
+                      >
+                        Consultar tabela em nova aba ↗
+                      </a>
+                    </div>
                     <Combobox
                       options={materiais.map((m) => ({ value: m.id, label: m.nome }))}
                       value={materialId}
