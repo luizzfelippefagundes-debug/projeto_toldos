@@ -421,21 +421,26 @@ export default function ProducaoPage() {
         })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) {
-          throw new Error(data.erro || "Falha no envio automático")
+          throw new Error(data.erro || "Falha no envio automático do bot")
         }
-        toast.success("Ordem de Serviço (PDF) enviada no WhatsApp do cliente!")
+        toast.success("✅ Ordem de Serviço (PDF) enviada automaticamente pelo robô!")
       } else {
-        const msg = `Olá, ${item.clienteNome.split(" ")[0]}! Segue a Ordem de Serviço #${item.numero} da Toldos Print. 📄✨`
-        const link = linkWhatsapp(item.clienteTelefone, msg)
-        if (link) window.open(link, "_blank")
-        toast.success("WhatsApp aberto!")
+        const msg = `Olá, ${item.clienteNome.split(" ")[0]}! Segue a sua Ordem de Serviço #${item.numero} da Toldos Print. 📄✨`
+        const resNotif = await fetch("/api/whatsapp/enviar-notificacao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            telefone: normalizarTelefone(item.clienteTelefone),
+            mensagem: msg,
+            clienteNome: item.clienteNome,
+          }),
+        })
+        if (!resNotif.ok) throw new Error("Falha no envio automático do robô")
+        toast.success("✅ Ordem de Serviço enviada automaticamente pelo robô!")
       }
     } catch (err: any) {
-      console.warn("Erro ao enviar OS via bot, abrindo WhatsApp:", err)
-      const msg = `Olá, ${item.clienteNome.split(" ")[0]}! Segue sua Ordem de Serviço nº ${item.numero} da Toldos Print. 📄✨\n\n💰 Valor Total: ${(item.total || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}\n\nChave Pix (CNPJ): 09.141.206/0001-06\nFavorecido: Toldos Print & Comunicação Visual`
-      const link = linkWhatsapp(item.clienteTelefone, msg)
-      if (link) window.open(link, "_blank")
-      toast.info("WhatsApp aberto com os dados da OS.")
+      console.error("Erro ao enviar OS via bot:", err)
+      toast.error(err?.message || "Não foi possível enviar a OS pelo robô. Verifique a conexão do bot.")
     } finally {
       setEnviandoOsWhatsapp(false)
     }
@@ -495,10 +500,12 @@ export default function ProducaoPage() {
               telefone: normalizarTelefone(item.clienteTelefone),
             }),
           })
-          if (res.ok) {
-            toast.success("Contrato assinado reenviado no WhatsApp!")
-            return
+          if (!res.ok) {
+            const d = await res.json().catch(() => ({}))
+            throw new Error(d.erro || "Falha ao reenviar contrato pelo robô")
           }
+          toast.success("✅ Contrato assinado reenviado automaticamente pelo robô!")
+          return
         }
 
         let linkAssinatura = ""
@@ -514,7 +521,7 @@ export default function ProducaoPage() {
 
         const msg = `Olá, ${item.clienteNome.split(" ")[0]}! Segue o link para conferência e assinatura digital da sua Ordem de Serviço nº ${item.numero} da Toldos Print: ✍️📄\n\n👉 ${linkAssinatura || `${window.location.origin}/orcamentos/${item.id}/contrato`}\n\nVocê pode assinar diretamente na tela do seu celular em menos de 1 minuto!`
 
-        await fetch("/api/whatsapp/enviar-notificacao", {
+        const resNotif = await fetch("/api/whatsapp/enviar-notificacao", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -522,18 +529,31 @@ export default function ProducaoPage() {
             mensagem: msg,
             clienteNome: item.clienteNome,
           }),
-        }).catch(() => {})
+        })
 
-        const link = linkWhatsapp(item.clienteTelefone, msg)
-        if (link) window.open(link, "_blank")
-        toast.success("Link de assinatura enviado no WhatsApp!")
+        const dNotif = await resNotif.json().catch(() => ({}))
+        if (!resNotif.ok || !dNotif.ok) {
+          throw new Error(dNotif?.resultado?.erro || "Falha no envio automático do robô")
+        }
+
+        toast.success("✅ Link de assinatura enviado automaticamente pelo robô!")
       } else {
         const msg = `Olá, ${item.clienteNome.split(" ")[0]}! Segue o link para assinar sua OS nº ${item.numero}: ✍️`
-        const link = linkWhatsapp(item.clienteTelefone, msg)
-        if (link) window.open(link, "_blank")
+        const resNotif = await fetch("/api/whatsapp/enviar-notificacao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            telefone: normalizarTelefone(item.clienteTelefone),
+            mensagem: msg,
+            clienteNome: item.clienteNome,
+          }),
+        })
+        if (!resNotif.ok) throw new Error("Falha no envio automático do robô")
+        toast.success("✅ Link de assinatura enviado pelo robô!")
       }
-    } catch {
-      toast.error("Erro ao enviar link de assinatura no WhatsApp.")
+    } catch (err: any) {
+      console.error("Erro ao enviar assinatura via bot:", err)
+      toast.error(err?.message || "Erro ao enviar assinatura pelo robô.")
     } finally {
       setEnviandoAssinaturaWhatsapp(false)
     }
@@ -548,78 +568,27 @@ export default function ProducaoPage() {
 
     setEnviandoCobrancaModal(true)
     try {
-      let linkAssinatura = ""
-      if (item.tipo === "orcamento") {
-        try {
-          const resToken = await fetch("/api/assinar/criar", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orcamentoId: item.id }),
-          })
-          if (resToken.ok) {
-            const dToken = await resToken.json()
-            linkAssinatura = dToken.url
-          }
-        } catch {}
-      }
-
-      let linkCartao = ""
-      try {
-        const resMp = await fetch("/api/mercadopago/criar-link", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orcamentoId: item.tipo === "orcamento" ? item.id : undefined,
-            valor: item.total || 0,
-            descricao: `Ordem de Serviço #${item.numero} - Toldos Print`,
-          }),
-        })
-        if (resMp.ok) {
-          const dMp = await resMp.json()
-          linkCartao = dMp.linkPagamento || ""
-        }
-      } catch {}
-
-      const chavePix = "09.141.206/0001-06"
-      const totalFormatado = (item.total || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-
-      const linkCartaoBloco = linkCartao
-        ? `\n2️⃣ *Cartão de Crédito (em até 12x no Mercado Pago):*\n👉 ${linkCartao}\n`
-        : ""
-      const linkAssinaturaBloco = linkAssinatura
-        ? `\n✍️ *Assinar Ordem de Serviço Digitalmente:*\n👉 ${linkAssinatura}\n`
-        : ""
-
-      const mensagem =
-        `Olá, ${item.clienteNome.split(" ")[0]}! Seguem as opções de pagamento da sua Ordem de Serviço nº ${item.numero} da Toldos Print. 📄✨\n\n` +
-        `💰 *Valor Total:* ${totalFormatado}\n\n` +
-        `*Qual forma de pagamento você prefere?*\n\n` +
-        `1️⃣ *Pix (à vista):*\n` +
-        `👉 Chave Pix (CNPJ): *${chavePix}*\n` +
-        `👉 Chave para copiar: *09141206000106*\n` +
-        `👤 Favorecido: Toldos Print & Comunicação Visual\n` +
-        linkCartaoBloco +
-        linkAssinaturaBloco +
-        `\nAssim que realizar o pagamento ou assinar, favor enviar o comprovante por aqui para darmos andamento imediato! 🤝✨`
-
-      await fetch("/api/whatsapp/enviar-notificacao", {
+      const res = await fetch("/api/whatsapp/enviar-cobranca", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          orcamentoId: item.tipo === "orcamento" ? item.id : undefined,
           telefone: normalizarTelefone(item.clienteTelefone),
-          mensagem,
           clienteNome: item.clienteNome,
+          valor: item.total || 0,
+          numero: item.numero,
         }),
-      }).catch(() => {})
+      })
 
-      const linkWa = linkWhatsapp(item.clienteTelefone, mensagem)
-      if (linkWa) {
-        window.open(linkWa, "_blank")
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) {
+        throw new Error(data.erro || "Falha no envio automático pelo robô")
       }
 
-      toast.success("Opções de pagamento (Pix e Cartão) enviadas ao cliente!")
-    } catch {
-      toast.error("Erro ao preparar cobrança para o cliente.")
+      toast.success("✅ Cobrança (Pix e Cartão em até 12x) enviada automaticamente pelo robô!")
+    } catch (err: any) {
+      console.error("Erro ao enviar cobrança via robô:", err)
+      toast.error(err?.message || "Não foi possível enviar a cobrança pelo robô. Verifique a conexão do bot.")
     } finally {
       setEnviandoCobrancaModal(false)
     }
