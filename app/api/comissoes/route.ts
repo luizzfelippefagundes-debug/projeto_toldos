@@ -121,10 +121,27 @@ export async function POST(req: Request) {
 
     const sql = getSql()
 
-    // Regra do Kaio / Fábrica: integral para cada um (não dividido)
+    // 1. Verificar elegibilidade dos colaboradores no banco
+    const configs = await sql`
+      SELECT colaborador_nome, recebe_bonus
+      FROM configuracao_bonus_colaboradores
+    `
+    const mapaInaptos = new Set<string>()
+    configs.forEach((c: any) => {
+      if (c.recebe_bonus === false) {
+        mapaInaptos.add(c.colaborador_nome.toLowerCase().trim())
+      }
+    })
+
+    // Regra do Kaio / Fábrica: integral para cada um (não dividido) que for elegível
     const registrosCriados: any[] = []
 
     for (const colabNome of colaboradores) {
+      // Se o colaborador foi desmarcado pelo dono nas regras de bônus, pula a geração de comissão
+      if (mapaInaptos.has(colabNome.toLowerCase().trim())) {
+        continue
+      }
+
       const id = `com-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
       await sql`
         INSERT INTO comissoes_producao (

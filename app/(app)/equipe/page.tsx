@@ -42,6 +42,7 @@ import {
   Layers,
   LayoutList,
   UserCheck,
+  Settings2,
 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -98,6 +99,16 @@ interface ResumoColaborador {
   quantidade_pecas: number
   quantidade_pendente: number
   comissoes_pendentes_ids: string[]
+}
+
+interface ElegibilidadeItem {
+  colaborador_id: string
+  colaborador_nome: string
+  email: string | null
+  papel: string
+  imagemUrl?: string
+  recebe_bonus: boolean
+  comissao_padrao_percent: number
 }
 
 const corPapel: Record<string, string> = {
@@ -189,6 +200,52 @@ export default function EquipePage() {
     observacao: string
   } | null>(null)
   const [salvandoPagamento, setSalvandoPagamento] = useState(false)
+
+  // Modal de Elegibilidade de Bônus (Quem Recebe Bônus)
+  const [dialogElegibilidadeAberto, setDialogElegibilidadeAberto] = useState(false)
+  const [listaElegibilidade, setListaElegibilidade] = useState<ElegibilidadeItem[]>([])
+  const [carregandoElegibilidade, setCarregandoElegibilidade] = useState(false)
+  const [salvandoElegibilidade, setSalvandoElegibilidade] = useState(false)
+
+  const carregarElegibilidade = useCallback(async () => {
+    setCarregandoElegibilidade(true)
+    try {
+      const res = await fetch("/api/comissoes/elegibilidade", { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setListaElegibilidade(data.elegibilidade || [])
+      } else {
+        toast.error("Erro ao carregar lista de colaboradores.")
+      }
+    } catch {
+      toast.error("Falha ao comunicar com o servidor.")
+    } finally {
+      setCarregandoElegibilidade(false)
+    }
+  }, [])
+
+  const salvarElegibilidade = async () => {
+    setSalvandoElegibilidade(true)
+    try {
+      const res = await fetch("/api/comissoes/elegibilidade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ colaboradores: listaElegibilidade }),
+      })
+      if (res.ok) {
+        toast.success("Regras de bônus atualizadas com sucesso!")
+        setDialogElegibilidadeAberto(false)
+        carregarDadosComissoes()
+      } else {
+        const err = await res.json()
+        toast.error(err.error || "Erro ao salvar regras.")
+      }
+    } catch {
+      toast.error("Erro ao salvar regras de bônus.")
+    } finally {
+      setSalvandoElegibilidade(false)
+    }
+  }
 
   // Expandir detalhes no card de fechamento
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>({})
@@ -784,16 +841,29 @@ export default function EquipePage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
+            <div
+              onClick={() => {
+                carregarElegibilidade()
+                setDialogElegibilidadeAberto(true)
+              }}
+              className="rounded-2xl border border-border bg-card p-4 shadow-xs flex items-center justify-between cursor-pointer hover:border-primary/50 transition-all group"
+              title="Clique para configurar quem pode receber bônus"
+            >
               <div>
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
-                  Colaboradores com Bônus
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                    Colaboradores com Bônus
+                  </span>
+                  <Settings2 className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
                 <span className="text-2xl sm:text-3xl font-black text-foreground mt-1 block">
                   {resumoColaboradores.filter((r) => r.total_pendente > 0).length} de {resumoColaboradores.length}
                 </span>
+                <span className="text-[10px] text-primary font-bold group-hover:underline">
+                  Configurar elegibilidade &rarr;
+                </span>
               </div>
-              <div className="h-12 w-12 rounded-2xl bg-amber-500/15 text-amber-600 flex items-center justify-center text-xl shrink-0">
+              <div className="h-12 w-12 rounded-2xl bg-amber-500/15 text-amber-600 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
                 👥
               </div>
             </div>
@@ -801,9 +871,29 @@ export default function EquipePage() {
 
           {/* Lista de Cards por Colaborador */}
           <div className="flex flex-col gap-3">
-            <h2 className="text-sm font-black text-foreground uppercase tracking-wider">
-              Fechamento por Colaborador
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-black text-foreground uppercase tracking-wider">
+                  Fechamento por Colaborador
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Extrato de produção semanal acumulado para conferência e repasse.
+                </p>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  carregarElegibilidade()
+                  setDialogElegibilidadeAberto(true)
+                }}
+                className="gap-2 text-xs font-bold border-primary/40 text-primary hover:bg-primary/10 hover:text-primary self-start sm:self-auto shadow-xs"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                <span>Quem Recebe Bônus</span>
+              </Button>
+            </div>
 
             {resumoColaboradores.length === 0 ? (
               <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center">
@@ -1950,6 +2040,138 @@ export default function EquipePage() {
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
             >
               {salvandoPagamento ? "Gravando..." : "Confirmar e Dar Baixa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Elegibilidade de Bônus (Quem Recebe Bônus) */}
+      <Dialog open={dialogElegibilidadeAberto} onOpenChange={setDialogElegibilidadeAberto}>
+        <DialogContent className="sm:max-w-xl max-h-[88vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-5 pb-3 border-b border-border bg-muted/20">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                <Coins className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-black text-foreground">
+                  Quem Recebe Bônus de Produção
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Selecione quem acumula bônus ao finalizar peças no Controle de Qualidade da fábrica.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="p-5 overflow-y-auto flex-1 flex flex-col gap-3">
+            {carregandoElegibilidade ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-2">
+                <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+                <span className="text-xs text-muted-foreground font-medium">Carregando colaboradores...</span>
+              </div>
+            ) : listaElegibilidade.length === 0 ? (
+              <div className="text-center py-8 text-xs text-muted-foreground">
+                Nenhum colaborador encontrado no sistema.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {listaElegibilidade.map((item, idx) => {
+                  const isAtivo = item.recebe_bonus
+                  return (
+                    <div
+                      key={item.colaborador_id || item.colaborador_nome}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all gap-3 ${
+                        isAtivo
+                          ? "bg-card border-border/80 shadow-xs"
+                          : "bg-muted/30 border-dashed border-border/60 opacity-60"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar nome={item.colaborador_nome} imagemUrl={item.imagemUrl || ""} />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-bold text-foreground truncate">
+                              {item.colaborador_nome}
+                            </span>
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                corPapel[item.papel] || "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {rotuloPapel[item.papel] || item.papel}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {item.email || "Sem e-mail cadastrado"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
+                        <div className="text-left sm:text-right">
+                          <span
+                            className={`text-xs font-bold block ${
+                              isAtivo ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                            }`}
+                          >
+                            {isAtivo ? "Recebe Bônus" : "Não Recebe"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground block">
+                            {isAtivo ? "Pontua na produção" : "Inapto / Bloqueado"}
+                          </span>
+                        </div>
+
+                        <Switch
+                          checked={item.recebe_bonus}
+                          onCheckedChange={(checked) => {
+                            setListaElegibilidade((prev) =>
+                              prev.map((c, i) => (i === idx ? { ...c, recebe_bonus: checked } : c))
+                            )
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 flex items-start gap-2.5 mt-2">
+              <Sparkles className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-800 dark:text-amber-200 leading-relaxed">
+                <strong className="font-bold">Flexibilidade total:</strong> Desative quem não deve participar do rateio de bônus (ex: diretores, administradores ou terceirizados). Ao concluir demandas na produção, apenas os membros marcados como ativos terão comissões geradas.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="p-4 border-t border-border bg-muted/10 flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDialogElegibilidadeAberto(false)}
+              disabled={salvandoElegibilidade}
+              className="text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={salvarElegibilidade}
+              disabled={salvandoElegibilidade || carregandoElegibilidade}
+              className="text-xs font-bold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {salvandoElegibilidade ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Salvando...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Salvar Regras</span>
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
