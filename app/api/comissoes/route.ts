@@ -55,6 +55,7 @@ export async function GET(req: Request) {
     for (const row of rows) {
       const nome = row.colaborador_nome
       const val = Number(row.valor_comissao) || 0
+      const qtdPecas = Number(row.quantidade_pecas) || 1
       const isPendente = row.status === "pendente"
 
       if (isPendente) {
@@ -75,10 +76,10 @@ export async function GET(req: Request) {
       }
 
       const item = resumoMap.get(nome)!
-      item.quantidade_pecas += 1
+      item.quantidade_pecas += qtdPecas
       if (isPendente) {
         item.total_pendente += val
-        item.quantidade_pendente += 1
+        item.quantidade_pendente += qtdPecas
         item.comissoes_pendentes_ids.push(row.id)
       } else {
         item.total_pago += val
@@ -136,7 +137,11 @@ export async function POST(req: Request) {
     // Regra do Kaio / Fábrica: integral para cada um (não dividido) que for elegível
     const registrosCriados: any[] = []
 
-    for (const colabNome of colaboradores) {
+    for (const itemColab of colaboradores) {
+      const colabNome = typeof itemColab === "string" ? itemColab : itemColab.nome
+      const qtdPecas = typeof itemColab === "object" && itemColab.pecas ? Number(itemColab.pecas) : 1
+      const valorFinal = typeof itemColab === "object" && itemColab.valor != null ? Number(itemColab.valor) : Number(valor_comissao) || 0
+
       // Se o colaborador foi desmarcado pelo dono nas regras de bônus, pula a geração de comissão
       if (mapaInaptos.has(colabNome.toLowerCase().trim())) {
         continue
@@ -156,6 +161,7 @@ export async function POST(req: Request) {
           valor_pedido,
           comissao_percent,
           valor_comissao,
+          quantidade_pecas,
           status,
           criado_em
         ) VALUES (
@@ -169,12 +175,13 @@ export async function POST(req: Request) {
           ${produto_nome || "Produção"},
           ${Number(valor_pedido) || 0},
           ${Number(comissao_percent) || 0},
-          ${Number(valor_comissao) || 0},
+          ${valorFinal},
+          ${qtdPecas},
           'pendente',
           NOW()
         )
       `
-      registrosCriados.push({ id, colaborador: colabNome, valor: valor_comissao })
+      registrosCriados.push({ id, colaborador: colabNome, pecas: qtdPecas, valor: valorFinal })
     }
 
     return NextResponse.json({ ok: true, inseridos: registrosCriados.length }, { status: 201 })

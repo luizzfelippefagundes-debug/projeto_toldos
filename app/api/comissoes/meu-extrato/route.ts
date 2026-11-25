@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const termoCompleto = `%${targetNome}%`
 
     const comissoes = await sql`
-      SELECT id, numero, cliente_nome, produto_nome, valor_pedido, comissao_percent, valor_comissao, status, pago_em, recibo_id, criado_em
+      SELECT id, numero, cliente_nome, produto_nome, valor_pedido, comissao_percent, valor_comissao, quantidade_pecas, status, pago_em, recibo_id, criado_em
       FROM comissoes_producao
       WHERE colaborador_id = ${targetId}
          OR colaborador_nome ILIKE ${termoCompleto}
@@ -68,9 +68,9 @@ export async function GET(request: NextRequest) {
         totalPendente,
         totalPago,
         totalGeral: totalPendente + totalPago,
-        pecasPendentes: itensPendentes.length,
-        pecasPagas: itensPagos.length,
-        totalPecas: comissoes.length,
+        pecasPendentes: itensPendentes.reduce((acc: number, c: any) => acc + (Number(c.quantidade_pecas) || 1), 0),
+        pecasPagas: itensPagos.reduce((acc: number, c: any) => acc + (Number(c.quantidade_pecas) || 1), 0),
+        totalPecas: comissoes.reduce((acc: number, c: any) => acc + (Number(c.quantidade_pecas) || 1), 0),
       },
       itensPendentes,
       recibos,

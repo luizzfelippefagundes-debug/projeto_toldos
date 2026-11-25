@@ -91,6 +91,7 @@ interface ComissaoItem {
   valor_pedido: number
   comissao_percent: number
   valor_comissao: number
+  quantidade_pecas?: number
   status: "pendente" | "pago"
   recibo_id?: string | null
   pago_em?: string | null
@@ -310,7 +311,7 @@ export default function EquipePage() {
         return data >= inicioSemanaAtual && data <= fimSemanaAtual
       })
       const totalSemana = itensSemana.reduce((acc, c) => acc + (Number(c.valor_comissao) || 0), 0)
-      const pecasSemana = itensSemana.length
+      const pecasSemana = itensSemana.reduce((acc, c) => acc + (Number(c.quantidade_pecas) || 1), 0)
 
       // Mês atual
       const itensMes = itensDoColab.filter((c) => {
@@ -318,7 +319,7 @@ export default function EquipePage() {
         return data >= inicioMesAtual && data <= fimMesAtual
       })
       const totalMes = itensMes.reduce((acc, c) => acc + (Number(c.valor_comissao) || 0), 0)
-      const pecasMes = itensMes.length
+      const pecasMes = itensMes.reduce((acc, c) => acc + (Number(c.quantidade_pecas) || 1), 0)
       const vendasMes = itensMes.reduce((acc, c) => acc + (Number(c.valor_pedido) || 0), 0)
 
       // Total pendente da semana / a pagar
@@ -453,7 +454,7 @@ export default function EquipePage() {
         rankingMap[nome] = { nome, bonusTotal: 0, pecasTotal: 0, vendasTotal: 0 }
       }
       rankingMap[nome].bonusTotal += Number(c.valor_comissao) || 0
-      rankingMap[nome].pecasTotal += 1
+      rankingMap[nome].pecasTotal += Number(c.quantidade_pecas) || 1
       rankingMap[nome].vendasTotal += Number(c.valor_pedido) || 0
     })
 
@@ -789,6 +790,7 @@ export default function EquipePage() {
         colaborador_nome: string
         valor_comissao: number
         comissao_percent: number
+        quantidade_pecas?: number
         status: "pendente" | "pago"
         recibo_id?: string | null
       }>
@@ -816,6 +818,7 @@ export default function EquipePage() {
         colaborador_nome: c.colaborador_nome,
         valor_comissao: Number(c.valor_comissao) || 0,
         comissao_percent: c.comissao_percent,
+        quantidade_pecas: Number(c.quantidade_pecas) || 1,
         status: c.status,
         recibo_id: c.recibo_id,
       })
@@ -2524,7 +2527,12 @@ export default function EquipePage() {
                                     : "bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 print:bg-emerald-50 print:text-emerald-950"
                                 }`}
                               >
-                                <span className="font-extrabold">{c.colaborador_nome}:</span>
+                                <span className="font-extrabold">{c.colaborador_nome}</span>
+                                {c.quantidade_pecas && c.quantidade_pecas > 1 ? (
+                                  <span className="text-[10px] bg-black/10 dark:bg-white/10 px-1 rounded font-bold">
+                                    {c.quantidade_pecas} pçs
+                                  </span>
+                                ) : null}
                                 <span className="font-black">{formatarMoeda(c.valor_comissao)}</span>
                                 {c.status === "pago" && (
                                   <span className="text-[10px] text-muted-foreground">✓</span>

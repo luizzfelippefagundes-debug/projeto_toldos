@@ -329,6 +329,7 @@ export default function ProducaoPage() {
     comissaoPercent?: number
     valorTotal?: number
     produtoNome?: string
+    quantidadeTotal?: number
   } | null>(null)
   const [qcChecks, setQcChecks] = useState({ medidas: true, acabamento: true, visual: true })
   const [qcUploading, setQcUploading] = useState(false)
@@ -343,7 +344,7 @@ export default function ProducaoPage() {
     "Serralheria",
     "Impressão / Acabamento",
   ])
-  const [colaboradoresSelecionados, setColaboradoresSelecionados] = useState<string[]>([])
+  const [colaboradoresPecas, setColaboradoresPecas] = useState<Record<string, number>>({})
 
   useEffect(() => {
     fetch("/api/equipe")
@@ -624,17 +625,18 @@ export default function ProducaoPage() {
       comissaoPercent?: number
       valorTotal?: number
       produtoNome?: string
+      quantidadeTotal?: number
     }) => {
       setModalQcItem(item)
       setQcChecks({ medidas: true, acabamento: true, visual: true })
       setQcFotomUrl(item.fotoAtual || null)
-      if (meuNome) {
-        setColaboradoresSelecionados([meuNome])
+      if (meuNome && equipeDisponivel.includes(meuNome)) {
+        setColaboradoresPecas({ [meuNome]: item.quantidadeTotal || 1 })
       } else {
-        setColaboradoresSelecionados([])
+        setColaboradoresPecas({})
       }
     },
-    [meuNome]
+    [meuNome, equipeDisponivel]
   )
 
   const handleUploadQcFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -674,20 +676,34 @@ export default function ProducaoPage() {
       return
     }
 
-    // Se houve comissão configurada (Regra do Kaio: integral para cada um, NÃO dividido!)
+    // Se houve comissão configurada (Calculado conforme a quantidade de peças que cada um produziu)
     if (modalQcItem.comissaoPercent && modalQcItem.comissaoPercent > 0) {
       const valorPedidoArredondado = Math.round((modalQcItem.valorTotal || 0) * 100) / 100
-      const valorUnitario = Math.round(((valorPedidoArredondado * modalQcItem.comissaoPercent) / 100) * 100) / 100
+      const totalBonusCalculado = Math.round(((valorPedidoArredondado * modalQcItem.comissaoPercent) / 100) * 100) / 100
       comemorarComissao()
 
-      const colabs = colaboradoresSelecionados.length > 0 ? colaboradoresSelecionados : ["Equipe de Produção"]
+      const nomesColabs = Object.keys(colaboradoresPecas)
+      const totalPecas = Object.values(colaboradoresPecas).reduce((a, b) => a + b, 0) || 1
+
+      // Mapear cada colaborador com suas respectivas peças e valores proporcionais
+      const colabsPayload = nomesColabs.length > 0
+        ? nomesColabs.map((nome) => {
+            const pecas = colaboradoresPecas[nome] || 1
+            const valor = Math.round(((totalBonusCalculado * pecas) / totalPecas) * 100) / 100
+            return {
+              nome,
+              pecas,
+              valor,
+            }
+          })
+        : [{ nome: "Equipe de Produção", pecas: 1, valor: totalBonusCalculado }]
 
       // Persistir no Banco de Comissões & RH da empresa
       fetch("/api/comissoes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          colaboradores: colabs,
+          colaboradores: colabsPayload,
           origem_tipo: modalQcItem.tipo,
           origem_id: modalQcItem.id,
           numero: modalQcItem.numero,
@@ -695,20 +711,15 @@ export default function ProducaoPage() {
           produto_nome: modalQcItem.produtoNome || (modalQcItem.tipo === "pedido" ? "Pedido Rápido" : "Comunicação Visual"),
           valor_pedido: valorPedidoArredondado,
           comissao_percent: modalQcItem.comissaoPercent,
-          valor_comissao: valorUnitario,
+          valor_comissao: totalBonusCalculado,
         }),
       }).catch((err) => console.error("Erro ao registrar comissão no banco:", err))
 
-      if (colaboradoresSelecionados.length > 0) {
-        toast.success(
-          `🪙 BÔNUS CREDITADO! R$ ${valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} salvo no RH para cada (${colaboradoresSelecionados.join(", ")})!`,
-          { duration: 6000 }
-        )
-      } else {
-        toast.success(
-          `🪙 BÔNUS DE ${modalQcItem.comissaoPercent}% CONCLUÍDO! (R$ ${valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cada)`,
-          { duration: 5000 }
-        )
+      if (colabsPayload.length > 0) {
+        const resumoToast = colabsPayload
+          .map((c) => `${c.nome}: ${c.pecas} ${c.pecas === 1 ? "peça" : "peças"} (R$ ${c.valor.toFixed(2)})`)
+          .join(" | ")
+        toast.success(`🪙 BÔNUS CREDITADO! ${resumoToast}`, { duration: 6000 })
       }
     }
 
@@ -1872,6 +1883,7 @@ export default function ProducaoPage() {
                           comissaoPercent: item.comissaoPercent,
                           valorTotal: item.valorTotal,
                           produtoNome: item.produtoNome,
+                          quantidadeTotal: item.quantidade || 1,
                         })
                       }}
                       className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-sm font-bold shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
@@ -2400,6 +2412,7 @@ export default function ProducaoPage() {
                             comissaoPercent: pedido.comissaoPercent,
                             valorTotal: pedido.total,
                             produtoNome: pedido.produtoNome ?? produtoDoPedido(pedido)?.nome,
+                            quantidadeTotal: 1,
                           })
                         }
                         onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -2468,6 +2481,7 @@ export default function ProducaoPage() {
                           comissaoPercent: orc.item.comissaoPercent,
                           valorTotal: orc.totalFechado || 0,
                           produtoNome: orc.materialFechado?.nome || orc.servicoFechado?.nome || "Comunicação Visual",
+                          quantidadeTotal: orc.item.quantidadeUnidades || 1,
                         })
                       }
                       onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -2723,6 +2737,7 @@ export default function ProducaoPage() {
                                       comissaoPercent: pedido.comissaoPercent,
                                       valorTotal: pedido.total,
                                       produtoNome: pedido.produtoNome ?? produtoDoPedido(pedido)?.nome,
+                                      quantidadeTotal: 1,
                                     })
                                   }
                                   onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -2792,6 +2807,7 @@ export default function ProducaoPage() {
                                     comissaoPercent: orc.item.comissaoPercent,
                                     valorTotal: orc.totalFechado || 0,
                                     produtoNome: orc.materialFechado?.nome || orc.servicoFechado?.nome || "Comunicação Visual",
+                                    quantidadeTotal: orc.item.quantidadeUnidades || 1,
                                   })
                                 }
                                 onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -3156,7 +3172,7 @@ export default function ProducaoPage() {
               )}
             </div>
 
-            {/* Gamificação / Comissão do Colaborador (Regra: integral para cada um) */}
+            {/* Gamificação / Comissão do Colaborador (Com divisão por quantidade de peças feitas) */}
             {modalQcItem?.comissaoPercent != null && modalQcItem.comissaoPercent > 0 && (
               <div className="rounded-xl border-2 border-amber-500 bg-gradient-to-br from-amber-500/20 via-yellow-500/10 to-amber-500/25 p-3.5 flex flex-col gap-2.5 shadow-md">
                 <div className="flex items-center justify-between gap-2">
@@ -3167,32 +3183,36 @@ export default function ProducaoPage() {
                         BÔNUS DA DEMANDA: {modalQcItem.comissaoPercent}%
                       </span>
                       <span className="text-[11px] font-bold text-muted-foreground">
-                        R$ {(((modalQcItem.valorTotal || 0) * modalQcItem.comissaoPercent) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} para CADA colaborador (não dividido)
+                        Total do bônus: R$ {(((modalQcItem.valorTotal || 0) * modalQcItem.comissaoPercent) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (creditado por peça produzida)
                       </span>
                     </div>
                   </div>
                   <span className="rounded-full bg-amber-500 text-slate-950 font-black text-xs px-2.5 py-1 shadow-xs shrink-0">
-                    R$ {(((modalQcItem.valorTotal || 0) * modalQcItem.comissaoPercent) / 100).toFixed(2)} cada
+                    R$ {(((modalQcItem.valorTotal || 0) * modalQcItem.comissaoPercent) / 100).toFixed(2)} total
                   </span>
                 </div>
 
-                <div className="pt-2 border-t border-amber-500/30 flex flex-col gap-1.5">
+                <div className="pt-2 border-t border-amber-500/30 flex flex-col gap-2">
                   <span className="text-[11px] font-bold text-foreground">
-                    Quem produziu esta peça? (Selecione para creditar):
+                    Quem produziu? (Clique para selecionar e informe a quantidade de peças de cada um):
                   </span>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {equipeDisponivel.map((membro) => {
-                      const sel = colaboradoresSelecionados.includes(membro)
+                      const sel = membro in colaboradoresPecas
                       return (
                         <button
                           key={`colab-${membro}`}
                           type="button"
                           onClick={() => {
-                            setColaboradoresSelecionados((prev) =>
-                              prev.includes(membro)
-                                ? prev.filter((m) => m !== membro)
-                                : [...prev, membro]
-                            )
+                            setColaboradoresPecas((prev) => {
+                              const novo = { ...prev }
+                              if (membro in novo) {
+                                delete novo[membro]
+                              } else {
+                                novo[membro] = 1
+                              }
+                              return novo
+                            })
                           }}
                           className={cn(
                             "px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer flex items-center gap-1",
@@ -3207,6 +3227,77 @@ export default function ProducaoPage() {
                       )
                     })}
                   </div>
+
+                  {/* Detalhe de Peças por Colaborador selecionado */}
+                  {Object.keys(colaboradoresPecas).length > 0 ? (
+                    <div className="flex flex-col gap-2 mt-1.5 pt-2 border-t border-amber-500/20">
+                      <div className="text-[11px] font-bold text-amber-900 dark:text-amber-200 flex items-center justify-between">
+                        <span>Defina as peças produzidas:</span>
+                        <span className="text-[10px] text-muted-foreground font-normal">
+                          Total de peças: {Object.values(colaboradoresPecas).reduce((a, b) => a + b, 0)}
+                        </span>
+                      </div>
+
+                      {Object.entries(colaboradoresPecas).map(([membro, qtd]) => {
+                        const totalBonus = Math.round(((modalQcItem.valorTotal || 0) * (modalQcItem.comissaoPercent || 0)) / 100 * 100) / 100
+                        const totalPecas = Object.values(colaboradoresPecas).reduce((a, b) => a + b, 0) || 1
+                        const valorDeste = Math.round(((totalBonus * qtd) / totalPecas) * 100) / 100
+
+                        return (
+                          <div
+                            key={`pecas-${membro}`}
+                            className="flex items-center justify-between p-2 rounded-lg bg-background/95 border border-amber-500/30 shadow-2xs"
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-xs font-extrabold text-foreground">{membro}</span>
+                              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                                Bônus: {formatarMoeda(valorDeste)} ({qtd} {qtd === 1 ? "peça" : "peças"})
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] text-muted-foreground font-semibold">Peças:</span>
+                              <div className="flex items-center gap-1 border border-border rounded-lg bg-muted/50 p-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setColaboradoresPecas((prev) => ({
+                                      ...prev,
+                                      [membro]: Math.max(1, (prev[membro] || 1) - 1),
+                                    }))
+                                  }}
+                                  className="h-6 w-6 flex items-center justify-center rounded bg-background hover:bg-muted font-black text-xs cursor-pointer"
+                                  title="Diminuir peças"
+                                >
+                                  -
+                                </button>
+                                <span className="w-8 text-center font-black text-xs text-foreground">
+                                  {qtd}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setColaboradoresPecas((prev) => ({
+                                      ...prev,
+                                      [membro]: (prev[membro] || 1) + 1,
+                                    }))
+                                  }}
+                                  className="h-6 w-6 flex items-center justify-center rounded bg-background hover:bg-muted font-black text-xs cursor-pointer"
+                                  title="Aumentar peças"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80 italic mt-1">
+                      Nenhum colaborador selecionado. Clique em quem produziu para creditar o bônus pelas peças feitas.
+                    </p>
+                  )}
                 </div>
               </div>
             )}

@@ -162,7 +162,7 @@ export default function OrdemDeServicoPage() {
       const dadosPix = `\n\n💳 *DADOS PARA PAGAMENTO VIA PIX:*
 👉 *Chave Pix (CNPJ):* 63.177.134/0001-00
 👉 *Chave para copiar (só números):* 63177134000100
-👤 *Favorecido:* Toldos Print & Comunicação Visual${pixCopiaColaBloco}`
+👤 *Favorecido:* Luis Carlos Loterio(Toldos Print & Comunicação Visual)${pixCopiaColaBloco}`
 
       // Busca ou gera link de pagamento com cartão se não tiver
       let linkCartaoParaEnvio = linkCartao
