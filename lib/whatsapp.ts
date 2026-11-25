@@ -33,8 +33,8 @@ export function mensagemOrcamentoWhatsapp({
     `Segue o orçamento nº ${numero} da Toldos Print, no valor de ${total}, ` +
     `válido até ${validoAte}.\n\n` +
     `💳 *Dados para Pagamento via Pix:*\n` +
-    `👉 *Chave Pix (CNPJ):* 09.141.206/0001-06\n` +
-    `👉 *Chave para copiar:* 09141206000106\n` +
+    `👉 *Chave Pix (CNPJ):* 63.177.134/0001-00\n` +
+    `👉 *Chave para copiar:* 63177134000100\n` +
     `Favorecido: Toldos Print & Comunicação Visual\n\n` +
     `Qualquer dúvida é só chamar por aqui!`
   )

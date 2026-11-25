@@ -220,7 +220,7 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
               <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1 text-xs font-bold text-gray-900">
                 <span>Chave Pix (CNPJ):</span>
                 <span className="font-mono bg-white px-2 py-0.5 rounded border border-emerald-200 select-all text-emerald-900">
-                  09.141.206/0001-06
+                  63.177.134/0001-00
                 </span>
               </div>
               <div className="mt-1 text-[11px] text-gray-600">

@@ -6,7 +6,7 @@ import { interpretarDataLocal } from "./date"
 // Dados fixos do cabeçalho/rodapé do orçamento oficial da empresa.
 export const EMPRESA_ORCAMENTO = {
   nome: "TOLDOSPRINT",
-  cnpj: "CNPJ: 09.141.206/0001-06  /  63.177.134/0001-00",
+  cnpj: "CNPJ: 63.177.134/0001-00",
   endereco: ["Avenida João Quiuqui", "29795-000 - Águia Branca/ES"],
   email: "toldosprint@outlook.com",
   contato: "27997489714",

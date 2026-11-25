@@ -160,8 +160,8 @@ export default function OrdemDeServicoPage() {
         : ""
 
       const dadosPix = `\n\n💳 *DADOS PARA PAGAMENTO VIA PIX:*
-👉 *Chave Pix (CNPJ):* 09.141.206/0001-06
-👉 *Chave para copiar (só números):* 09141206000106
+👉 *Chave Pix (CNPJ):* 63.177.134/0001-00
+👉 *Chave para copiar (só números):* 63177134000100
 👤 *Favorecido:* Toldos Print & Comunicação Visual${pixCopiaColaBloco}`
 
       // Busca ou gera link de pagamento com cartão se não tiver
@@ -467,7 +467,7 @@ export default function OrdemDeServicoPage() {
               <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                 <div>
                   <span className="text-gray-500">Chave Pix (CNPJ): </span>
-                  <span className="font-bold text-gray-900 select-all">09.141.206/0001-06</span>
+                  <span className="font-bold text-gray-900 select-all">63.177.134/0001-00</span>
                 </div>
                 <div>
                   <span className="text-gray-500">Beneficiário: </span>

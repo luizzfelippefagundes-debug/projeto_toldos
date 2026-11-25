@@ -255,7 +255,7 @@ export default function ContratoServicoPage() {
             </h2>
             <div className="space-y-1.5 pl-2 text-slate-800">
               <p>
-                <strong className="text-slate-950">CONTRATADA:</strong> TOLDOS PRINT & COMUNICAÇÃO VISUAL LTDA, nome fantasia <strong>TOLDOSPRINT</strong>, inscrita no CNPJ sob o nº <strong>09.141.206/0001-06 / 63.177.134/0001-00</strong>, com sede e endereço na <strong>Av. João Quiuqui, Centro, Águia Branca – ES, CEP 29795-000</strong>, representada por Kaio (Administrador / Responsável Técnico). Telefones de contato: <strong>(27) 99748-9714</strong> e <strong>(27) 99612-5835</strong>.
+                <strong className="text-slate-950">CONTRATADA:</strong> TOLDOS PRINT & COMUNICAÇÃO VISUAL LTDA, nome fantasia <strong>TOLDOSPRINT</strong>, inscrita no CNPJ sob o nº <strong>63.177.134/0001-00</strong>, com sede e endereço na <strong>Av. João Quiuqui, Centro, Águia Branca – ES, CEP 29795-000</strong>, representada por Kaio (Administrador / Responsável Técnico). Telefones de contato: <strong>(27) 99748-9714</strong> e <strong>(27) 99612-5835</strong>.
               </p>
               <p>
                 <strong className="text-slate-950">CONTRATANTE:</strong> <strong>{cliente?.nome || "Cliente não informado"}</strong>

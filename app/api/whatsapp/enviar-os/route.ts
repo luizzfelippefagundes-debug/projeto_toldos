@@ -99,7 +99,7 @@ export async function POST(req: Request) {
   }
 
   // 4. Gera código Pix estático copia e cola
-  const chavePix = process.env.PIX_CHAVE_EMPRESA || "09.141.206/0001-06"
+  const chavePix = process.env.PIX_CHAVE_EMPRESA || "63.177.134/0001-00"
   const chaveNumeros = chavePix.replace(/\D/g, "")
   const pixCopiaCola = totalFinal > 0
     ? gerarPayloadPixEstatico({

@@ -176,7 +176,7 @@ export async function gerarPdfContratoServidor(
   // 1. Identificação das Partes
   tituloClausula("1", "Identificação das Partes")
   doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(30)
-  const textoContratada = `CONTRATADA: TOLDOS PRINT & COMUNICAÇÃO VISUAL LTDA, nome fantasia TOLDOSPRINT, CNPJ: 09.141.206/0001-06 / 63.177.134/0001-00, com sede na Av. João Quiuqui, Centro, Águia Branca – ES, CEP 29795-000, representada por Kaio (Administrador). Contatos: (27) 99748-9714 / (27) 99612-5835.`
+  const textoContratada = `CONTRATADA: TOLDOS PRINT & COMUNICAÇÃO VISUAL LTDA, nome fantasia TOLDOSPRINT, CNPJ: 63.177.134/0001-00, com sede na Av. João Quiuqui, Centro, Águia Branca – ES, CEP 29795-000, representada por Kaio (Administrador). Contatos: (27) 99748-9714 / (27) 99612-5835.`
   const linhasContratada = doc.splitTextToSize(textoContratada, larguraUtil - 8)
   checarQuebraPagina(linhasContratada.length * 10 + 20)
   doc.text(linhasContratada, esq + 4, y)

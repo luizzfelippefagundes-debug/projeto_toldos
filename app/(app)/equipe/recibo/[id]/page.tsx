@@ -270,7 +270,7 @@ export default function ReciboPage({
                 INDÚSTRIA DE TOLDOS & COMUNICAÇÃO VISUAL
               </p>
               <p className="text-[11px] text-slate-600 mt-1 font-medium">
-                {empresa?.cnpj || "CNPJ: 09.141.206/0001-06 / 63.177.134/0001-00"}
+                {empresa?.cnpj || "CNPJ: 63.177.134/0001-00"}
               </p>
               <p className="text-[11px] text-slate-600 font-medium">
                 {empresa?.endereco?.[0] || "Avenida João Quiuqui"} • {empresa?.endereco?.[1] || "Águia Branca/ES"} • Tel: (27) 99748-9714

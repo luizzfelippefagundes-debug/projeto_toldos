@@ -362,25 +362,25 @@ export function resolverFluxoAtendimento(
   }
 
   if (pedePix) {
-    const chavePix = process.env.PIX_CHAVE_EMPRESA || "09.141.206/0001-06"
+    const chavePix = process.env.PIX_CHAVE_EMPRESA || "63.177.134/0001-00"
     return {
       resposta:
         "⚡ *PAGAMENTO VIA PIX:*\n\n" +
         `Nossa chave PIX oficial é o CNPJ:\n👉 *${chavePix}*\n` +
-        "Chave sem pontuação (para copiar): *09141206000106*\n" +
+        "Chave sem pontuação (para copiar): *63177134000100*\n" +
         "Favorecido: *Toldos Print & Comunicação Visual*\n\n" +
         "Assim que realizar o pagamento, pode mandar o comprovante por aqui mesmo que confirmamos o seu pedido na hora! 🤝✨",
     }
   }
 
   if (pedeFormaPagamento) {
-    const chavePix = process.env.PIX_CHAVE_EMPRESA || "09.141.206/0001-06"
+    const chavePix = process.env.PIX_CHAVE_EMPRESA || "63.177.134/0001-00"
     return {
       resposta:
         "💳 *FORMAS DE PAGAMENTO ACEITAS:*\n\n" +
         "Qual forma você prefere?\n\n" +
         `1️⃣ *Pix (à vista):*\n` +
-        `• Chave CNPJ: *${chavePix}* (números: *09141206000106*)\n` +
+        `• Chave CNPJ: *${chavePix}* (números: *63177134000100*)\n` +
         `• Favorecido: *Toldos Print & Comunicação Visual*\n\n` +
         `2️⃣ *Cartão de Crédito (em até 12x):*\n` +
         `• Link seguro online via Mercado Pago ou na nossa maquininha física!\n\n` +
