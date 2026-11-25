@@ -81,7 +81,9 @@ import {
   Info,
   Coins,
   CreditCard,
+  History,
 } from "lucide-react"
+import { HistoricoEntreguesDialog } from "@/components/producao/historico-entregues-dialog"
 import { CobrancaCartaoDialog } from "@/components/orcamentos/cobranca-cartao-dialog"
 import { comemorarComissao } from "@/lib/som-comissao"
 import { linkWhatsapp } from "@/lib/whatsapp"
@@ -272,6 +274,7 @@ export default function ProducaoPage() {
   const [colunaAtiva, setColunaAtiva] = useState<StatusPedidoRapido | "todas">("todas")
   const [ocultarEntregues, setOcultarEntregues] = useState(false)
   const [colunasVisiveis, setColunasVisiveis] = useState<string[]>(() => colunas.map((c) => c.status))
+  const [modalHistoricoEntregues, setModalHistoricoEntregues] = useState(false)
   const [filtroPreset, setFiltroPreset] = useState<"todos" | "recentes_5" | "os" | "rapida" | "atrasados" | "hoje">("todos")
   const [ocultarVazias, setOcultarVazias] = useState(false)
   const [arrastandoId, setArrastandoId] = useState<string | null>(null)
@@ -2123,6 +2126,19 @@ export default function ProducaoPage() {
               {totalEntregues}
             </span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setModalHistoricoEntregues(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/20 px-3 h-9 text-xs font-semibold text-teal-700 dark:text-teal-300 transition-all shrink-0 cursor-pointer shadow-2xs"
+            title="Abrir histórico com todos os serviços e pedidos já entregues"
+          >
+            <History className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
+            <span>Histórico de Entregas</span>
+            <span className="rounded-full bg-teal-600/20 text-teal-800 dark:text-teal-200 px-1.5 py-0.2 text-[10px] font-bold">
+              {totalEntregues}
+            </span>
+          </button>
         </div>
 
         {/* Linha de Pílulas Rápidas de Filtro */}
@@ -2320,7 +2336,9 @@ export default function ProducaoPage() {
                 numero: o.numero,
                 orcamento: o,
               })),
-            ].sort(compararItensFila)
+            ].sort(col.status === "entregue" ? (a, b) => b.dataCriacao - a.dataCriacao || b.numero - a.numero : compararItensFila)
+
+            const itensExibidos = col.status === "entregue" ? itensDaColuna.slice(0, 10) : itensDaColuna
 
             return (
               <div key={col.status} className="flex flex-col gap-2.5">
@@ -2331,11 +2349,33 @@ export default function ProducaoPage() {
                       {col.titulo}
                     </span>
                   </div>
-                  <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold shadow-2xs", col.badgeFundo, col.corTexto)}>
-                    {totalColuna}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {col.status === "entregue" && totalColuna > 10 && (
+                      <span className="text-[10px] text-muted-foreground font-semibold">
+                        (10 de {totalColuna})
+                      </span>
+                    )}
+                    <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold shadow-2xs", col.badgeFundo, col.corTexto)}>
+                      {totalColuna}
+                    </span>
+                  </div>
                 </div>
-                {itensDaColuna.map((item, idx) => {
+
+                {col.status === "entregue" && (
+                  <button
+                    type="button"
+                    onClick={() => setModalHistoricoEntregues(true)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg border border-teal-300 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-200 text-xs font-bold cursor-pointer hover:bg-teal-100 transition-all shadow-2xs"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <History className="h-4 w-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                      <span>Ver Histórico Geral de Entregas ({totalColuna})</span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-teal-500" />
+                  </button>
+                )}
+
+                {itensExibidos.map((item, idx) => {
                   if (item.tipo === "pedido") {
                     const pedido = item.pedido
                     return (
@@ -2485,6 +2525,18 @@ export default function ProducaoPage() {
                     />
                   )
                 })}
+                {col.status === "entregue" && totalColuna > 10 && (
+                  <div className="p-3 text-center text-xs text-muted-foreground border border-dashed border-teal-300 dark:border-teal-800 rounded-lg bg-teal-50/50 dark:bg-teal-950/20">
+                    <span>Mostrando os 10 mais recentes na coluna.</span>
+                    <button
+                      type="button"
+                      onClick={() => setModalHistoricoEntregues(true)}
+                      className="block w-full mt-1.5 text-teal-700 dark:text-teal-300 font-bold hover:underline cursor-pointer"
+                    >
+                      Abrir histórico com todos os {totalColuna} entregues →
+                    </button>
+                  </div>
+                )}
                 {totalColuna === 0 && colunaAtiva !== "todas" && (
                   <p className="py-6 text-center text-sm text-muted-foreground">
                     Nenhum pedido ou orçamento em {col.titulo}.
@@ -2583,7 +2635,9 @@ export default function ProducaoPage() {
                       numero: o.numero,
                       orcamento: o,
                     })),
-                  ].sort(compararItensFila)
+                  ].sort(col.status === "entregue" ? (a, b) => b.dataCriacao - a.dataCriacao || b.numero - a.numero : compararItensFila)
+
+                  const itensExibidos = col.status === "entregue" ? itensDaColuna.slice(0, 10) : itensDaColuna
 
                   return (
                     <ColunaDroppable key={col.status} status={col.status} coluna={col}>
@@ -2601,25 +2655,50 @@ export default function ProducaoPage() {
                             {col.titulo}
                           </span>
                         </div>
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-xs font-bold shadow-2xs",
-                            col.badgeFundo,
-                            col.corTexto
+                        <div className="flex items-center gap-1.5">
+                          {col.status === "entregue" && total > 10 && (
+                            <span className="text-[10px] text-muted-foreground font-semibold">
+                              (10 de {total})
+                            </span>
                           )}
-                        >
-                          {total}
-                        </span>
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-xs font-bold shadow-2xs",
+                              col.badgeFundo,
+                              col.corTexto
+                            )}
+                          >
+                            {total}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Lista de cartões com rolagem independente */}
                       <div className="flex-1 overflow-y-auto p-2.5 flex flex-col gap-2.5 min-h-0 custom-scrollbar">
+                        {col.status === "entregue" && (
+                          <button
+                            type="button"
+                            onClick={() => setModalHistoricoEntregues(true)}
+                            className="w-full flex items-center justify-between gap-2 p-2.5 rounded-xl border border-teal-300 dark:border-teal-700/60 bg-teal-50 hover:bg-teal-100/90 dark:bg-teal-950/40 dark:hover:bg-teal-900/60 text-teal-800 dark:text-teal-200 transition-all text-xs font-bold shadow-xs cursor-pointer text-left shrink-0"
+                          >
+                            <div className="flex items-center gap-2">
+                              <History className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                              <div>
+                                <div className="font-bold">Histórico Geral ({total})</div>
+                                <div className="text-[10px] font-normal text-teal-600 dark:text-teal-400">
+                                  {total > 10 ? `Ver todos os ${total} serviços entregues` : "Ver detalhes de todos os entregues"}
+                                </div>
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-teal-500" />
+                          </button>
+                        )}
                         {total === 0 && (
                           <div className="rounded-lg border border-dashed border-border/70 p-4 text-center text-xs text-muted-foreground">
                             Vazio
                           </div>
                         )}
-                        {itensDaColuna.map((item, idx) => {
+                        {itensExibidos.map((item, idx) => {
                           if (item.tipo === "pedido") {
                             const pedido = item.pedido
                             return (
@@ -2771,6 +2850,18 @@ export default function ProducaoPage() {
                             </PedidoCardArrastavel>
                           )
                         })}
+                        {col.status === "entregue" && total > 10 && (
+                          <div className="mt-1 p-2 text-center text-xs text-muted-foreground border border-dashed border-teal-300/60 dark:border-teal-800/60 rounded-lg bg-teal-50/50 dark:bg-teal-950/20 shrink-0">
+                            <span>Mostrando os 10 mais recentes na coluna.</span>
+                            <button
+                              type="button"
+                              onClick={() => setModalHistoricoEntregues(true)}
+                              className="block w-full mt-1 text-teal-700 dark:text-teal-300 font-bold hover:underline cursor-pointer"
+                            >
+                              Ver todos os {total} entregues →
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </ColunaDroppable>
                   )
@@ -3668,6 +3759,85 @@ export default function ProducaoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Histórico Geral de Todos os Serviços Entregues */}
+      <HistoricoEntreguesDialog
+        open={modalHistoricoEntregues}
+        onOpenChange={setModalHistoricoEntregues}
+        pedidosRapidos={pedidosRapidos}
+        orcamentos={orcamentos}
+        clientes={clientes}
+        produtosRapidos={produtosRapidos}
+        assinaturas={assinaturas}
+        onAbrirMaisDetalhes={(item) => {
+          if (item.tipo === "pedido" && item.pedidoOriginal) {
+            const p = item.pedidoOriginal
+            setModalDetalhesItem({
+              tipo: "pedido",
+              id: p.id,
+              numero: p.numero,
+              clienteNome: p.clienteNome,
+              clienteTelefone: p.clienteTelefone,
+              total: p.total,
+              produtoNome: p.produtoNome ?? produtoDoPedido(p)?.nome,
+              varianteNome: p.varianteNome,
+              acabamento: p.acabamento,
+              observacao: p.observacao,
+              arteUrl: p.arteUrl,
+              fotoProntoUrl: p.fotoProntoUrl,
+              status: p.status,
+              comissaoPercent: p.comissaoPercent,
+            })
+          } else if (item.tipo === "orcamento" && item.orcamentoOriginal) {
+            const o = item.orcamentoOriginal
+            const cli = clientes.find((c) => c.id === o.clienteId)
+            const ass = assinaturas[o.id]
+            setModalDetalhesItem({
+              tipo: "orcamento",
+              id: o.id,
+              numero: o.numero,
+              clienteNome: cli?.nome || "Cliente",
+              clienteTelefone: cli?.telefone || null,
+              total: o.totalFechado || (o.item as any)?.total || 0,
+              largura: o.item?.largura,
+              altura: o.item?.altura,
+              quantidade: o.item?.quantidadeUnidades,
+              produtoNome: o.materialFechado?.nome || o.servicoFechado?.nome || "Comunicação Visual",
+              observacao: o.observacao,
+              arteUrl: o.arteUrl,
+              fotoProntoUrl: o.fotoProntoUrl,
+              status: o.statusProducao || "entregue",
+              contratoAssinado: ass?.assinado,
+              contratoUrl: ass?.pdfUrl || undefined,
+              osUrl: `/api/orcamentos/${o.id}/os/pdf`,
+              dataEmissao: o.osEmitidaEm || o.fechadoEm,
+              comissaoPercent: o.comissaoPercent,
+            })
+          }
+        }}
+        onMoverStatus={(tipo, id, novoStatus) => {
+          if (tipo === "pedido") {
+            const ped = pedidosRapidos.find((p) => p.id === id)
+            solicitarConfirmacao(
+              ped?.clienteNome ?? "Cliente",
+              ped?.clienteTelefone ?? null,
+              novoStatus,
+              () => moverPedidoRapido(id, novoStatus),
+              id
+            )
+          } else {
+            const orc = orcamentos.find((o) => o.id === id)
+            const cli = clientes.find((c) => c.id === orc?.clienteId)
+            solicitarConfirmacao(
+              cli?.nome ?? "Cliente",
+              cli?.telefone ?? null,
+              novoStatus,
+              () => moverOrcamentoProducao(id, novoStatus),
+              id
+            )
+          }
+        }}
+      />
     </>
   )
 }
