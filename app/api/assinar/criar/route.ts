@@ -12,18 +12,26 @@ export async function POST(req: Request) {
   await garantirTabelaAssinaturasOs()
 
   const sql = getSql()
-  const rows = await sql`SELECT id FROM orcamentos WHERE id = ${orcamentoId} LIMIT 1`
+  const semPrefixo = orcamentoId.startsWith("orc-") ? orcamentoId.slice(4) : orcamentoId
+  const comPrefixo = orcamentoId.startsWith("orc-") ? orcamentoId : `orc-${orcamentoId}`
+
+  const rows = await sql`
+    SELECT id FROM orcamentos 
+    WHERE id = ${orcamentoId} OR id = ${comPrefixo} OR id = ${semPrefixo} 
+    LIMIT 1
+  `
   if (rows.length === 0) {
     return NextResponse.json({ erro: "Orçamento não encontrado" }, { status: 404 })
   }
 
+  const realOrcId = rows[0].id as string
   const token = randomUUID()
   const agora = new Date()
   const expira = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 dias
 
   await sql`
     INSERT INTO assinaturas_os (id, orcamento_id, criado_em, expira_em)
-    VALUES (${token}, ${orcamentoId}, ${agora.toISOString()}, ${expira.toISOString()})
+    VALUES (${token}, ${realOrcId}, ${agora.toISOString()}, ${expira.toISOString()})
   `
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL

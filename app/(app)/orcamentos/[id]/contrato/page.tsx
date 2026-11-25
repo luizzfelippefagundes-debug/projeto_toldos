@@ -48,7 +48,7 @@ function formatarDataExtenso(dataIso: string | Date): string {
 export default function ContratoServicoPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const { orcamentos, clientes, materiais, servicos, acabamentos } = useData()
+  const { orcamentos, clientes, materiais, servicos, acabamentos, carregado } = useData()
 
   const [assinaturaDigital, setAssinaturaDigital] = useState<string | null>(null)
   const [dataAssinatura, setDataAssinatura] = useState<string | null>(null)
@@ -72,6 +72,14 @@ export default function ContratoServicoPage() {
       })
       .catch(() => {})
   }, [id])
+
+  if (!carregado) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[350px] gap-3">
+        <p className="text-sm text-muted-foreground font-medium animate-pulse">Carregando Contrato...</p>
+      </div>
+    )
+  }
 
   if (!orcamento) {
     return (

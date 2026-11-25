@@ -80,7 +80,9 @@ import {
   Send,
   Info,
   Coins,
+  CreditCard,
 } from "lucide-react"
+import { CobrancaCartaoDialog } from "@/components/orcamentos/cobranca-cartao-dialog"
 import { comemorarComissao } from "@/lib/som-comissao"
 import { linkWhatsapp } from "@/lib/whatsapp"
 import { toast } from "sonner"
@@ -260,9 +262,8 @@ export default function ProducaoPage() {
     clientes,
     moverOrcamentoProducao,
     salvarArteOrcamento,
-    salvarFotoProntoOrcamento,
     salvarArtePedidoRapido,
-    salvarFotoProntoPedidoRapido,
+    concluirPecaPronta,
     salvarObservacaoOrcamento,
     salvarObservacaoPedidoRapido,
   } = useData()
@@ -387,6 +388,140 @@ export default function ProducaoPage() {
     fotoProntoUrl?: string
   } | null>(null)
 
+  const [abrindoAssinatura, setAbrindoAssinatura] = useState(false)
+  const [enviandoCobrancaModal, setEnviandoCobrancaModal] = useState(false)
+
+  const handleAbrirOsPdf = (item: typeof modalDetalhesItem) => {
+    if (!item) return
+    if (item.tipo === "orcamento") {
+      window.open(`/api/orcamentos/${item.id}/os/pdf`, "_blank")
+    } else {
+      window.open(item.osUrl || `/orcamentos/${item.id}/os`, "_blank")
+    }
+  }
+
+  const handleAbrirAssinatura = async (item: typeof modalDetalhesItem) => {
+    if (!item) return
+    setAbrindoAssinatura(true)
+    try {
+      if (item.tipo === "orcamento") {
+        const res = await fetch(`/api/assinar/por-orcamento/${item.id}`)
+        const data = res.ok ? await res.json() : null
+        if (data?.assinado && data.pdfUrl) {
+          window.open(data.pdfUrl, "_blank")
+          return
+        }
+        if (data?.token) {
+          window.open(`/assinar/${data.token}`, "_blank")
+          return
+        }
+        const resCriar = await fetch("/api/assinar/criar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orcamentoId: item.id }),
+        })
+        if (resCriar.ok) {
+          const d = await resCriar.json()
+          if (d.url) {
+            window.open(d.url, "_blank")
+            return
+          }
+        }
+      }
+      window.open(item.contratoUrl || `/orcamentos/${item.id}/contrato`, "_blank")
+    } catch {
+      toast.error("Erro ao abrir link de assinatura")
+    } finally {
+      setAbrindoAssinatura(false)
+    }
+  }
+
+  const handleEnviarCobrancaWhatsapp = async (item: typeof modalDetalhesItem) => {
+    if (!item) return
+    if (!item.clienteTelefone) {
+      toast.error("Este cliente não tem telefone cadastrado.")
+      return
+    }
+
+    setEnviandoCobrancaModal(true)
+    try {
+      let linkAssinatura = ""
+      if (item.tipo === "orcamento") {
+        try {
+          const resToken = await fetch("/api/assinar/criar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orcamentoId: item.id }),
+          })
+          if (resToken.ok) {
+            const dToken = await resToken.json()
+            linkAssinatura = dToken.url
+          }
+        } catch {}
+      }
+
+      let linkCartao = ""
+      try {
+        const resMp = await fetch("/api/mercadopago/criar-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orcamentoId: item.tipo === "orcamento" ? item.id : undefined,
+            valor: item.total || 0,
+            descricao: `Ordem de Serviço #${item.numero} - Toldos Print`,
+          }),
+        })
+        if (resMp.ok) {
+          const dMp = await resMp.json()
+          linkCartao = dMp.linkPagamento || ""
+        }
+      } catch {}
+
+      const chavePix = "09.141.206/0001-06"
+      const totalFormatado = (item.total || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+
+      const linkCartaoBloco = linkCartao
+        ? `\n2️⃣ *Cartão de Crédito (em até 12x no Mercado Pago):*\n👉 ${linkCartao}\n`
+        : ""
+      const linkAssinaturaBloco = linkAssinatura
+        ? `\n✍️ *Assinar Ordem de Serviço Digitalmente:*\n👉 ${linkAssinatura}\n`
+        : ""
+
+      const mensagem =
+        `Olá, ${item.clienteNome.split(" ")[0]}! Seguem as opções de pagamento da sua Ordem de Serviço nº ${item.numero} da Toldos Print. 📄✨\n\n` +
+        `💰 *Valor Total:* ${totalFormatado}\n\n` +
+        `*Qual forma de pagamento você prefere?*\n\n` +
+        `1️⃣ *Pix (à vista):*\n` +
+        `👉 Chave Pix (CNPJ): *${chavePix}*\n` +
+        `👉 Chave para copiar: *09141206000106*\n` +
+        `👤 Favorecido: Toldos Print & Comunicação Visual\n` +
+        linkCartaoBloco +
+        linkAssinaturaBloco +
+        `\nAssim que realizar o pagamento ou assinar, favor enviar o comprovante por aqui para darmos andamento imediato! 🤝✨`
+
+      await fetch("/api/whatsapp/enviar-notificacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telefone: normalizarTelefone(item.clienteTelefone),
+          mensagem,
+          clienteNome: item.clienteNome,
+        }),
+      }).catch(() => {})
+
+      const linkWa = linkWhatsapp(item.clienteTelefone, mensagem)
+      if (linkWa) {
+        window.open(linkWa, "_blank")
+      }
+
+      toast.success("Opções de pagamento (Pix e Cartão) enviadas ao cliente!")
+    } catch {
+      toast.error("Erro ao preparar cobrança para o cliente.")
+    } finally {
+      setEnviandoCobrancaModal(false)
+    }
+  }
+
   const abrirQc = useCallback(
     (item: {
       tipo: "pedido" | "orcamento"
@@ -441,14 +576,6 @@ export default function ProducaoPage() {
       return
     }
 
-    if (qcFotomUrl && qcFotomUrl !== modalQcItem.fotoAtual) {
-      if (modalQcItem.tipo === "pedido") {
-        await salvarFotoProntoPedidoRapido(modalQcItem.id, qcFotomUrl)
-      } else {
-        await salvarFotoProntoOrcamento(modalQcItem.id, qcFotomUrl)
-      }
-    }
-
     // Se houve comissão configurada (Regra do Kaio: integral para cada um, NÃO dividido!)
     if (modalQcItem.comissaoPercent && modalQcItem.comissaoPercent > 0) {
       const valorPedidoArredondado = Math.round((modalQcItem.valorTotal || 0) * 100) / 100
@@ -488,14 +615,13 @@ export default function ProducaoPage() {
     }
 
     const item = modalQcItem
+    const fotoConcluida = qcFotomUrl
     setModalQcItem(null)
 
-    // Move sempre a peça para pronto
-    if (item.tipo === "pedido") {
-      moverPedidoRapido(item.id, "pronto")
-    } else {
-      moverOrcamentoProducao(item.id, "pronto")
-    }
+    // Status "pronto" e foto da peça numa única gravação: em chamadas
+    // separadas as duas corriam entre si e a última apagava o campo da
+    // outra, deixando a peça presa no status anterior.
+    concluirPecaPronta(item.tipo, item.id, fotoConcluida)
     toast.success(`✅ Peça #${item.numero} concluída e foto enviada ao Kaio!`)
 
     // Opcionalmente abrir confirmação de WhatsApp se for dono/atendimento com telefone
@@ -3182,45 +3308,76 @@ export default function ProducaoPage() {
               </div>
             )}
 
-            {/* Documentos: OS e Contrato/Assinatura */}
-            {(modalDetalhesItem?.osUrl || modalDetalhesItem?.contratoUrl) && (
-              <div className="flex flex-col gap-1.5 pt-1">
+            {/* Documentos & Cobrança (Pix, Cartão, OS e Assinatura) */}
+            {modalDetalhesItem && (
+              <div className="flex flex-col gap-2 pt-1">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Documentos & Assinatura
+                  Documentos & Pagamento
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {modalDetalhesItem?.osUrl && (
-                    <a
-                      href={modalDetalhesItem.osUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border/80 transition-all active:scale-[0.98]"
-                    >
-                      <Printer className="h-4 w-4 text-primary shrink-0" />
-                      <span>Abrir OS (PDF)</span>
-                    </a>
-                  )}
+                  {/* 1. Abrir OS em PDF */}
+                  <button
+                    type="button"
+                    onClick={() => handleAbrirOsPdf(modalDetalhesItem)}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border/80 transition-all active:scale-[0.98] cursor-pointer"
+                    title="Visualizar ou imprimir a Ordem de Serviço em PDF com QR Code Pix"
+                  >
+                    <Printer className="h-4 w-4 text-primary shrink-0" />
+                    <span>Abrir OS (PDF)</span>
+                  </button>
 
-                  {modalDetalhesItem?.contratoUrl && (
-                    <a
-                      href={modalDetalhesItem.contratoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        "flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold border transition-all active:scale-[0.98]",
-                        modalDetalhesItem?.contratoAssinado
-                          ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                          : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                      )}
-                    >
-                      <FileCheck className="h-4 w-4 shrink-0" />
-                      <span>
-                        {modalDetalhesItem?.contratoAssinado
-                          ? "Ver Contrato Assinado"
-                          : "Abrir p/ Assinar (Ag. Assinatura)"}
-                      </span>
-                    </a>
-                  )}
+                  {/* 2. Abrir para Assinar */}
+                  <button
+                    type="button"
+                    onClick={() => handleAbrirAssinatura(modalDetalhesItem)}
+                    disabled={abrindoAssinatura}
+                    className={cn(
+                      "flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold border transition-all active:scale-[0.98] cursor-pointer",
+                      modalDetalhesItem?.contratoAssinado
+                        ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                        : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                    )}
+                  >
+                    <FileCheck className="h-4 w-4 shrink-0" />
+                    <span>
+                      {abrindoAssinatura
+                        ? "Abrindo..."
+                        : modalDetalhesItem?.contratoAssinado
+                        ? "Ver Assinado (PDF)"
+                        : "Abrir p/ Assinar (Ag. Assinatura)"}
+                    </span>
+                  </button>
+
+                  {/* 3. Enviar Cobrança no WhatsApp (Pix + Cartão 12x) */}
+                  <button
+                    type="button"
+                    onClick={() => handleEnviarCobrancaWhatsapp(modalDetalhesItem)}
+                    disabled={enviandoCobrancaModal}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-bold transition-all shadow-xs cursor-pointer"
+                    title="Enviar mensagem com Pix Copia e Cola e Link do Cartão em até 12x"
+                  >
+                    <MessageCircle className="h-4 w-4 shrink-0" />
+                    <span>{enviandoCobrancaModal ? "Enviando..." : "Enviar Pix & Cartão (Zap)"}</span>
+                  </button>
+
+                  {/* 4. Cobrança no Cartão / Maquininha Point Smart */}
+                  <CobrancaCartaoDialog
+                    orcamentoId={modalDetalhesItem.tipo === "orcamento" ? modalDetalhesItem.id : undefined}
+                    numeroOrcamento={modalDetalhesItem.numero}
+                    valorTotal={modalDetalhesItem.total || 0}
+                    nomeCliente={modalDetalhesItem.clienteNome}
+                    telefoneCliente={modalDetalhesItem.clienteTelefone || undefined}
+                    trigger={
+                      <button
+                        type="button"
+                        className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold transition-all shadow-xs cursor-pointer"
+                        title="Cobrar com link do Mercado Pago ou na Maquininha física da loja"
+                      >
+                        <CreditCard className="h-4 w-4 shrink-0" />
+                        <span>Cobrar Cartão / Maquininha</span>
+                      </button>
+                    }
+                  />
                 </div>
               </div>
             )}

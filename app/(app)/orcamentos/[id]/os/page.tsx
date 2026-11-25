@@ -16,9 +16,18 @@ import { CobrancaCartaoDialog } from "@/components/orcamentos/cobranca-cartao-di
 export default function OrdemDeServicoPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const { orcamentos, clientes, materiais, servicos, acabamentos } = useData()
+  const { orcamentos, clientes, materiais, servicos, acabamentos, carregado } = useData()
 
   const orcamento = orcamentos.find((o) => o.id === id)
+
+  if (!carregado) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[350px] gap-3">
+        <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground font-medium">Carregando Ordem de Serviço...</p>
+      </div>
+    )
+  }
 
   if (!orcamento) {
     return (

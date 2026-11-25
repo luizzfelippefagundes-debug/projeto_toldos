@@ -7,10 +7,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   await garantirTabelaAssinaturasOs()
 
   const sql = getSql()
+  const semPrefixo = id.startsWith("orc-") ? id.slice(4) : id
+  const comPrefixo = id.startsWith("orc-") ? id : `orc-${id}`
+
   const rows = await sql`
     SELECT id, assinado_em, assinatura_data, pdf_url, criado_em, expira_em
     FROM assinaturas_os
-    WHERE orcamento_id = ${id}
+    WHERE orcamento_id = ${id} OR orcamento_id = ${comPrefixo} OR orcamento_id = ${semPrefixo}
     ORDER BY criado_em DESC
     LIMIT 1
   `
