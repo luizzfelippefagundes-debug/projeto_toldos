@@ -122,8 +122,13 @@ export interface DataContextValue {
   salvarArtePedidoRapido: (id: string, arteUrl: string | null) => Promise<void>
   salvarObservacaoOrcamento: (id: string, observacao: string) => Promise<void>
   salvarObservacaoPedidoRapido: (id: string, observacao: string) => Promise<void>
-  salvarFotoProntoOrcamento: (id: string, fotoUrl: string | null) => Promise<void>
-  salvarFotoProntoPedidoRapido: (id: string, fotoUrl: string | null) => Promise<void>
+  // Conclusão da peça no QC da produção: status "pronto" + foto da peça
+  // gravados num único PUT (ver comentário na implementação).
+  concluirPecaPronta: (
+    tipo: "pedido" | "orcamento",
+    id: string,
+    fotoProntoUrl: string
+  ) => void
   addLancamento: (
     dados: Omit<LancamentoFinanceiro, "id" | "criadoEm">
   ) => LancamentoFinanceiro
@@ -688,17 +693,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     )
   }
 
-  const salvarFotoProntoOrcamento: DataContextValue["salvarFotoProntoOrcamento"] = async (id, fotoProntoUrl) => {
-    setOrcamentos((atual) =>
-      atual.map((o) => {
-        if (o.id !== id) return o
-        const atualizado = { ...o, fotoProntoUrl: fotoProntoUrl ?? undefined }
-        apiPut(`/api/orcamentos/${id}`, atualizado)
-        return atualizado
-      })
-    )
-  }
-
   const salvarArtePedidoRapido: DataContextValue["salvarArtePedidoRapido"] = async (id, arteUrl) => {
     setPedidosRapidos((atual) =>
       atual.map((p) => {
@@ -710,15 +704,58 @@ export function DataProvider({ children }: { children: ReactNode }) {
     )
   }
 
-  const salvarFotoProntoPedidoRapido: DataContextValue["salvarFotoProntoPedidoRapido"] = async (id, fotoProntoUrl) => {
-    setPedidosRapidos((atual) =>
-      atual.map((p) => {
-        if (p.id !== id) return p
-        const atualizado = { ...p, fotoProntoUrl: fotoProntoUrl ?? undefined }
-        apiPut(`/api/pedidos-rapidos/${id}`, atualizado)
-        return atualizado
-      })
+  // As rotas PUT de pedidos-rápidos e orçamentos reescrevem a linha INTEIRA.
+  // A conclusão no QC gravava a foto e o status em duas chamadas concorrentes,
+  // então a última a chegar no banco apagava o campo da outra: ora a foto
+  // sumia, ora o pedido voltava pra "acabamento" mesmo com a tela mostrando
+  // "pronto" (estado otimista). Aqui os dois campos vão no MESMO PUT.
+  const concluirPecaPronta: DataContextValue["concluirPecaPronta"] = (
+    tipo,
+    id,
+    fotoProntoUrl
+  ) => {
+    if (tipo === "pedido") {
+      const pedido = pedidosRapidos.find((p) => p.id === id)
+      if (!pedido) return
+      const atualizado: PedidoRapido = {
+        ...pedido,
+        status: "pronto",
+        fotoProntoUrl,
+      }
+      setPedidosRapidos((atual) =>
+        atual.map((p) =>
+          p.id === id ? { ...p, status: "pronto" as const, fotoProntoUrl } : p
+        )
+      )
+      apiPut(`/api/pedidos-rapidos/${id}`, atualizado)
+      if (pedido.status === "aguardando") {
+        adicionarReceitaPedido(pedido)
+      }
+      const mensagem = mensagemStatusPedido["pronto"]
+      if (mensagem && pedido.status !== "pronto" && pedido.clienteTelefone) {
+        registrarMensagemBot({
+          clienteNome: pedido.clienteNome || "Cliente",
+          telefone: pedido.clienteTelefone,
+          texto: mensagem.replace("{numero}", String(pedido.numero)),
+          origem: "automatica",
+          autor: "bot",
+        })
+      }
+      return
+    }
+
+    const orcamento = orcamentos.find((o) => o.id === id)
+    setOrcamentos((atual) =>
+      atual.map((o) =>
+        o.id === id
+          ? { ...o, statusProducao: "pronto" as const, fotoProntoUrl }
+          : o
+      )
     )
+    const atualizado = orcamento
+      ? { ...orcamento, statusProducao: "pronto" as const, fotoProntoUrl }
+      : { id, statusProducao: "pronto" as const, fotoProntoUrl }
+    apiPut(`/api/orcamentos/${id}`, atualizado)
   }
 
   const salvarObservacaoOrcamento: DataContextValue["salvarObservacaoOrcamento"] = async (id, observacao) => {
@@ -883,11 +920,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
     status
   ) => {
     const pedido = pedidosRapidos.find((p) => p.id === id)
-    const atualizado = pedido ? { ...pedido, status } : null
+    // O corpo do PUT sai de dentro do updater: o snapshot de render pode estar
+    // desatualizado se outra gravação acabou de alterar o pedido, e como a
+    // rota reescreve a linha inteira isso apagaria o campo recém-salvo.
     setPedidosRapidos((atual) =>
-      atual.map((p) => (p.id === id ? { ...p, status } : p))
+      atual.map((p) => {
+        if (p.id !== id) return p
+        const atualizado = { ...p, status }
+        apiPut(`/api/pedidos-rapidos/${id}`, atualizado)
+        return atualizado
+      })
     )
-    if (atualizado) apiPut(`/api/pedidos-rapidos/${id}`, atualizado)
     if (pedido && pedido.status === "aguardando" && status !== "aguardando") {
       adicionarReceitaPedido(pedido)
     }
@@ -995,9 +1038,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       moverPedidoRapido,
       moverOrcamentoProducao,
       salvarArteOrcamento,
-      salvarFotoProntoOrcamento,
       salvarArtePedidoRapido,
-      salvarFotoProntoPedidoRapido,
+      concluirPecaPronta,
       salvarObservacaoOrcamento,
       salvarObservacaoPedidoRapido,
       addLancamento,

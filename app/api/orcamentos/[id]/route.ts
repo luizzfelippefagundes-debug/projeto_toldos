@@ -19,13 +19,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       status=${b.status}, criado_em=${b.criadoEm}, fechado_em=${b.fechadoEm ?? null},
       validade_dias=${b.validadeDias ?? null},
       retorno=${b.retorno ? JSON.stringify(b.retorno) : null},
-      status_producao=${b.statusProducao ?? null},
-      os_emitida_em=${b.osEmitidaEm ?? null},
-      arte_url=${b.arteUrl ?? null},
-      arte_aprovada_em=${b.arteAprovadaEm ?? null},
-      observacao=${b.observacao ?? null},
+      status_producao=COALESCE(${b.statusProducao ?? null}, status_producao),
+      os_emitida_em=COALESCE(${b.osEmitidaEm ?? null}, os_emitida_em),
+      arte_url=COALESCE(${b.arteUrl ?? null}, arte_url),
+      arte_aprovada_em=COALESCE(${b.arteAprovadaEm ?? null}, arte_aprovada_em),
+      observacao=COALESCE(${b.observacao ?? null}, observacao),
       origem=COALESCE(${b.origem ?? null}, origem),
-      foto_pronto_url=${b.fotoProntoUrl ?? null}
+      foto_pronto_url=COALESCE(${b.fotoProntoUrl ?? null}, foto_pronto_url)
     WHERE id=${id}
   `
   return NextResponse.json(b)
