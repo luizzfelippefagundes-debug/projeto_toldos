@@ -8,7 +8,7 @@ import { useUser } from "@clerk/nextjs"
 import { interpretarDataLocal } from "@/lib/date"
 import { Button } from "@/components/ui/button"
 
-type StatusPedido = "aguardando" | "aprovado" | "ag_confirmacao" | "impressao" | "acabamento" | "pronto"
+type StatusPedido = "aguardando" | "aprovado" | "ag_confirmacao" | "impressao" | "acabamento" | "pronto" | "arte"
 
 interface PedidoTV {
   id: string
@@ -24,6 +24,7 @@ interface PedidoTV {
   total: number
   tipo?: "rapido" | "orcamento"
   comissao_percent?: number | null
+  arte_url?: string | null
 }
 
 interface AvisoTV {
@@ -170,7 +171,7 @@ function PedidoCard({
     (pedido.observacao.includes("ALERTA DA FÁBRICA") || pedido.observacao.includes("PROBLEMA REPORTADO"))
   )
   const colunaInfo = COLUNAS.find(
-    (c) => c.status === pedido.status || (c.status === "aprovado" && (pedido.status as string) === "arte")
+    (c) => c.status === pedido.status || (c.status === "ag_confirmacao" && (pedido.status as string) === "arte")
   )
 
   return (
@@ -257,6 +258,13 @@ function PedidoCard({
           <p className="font-black text-foreground text-xs sm:text-sm lg:text-base leading-snug break-words whitespace-normal mt-0.5">
             {pedido.produto_nome ?? "Item de Produção"}
           </p>
+          {pedido.arte_url && (
+            <div className="mt-1 flex items-center gap-1 rounded bg-pink-500/15 border border-pink-500/30 px-1.5 py-0.5 text-pink-700 dark:text-pink-300 w-fit">
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider">
+                🎨 Arte Anexada
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Acabamento completo com quebra de linha */}
@@ -1027,7 +1035,7 @@ export default function TvPage() {
     if (config?.ocultarVazias) {
       const comPedidos = autorizadas.filter((c) => {
         const count = pedidosEfetivos.filter(
-          (p) => p.status === c.status || (c.status === "aprovado" && (p.status as string) === "arte")
+          (p) => p.status === c.status || (c.status === "ag_confirmacao" && (p.status as string) === "arte")
         ).length
         return count > 0
       })
@@ -1051,7 +1059,7 @@ export default function TvPage() {
     if (filtroStatusMobile === "urgencias") return pedidosAlertas
     if (filtroStatusMobile === "todos") return pedidosEfetivos
     return pedidosEfetivos.filter(
-      (p) => p.status === filtroStatusMobile || (filtroStatusMobile === "aprovado" && (p.status as string) === "arte")
+      (p) => p.status === filtroStatusMobile || (filtroStatusMobile === "ag_confirmacao" && (p.status as string) === "arte")
     )
   }, [pedidosEfetivos, filtroStatusMobile, pedidosAlertas])
 
@@ -1277,7 +1285,7 @@ export default function TvPage() {
 
           {colunasFiltradas.map((coluna) => {
             const count = pedidosEfetivos.filter(
-              (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
+              (p) => p.status === coluna.status || (coluna.status === "ag_confirmacao" && (p.status as string) === "arte")
             ).length
             const ativo = filtroStatusMobile === coluna.status
             return (
@@ -1385,7 +1393,7 @@ export default function TvPage() {
 
         {colunasFiltradas.map((coluna) => {
           const colPedidos = pedidosEfetivos.filter(
-            (p) => p.status === coluna.status || (coluna.status === "aprovado" && (p.status as string) === "arte")
+            (p) => p.status === coluna.status || (coluna.status === "ag_confirmacao" && (p.status as string) === "arte")
           )
           return (
             <TvColuna

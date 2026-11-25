@@ -229,7 +229,7 @@ const colunaMap = Object.fromEntries(colunas.map((c) => [c.status, c])) as Recor
   (typeof colunas)[number]
 >
 if (!colunaMap.arte) {
-  colunaMap.arte = colunaMap.aprovado
+  colunaMap.arte = colunaMap.ag_confirmacao
 }
 
 const PROXIMO_STATUS: Partial<Record<StatusPedidoRapido, StatusPedidoRapido>> = {
@@ -1211,10 +1211,10 @@ export default function ProducaoPage() {
       if (ocultarEntregues && col.status === "entregue") return false
       if (ocultarVazias) {
         const pCount = pedidosFiltrados.filter(
-          (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
+          (p) => p.status === col.status || (col.status === "ag_confirmacao" && p.status === "arte")
         ).length
         const oCount = orcamentosEmProducao.filter(
-          (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
+          (o) => o.statusProducao === col.status || (col.status === "ag_confirmacao" && o.statusProducao === "arte")
         ).length
         if (pCount + oCount === 0) return false
       }
@@ -1436,11 +1436,11 @@ export default function ProducaoPage() {
       let statusDestino: StatusPedidoRapido | null = null
       const targetPedido = pedidosRapidos.find((p) => p.id === targetCardId)
       if (targetPedido) {
-        statusDestino = (targetPedido.status === "arte" ? "aprovado" : targetPedido.status) as StatusPedidoRapido
+        statusDestino = (targetPedido.status === "arte" ? "ag_confirmacao" : targetPedido.status) as StatusPedidoRapido
       } else if (targetCardId.startsWith("orc-")) {
         const targetOrc = orcamentos.find((o) => o.id === targetCardId.slice(4))
         if (targetOrc) {
-          const st = targetOrc.statusProducao === "arte" ? "aprovado" : targetOrc.statusProducao
+          const st = targetOrc.statusProducao === "arte" ? "ag_confirmacao" : targetOrc.statusProducao
           statusDestino = (st as StatusPedidoRapido) || "aprovado"
         }
       }
@@ -2061,8 +2061,8 @@ export default function ProducaoPage() {
                       const colunasComCards = colunas
                         .filter((c) => {
                           const count =
-                            pedidosRapidos.filter((p) => p.status === c.status || (c.status === "aprovado" && p.status === "arte")).length +
-                            orcamentos.filter((o) => o.statusProducao === c.status || (c.status === "aprovado" && o.statusProducao === "arte")).length
+                            pedidosRapidos.filter((p) => p.status === c.status || (c.status === "ag_confirmacao" && p.status === "arte")).length +
+                            orcamentos.filter((o) => o.statusProducao === c.status || (c.status === "ag_confirmacao" && o.statusProducao === "arte")).length
                           return count > 0
                         })
                         .map((c) => c.status)
@@ -2079,8 +2079,8 @@ export default function ProducaoPage() {
                 {colunas.map((c) => {
                   const marcada = colunasVisiveis.includes(c.status)
                   const totalCards =
-                    pedidosRapidos.filter((p) => p.status === c.status || (c.status === "aprovado" && p.status === "arte")).length +
-                    orcamentos.filter((o) => o.statusProducao === c.status || (c.status === "aprovado" && o.statusProducao === "arte")).length
+                    pedidosRapidos.filter((p) => p.status === c.status || (c.status === "ag_confirmacao" && p.status === "arte")).length +
+                    orcamentos.filter((o) => o.statusProducao === c.status || (c.status === "ag_confirmacao" && o.statusProducao === "arte")).length
 
                   return (
                     <label
@@ -2295,8 +2295,8 @@ export default function ProducaoPage() {
         </button>
         {colunasRenderizadas.map((col) => {
           const qtd =
-            pedidosFiltrados.filter((p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")).length +
-            orcamentosEmProducao.filter((o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")).length
+            pedidosFiltrados.filter((p) => p.status === col.status || (col.status === "ag_confirmacao" && p.status === "arte")).length +
+            orcamentosEmProducao.filter((o) => o.statusProducao === col.status || (col.status === "ag_confirmacao" && o.statusProducao === "arte")).length
           return (
             <button
               key={col.status}
@@ -2325,10 +2325,10 @@ export default function ProducaoPage() {
           })
           .map((col) => {
             const pedidosDaColuna = pedidosFiltrados.filter(
-              (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
+              (p) => p.status === col.status || (col.status === "ag_confirmacao" && p.status === "arte")
             )
             const orcsDaColuna = orcamentosEmProducao.filter(
-              (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
+              (o) => o.statusProducao === col.status || (col.status === "ag_confirmacao" && o.statusProducao === "arte")
             )
             const totalColuna = pedidosDaColuna.length + orcsDaColuna.length
             if (colunaAtiva === "todas" && totalColuna === 0) return null
@@ -2627,10 +2627,10 @@ export default function ProducaoPage() {
               <div className="flex gap-3.5 h-full min-w-max items-start">
                 {colunasRenderizadas.map((col) => {
                   const pedidosDaColuna = pedidosFiltrados.filter(
-                    (p) => p.status === col.status || (col.status === "aprovado" && p.status === "arte")
+                    (p) => p.status === col.status || (col.status === "ag_confirmacao" && p.status === "arte")
                   )
                   const orcsDaColuna = orcamentosEmProducao.filter(
-                    (o) => o.statusProducao === col.status || (col.status === "aprovado" && o.statusProducao === "arte")
+                    (o) => o.statusProducao === col.status || (col.status === "ag_confirmacao" && o.statusProducao === "arte")
                   )
                   const total = pedidosDaColuna.length + orcsDaColuna.length
 
@@ -4001,6 +4001,7 @@ function ArteCardWidget({
   clienteTelefone,
   onSalvarArte,
   onAbrirArte,
+  onMudarStatus,
 }: {
   id: string
   arteUrl?: string
@@ -4010,6 +4011,7 @@ function ArteCardWidget({
   clienteTelefone?: string | null
   onSalvarArte: (url: string | null) => Promise<void>
   onAbrirArte?: (url: string, titulo: string) => void
+  onMudarStatus?: (status: StatusPedidoRapido) => void
 }) {
   const [enviando, setEnviando] = useState(false)
   const [copiado, setCopiado] = useState(false)
@@ -4027,6 +4029,9 @@ function ArteCardWidget({
       const data = await res.json()
       if (data.url) {
         await onSalvarArte(data.url)
+        if (onMudarStatus && (status === "aprovado" || status === "aguardando" || (status as string) === "arte")) {
+          onMudarStatus("ag_confirmacao")
+        }
       }
     } catch (err) {
       console.error("Erro ao enviar arte:", err)
@@ -4513,6 +4518,7 @@ function PedidoCardConteudo({
         clienteTelefone={pedido.clienteTelefone}
         onSalvarArte={onSalvarArte}
         onAbrirArte={onAbrirArte}
+        onMudarStatus={onMudarStatus}
       />
 
       {/* Widget de Observação / Instrução para Fábrica e TV */}
@@ -4844,6 +4850,7 @@ function OrcamentoCardConteudo({
         clienteTelefone={cliente?.telefone}
         onSalvarArte={onSalvarArte}
         onAbrirArte={onAbrirArte}
+        onMudarStatus={onMudarStatus}
       />
 
       {/* Widget de Observação / Instrução para Fábrica e TV */}

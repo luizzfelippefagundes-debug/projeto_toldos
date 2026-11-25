@@ -30,6 +30,7 @@ interface OrcamentoRaw {
   status: string
   criado_em: string
   total: number | string
+  arte_url?: string | null
 }
 
 export async function GET() {
@@ -77,10 +78,11 @@ export async function GET() {
       ? config.statusVisiveis
       : DEFAULT_STATUS_VISIVEIS
 
-  // Se "aprovado" está selecionado, também inclui "arte" que é estágio equivalente
-  const statusComArte = statusVisiveis.includes("aprovado")
-    ? [...statusVisiveis, "arte"]
-    : statusVisiveis
+  // Se "ag_confirmacao" ou "aprovado" está selecionado, também inclui "arte" que é estágio de arte
+  const statusComArte =
+    statusVisiveis.includes("ag_confirmacao") || statusVisiveis.includes("aprovado")
+      ? Array.from(new Set([...statusVisiveis, "arte"]))
+      : statusVisiveis
 
   const podeBuscarRapidos = config.tiposVisiveis.includes("rapido")
   const podeBuscarOrcamentos = config.tiposVisiveis.includes("orcamento")
@@ -89,7 +91,7 @@ export async function GET() {
     podeBuscarRapidos
       ? sql`
           SELECT id, numero, cliente_nome, produto_nome, variante_nome,
-                 acabamento, observacao, status, criado_em, prazo_entrega_em, total
+                 acabamento, observacao, status, criado_em, prazo_entrega_em, total, arte_url
           FROM pedidos_rapidos
           WHERE status = ANY(${statusComArte})
         `
@@ -106,7 +108,8 @@ export async function GET() {
             o.observacao,
             o.status_producao as status,
             o.criado_em,
-            COALESCE(o.total_fechado, 0) as total
+            COALESCE(o.total_fechado, 0) as total,
+            o.arte_url
           FROM orcamentos o
           LEFT JOIN clientes c ON c.id = o.cliente_id
           WHERE o.status_producao = ANY(${statusComArte})
@@ -132,6 +135,7 @@ export async function GET() {
     criado_em: string
     prazo_entrega_em: string | null
     total: number | string
+    arte_url?: string | null
   }>).map((p) => ({
     id: p.id,
     numero: p.numero,
@@ -140,7 +144,8 @@ export async function GET() {
     variante_nome: p.variante_nome,
     acabamento: p.acabamento,
     observacao: p.observacao || "",
-    status: p.status === "arte" ? "aprovado" : p.status,
+    status: p.status === "arte" ? "ag_confirmacao" : p.status,
+    arte_url: p.arte_url || null,
     criado_em: p.criado_em,
     prazo_entrega_em: p.prazo_entrega_em,
     total: Number(p.total) || 0,
@@ -168,7 +173,8 @@ export async function GET() {
       variante_nome: variante_nome || null,
       acabamento: serv?.nome || null,
       observacao: o.observacao || item.observacao || item.observacoes || "",
-      status: o.status === "arte" ? "aprovado" : o.status,
+      status: o.status === "arte" ? "ag_confirmacao" : o.status,
+      arte_url: o.arte_url || null,
       criado_em: o.criado_em,
       prazo_entrega_em: null,
       total: Number(o.total) || 0,
