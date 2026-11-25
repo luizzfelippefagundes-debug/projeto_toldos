@@ -104,9 +104,9 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Chave Pix & Payload Copia e Cola
-    const chavePix = process.env.PIX_CHAVE_EMPRESA || "63.177.134/0001-00"
-    const chaveNumeros = chavePix.replace(/\D/g, "")
+    // 3. Chave Pix & Payload Copia e Cola Oficial
+    const chavePix = "63.177.134/0001-00"
+    const chaveNumeros = "63177134000100"
     const pixCopiaCola = totalFinal > 0
       ? gerarPayloadPixEstatico({
           chave: chaveNumeros || chavePix,

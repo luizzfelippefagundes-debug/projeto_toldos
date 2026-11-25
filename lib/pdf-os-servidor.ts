@@ -222,7 +222,7 @@ export async function gerarPdfOsServidor(
 
   // Bloco de Pagamento Pix com QR Code
   if (totalFinal > 0) {
-    const chavePix = process.env.PIX_CHAVE_EMPRESA || "63.177.134/0001-00"
+    const chavePix = "63.177.134/0001-00"
     const chaveNumeros = chavePix.replace(/\D/g, "")
     const payloadPix = gerarPayloadPixEstatico({
       chave: chaveNumeros || chavePix,

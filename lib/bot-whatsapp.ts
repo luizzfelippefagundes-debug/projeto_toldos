@@ -362,7 +362,7 @@ export function resolverFluxoAtendimento(
   }
 
   if (pedePix) {
-    const chavePix = process.env.PIX_CHAVE_EMPRESA || "63.177.134/0001-00"
+    const chavePix = "63.177.134/0001-00"
     return {
       resposta:
         "⚡ *PAGAMENTO VIA PIX:*\n\n" +
@@ -374,7 +374,7 @@ export function resolverFluxoAtendimento(
   }
 
   if (pedeFormaPagamento) {
-    const chavePix = process.env.PIX_CHAVE_EMPRESA || "63.177.134/0001-00"
+    const chavePix = "63.177.134/0001-00"
     return {
       resposta:
         "💳 *FORMAS DE PAGAMENTO ACEITAS:*\n\n" +

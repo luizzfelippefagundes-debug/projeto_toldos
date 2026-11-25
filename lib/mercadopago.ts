@@ -35,7 +35,7 @@ function getAppUrl(): string {
  */
 export async function criarPixMercadoPago(dados: DadosCriarPix): Promise<RespostaPixMercadoPago> {
   const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
-  const chavePixFixa = process.env.PIX_CHAVE_EMPRESA || process.env.NEXT_PUBLIC_PIX_CHAVE || "63177134000100"
+  const chavePixFixa = "63177134000100"
 
   // 1. Se o token do Mercado Pago estiver configurado, chama a API oficial v1/payments
   if (token) {
