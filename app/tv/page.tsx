@@ -245,7 +245,7 @@ function PedidoCard({
                 <span className="text-base sm:text-xl shrink-0 animate-bounce">🪙</span>
                 <div className="flex flex-col min-w-0 leading-tight">
                   <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
-                    BÔNUS COLABORADOR: {pedido.comissao_percent}%
+                    BÔNUS COLABORADOR
                   </span>
                   <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground truncate">
                     Para cada um que produzir (integral)
@@ -308,7 +308,7 @@ function TvColuna({
   }, [pedidos.length, tamanhoGrande])
 
   // Auto-scroll contínuo e cíclico com acumulador de float para compatibilidade com Smart TVs
-  // NÃO depende de 'pedidos' para não ser reiniciado a cada ciclo de polling de 3 segundos
+  // Baseado em delta de tempo para velocidade constante e confortável em qualquer Smart TV (60Hz ou 120Hz)
   useEffect(() => {
     const el = containerRef.current
     if (!el || !temOverflow) return
@@ -318,13 +318,15 @@ function TvColuna({
     let direcao = 1 // 1: descendo, -1: subindo
     let pausado = true // Começa pausado no topo para leitura inicial
     let scrollPos = el.scrollTop // Acumulador de precisão para evitar truncamento em Smart TVs
+    let ultimoTempo = performance.now()
 
-    // Inicia a rolagem para baixo após 2.5 segundos de pausa inicial
+    // Inicia a rolagem para baixo após 6 segundos de pausa no topo para leitura confortável
     timeoutId = setTimeout(() => {
       pausado = false
-    }, 2500)
+      ultimoTempo = performance.now()
+    }, 6000)
 
-    const rolar = () => {
+    const rolar = (tempoAtual: number) => {
       if (!el) return
       const maxScroll = el.scrollHeight - el.clientHeight
       if (maxScroll <= 2) {
@@ -332,40 +334,49 @@ function TvColuna({
         return
       }
 
+      const deltaMs = Math.min(tempoAtual - ultimoTempo, 100)
+      ultimoTempo = tempoAtual
+
       if (!pausado) {
         if (direcao === 1) {
-          // Descendo suavemente: 0.85px por frame
-          scrollPos += 0.85
+          // Descendo suavemente: 18 pixels por segundo (ritmo calmo e legível à distância)
+          const pixelsPorSegundo = 18
+          scrollPos += (pixelsPorSegundo * deltaMs) / 1000
+
           if (scrollPos >= maxScroll) {
             scrollPos = maxScroll
             el.scrollTop = maxScroll
             setEstaNoTopo(false)
             setEstaNoFim(true)
             pausado = true
-            // Pausa no final para leitura dos últimos pedidos antes de subir
+            // Pausa no final por 6 segundos para leitura dos últimos pedidos antes de subir
             timeoutId = setTimeout(() => {
               direcao = -1
               pausado = false
-            }, 3500)
+              ultimoTempo = performance.now()
+            }, 6000)
           } else {
             el.scrollTop = Math.round(scrollPos)
             setEstaNoTopo(el.scrollTop <= 5)
             setEstaNoFim(el.scrollTop >= maxScroll - 5)
           }
         } else {
-          // Subindo suavemente de volta ao topo: 1.2px por frame
-          scrollPos -= 1.2
+          // Subindo suavemente de volta ao topo: 28 pixels por segundo
+          const pixelsPorSegundo = 28
+          scrollPos -= (pixelsPorSegundo * deltaMs) / 1000
+
           if (scrollPos <= 0) {
             scrollPos = 0
             el.scrollTop = 0
             setEstaNoTopo(true)
             setEstaNoFim(false)
             pausado = true
-            // Pausa no topo antes de descer novamente
+            // Pausa no topo por 6 segundos antes de descer novamente
             timeoutId = setTimeout(() => {
               direcao = 1
               pausado = false
-            }, 3000)
+              ultimoTempo = performance.now()
+            }, 6000)
           } else {
             el.scrollTop = Math.round(scrollPos)
             setEstaNoTopo(el.scrollTop <= 5)
@@ -1122,7 +1133,7 @@ export default function TvPage() {
         <div className="shrink-0 overflow-hidden rounded-xl border border-border/80 bg-card py-2 shadow-xs">
           <div
             className="ticker-track"
-            style={{ animationDuration: `${Math.max(avisos.length * 10, 20)}s` }}
+            style={{ animationDuration: `${Math.max(avisos.length * 22, 40)}s` }}
           >
             {[
               ...avisos.filter((a) => (a as { ativo?: boolean }).ativo !== false),
