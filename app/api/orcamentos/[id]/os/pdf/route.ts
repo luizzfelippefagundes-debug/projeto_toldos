@@ -17,6 +17,62 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     LIMIT 1
   `
   if (rows.length === 0) {
+    // Suporte também para Pedidos Rápidos da Produção
+    const pedRows = await sql`
+      SELECT * FROM pedidos_rapidos 
+      WHERE id = ${id} OR id = ${semPrefixo} 
+      LIMIT 1
+    `
+    if (pedRows.length > 0) {
+      const p = pedRows[0]
+      const orcamentoEquivalente = {
+        id: p.id,
+        numero: p.numero,
+        clienteId: "pedido-rapido",
+        item: {
+          altura: Number(p.altura || 0),
+          largura: Number(p.largura || 0),
+          quantidadeUnidades: Number(p.quantidade || 1),
+          materialId: "",
+          servicoId: "",
+          horasEstimadas: 0,
+          observacao: p.observacao || "",
+          acabamentos: p.acabamento ? [{ acabamentoId: p.acabamento, quantidade: 1 }] : [],
+          deslocamento: { incluido: false, distanciaKm: 0, pedagio: 0, alimentacao: 0, custoPorKm: 0 },
+          instalacao: { incluida: false, horas: 0, custoHora: 0, numAjudantes: 0, diariaAjudante: 0, equipamentoId: "" },
+          margemPercent: 0,
+          impostoPercent: 0,
+          comissaoPercent: Number(p.comissao_percent || 0),
+          descontoPercent: 0,
+          acrescimoPercent: 0,
+          entradaPercent: 0,
+        },
+        materialFechado: {
+          id: "ped-mat",
+          nome: p.produto_nome || "Produto Personalizado",
+          custo: Number(p.total || 0),
+          unidade: "unidade",
+          quantidade: Number(p.quantidade || 1),
+        },
+        totalFechado: Number(p.total || 0),
+        ajusteManual: 0,
+        status: "fechado",
+        criadoEm: typeof p.criado_em === "string" ? p.criado_em : p.criado_em?.toISOString?.() || new Date().toISOString(),
+      } as Orcamento
+      const pdfBuffer = await gerarPdfOsServidor(
+        orcamentoEquivalente,
+        p.cliente_nome || "Cliente Balcão",
+        p.cliente_telefone || undefined
+      )
+      const numeroOS = String(p.numero).padStart(4, "0")
+      return new NextResponse(new Uint8Array(pdfBuffer), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `inline; filename="OS-${numeroOS}.pdf"`,
+          "Cache-Control": "no-store, max-age=0",
+        },
+      })
+    }
     return new NextResponse("Orçamento não encontrado", { status: 404 })
   }
   const r = rows[0]

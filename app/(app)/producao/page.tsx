@@ -397,10 +397,10 @@ export default function ProducaoPage() {
 
   const handleAbrirOsPdf = (item: typeof modalDetalhesItem) => {
     if (!item) return
-    if (item.tipo === "orcamento") {
-      window.open(`/api/orcamentos/${item.id}/os/pdf`, "_blank")
-    } else {
-      window.open(item.osUrl || `/orcamentos/${item.id}/os`, "_blank")
+    const url = `/api/orcamentos/${item.id}/os/pdf`
+    const win = window.open(url, "_blank")
+    if (!win) {
+      window.location.href = url
     }
   }
 
@@ -451,16 +451,22 @@ export default function ProducaoPage() {
   const handleAbrirAssinatura = async (item: typeof modalDetalhesItem) => {
     if (!item) return
     setAbrindoAssinatura(true)
+    // Abre a aba imediatamente no clique para garantir que navegadores (Chrome, Safari, Firefox) não bloqueiem como popup
+    const popup = window.open("about:blank", "_blank")
+
     try {
       if (item.tipo === "orcamento") {
         const res = await fetch(`/api/assinar/por-orcamento/${item.id}`)
         const data = res.ok ? await res.json() : null
         if (data?.assinado && data.pdfUrl) {
-          window.open(data.pdfUrl, "_blank")
+          if (popup) popup.location.href = data.pdfUrl
+          else window.location.href = data.pdfUrl
           return
         }
         if (data?.token) {
-          window.open(`/assinar/${data.token}`, "_blank")
+          const destino = `/assinar/${data.token}`
+          if (popup) popup.location.href = destino
+          else window.location.href = destino
           return
         }
         const resCriar = await fetch("/api/assinar/criar", {
@@ -471,13 +477,17 @@ export default function ProducaoPage() {
         if (resCriar.ok) {
           const d = await resCriar.json()
           if (d.url) {
-            window.open(d.url, "_blank")
+            if (popup) popup.location.href = d.url
+            else window.location.href = d.url
             return
           }
         }
       }
-      window.open(item.contratoUrl || `/orcamentos/${item.id}/contrato`, "_blank")
+      const fallbackUrl = item.contratoUrl || `/orcamentos/${item.id}/contrato`
+      if (popup) popup.location.href = fallbackUrl
+      else window.location.href = fallbackUrl
     } catch {
+      if (popup) popup.close()
       toast.error("Erro ao abrir link de assinatura")
     } finally {
       setAbrindoAssinatura(false)

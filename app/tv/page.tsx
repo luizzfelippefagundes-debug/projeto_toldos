@@ -176,7 +176,7 @@ function PedidoCard({
   return (
     <div
       key={pedido.id}
-      className={`shrink-0 rounded-2xl border-2 transition-all p-2.5 sm:p-3 shadow-sm w-full min-w-0 max-w-full overflow-hidden ${
+      className={`shrink-0 rounded-2xl border-2 transition-all p-2 sm:p-2.5 shadow-sm w-full min-w-0 max-w-full overflow-hidden ${
         temProblema
           ? "border-red-600 bg-red-100/95 dark:border-red-500 dark:bg-red-950/85 ring-4 ring-red-500/30 shadow-lg animate-[pulse_3s_ease-in-out_infinite]"
           : atrasado
@@ -233,7 +233,7 @@ function PedidoCard({
       </p>
 
       {/* Bloco: O QUE É PRA FAZER (Destaque total para a fábrica - NUNCA CORTA) */}
-      <div className="mt-1.5 flex flex-col gap-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-2 sm:p-2.5 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs min-w-0 max-w-full overflow-hidden">
+      <div className="mt-1 flex flex-col gap-1 sm:gap-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-1.5 sm:p-2 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs min-w-0 max-w-full overflow-hidden">
         {/* Medidas / Quantidade */}
         {pedido.variante_nome && (
           <div className="w-full max-w-full rounded-lg bg-primary/15 border border-primary/30 px-2 py-1 text-primary box-border">
@@ -464,17 +464,17 @@ function TvColuna({
   return (
     <div
       id={`tv-coluna-${status}`}
-      className="flex h-full min-h-0 flex-1 min-w-[210px] sm:min-w-[230px] 2xl:min-w-0 flex-col gap-2"
+      className="flex h-full min-h-0 flex-1 min-w-0 flex-col gap-1.5 sm:gap-2 overflow-hidden"
     >
       {/* Cabeçalho da coluna */}
       <div
-        className={`flex shrink-0 items-center justify-between rounded-xl border px-3 py-2 shadow-2xs ${borda} ${fundo}`}
+        className={`flex shrink-0 items-center justify-between rounded-xl border px-2 sm:px-2.5 py-1.5 shadow-2xs gap-1 min-w-0 ${borda} ${fundo}`}
       >
-        <span className="text-sm sm:text-base lg:text-lg font-black tracking-tight truncate text-foreground">
+        <span className="text-xs sm:text-sm lg:text-base font-black tracking-tight truncate text-foreground min-w-0">
           {label}
         </span>
         <span
-          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs sm:text-sm font-black ${
+          className={`shrink-0 rounded-full px-2 py-0.5 text-xs sm:text-sm font-black ${
             pedidos.length > 0
               ? "bg-foreground/20 text-foreground"
               : "bg-black/5 dark:bg-white/5 text-muted-foreground opacity-40"
@@ -652,13 +652,13 @@ function TvColunaEmergencias({
   return (
     <div
       id="tv-coluna-emergencias"
-      className="flex h-full min-h-0 flex-1 min-w-[210px] sm:min-w-[230px] 2xl:min-w-0 flex-col gap-2"
+      className="flex h-full min-h-0 flex-1 min-w-0 flex-col gap-1.5 sm:gap-2 overflow-hidden"
     >
       {/* Cabeçalho da Coluna de Emergências */}
-      <div className="flex shrink-0 items-center justify-between rounded-xl border-2 border-red-600 bg-gradient-to-r from-red-600/20 via-red-500/15 to-red-600/20 dark:bg-red-950/70 px-2.5 sm:px-3 py-2 shadow-lg ring-2 ring-red-500/50">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-base sm:text-lg animate-bounce leading-none shrink-0">🚨</span>
-          <span className="text-xs sm:text-sm lg:text-base font-black tracking-tight truncate text-red-700 dark:text-red-300 uppercase">
+      <div className="flex shrink-0 items-center justify-between rounded-xl border-2 border-red-600 bg-gradient-to-r from-red-600/20 via-red-500/15 to-red-600/20 dark:bg-red-950/70 px-2 sm:px-2.5 py-1.5 shadow-lg ring-2 ring-red-500/50 gap-1 min-w-0">
+        <div className="flex items-center gap-1 min-w-0">
+          <span className="text-sm sm:text-base animate-bounce leading-none shrink-0">🚨</span>
+          <span className="text-[11px] sm:text-xs lg:text-sm font-black tracking-tight truncate text-red-700 dark:text-red-300 uppercase min-w-0">
             Emergências
           </span>
         </div>
@@ -1056,7 +1056,7 @@ export default function TvPage() {
   }, [pedidosEfetivos, filtroStatusMobile, pedidosAlertas])
 
   return (
-    <div className="group/tv flex h-screen max-h-screen w-screen overflow-hidden flex-col gap-2.5 sm:gap-3 p-2.5 sm:p-4 bg-background">
+    <div className="group/tv flex h-screen max-h-screen w-full max-w-full overflow-hidden flex-col gap-2 sm:gap-2.5 p-2 sm:p-3 bg-background box-border">
 
       {/* Barra flutuante de utilitários da TV — visível ao passar o mouse ou interagir */}
       <div className="fixed top-2.5 right-3 z-50 flex items-center gap-2 opacity-0 sm:group-hover/tv:opacity-100 transition-opacity duration-200">
@@ -1370,8 +1370,8 @@ export default function TvPage() {
         </div>
       </div>
 
-      {/* Visualização DESKTOP / TV: Kanban lado a lado com auto-scroll infinito */}
-      <div className="flex-1 min-h-0 hidden md:flex flex-row gap-2 sm:gap-2.5 w-full overflow-x-auto overflow-y-hidden [scrollbar-width:thin] pb-1">
+      {/* Visualização DESKTOP / TV: Kanban lado a lado com auto-scroll infinito (100% responsivo para qualquer TV) */}
+      <div className="flex-1 min-h-0 hidden md:flex flex-row gap-1.5 sm:gap-2 w-full max-w-full overflow-hidden pb-0.5">
         {/* Coluna Dedicada de Avisos & Emergências da Fábrica */}
         {config?.mostrarColunaAlertas !== false && (avisosAtivos.length > 0 || pedidosAlertas.length > 0) && (
           <TvColunaEmergencias
