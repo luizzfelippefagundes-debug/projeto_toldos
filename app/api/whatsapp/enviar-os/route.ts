@@ -21,7 +21,14 @@ export async function POST(req: Request) {
   await garantirTabelaAssinaturasOs()
 
   const sql = getSql()
-  const rows = await sql`SELECT * FROM orcamentos WHERE id = ${orcamentoId} LIMIT 1`
+  const semPrefixo = orcamentoId.startsWith("orc-") ? orcamentoId.slice(4) : orcamentoId
+  const comPrefixo = orcamentoId.startsWith("orc-") ? orcamentoId : `orc-${orcamentoId}`
+
+  const rows = await sql`
+    SELECT * FROM orcamentos 
+    WHERE id = ${orcamentoId} OR id = ${comPrefixo} OR id = ${semPrefixo} 
+    LIMIT 1
+  `
   if (rows.length === 0) {
     return NextResponse.json({ erro: "Orçamento não encontrado" }, { status: 404 })
   }

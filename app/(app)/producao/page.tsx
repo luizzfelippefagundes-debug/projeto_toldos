@@ -390,6 +390,8 @@ export default function ProducaoPage() {
 
   const [abrindoAssinatura, setAbrindoAssinatura] = useState(false)
   const [enviandoCobrancaModal, setEnviandoCobrancaModal] = useState(false)
+  const [enviandoOsWhatsapp, setEnviandoOsWhatsapp] = useState(false)
+  const [enviandoAssinaturaWhatsapp, setEnviandoAssinaturaWhatsapp] = useState(false)
 
   const handleAbrirOsPdf = (item: typeof modalDetalhesItem) => {
     if (!item) return
@@ -397,6 +399,45 @@ export default function ProducaoPage() {
       window.open(`/api/orcamentos/${item.id}/os/pdf`, "_blank")
     } else {
       window.open(item.osUrl || `/orcamentos/${item.id}/os`, "_blank")
+    }
+  }
+
+  const handleEnviarOsWhatsapp = async (item: typeof modalDetalhesItem) => {
+    if (!item) return
+    if (!item.clienteTelefone) {
+      toast.error("Este cliente não tem telefone cadastrado.")
+      return
+    }
+    setEnviandoOsWhatsapp(true)
+    try {
+      if (item.tipo === "orcamento") {
+        const res = await fetch("/api/whatsapp/enviar-os", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orcamentoId: item.id,
+            telefone: normalizarTelefone(item.clienteTelefone),
+          }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          throw new Error(data.erro || "Falha no envio automático")
+        }
+        toast.success("Ordem de Serviço (PDF) enviada no WhatsApp do cliente!")
+      } else {
+        const msg = `Olá, ${item.clienteNome.split(" ")[0]}! Segue a Ordem de Serviço #${item.numero} da Toldos Print. 📄✨`
+        const link = linkWhatsapp(item.clienteTelefone, msg)
+        if (link) window.open(link, "_blank")
+        toast.success("WhatsApp aberto!")
+      }
+    } catch (err: any) {
+      console.warn("Erro ao enviar OS via bot, abrindo WhatsApp:", err)
+      const msg = `Olá, ${item.clienteNome.split(" ")[0]}! Segue sua Ordem de Serviço nº ${item.numero} da Toldos Print. 📄✨\n\n💰 Valor Total: ${(item.total || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}\n\nChave Pix (CNPJ): 09.141.206/0001-06\nFavorecido: Toldos Print & Comunicação Visual`
+      const link = linkWhatsapp(item.clienteTelefone, msg)
+      if (link) window.open(link, "_blank")
+      toast.info("WhatsApp aberto com os dados da OS.")
+    } finally {
+      setEnviandoOsWhatsapp(false)
     }
   }
 
@@ -433,6 +474,68 @@ export default function ProducaoPage() {
       toast.error("Erro ao abrir link de assinatura")
     } finally {
       setAbrindoAssinatura(false)
+    }
+  }
+
+  const handleEnviarAssinaturaWhatsapp = async (item: typeof modalDetalhesItem) => {
+    if (!item) return
+    if (!item.clienteTelefone) {
+      toast.error("Este cliente não tem telefone cadastrado.")
+      return
+    }
+    setEnviandoAssinaturaWhatsapp(true)
+    try {
+      if (item.tipo === "orcamento") {
+        if (item.contratoAssinado) {
+          const res = await fetch("/api/whatsapp/reenviar-contrato", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orcamentoId: item.id,
+              telefone: normalizarTelefone(item.clienteTelefone),
+            }),
+          })
+          if (res.ok) {
+            toast.success("Contrato assinado reenviado no WhatsApp!")
+            return
+          }
+        }
+
+        let linkAssinatura = ""
+        const resToken = await fetch("/api/assinar/criar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orcamentoId: item.id }),
+        })
+        if (resToken.ok) {
+          const dToken = await resToken.json()
+          linkAssinatura = dToken.url
+        }
+
+        const msg = `Olá, ${item.clienteNome.split(" ")[0]}! Segue o link para conferência e assinatura digital da sua Ordem de Serviço nº ${item.numero} da Toldos Print: ✍️📄\n\n👉 ${linkAssinatura || `${window.location.origin}/orcamentos/${item.id}/contrato`}\n\nVocê pode assinar diretamente na tela do seu celular em menos de 1 minuto!`
+
+        await fetch("/api/whatsapp/enviar-notificacao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            telefone: normalizarTelefone(item.clienteTelefone),
+            mensagem: msg,
+            clienteNome: item.clienteNome,
+          }),
+        }).catch(() => {})
+
+        const link = linkWhatsapp(item.clienteTelefone, msg)
+        if (link) window.open(link, "_blank")
+        toast.success("Link de assinatura enviado no WhatsApp!")
+      } else {
+        const msg = `Olá, ${item.clienteNome.split(" ")[0]}! Segue o link para assinar sua OS nº ${item.numero}: ✍️`
+        const link = linkWhatsapp(item.clienteTelefone, msg)
+        if (link) window.open(link, "_blank")
+      }
+    } catch {
+      toast.error("Erro ao enviar link de assinatura no WhatsApp.")
+    } finally {
+      setEnviandoAssinaturaWhatsapp(false)
     }
   }
 
@@ -3308,76 +3411,135 @@ export default function ProducaoPage() {
               </div>
             )}
 
-            {/* Documentos & Cobrança (Pix, Cartão, OS e Assinatura) */}
+            {/* Documentos, Assinatura & Pagamento */}
             {modalDetalhesItem && (
-              <div className="flex flex-col gap-2 pt-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Documentos & Pagamento
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {/* 1. Abrir OS em PDF */}
-                  <button
-                    type="button"
-                    onClick={() => handleAbrirOsPdf(modalDetalhesItem)}
-                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border/80 transition-all active:scale-[0.98] cursor-pointer"
-                    title="Visualizar ou imprimir a Ordem de Serviço em PDF com QR Code Pix"
-                  >
-                    <Printer className="h-4 w-4 text-primary shrink-0" />
-                    <span>Abrir OS (PDF)</span>
-                  </button>
-
-                  {/* 2. Abrir para Assinar */}
-                  <button
-                    type="button"
-                    onClick={() => handleAbrirAssinatura(modalDetalhesItem)}
-                    disabled={abrindoAssinatura}
-                    className={cn(
-                      "flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold border transition-all active:scale-[0.98] cursor-pointer",
-                      modalDetalhesItem?.contratoAssinado
-                        ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                        : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border-amber-500/30"
-                    )}
-                  >
-                    <FileCheck className="h-4 w-4 shrink-0" />
-                    <span>
-                      {abrindoAssinatura
-                        ? "Abrindo..."
-                        : modalDetalhesItem?.contratoAssinado
-                        ? "Ver Assinado (PDF)"
-                        : "Abrir p/ Assinar (Ag. Assinatura)"}
+              <div className="flex flex-col gap-3 pt-1">
+                {/* 1. Bloco Ordem de Serviço */}
+                <div className="flex flex-col gap-1.5 p-2.5 rounded-xl border border-border/70 bg-muted/20">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-foreground font-semibold">
+                      <Printer className="h-3.5 w-3.5 text-primary" />
+                      Ordem de Serviço (OS #{modalDetalhesItem.numero})
                     </span>
-                  </button>
+                    <span className="text-[10px] text-muted-foreground font-medium">PDF & WhatsApp</span>
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAbrirOsPdf(modalDetalhesItem)}
+                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold border border-border/80 transition-all active:scale-[0.98] cursor-pointer"
+                      title="Abrir PDF da Ordem de Serviço para visualizar ou imprimir"
+                    >
+                      <Printer className="h-4 w-4 text-primary shrink-0" />
+                      <span>Imprimir / Abrir PDF</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEnviarOsWhatsapp(modalDetalhesItem)}
+                      disabled={enviandoOsWhatsapp}
+                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer"
+                      title="Enviar documento PDF da OS diretamente para o WhatsApp do cliente"
+                    >
+                      <MessageCircle className="h-4 w-4 shrink-0" />
+                      <span>{enviandoOsWhatsapp ? "Enviando..." : "Enviar OS no WhatsApp"}</span>
+                    </button>
+                  </div>
+                </div>
 
-                  {/* 3. Enviar Cobrança no WhatsApp (Pix + Cartão 12x) */}
-                  <button
-                    type="button"
-                    onClick={() => handleEnviarCobrancaWhatsapp(modalDetalhesItem)}
-                    disabled={enviandoCobrancaModal}
-                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white font-bold transition-all shadow-xs cursor-pointer"
-                    title="Enviar mensagem com Pix Copia e Cola e Link do Cartão em até 12x"
-                  >
-                    <MessageCircle className="h-4 w-4 shrink-0" />
-                    <span>{enviandoCobrancaModal ? "Enviando..." : "Enviar Pix & Cartão (Zap)"}</span>
-                  </button>
+                {/* 2. Bloco Assinatura Digital & Contrato */}
+                <div className="flex flex-col gap-1.5 p-2.5 rounded-xl border border-border/70 bg-muted/20">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-foreground font-semibold">
+                      <FileCheck className="h-3.5 w-3.5 text-amber-500" />
+                      Assinatura Digital & Contrato
+                    </span>
+                    {modalDetalhesItem.contratoAssinado ? (
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">✓ Assinado</span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">Ag. Assinatura</span>
+                    )}
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAbrirAssinatura(modalDetalhesItem)}
+                      disabled={abrindoAssinatura}
+                      className={cn(
+                        "flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold border transition-all active:scale-[0.98] cursor-pointer",
+                        modalDetalhesItem?.contratoAssinado
+                          ? "bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                          : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                      )}
+                      title={modalDetalhesItem?.contratoAssinado ? "Ver o contrato assinado pelo cliente em PDF" : "Abrir tela para o cliente assinar agora na fábrica"}
+                    >
+                      <FileCheck className="h-4 w-4 shrink-0" />
+                      <span>
+                        {abrindoAssinatura
+                          ? "Abrindo..."
+                          : modalDetalhesItem?.contratoAssinado
+                          ? "Ver Assinado (PDF)"
+                          : "Abrir p/ Assinar na Tela"}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEnviarAssinaturaWhatsapp(modalDetalhesItem)}
+                      disabled={enviandoAssinaturaWhatsapp}
+                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer"
+                      title="Enviar link de assinatura digital ou contrato assinado para o WhatsApp do cliente"
+                    >
+                      <MessageCircle className="h-4 w-4 shrink-0" />
+                      <span>
+                        {enviandoAssinaturaWhatsapp
+                          ? "Enviando..."
+                          : modalDetalhesItem?.contratoAssinado
+                          ? "Reenviar Contrato (Zap)"
+                          : "Enviar Link no WhatsApp"}
+                      </span>
+                    </button>
+                  </div>
+                </div>
 
-                  {/* 4. Cobrança no Cartão / Maquininha Point Smart */}
-                  <CobrancaCartaoDialog
-                    orcamentoId={modalDetalhesItem.tipo === "orcamento" ? modalDetalhesItem.id : undefined}
-                    numeroOrcamento={modalDetalhesItem.numero}
-                    valorTotal={modalDetalhesItem.total || 0}
-                    nomeCliente={modalDetalhesItem.clienteNome}
-                    telefoneCliente={modalDetalhesItem.clienteTelefone || undefined}
-                    trigger={
-                      <button
-                        type="button"
-                        className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold transition-all shadow-xs cursor-pointer"
-                        title="Cobrar com link do Mercado Pago ou na Maquininha física da loja"
-                      >
-                        <CreditCard className="h-4 w-4 shrink-0" />
-                        <span>Cobrar Cartão / Maquininha</span>
-                      </button>
-                    }
-                  />
+                {/* 3. Bloco Cobrança & Formas de Pagamento */}
+                <div className="flex flex-col gap-1.5 p-2.5 rounded-xl border border-border/70 bg-muted/20">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-foreground font-semibold">
+                      <CreditCard className="h-3.5 w-3.5 text-green-500" />
+                      Cobrança (Pix & Cartão em até 12x)
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-bold">
+                      {(modalDetalhesItem.total || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </span>
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleEnviarCobrancaWhatsapp(modalDetalhesItem)}
+                      disabled={enviandoCobrancaModal}
+                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shadow-xs"
+                      title="Enviar mensagem completa com Chave Pix, Copia e Cola e Link do Cartão em 12x"
+                    >
+                      <MessageCircle className="h-4 w-4 shrink-0" />
+                      <span>{enviandoCobrancaModal ? "Enviando..." : "Enviar Pix & Cartão (Zap)"}</span>
+                    </button>
+                    <CobrancaCartaoDialog
+                      orcamentoId={modalDetalhesItem.tipo === "orcamento" ? modalDetalhesItem.id : undefined}
+                      numeroOrcamento={modalDetalhesItem.numero}
+                      valorTotal={modalDetalhesItem.total || 0}
+                      nomeCliente={modalDetalhesItem.clienteNome}
+                      telefoneCliente={modalDetalhesItem.clienteTelefone || undefined}
+                      trigger={
+                        <button
+                          type="button"
+                          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
+                          title="Cobrar na Maquininha Point Smart ou copiar link Mercado Pago"
+                        >
+                          <CreditCard className="h-4 w-4 shrink-0" />
+                          <span>Cobrar Cartão / Maquininha</span>
+                        </button>
+                      }
+                    />
+                  </div>
                 </div>
               </div>
             )}

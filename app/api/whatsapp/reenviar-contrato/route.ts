@@ -16,9 +16,18 @@ export async function POST(req: Request) {
     }
 
     const sql = getSql()
-    const rows = orcamentoId
-      ? await sql`SELECT * FROM orcamentos WHERE id = ${orcamentoId} LIMIT 1`
-      : await sql`SELECT * FROM orcamentos WHERE numero = ${Number(numero)} LIMIT 1`
+    let rows: any[] = []
+    if (orcamentoId) {
+      const semPrefixo = orcamentoId.startsWith("orc-") ? orcamentoId.slice(4) : orcamentoId
+      const comPrefixo = orcamentoId.startsWith("orc-") ? orcamentoId : `orc-${orcamentoId}`
+      rows = await sql`
+        SELECT * FROM orcamentos 
+        WHERE id = ${orcamentoId} OR id = ${comPrefixo} OR id = ${semPrefixo} 
+        LIMIT 1
+      `
+    } else {
+      rows = await sql`SELECT * FROM orcamentos WHERE numero = ${Number(numero)} LIMIT 1`
+    }
 
     if (rows.length === 0) {
       return NextResponse.json({ erro: "Orçamento não encontrado" }, { status: 404 })
