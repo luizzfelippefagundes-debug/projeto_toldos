@@ -330,6 +330,8 @@ export default function ProducaoPage() {
   const [qcUploading, setQcUploading] = useState(false)
   const [qcFotomUrl, setQcFotomUrl] = useState<string | null>(null)
   const qcFileInputRef = useRef<HTMLInputElement>(null)
+  const qcCameraInputRef = useRef<HTMLInputElement>(null)
+  const qcGaleriaInputRef = useRef<HTMLInputElement>(null)
   const [equipeDisponivel, setEquipeDisponivel] = useState<string[]>([
     "Marcos",
     "Lucas",
@@ -638,6 +640,8 @@ export default function ProducaoPage() {
     } finally {
       setQcUploading(false)
       if (qcFileInputRef.current) qcFileInputRef.current.value = ""
+      if (qcCameraInputRef.current) qcCameraInputRef.current.value = ""
+      if (qcGaleriaInputRef.current) qcGaleriaInputRef.current.value = ""
     }
   }
 
@@ -2916,22 +2920,37 @@ export default function ProducaoPage() {
               </p>
 
               {qcFotomUrl ? (
-                <div className="relative group rounded-xl overflow-hidden border-2 border-emerald-500/50 h-52 bg-black/10 flex items-center justify-center shadow-inner">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={qcFotomUrl} alt="Foto da peça pronta" className="max-h-full max-w-full object-contain" />
-                  <div className="absolute top-2 left-2 bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-full shadow-xs flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    Foto Anexada
+                <div className="flex flex-col gap-2">
+                  <div className="relative group rounded-xl overflow-hidden border-2 border-emerald-500/50 h-52 bg-black/10 flex items-center justify-center shadow-inner">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={qcFotomUrl} alt="Foto da peça pronta" className="max-h-full max-w-full object-contain" />
+                    <div className="absolute top-2 left-2 bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-full shadow-xs flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Foto Anexada
+                    </div>
                   </div>
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <Button
                       type="button"
                       size="sm"
-                      variant="secondary"
-                      onClick={() => qcFileInputRef.current?.click()}
+                      variant="outline"
+                      onClick={() => qcCameraInputRef.current?.click()}
                       disabled={qcUploading}
+                      className="text-xs font-bold gap-1 cursor-pointer"
                     >
-                      Trocar Foto
+                      <Camera className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>Câmera</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => qcGaleriaInputRef.current?.click()}
+                      disabled={qcUploading}
+                      className="text-xs font-bold gap-1 cursor-pointer"
+                    >
+                      <ImageIcon className="h-3.5 w-3.5 text-blue-600" />
+                      <span>Galeria</span>
                     </Button>
                     <Button
                       type="button"
@@ -2939,33 +2958,73 @@ export default function ProducaoPage() {
                       variant="destructive"
                       onClick={() => setQcFotomUrl(null)}
                       disabled={qcUploading}
+                      className="text-xs font-bold cursor-pointer"
                     >
                       Remover
                     </Button>
                   </div>
                 </div>
               ) : (
-                <label className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-emerald-500 hover:border-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/15 py-8 px-4 cursor-pointer transition-all text-center group active:scale-[0.99]">
-                  {qcUploading ? (
-                    <>
-                      <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
-                      <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">Enviando foto da peça...</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="h-14 w-14 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                        <Camera className="h-8 w-8" />
-                      </div>
-                      <span className="text-sm font-black text-emerald-800 dark:text-emerald-200">
-                        📸 TIRAR FOTO COM A CÂMERA DO CELULAR
-                      </span>
-                      <span className="text-xs text-muted-foreground font-medium">
-                        Toque aqui para abrir a câmera ou escolher da galeria
-                      </span>
-                    </>
-                  )}
+                <div className="flex flex-col gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {/* Botão 1: Abrir Câmera do Celular */}
+                    <button
+                      type="button"
+                      onClick={() => qcCameraInputRef.current?.click()}
+                      disabled={qcUploading}
+                      className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-emerald-500 hover:border-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 py-7 px-4 cursor-pointer transition-all active:scale-[0.98] text-center"
+                    >
+                      {qcUploading ? (
+                        <>
+                          <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
+                          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Enviando foto...</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="h-12 w-12 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs">
+                            <Camera className="h-6 w-6" />
+                          </div>
+                          <span className="text-xs sm:text-sm font-black text-emerald-800 dark:text-emerald-200 uppercase tracking-wide">
+                            📸 Abrir Câmera
+                          </span>
+                          <span className="text-[11px] text-muted-foreground font-medium">
+                            Tirar foto na bancada agora
+                          </span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Botão 2: Pegar na Galeria / Arquivos */}
+                    <button
+                      type="button"
+                      onClick={() => qcGaleriaInputRef.current?.click()}
+                      disabled={qcUploading}
+                      className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-blue-500 hover:border-blue-600 bg-blue-500/10 hover:bg-blue-500/20 py-7 px-4 cursor-pointer transition-all active:scale-[0.98] text-center"
+                    >
+                      {qcUploading ? (
+                        <>
+                          <div className="h-8 w-8 animate-spin rounded-full border-3 border-blue-600 border-t-transparent" />
+                          <span className="text-xs font-bold text-blue-700 dark:text-blue-300">Enviando foto...</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="h-12 w-12 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-xs">
+                            <ImageIcon className="h-6 w-6" />
+                          </div>
+                          <span className="text-xs sm:text-sm font-black text-blue-800 dark:text-blue-200 uppercase tracking-wide">
+                            🖼️ Pegar na Galeria
+                          </span>
+                          <span className="text-[11px] text-muted-foreground font-medium">
+                            Escolher foto salva ou arquivo
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Input 1: Câmera com capture="environment" */}
                   <input
-                    ref={qcFileInputRef}
+                    ref={qcCameraInputRef}
                     type="file"
                     accept="image/*"
                     capture="environment"
@@ -2973,7 +3032,17 @@ export default function ProducaoPage() {
                     disabled={qcUploading}
                     onChange={handleUploadQcFoto}
                   />
-                </label>
+
+                  {/* Input 2: Galeria / Arquivos sem capture */}
+                  <input
+                    ref={qcGaleriaInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={qcUploading}
+                    onChange={handleUploadQcFoto}
+                  />
+                </div>
               )}
             </div>
 
@@ -3084,17 +3153,27 @@ export default function ProducaoPage() {
                 <span>Concluir Peça & Enviar ao Kaio</span>
               </Button>
             ) : (
-              <Button
-                type="button"
-                onClick={() => {
-                  qcFileInputRef.current?.click()
-                  toast.info("📸 Abra a câmera para tirar a foto da peça!")
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-              >
-                <Camera className="mr-1.5 h-4 w-4" />
-                <span>Tirar Foto da Peça para Concluir</span>
-              </Button>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  type="button"
+                  onClick={() => qcCameraInputRef.current?.click()}
+                  disabled={qcUploading}
+                  className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                >
+                  <Camera className="mr-1.5 h-4 w-4" />
+                  <span>Abrir Câmera</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => qcGaleriaInputRef.current?.click()}
+                  disabled={qcUploading}
+                  className="flex-1 sm:flex-none font-bold text-xs border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+                >
+                  <ImageIcon className="mr-1.5 h-4 w-4" />
+                  <span>Pegar na Galeria</span>
+                </Button>
+              </div>
             )}
           </DialogFooter>
         </DialogContent>
