@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useUser } from "@clerk/nextjs"
 import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from "react"
 import {
   DndContext,
@@ -244,7 +245,12 @@ function iniciais(nome: string) {
 }
 
 export default function ProducaoPage() {
+  const { user } = useUser()
   const { papel } = usePapelAtivo()
+  const meuNome = useMemo(() => {
+    if (!user) return ""
+    return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username || ""
+  }, [user])
   const {
     pedidosRapidos,
     produtosRapidos,
@@ -337,11 +343,11 @@ export default function ProducaoPage() {
       .then((dados) => {
         if (Array.isArray(dados) && dados.length > 0) {
           const nomes = dados.map((u: any) => u.nome).filter(Boolean)
-          setEquipeDisponivel((prev) => Array.from(new Set([...prev, ...nomes])))
+          setEquipeDisponivel((prev) => Array.from(new Set([...prev, ...nomes, ...(meuNome ? [meuNome] : [])])))
         }
       })
       .catch(() => {})
-  }, [])
+  }, [meuNome])
 
   const [modalProblemaItem, setModalProblemaItem] = useState<{
     tipo: "pedido" | "orcamento"
@@ -394,9 +400,13 @@ export default function ProducaoPage() {
       setModalQcItem(item)
       setQcChecks({ medidas: true, acabamento: true, visual: true })
       setQcFotomUrl(item.fotoAtual || null)
-      setColaboradoresSelecionados([])
+      if (meuNome) {
+        setColaboradoresSelecionados([meuNome])
+      } else {
+        setColaboradoresSelecionados([])
+      }
     },
-    []
+    [meuNome]
   )
 
   const handleUploadQcFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -478,22 +488,32 @@ export default function ProducaoPage() {
     const item = modalQcItem
     setModalQcItem(null)
 
-    if (item.tipo === "pedido") {
-      solicitarConfirmacao(
-        item.clienteNome,
-        item.clienteTelefone,
-        "pronto",
-        () => moverPedidoRapido(item.id, "pronto"),
-        item.id
-      )
+    if (papel === "operador") {
+      // Para o operador de fábrica: mover direto para pronto sem travar em confirmação de WhatsApp
+      if (item.tipo === "pedido") {
+        moverPedidoRapido(item.id, "pronto")
+      } else {
+        moverOrcamentoProducao(item.id, "pronto")
+      }
+      toast.success(`✅ Peça #${item.numero} concluída e movida para Prontos!`)
     } else {
-      solicitarConfirmacao(
-        item.clienteNome,
-        item.clienteTelefone,
-        "pronto",
-        () => moverOrcamentoProducao(item.id, "pronto"),
-        item.id
-      )
+      if (item.tipo === "pedido") {
+        solicitarConfirmacao(
+          item.clienteNome,
+          item.clienteTelefone,
+          "pronto",
+          () => moverPedidoRapido(item.id, "pronto"),
+          item.id
+        )
+      } else {
+        solicitarConfirmacao(
+          item.clienteNome,
+          item.clienteTelefone,
+          "pronto",
+          () => moverOrcamentoProducao(item.id, "pronto"),
+          item.id
+        )
+      }
     }
   }
 
@@ -1232,9 +1252,10 @@ export default function ProducaoPage() {
   }
 
   // Visão Ultralimpa e Direta para o Colaborador (Chão de Fábrica)
-  if (papel === "operador") {
-    return (
-      <div className="flex flex-col gap-4 max-w-2xl mx-auto pb-12">
+  return (
+    <>
+      {papel === "operador" ? (
+        <div className="flex flex-col gap-4 max-w-2xl mx-auto pb-12">
         {/* Header Colaborador */}
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -1534,105 +1555,10 @@ export default function ProducaoPage() {
             ))
           )}
         </div>
-
-        {/* Modal de Arte também disponível para o colaborador */}
-        <Dialog open={!!modalArtePreview} onOpenChange={(open) => { if (!open) setModalArtePreview(null) }}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-4">
-            <DialogHeader>
-              <DialogTitle className="text-sm font-bold truncate">
-                {modalArtePreview?.titulo || "Arte"}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="flex-1 min-h-[250px] max-h-[60vh] overflow-auto flex items-center justify-center bg-black/5 dark:bg-black/30 rounded-xl p-2">
-              {modalArtePreview?.url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={modalArtePreview.url} alt="Arte" className="max-h-full max-w-full object-contain rounded-lg" />
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" size="sm" onClick={() => setModalArtePreview(null)}>
-                Fechar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Modal Reportar Problema / Retrabalho para Colaborador */}
-        <Dialog open={!!modalProblemaItem} onOpenChange={(open) => { if (!open && !salvandoProblema) setModalProblemaItem(null) }}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base font-bold text-destructive">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-                <span>Reportar Problema na Demanda</span>
-              </DialogTitle>
-              <DialogDescription>
-                Informe o que está travando o item #{modalProblemaItem?.numero} ({modalProblemaItem?.clienteNome}). O Kaio será notificado imediatamente.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex flex-col gap-3 py-1">
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold">Motivo do Problema:</Label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {[
-                    "Falta de material / Bobina",
-                    "Erro de impressão / Cabeçote",
-                    "Medidas incorretas",
-                    "Máquina / Plotter parada",
-                    "Arquivo de arte corrompido",
-                    "Outro problema",
-                  ].map((motivo) => (
-                    <button
-                      key={motivo}
-                      type="button"
-                      onClick={() => setMotivoProblema(motivo)}
-                      className={cn(
-                        "rounded-lg p-2 text-left text-xs font-medium border transition-colors",
-                        motivoProblema === motivo
-                          ? "border-destructive bg-destructive/10 text-destructive font-bold"
-                          : "border-border/80 bg-background hover:bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {motivo}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs font-semibold">Detalhes adicionais (opcional):</Label>
-                <Textarea
-                  rows={3}
-                  placeholder="Ex: lona 440g acabou, ilhós soltando, arquivo com corte invertido..."
-                  value={detalheProblema}
-                  onChange={(e) => setDetalheProblema(e.target.value)}
-                  className="text-xs resize-none"
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setModalProblemaItem(null)} disabled={salvandoProblema}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleRegistrarProblema}
-                disabled={salvandoProblema || (!motivoProblema && !detalheProblema.trim())}
-                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold"
-              >
-                <AlertTriangle className="mr-1.5 h-4 w-4" />
-                <span>{salvandoProblema ? "Salvando..." : "Emitir Alerta ao Kaio"}</span>
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-4 sm:gap-6">
-      {/* Header */}
+    ) : (
+      <div className="flex flex-col gap-4 sm:gap-6">
+        {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Produção</h1>
@@ -2245,65 +2171,6 @@ export default function ProducaoPage() {
         )}
       </div>
 
-      {/* Modal de confirmação ao mover para ag_confirmacao/pronto/entregue */}
-      <Dialog open={!!confirmando} onOpenChange={(open) => { if (!open && !confirmando?.enviando) setConfirmando(null) }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {confirmando?.novoStatus === "ag_confirmacao" ? "Enviar arte para aprovação?" : confirmando?.novoStatus === "pronto" ? "Marcar como Pronto?" : "Marcar como Entregue?"}
-            </DialogTitle>
-            <DialogDescription>
-              {confirmando?.novoStatus === "ag_confirmacao"
-                ? "Deseja enviar uma mensagem ao cliente pedindo aprovação da arte antes de iniciar a produção?"
-                : confirmando?.novoStatus === "pronto"
-                  ? "Deseja avisar o cliente que o pedido está pronto para retirada/entrega?"
-                  : "Deseja enviar uma confirmação de entrega pelo WhatsApp?"}
-            </DialogDescription>
-          </DialogHeader>
-
-          {confirmando?.clienteTelefone && (
-            <div className="flex flex-col gap-2">
-              <Label>Mensagem para {confirmando.clienteNome.split(" ")[0]}</Label>
-              <Textarea
-                rows={4}
-                className="resize-none text-sm"
-                value={confirmando.mensagem}
-                onChange={(e) => setConfirmando((c) => c ? { ...c, mensagem: e.target.value } : null)}
-                disabled={confirmando.enviando}
-              />
-            </div>
-          )}
-
-          {!confirmando?.clienteTelefone && (
-            <p className="text-sm text-muted-foreground">
-              Este cliente não tem telefone cadastrado — não será possível enviar WhatsApp.
-            </p>
-          )}
-
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setConfirmando(null)} disabled={confirmando?.enviando}>
-              Cancelar
-            </Button>
-            {confirmando?.clienteTelefone && (
-              <Button variant="outline" onClick={() => confirmarMudanca(false)} disabled={confirmando?.enviando}>
-                Só mover
-              </Button>
-            )}
-            <Button
-              onClick={() => confirmarMudanca(!!confirmando?.clienteTelefone)}
-              disabled={confirmando?.enviando}
-              className={confirmando?.novoStatus === "pronto" ? "bg-green-600 hover:bg-green-700 text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white"}
-            >
-              {confirmando?.enviando
-                ? "Enviando…"
-                : confirmando?.clienteTelefone
-                  ? <><MessageCircle className="mr-1.5 h-4 w-4" />Confirmar e enviar WhatsApp</>
-                  : "Confirmar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Desktop: Caixa fixa do Kanban com rolagem interna bi-direcional */}
       <div className="hidden md:flex flex-col rounded-2xl border border-border/80 bg-muted/20 dark:bg-card/30 shadow-xs overflow-hidden">
         {/* Barra superior de status/info da caixa do Kanban */}
@@ -2603,6 +2470,67 @@ export default function ProducaoPage() {
           </DndContext>
         </div>
       </div>
+    </div>
+  )}
+
+      {/* Modal de confirmação ao mover para ag_confirmacao/pronto/entregue */}
+      <Dialog open={!!confirmando} onOpenChange={(open) => { if (!open && !confirmando?.enviando) setConfirmando(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmando?.novoStatus === "ag_confirmacao" ? "Enviar arte para aprovação?" : confirmando?.novoStatus === "pronto" ? "Marcar como Pronto?" : "Marcar como Entregue?"}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmando?.novoStatus === "ag_confirmacao"
+                ? "Deseja enviar uma mensagem ao cliente pedindo aprovação da arte antes de iniciar a produção?"
+                : confirmando?.novoStatus === "pronto"
+                  ? "Deseja avisar o cliente que o pedido está pronto para retirada/entrega?"
+                  : "Deseja enviar uma confirmação de entrega pelo WhatsApp?"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmando?.clienteTelefone && (
+            <div className="flex flex-col gap-2">
+              <Label>Mensagem para {confirmando.clienteNome.split(" ")[0]}</Label>
+              <Textarea
+                rows={4}
+                className="resize-none text-sm"
+                value={confirmando.mensagem}
+                onChange={(e) => setConfirmando((c) => c ? { ...c, mensagem: e.target.value } : null)}
+                disabled={confirmando.enviando}
+              />
+            </div>
+          )}
+
+          {!confirmando?.clienteTelefone && (
+            <p className="text-sm text-muted-foreground">
+              Este cliente não tem telefone cadastrado — não será possível enviar WhatsApp.
+            </p>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmando(null)} disabled={confirmando?.enviando}>
+              Cancelar
+            </Button>
+            {confirmando?.clienteTelefone && (
+              <Button variant="outline" onClick={() => confirmarMudanca(false)} disabled={confirmando?.enviando}>
+                Só mover
+              </Button>
+            )}
+            <Button
+              onClick={() => confirmarMudanca(!!confirmando?.clienteTelefone)}
+              disabled={confirmando?.enviando}
+              className={confirmando?.novoStatus === "pronto" ? "bg-green-600 hover:bg-green-700 text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white"}
+            >
+              {confirmando?.enviando
+                ? "Enviando…"
+                : confirmando?.clienteTelefone
+                  ? <><MessageCircle className="mr-1.5 h-4 w-4" />Confirmar e enviar WhatsApp</>
+                  : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Visualizador de Arte em Alta Resolução */}
       <Dialog open={!!modalArtePreview} onOpenChange={(open) => { if (!open) setModalArtePreview(null) }}>
@@ -3186,7 +3114,7 @@ export default function ProducaoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }
 
