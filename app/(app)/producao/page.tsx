@@ -40,6 +40,7 @@ import { usePapelAtivo } from "@/context/papel-ativo-context"
 import { dispararNotificacaoNativa } from "@/lib/notificacoes-app"
 import type { Orcamento, Cliente, PedidoRapido, ProdutoRapido, StatusPedidoRapido } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { LOGO_PRINT_BASE64 } from "@/lib/logo-data"
 import {
   obterPrazoEntregaPedido,
   pedidoRapidoEstaAtrasado,
@@ -531,9 +532,10 @@ export default function ProducaoPage() {
       <head>
         <meta charset="utf-8" />
         <title>Ficha de Produção - #${item.numero} ${item.clienteNome}</title>
+        <base href="${typeof window !== 'undefined' ? window.location.origin : ''}/">
         <style>
           @page { size: A4; margin: 12mm; }
-          * { box-sizing: border-box; }
+          * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 13px; line-height: 1.4; }
           .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
           .logo { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
@@ -566,9 +568,9 @@ export default function ProducaoPage() {
       <body>
         <div class="header">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <img src="/brand/logo-orcamento.png" alt="Toldos Print" style="height: 48px; max-width: 175px; object-fit: contain;" />
+            <img src="${LOGO_PRINT_BASE64}" alt="Toldos Print" style="height: 46px; width: auto; object-fit: contain; display: block;" />
             <div style="border-left: 1.5px solid #ccc; padding-left: 10px;">
-              <div style="font-size: 13px; font-weight: 800; color: #111; letter-spacing: -0.3px;">TOLDOS PRINT</div>
+              <div style="font-size: 14px; font-weight: 900; color: #111; letter-spacing: -0.3px;">TOLDOS PRINT</div>
               <div style="font-size: 10.5px; color: #555;">toldosprint@outlook.com · Ficha de Instrução para Bancada</div>
             </div>
           </div>

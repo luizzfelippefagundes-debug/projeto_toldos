@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo, useCallback } from "react"
+import { LOGO_PRINT_BASE64 } from "@/lib/logo-data"
 import {
   Select,
   SelectContent,
@@ -628,7 +629,7 @@ export default function EquipePage() {
           <div className="flex items-center gap-3.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/brand/logo-orcamento.png"
+              src={LOGO_PRINT_BASE64}
               alt="Toldos Print"
               className="h-12 w-auto object-contain shrink-0"
             />
