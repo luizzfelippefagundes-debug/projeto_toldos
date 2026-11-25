@@ -62,25 +62,28 @@ export async function POST(req: Request) {
     const sql = getSql()
     await garantirTabela(sql)
 
+    const rowsAnteriores = await sql`SELECT valor FROM configuracoes WHERE chave = 'tv_config'`
+    const anterior = rowsAnteriores[0]?.valor ? JSON.parse(rowsAnteriores[0].valor) : {}
+
     const novaConfig: TvConfig = {
       statusVisiveis:
         Array.isArray(corpo.statusVisiveis) && corpo.statusVisiveis.length > 0
           ? corpo.statusVisiveis
-          : DEFAULT_TV_CONFIG.statusVisiveis,
+          : (anterior.statusVisiveis || DEFAULT_TV_CONFIG.statusVisiveis),
       tiposVisiveis:
         Array.isArray(corpo.tiposVisiveis) && corpo.tiposVisiveis.length > 0
           ? corpo.tiposVisiveis
-          : DEFAULT_TV_CONFIG.tiposVisiveis,
-      mostrarAtrasados: corpo.mostrarAtrasados ?? true,
-      somAlarme: corpo.somAlarme ?? true,
-      tema: corpo.tema === "light" ? "light" : "dark",
-      apenasRecentes: corpo.apenasRecentes ?? false,
-      densidade: corpo.densidade === "compacto" ? "compacto" : "normal",
-      tamanhoFonte: corpo.tamanhoFonte === "normal" ? "normal" : "grande",
-      ocultarVazias: corpo.ocultarVazias ?? false,
-      mostrarColunaAlertas: corpo.mostrarColunaAlertas ?? true,
-      velocidadeScroll: typeof corpo.velocidadeScroll === "number" ? corpo.velocidadeScroll : 12,
-      recarregarEm: corpo.recarregarEm ? Number(corpo.recarregarEm) : undefined,
+          : (anterior.tiposVisiveis || DEFAULT_TV_CONFIG.tiposVisiveis),
+      mostrarAtrasados: corpo.mostrarAtrasados ?? anterior.mostrarAtrasados ?? true,
+      somAlarme: corpo.somAlarme ?? anterior.somAlarme ?? true,
+      tema: (corpo.tema || anterior.tema) === "light" ? "light" : "dark",
+      apenasRecentes: corpo.apenasRecentes ?? anterior.apenasRecentes ?? false,
+      densidade: (corpo.densidade || anterior.densidade) === "compacto" ? "compacto" : "normal",
+      tamanhoFonte: (corpo.tamanhoFonte || anterior.tamanhoFonte) === "normal" ? "normal" : "grande",
+      ocultarVazias: corpo.ocultarVazias ?? anterior.ocultarVazias ?? false,
+      mostrarColunaAlertas: corpo.mostrarColunaAlertas ?? anterior.mostrarColunaAlertas ?? true,
+      velocidadeScroll: typeof corpo.velocidadeScroll === "number" ? corpo.velocidadeScroll : (anterior.velocidadeScroll ?? 12),
+      recarregarEm: corpo.recarregarEm ? Number(corpo.recarregarEm) : anterior.recarregarEm,
     }
 
     await sql`

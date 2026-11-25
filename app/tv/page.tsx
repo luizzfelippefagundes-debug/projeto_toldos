@@ -844,7 +844,7 @@ export default function TvPage() {
   const [alertaRecente, setAlertaRecente] = useState<{ id: string; titulo: string; sub: string } | null>(null)
   const [alertasAtivados, setAlertasAtivados] = useState<boolean>(false)
   const versaoInicialRef = useRef<string | null>(null)
-  const ultimoRecarregarRef = useRef<number>(Date.now())
+  const ultimoRecarregarTokenRef = useRef<number | null>(null)
   const pedidosConhecidosRef = useRef<Set<string> | null>(null)
   const [config, setConfig] = useState<{
     statusVisiveis?: string[]
@@ -862,7 +862,7 @@ export default function TvPage() {
 
   const carregar = useCallback(async () => {
     try {
-      const res = await fetch("/api/tv/pedidos", { cache: "no-store" })
+      const res = await fetch(`/api/tv/pedidos?_t=${Date.now()}`, { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
 
@@ -872,15 +872,22 @@ export default function TvPage() {
           if (versaoInicialRef.current === null) {
             versaoInicialRef.current = String(data.versao)
           } else if (versaoInicialRef.current !== String(data.versao)) {
-            window.location.reload()
+            const url = new URL(window.location.href)
+            url.searchParams.set("_v", String(data.versao))
+            window.location.replace(url.toString())
             return
           }
         }
         // 2. Se o dono clicou "Atualizar Monitor da TV Agora" na Central do Telão
         if (data.config?.recarregarEm) {
-          const recarregarEm = Number(data.config.recarregarEm)
-          if (recarregarEm > ultimoRecarregarRef.current) {
-            window.location.reload()
+          const token = Number(data.config.recarregarEm)
+          if (ultimoRecarregarTokenRef.current === null) {
+            ultimoRecarregarTokenRef.current = token
+          } else if (token !== ultimoRecarregarTokenRef.current) {
+            ultimoRecarregarTokenRef.current = token
+            const url = new URL(window.location.href)
+            url.searchParams.set("_reload", String(Date.now()))
+            window.location.replace(url.toString())
             return
           }
         }
@@ -940,6 +947,13 @@ export default function TvPage() {
   }, [])
 
   useEffect(() => {
+    // Garante que a TV nunca fique presa em Service Worker ou cache estático
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((r) => r.unregister().catch(() => {}))
+      }).catch(() => {})
+    }
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     carregar()
     // Atualiza automaticamente a cada 3 segundos: qualquer mudança na Central da TV aparece na hora na TV!
