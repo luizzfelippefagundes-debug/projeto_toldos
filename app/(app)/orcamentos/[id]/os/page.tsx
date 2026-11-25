@@ -492,6 +492,24 @@ export default function OrdemDeServicoPage() {
           </div>
         </div>
 
+        {/* ──────────── FOTO DA PEÇA FINALIZADA (COMPROVAÇÃO DE PRODUÇÃO) ──────────── */}
+        {orcamento.fotoProntoUrl && (
+          <div className="mt-6 rounded-lg border-2 border-emerald-500/40 bg-emerald-50/50 p-4 print:border-gray-400">
+            <div className="flex items-center gap-2 mb-2 text-emerald-800 font-bold text-xs uppercase tracking-wider">
+              <span>📸</span>
+              <span>Comprovação de Produção (Peça Finalizada na Fábrica)</span>
+            </div>
+            <div className="max-h-64 rounded-md overflow-hidden bg-white border border-emerald-300 flex items-center justify-center p-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={orcamento.fotoProntoUrl}
+                alt="Foto da Peça Pronta"
+                className="max-h-60 max-w-full object-contain"
+              />
+            </div>
+          </div>
+        )}
+
         {/* ──────────── ASSINATURAS ──────────── */}
         <div className="mt-10 grid grid-cols-2 gap-8">
           <div className="flex flex-col items-center gap-1">

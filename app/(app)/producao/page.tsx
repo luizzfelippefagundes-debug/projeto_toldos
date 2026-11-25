@@ -384,6 +384,7 @@ export default function ProducaoPage() {
     dataEmissao?: string | null
     tipoServico?: string
     comissaoPercent?: number
+    fotoProntoUrl?: string
   } | null>(null)
 
   const abrirQc = useCallback(
@@ -489,32 +490,23 @@ export default function ProducaoPage() {
     const item = modalQcItem
     setModalQcItem(null)
 
-    if (papel === "operador") {
-      // Para o operador de fábrica: mover direto para pronto sem travar em confirmação de WhatsApp
-      if (item.tipo === "pedido") {
-        moverPedidoRapido(item.id, "pronto")
-      } else {
-        moverOrcamentoProducao(item.id, "pronto")
-      }
-      toast.success(`✅ Peça #${item.numero} concluída e movida para Prontos!`)
+    // Move sempre a peça para pronto
+    if (item.tipo === "pedido") {
+      moverPedidoRapido(item.id, "pronto")
     } else {
-      if (item.tipo === "pedido") {
-        solicitarConfirmacao(
-          item.clienteNome,
-          item.clienteTelefone,
-          "pronto",
-          () => moverPedidoRapido(item.id, "pronto"),
-          item.id
-        )
-      } else {
-        solicitarConfirmacao(
-          item.clienteNome,
-          item.clienteTelefone,
-          "pronto",
-          () => moverOrcamentoProducao(item.id, "pronto"),
-          item.id
-        )
-      }
+      moverOrcamentoProducao(item.id, "pronto")
+    }
+    toast.success(`✅ Peça #${item.numero} concluída e foto enviada ao Kaio!`)
+
+    // Opcionalmente abrir confirmação de WhatsApp se for dono/atendimento com telefone
+    if (papel !== "operador" && item.clienteTelefone) {
+      solicitarConfirmacao(
+        item.clienteNome,
+        item.clienteTelefone,
+        "pronto",
+        () => {},
+        item.id
+      )
     }
   }
 
@@ -1113,7 +1105,7 @@ export default function ProducaoPage() {
           altura: o.item.altura,
           quantidade: o.item.quantidadeUnidades || 1,
           observacao: o.observacao,
-          arteUrl: o.arteUrl,
+          arteUrl: o.arteUrl || o.anexoUrl || (o.item?.fotos && o.item.fotos.length > 0 ? o.item.fotos[0].url : undefined),
           fotoProntoUrl: o.fotoProntoUrl,
           fotosLocal: o.item.fotos?.map((f) => f.url) || (o.anexoUrl ? [o.anexoUrl] : []),
           status: o.statusProducao as StatusPedidoRapido,
@@ -1506,46 +1498,52 @@ export default function ProducaoPage() {
                       <span>Imprimir Ficha</span>
                     </button>
 
-                    {/* Botão Ver Ficha / Detalhes */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setModalDetalhesItem({
-                          tipo: item.tipo,
-                          id: item.id,
-                          numero: item.numero,
-                          clienteNome: item.clienteNome,
-                          clienteTelefone: item.clienteTelefone,
-                          total: item.valorTotal,
-                          largura: item.largura,
-                          altura: item.altura,
-                          quantidade: item.quantidade,
-                          produtoNome: item.produtoNome,
-                          varianteNome: item.varianteNome,
-                          acabamento: item.acabamento,
-                          observacao: item.observacao,
-                          arteUrl: item.arteUrl,
-                          fotosLocal: item.fotosLocal,
-                          status: item.status,
-                          comissaoPercent: item.comissaoPercent,
-                        })
-                      }}
-                      className="py-2 px-3 rounded-xl bg-muted/80 hover:bg-muted border border-border/80 text-foreground text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                      title="Ver ficha técnica completa na tela"
-                    >
-                      <Info className="h-4 w-4 text-primary" />
-                      <span>Ver Ficha</span>
-                    </button>
-
-                    {/* Botão Ver Arte (se houver) */}
-                    {item.arteUrl && (
+                    {/* Botão Ver Arte (se houver arte) OU Ver Detalhes (se não houver) */}
+                    {item.arteUrl ? (
                       <button
                         type="button"
-                        onClick={() => setModalArtePreview({ url: item.arteUrl!, titulo: `Arte #${item.numero} - ${item.clienteNome}` })}
-                        className="flex-1 py-2 px-3 rounded-xl bg-muted/70 hover:bg-muted border border-border/80 text-foreground text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        onClick={() =>
+                          setModalArtePreview({
+                            url: item.arteUrl!,
+                            titulo: `Arte #${item.numero} - ${item.clienteNome}`,
+                          })
+                        }
+                        className="flex-1 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                        title="Ver arte e layout aprovados pelo cliente em tela cheia"
                       >
-                        <Eye className="h-4 w-4 text-primary" />
+                        <Eye className="h-4 w-4" />
                         <span>Ver Arte</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModalDetalhesItem({
+                            tipo: item.tipo,
+                            id: item.id,
+                            numero: item.numero,
+                            clienteNome: item.clienteNome,
+                            clienteTelefone: item.clienteTelefone,
+                            total: item.valorTotal,
+                            largura: item.largura,
+                            altura: item.altura,
+                            quantidade: item.quantidade,
+                            produtoNome: item.produtoNome,
+                            varianteNome: item.varianteNome,
+                            acabamento: item.acabamento,
+                            observacao: item.observacao,
+                            arteUrl: item.arteUrl,
+                            fotoProntoUrl: item.fotoProntoUrl,
+                            fotosLocal: item.fotosLocal,
+                            status: item.status,
+                            comissaoPercent: item.comissaoPercent,
+                          })
+                        }}
+                        className="flex-1 py-2 px-3 rounded-xl bg-muted/80 hover:bg-muted border border-border/80 text-foreground text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        title="Ver especificações da demanda"
+                      >
+                        <Info className="h-4 w-4 text-primary" />
+                        <span>Ver Detalhes</span>
                       </button>
                     )}
 
@@ -1566,7 +1564,7 @@ export default function ProducaoPage() {
                         }}
                         className={cn(
                           "py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer",
-                          item.arteUrl ? "flex-1" : "flex-1",
+                          item.arteUrl ? "shrink-0" : "shrink-0",
                           item.observacao?.includes("ALERTA DA FÁBRICA")
                             ? "bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-300 hover:bg-red-500/25"
                             : "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-800 dark:text-amber-300"
@@ -1579,7 +1577,63 @@ export default function ProducaoPage() {
                     )}
                   </div>
 
-                  {/* O Botão Principal: Marcar como Pronto (Abre QC com Foto Obrigatória) */}
+                  {/* Se houver arte anexada, mostra a miniatura para o colaborador ver na bancada */}
+                  {item.arteUrl && (
+                    <div
+                      onClick={() =>
+                        setModalArtePreview({
+                          url: item.arteUrl!,
+                          titulo: `Arte #${item.numero} - ${item.clienteNome}`,
+                        })
+                      }
+                      className="flex items-center gap-2.5 p-2 rounded-xl border border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 cursor-pointer transition-all"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.arteUrl}
+                        alt="Arte Aprovada"
+                        className="h-12 w-16 object-contain rounded-lg border border-indigo-500/20 bg-black/5 dark:bg-black/30 shrink-0"
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>Arte Aprovada (Layout)</span>
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">Toque para abrir a arte em tela cheia</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Se a peça já estiver concluída e tiver foto, mostra a foto anexada */}
+                  {item.status === "pronto" && item.fotoProntoUrl && (
+                    <div
+                      onClick={() =>
+                        setModalArtePreview({
+                          url: item.fotoProntoUrl!,
+                          titulo: `Foto da Peça Concluída #${item.numero} - ${item.clienteNome}`,
+                        })
+                      }
+                      className="flex items-center gap-2.5 p-2 rounded-xl border-2 border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/20 cursor-pointer transition-all"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.fotoProntoUrl}
+                        alt="Foto da Peça Pronta"
+                        className="h-12 w-16 object-cover rounded-lg border border-emerald-500/40 shrink-0"
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-black text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                          <Camera className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>Foto da Peça Pronta (Enviada ao Kaio)</span>
+                        </span>
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 underline font-medium">
+                          Toque para ampliar foto
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* O Botão Principal: Marcar como Pronto (Abre Foto Obrigatória para o Kaio) */}
                   {item.status !== "pronto" ? (
                     <button
                       type="button"
@@ -1598,13 +1652,13 @@ export default function ProducaoPage() {
                       }}
                       className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-sm font-bold shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
                     >
-                      <CheckCircle2 className="h-5 w-5" />
-                      <span>Marcar como Peça Pronta</span>
+                      <Camera className="h-5 w-5" />
+                      <span>Marcar como Peça Pronta (Tirar Foto)</span>
                     </button>
                   ) : (
                     <div className="w-full py-2.5 px-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center justify-center gap-1.5">
                       <CheckCircle2 className="h-4 w-4" />
-                      <span>✅ Peça Pronta (Avisado ao Kaio)</span>
+                      <span>✅ Peça Pronta (Foto enviada ao Kaio)</span>
                     </div>
                   )}
                 </div>
@@ -2101,6 +2155,7 @@ export default function ProducaoPage() {
                             acabamento: pedido.acabamento,
                             observacao: pedido.observacao,
                             arteUrl: pedido.arteUrl,
+                            fotoProntoUrl: pedido.fotoProntoUrl,
                             status: pedido.status,
                             dataEmissao: pedido.criadoEm,
                             tipoServico: "Gráfica Rápida",
@@ -2174,6 +2229,7 @@ export default function ProducaoPage() {
                           varianteNome: orc.materialFechado?.nome,
                           observacao: orc.observacao,
                           arteUrl: orc.arteUrl,
+                          fotoProntoUrl: orc.fotoProntoUrl,
                           fotosLocal: orc.item.fotos?.map((f) => f.url) || (orc.anexoUrl ? [orc.anexoUrl] : []),
                           status: orc.statusProducao || "aprovado",
                           comissaoPercent: orc.item.comissaoPercent,
@@ -2383,6 +2439,7 @@ export default function ProducaoPage() {
                                       acabamento: pedido.acabamento,
                                       observacao: pedido.observacao,
                                       arteUrl: pedido.arteUrl,
+                                      fotoProntoUrl: pedido.fotoProntoUrl,
                                       status: pedido.status,
                                       dataEmissao: pedido.criadoEm,
                                       tipoServico: "Gráfica Rápida",
@@ -2457,6 +2514,7 @@ export default function ProducaoPage() {
                                     varianteNome: orc.materialFechado?.nome,
                                     observacao: orc.observacao,
                                     arteUrl: orc.arteUrl,
+                                    fotoProntoUrl: orc.fotoProntoUrl,
                                     fotosLocal: orc.item.fotos?.map((f) => f.url) || (orc.anexoUrl ? [orc.anexoUrl] : []),
                                     status: orc.statusProducao || "aprovado",
                                     contratoAssinado: assinaturas[orc.id]?.assinado,
@@ -2628,55 +2686,97 @@ export default function ProducaoPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Checklist de Qualidade (QC) & Foto Peça Pronta */}
+      {/* Modal Foto da Peça Pronta & Conclusão (Obrigatório para o Kaio) */}
       <Dialog open={!!modalQcItem} onOpenChange={(open) => { if (!open && !qcUploading) setModalQcItem(null) }}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
-              <ShieldCheck className="h-5 w-5 text-emerald-600" />
-              <span>Conferência de Qualidade (QC)</span>
+              <Camera className="h-5 w-5 text-emerald-600" />
+              <span>Foto da Peça Pronta & Conclusão</span>
             </DialogTitle>
             <DialogDescription>
-              Confira os itens abaixo antes de marcar #{modalQcItem?.numero} ({modalQcItem?.clienteNome}) como pronto.
+              Tire a foto da peça finalizada #{modalQcItem?.numero} ({modalQcItem?.clienteNome}) para comprovar o serviço e enviar ao Kaio.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-4 py-2">
-            {/* Checklist */}
-            <div className="flex flex-col gap-2.5 rounded-xl border border-border/80 bg-muted/30 p-3">
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                Checklist de Qualidade:
+            {/* Foto da Peça Pronta (OBRIGATÓRIA PARA O KAIO) - EM DESTAQUE NO TOPO */}
+            <div className="flex flex-col gap-2 rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-500/5 p-3.5">
+              <span className="text-xs font-bold text-foreground flex items-center justify-between gap-1.5">
+                <span className="flex items-center gap-1.5">
+                  <Camera className="h-4 w-4 text-emerald-600" />
+                  <span className="font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                    Foto da Peça Pronta (Obrigatório)
+                  </span>
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                  Visível para o Kaio
+                </span>
               </span>
+              <p className="text-[11px] text-muted-foreground">
+                Tire uma foto clara do produto pronto na bancada antes de entregar ou embalar.
+              </p>
 
-              <label className="flex items-start gap-2.5 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
-                <input
-                  type="checkbox"
-                  checked={qcChecks.medidas}
-                  onChange={(e) => setQcChecks((c) => ({ ...c, medidas: e.target.checked }))}
-                  className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 accent-emerald-600 cursor-pointer"
-                />
-                <span>📏 Medidas conferidas na trena (tamanho, escala e proporção corretos)</span>
-              </label>
-
-              <label className="flex items-start gap-2.5 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
-                <input
-                  type="checkbox"
-                  checked={qcChecks.acabamento}
-                  onChange={(e) => setQcChecks((c) => ({ ...c, acabamento: e.target.checked }))}
-                  className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 accent-emerald-600 cursor-pointer"
-                />
-                <span>✂️ Acabamento conferido (corte no esquadro, ilhós, solda, verniz ou bainha)</span>
-              </label>
-
-              <label className="flex items-start gap-2.5 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
-                <input
-                  type="checkbox"
-                  checked={qcChecks.visual}
-                  onChange={(e) => setQcChecks((c) => ({ ...c, visual: e.target.checked }))}
-                  className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 accent-emerald-600 cursor-pointer"
-                />
-                <span>🔍 Inspeção visual ok (sem falhas de impressão, riscos, manchas ou bolhas)</span>
-              </label>
+              {qcFotomUrl ? (
+                <div className="relative group rounded-xl overflow-hidden border-2 border-emerald-500/50 h-52 bg-black/10 flex items-center justify-center shadow-inner">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qcFotomUrl} alt="Foto da peça pronta" className="max-h-full max-w-full object-contain" />
+                  <div className="absolute top-2 left-2 bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-full shadow-xs flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Foto Anexada
+                  </div>
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => qcFileInputRef.current?.click()}
+                      disabled={qcUploading}
+                    >
+                      Trocar Foto
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => setQcFotomUrl(null)}
+                      disabled={qcUploading}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-emerald-500 hover:border-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/15 py-8 px-4 cursor-pointer transition-all text-center group active:scale-[0.99]">
+                  {qcUploading ? (
+                    <>
+                      <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-600 border-t-transparent" />
+                      <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">Enviando foto da peça...</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-14 w-14 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+                        <Camera className="h-8 w-8" />
+                      </div>
+                      <span className="text-sm font-black text-emerald-800 dark:text-emerald-200">
+                        📸 TIRAR FOTO COM A CÂMERA DO CELULAR
+                      </span>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        Toque aqui para abrir a câmera ou escolher da galeria
+                      </span>
+                    </>
+                  )}
+                  <input
+                    ref={qcFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    disabled={qcUploading}
+                    onChange={handleUploadQcFoto}
+                  />
+                </label>
+              )}
             </div>
 
             {/* Gamificação / Comissão do Colaborador (Regra: integral para cada um) */}
@@ -2734,97 +2834,70 @@ export default function ProducaoPage() {
               </div>
             )}
 
-            {/* Foto da Peça Pronta (OBRIGATÓRIA) */}
-            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-border/80 bg-muted/20 p-3">
-              <span className="text-xs font-bold text-foreground flex items-center justify-between gap-1.5">
-                <span className="flex items-center gap-1.5">
-                  <Camera className="h-4 w-4 text-primary" />
-                  <span>Foto da Peça Pronta (Evidência Obrigatória)</span>
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-destructive bg-destructive/10 px-2 py-0.5 rounded-full border border-destructive/20">
-                  Obrigatória
-                </span>
+            {/* Checklist Rápido de Bancada */}
+            <div className="flex flex-col gap-2 rounded-xl border border-border/80 bg-muted/30 p-3">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                Conferência de Bancada:
               </span>
-              <p className="text-[11px] text-muted-foreground">
-                Tire uma foto com a câmera do celular da peça pronta antes de embalar ou entregar.
-              </p>
 
-              {qcFotomUrl ? (
-                <div className="relative group rounded-lg overflow-hidden border border-border h-40 bg-black/10 flex items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={qcFotomUrl} alt="Foto da peça pronta" className="max-h-full max-w-full object-contain" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => qcFileInputRef.current?.click()}
-                      disabled={qcUploading}
-                    >
-                      Trocar Foto
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => setQcFotomUrl(null)}
-                      disabled={qcUploading}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 py-5 px-4 cursor-pointer transition-colors text-center">
-                  {qcUploading ? (
-                    <>
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                      <span className="text-xs font-semibold text-primary">Enviando foto...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="h-7 w-7 text-primary" />
-                      <span className="text-xs font-bold text-foreground">
-                        Tirar Foto / Carregar da Galeria
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        Toque para abrir a câmera do celular
-                      </span>
-                    </>
-                  )}
-                  <input
-                    ref={qcFileInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    disabled={qcUploading}
-                    onChange={handleUploadQcFoto}
-                  />
-                </label>
-              )}
+              <label className="flex items-start gap-2.5 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
+                <input
+                  type="checkbox"
+                  checked={qcChecks.medidas}
+                  onChange={(e) => setQcChecks((c) => ({ ...c, medidas: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 accent-emerald-600 cursor-pointer"
+                />
+                <span>📏 Medidas conferidas na trena</span>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
+                <input
+                  type="checkbox"
+                  checked={qcChecks.acabamento}
+                  onChange={(e) => setQcChecks((c) => ({ ...c, acabamento: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 accent-emerald-600 cursor-pointer"
+                />
+                <span>✂️ Acabamento OK (solda, corte, ilhós ou verniz)</span>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer text-xs font-medium text-foreground hover:text-primary transition-colors">
+                <input
+                  type="checkbox"
+                  checked={qcChecks.visual}
+                  onChange={(e) => setQcChecks((c) => ({ ...c, visual: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-emerald-600 accent-emerald-600 cursor-pointer"
+                />
+                <span>🔍 Inspeção visual OK (sem riscos ou manchas)</span>
+              </label>
             </div>
-
-            {!qcFotomUrl && (
-              <div className="p-2.5 rounded-xl border border-destructive/40 bg-destructive/10 text-destructive text-xs font-semibold flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span>Foto obrigatória! Tire ou anexe a foto da peça finalizada para liberar a conclusão.</span>
-              </div>
-            )}
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setModalQcItem(null)} disabled={qcUploading}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleConcluirQc}
-              disabled={qcUploading || !qcFotomUrl || !(qcChecks.medidas && qcChecks.acabamento && qcChecks.visual)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-            >
-              <CheckCircle2 className="mr-1.5 h-4 w-4" />
-              <span>Aprovar QC e Marcar Pronto</span>
-            </Button>
+            {qcFotomUrl ? (
+              <Button
+                onClick={handleConcluirQc}
+                disabled={qcUploading}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              >
+                <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                <span>Concluir Peça & Enviar ao Kaio</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => {
+                  qcFileInputRef.current?.click()
+                  toast.info("📸 Abra a câmera para tirar a foto da peça!")
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              >
+                <Camera className="mr-1.5 h-4 w-4" />
+                <span>Tirar Foto da Peça para Concluir</span>
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -3015,6 +3088,40 @@ export default function ProducaoPage() {
               <Printer className="h-4 w-4" />
               <span>🖨️ Imprimir Ficha de Produção (Instrução para Bancada)</span>
             </button>
+
+            {/* Foto da Peça Pronta (Evidência enviada pelo Colaborador) */}
+            {modalDetalhesItem?.fotoProntoUrl && (
+              <div className="flex flex-col gap-2 rounded-2xl border-2 border-emerald-500/60 bg-emerald-500/10 p-3.5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                    <Camera className="h-4 w-4 text-emerald-600" />
+                    <span>Foto da Peça Finalizada (Enviada pelo Colaborador)</span>
+                  </span>
+                  <span className="text-[10px] bg-emerald-500 text-white font-bold px-2 py-0.5 rounded-full shadow-2xs">
+                    ✅ Concluído na Fábrica
+                  </span>
+                </div>
+                <div
+                  className="relative rounded-xl overflow-hidden border border-emerald-500/40 max-h-64 bg-black/15 flex items-center justify-center cursor-pointer hover:opacity-95 transition-opacity"
+                  onClick={() =>
+                    setModalArtePreview({
+                      url: modalDetalhesItem.fotoProntoUrl!,
+                      titulo: `Peça Pronta #${modalDetalhesItem.numero} - ${modalDetalhesItem.clienteNome}`,
+                    })
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={modalDetalhesItem.fotoProntoUrl}
+                    alt="Foto da Peça Pronta"
+                    className="max-h-64 max-w-full object-contain"
+                  />
+                </div>
+                <span className="text-[10px] text-center text-emerald-700 dark:text-emerald-300 font-medium">
+                  🔍 Toque na foto para abrir em tela cheia com zoom
+                </span>
+              </div>
+            )}
 
             {/* Fotos Lado a Lado: Foto do Local (Orçamento) e Arte Aprovada */}
             {((modalDetalhesItem?.fotosLocal && modalDetalhesItem.fotosLocal.length > 0) || modalDetalhesItem?.arteUrl) && (
@@ -3729,15 +3836,18 @@ function PedidoCardConteudo({
       {/* Badge de Foto da Peça Pronta (se houver) */}
       {pedido.fotoProntoUrl && (
         <div
-          className="flex items-center justify-between gap-1.5 p-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 cursor-pointer text-xs transition-colors hover:bg-emerald-500/20"
+          className="flex items-center gap-2.5 p-2 rounded-xl border-2 border-emerald-500/50 bg-emerald-500/10 cursor-pointer transition-all hover:bg-emerald-500/20"
           onClick={() => onAbrirArte && onAbrirArte(pedido.fotoProntoUrl!, `Foto da Peça #${pedido.numero} - ${pedido.clienteNome}`)}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold text-[11px]">
-            <Camera className="h-3.5 w-3.5" />
-            <span>Foto da Peça Registrada</span>
+          <img src={pedido.fotoProntoUrl} alt="Foto Peça Pronta" className="h-11 w-14 object-cover rounded-lg border border-emerald-500/40 shrink-0" />
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-black text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+              <Camera className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Foto da Peça Pronta</span>
+            </span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-medium">Toque p/ ampliar foto</span>
           </div>
-          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-medium">Ver foto</span>
         </div>
       )}
 
@@ -4057,15 +4167,18 @@ function OrcamentoCardConteudo({
       {/* Badge de Foto da Peça Pronta (se houver) */}
       {orcamento.fotoProntoUrl && (
         <div
-          className="flex items-center justify-between gap-1.5 p-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 cursor-pointer text-xs transition-colors hover:bg-emerald-500/20"
+          className="flex items-center gap-2.5 p-2 rounded-xl border-2 border-emerald-500/50 bg-emerald-500/10 cursor-pointer transition-all hover:bg-emerald-500/20"
           onClick={() => onAbrirArte && onAbrirArte(orcamento.fotoProntoUrl!, `Foto da Peça ORC #${orcamento.numero} - ${cliente?.nome || "Cliente"}`)}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold text-[11px]">
-            <Camera className="h-3.5 w-3.5" />
-            <span>Foto da Peça Registrada</span>
+          <img src={orcamento.fotoProntoUrl} alt="Foto Peça Pronta" className="h-11 w-14 object-cover rounded-lg border border-emerald-500/40 shrink-0" />
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-black text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+              <Camera className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Foto da Peça Pronta</span>
+            </span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-medium">Toque p/ ampliar foto</span>
           </div>
-          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 underline font-medium">Ver foto</span>
         </div>
       )}
 
