@@ -346,18 +346,45 @@ export function resolverFluxoAtendimento(
   const limpo = textoRecebido.trim().toLowerCase()
   const eSaudacao = /^(oi+|ol[aá]+|e a[ií]|bom dia|boa tarde|boa noite|hey|hello|al[oô]+|opa|fala)[\s!?.]*$/i.test(limpo)
   const pedeOrcamento = /(or[çc]amento|pre[çc]o|valor|quanto|custa|fazer|produzir|toldo|toldos|adesivo|adesivos|placa|placas|lona|lonas|fachada|fachadas|banner|banners|faixa|faixas|letra|letras|3d|reforma|reformas|cobertura|coberturas|outdoor|outdoors|totem|totens|painel|paineis|painéis|rotulo|rotulos|rótulo|rótulos|vitrine|vitrines|envelopamento|acm|luminoso|luminosos|cortina|policarbonato|janela|varanda|tapume|comprar|encomendar)/i.test(limpo)
-  const pedePix = /(pix|chave pix|copia e cola|como pagar|como pago|forma de pagamento|dados bancarios|mercado pago)/i.test(limpo)
+  const pedeCartao = /(cart[aã]o|cr[eé]dito|d[eé]bito|parcela|parcelar|parcelamento|link.*pagamento|op[çc][ãa]o 2|^2$)/i.test(limpo)
+  const pedePix = /(pix|chave pix|copia e cola|op[çc][ãa]o 1|^1$)/i.test(limpo)
+  const pedeFormaPagamento = /(como pagar|como pago|forma de pagamento|dados bancarios|formas de pagamento)/i.test(limpo)
 
-  // 1. Dúvida sobre pagamento / Pix
+  // 1. Dúvida sobre pagamento (Cartão, Pix ou Geral)
+  if (pedeCartao) {
+    return {
+      resposta:
+        "💳 *PAGAMENTO NO CARTÃO DE CRÉDITO:*\n\n" +
+        "Aceitamos cartões de crédito com parcelamento em até 12x pelo Mercado Pago!\n\n" +
+        "👉 O link seguro para pagamento é enviado junto com a sua Ordem de Serviço ou Orçamento.\n" +
+        "Se precisar que reenviemos o link do seu pedido ou que passemos na maquininha física, nossa equipe técnica já está à disposição por aqui! 🤝✨",
+    }
+  }
+
   if (pedePix) {
     const chavePix = process.env.PIX_CHAVE_EMPRESA || "09.141.206/0001-06"
     return {
       resposta:
-        "💳 *PAGAMENTO VIA PIX:*\n\n" +
+        "⚡ *PAGAMENTO VIA PIX:*\n\n" +
         `Nossa chave PIX oficial é o CNPJ:\n👉 *${chavePix}*\n` +
         "Chave sem pontuação (para copiar): *09141206000106*\n" +
-        "Favorecido: *Toldos Print (Comunicação Visual e Toldos)*\n\n" +
+        "Favorecido: *Toldos Print & Comunicação Visual*\n\n" +
         "Assim que realizar o pagamento, pode mandar o comprovante por aqui mesmo que confirmamos o seu pedido na hora! 🤝✨",
+    }
+  }
+
+  if (pedeFormaPagamento) {
+    const chavePix = process.env.PIX_CHAVE_EMPRESA || "09.141.206/0001-06"
+    return {
+      resposta:
+        "💳 *FORMAS DE PAGAMENTO ACEITAS:*\n\n" +
+        "Qual forma você prefere?\n\n" +
+        `1️⃣ *Pix (à vista):*\n` +
+        `• Chave CNPJ: *${chavePix}* (números: *09141206000106*)\n` +
+        `• Favorecido: *Toldos Print & Comunicação Visual*\n\n` +
+        `2️⃣ *Cartão de Crédito (em até 12x):*\n` +
+        `• Link seguro online via Mercado Pago ou na nossa maquininha física!\n\n` +
+        "Basta nos informar a opção escolhida ou responder por aqui! 🤝✨",
     }
   }
 

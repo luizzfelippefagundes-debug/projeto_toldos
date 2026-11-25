@@ -175,14 +175,21 @@ export default function OrdemDeServicoPage() {
       }
 
       const linkCartaoBloco = linkCartaoParaEnvio
-        ? `\n\n💳 *PAGAR COM CARTÃO (em até 12x):*\n${linkCartaoParaEnvio}`
+        ? `\n\n2️⃣ *Cartão de Crédito (em até 12x no Mercado Pago):*\n👉 ${linkCartaoParaEnvio}`
         : ""
 
       const linkAssinaturaBloco = linkAssinatura
-        ? `\n\n✍️ *Assinar Ordem de Serviço digitalmente:*\n${linkAssinatura}`
+        ? `\n\n✍️ *Assinar Ordem de Serviço digitalmente:*\n👉 ${linkAssinatura}`
         : ""
 
-      const mensagem = `Olá, ${cliente.nome.split(" ")[0]}! Segue a Ordem de Serviço nº ${numeroFormatado} da Toldos Print.\n\n💰 *Valor:* ${formatarMoeda(totalFinal)}${dadosPix}${linkCartaoBloco}${linkAssinaturaBloco}\n\nAssim que realizar o pagamento, favor enviar o comprovante por aqui! 🤝`
+      const mensagem =
+        `Olá, ${cliente.nome.split(" ")[0]}! Segue a Ordem de Serviço nº ${numeroFormatado} da Toldos Print. 📄✨\n\n` +
+        `💰 *Valor Total:* ${formatarMoeda(totalFinal)}\n\n` +
+        `*Qual forma de pagamento você prefere?*\n\n` +
+        `1️⃣ *Pix (à vista):*${dadosPix}` +
+        linkCartaoBloco +
+        linkAssinaturaBloco +
+        `\n\nAssim que realizar o pagamento ou assinar, favor enviar o comprovante por aqui para iniciarmos a produção imediatamente! 🤝✨`
 
       // Envia PDF pelo bot
       await fetch("/api/whatsapp/enviar-os", {

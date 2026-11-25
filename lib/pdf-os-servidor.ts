@@ -1,10 +1,12 @@
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { jsPDF } from "jspdf"
+import QRCode from "qrcode"
 import { formatarData, formatarMoeda } from "./format"
 import { EMPRESA_ORCAMENTO, gerarLinhasOrcamento } from "./orcamento-pdf"
 import { calcularOrcamentoSalvo } from "./orcamento-itens"
 import { materiaisSeed, servicosSeed, acabamentosSeed } from "./seed-data"
+import { gerarPayloadPixEstatico } from "./mercadopago"
 import { getSql } from "./db"
 import type { Acabamento, Material, Orcamento, Servico } from "./types"
 
@@ -218,8 +220,68 @@ export async function gerarPdfOsServidor(
   doc.text(formatarMoeda(totalFinal), dir - 8, y + 16, { align: "right" })
   y += 24
 
+  // Bloco de Pagamento Pix com QR Code
+  if (totalFinal > 0) {
+    const chavePix = process.env.PIX_CHAVE_EMPRESA || "09.141.206/0001-06"
+    const chaveNumeros = chavePix.replace(/\D/g, "")
+    const payloadPix = gerarPayloadPixEstatico({
+      chave: chaveNumeros || chavePix,
+      nome: process.env.PIX_NOME_BENEFICIARIO || "TOLDOS PRINT",
+      cidade: process.env.PIX_CIDADE_BENEFICIARIO || "COLATINA",
+      valor: totalFinal,
+      identificador: numero,
+    })
+
+    let qrCodeDataUrl: string | null = null
+    try {
+      qrCodeDataUrl = await QRCode.toDataURL(payloadPix, { width: 180, margin: 1 })
+    } catch {}
+
+    y += 12
+    const boxHeight = 70
+    doc.setFillColor(248, 250, 252)
+    doc.roundedRect(esq, y, dir - esq, boxHeight, 4, 4, "F")
+    doc.setDrawColor(203, 213, 225).setLineWidth(0.8)
+    doc.roundedRect(esq, y, dir - esq, boxHeight, 4, 4, "S")
+
+    if (qrCodeDataUrl) {
+      doc.addImage(qrCodeDataUrl, "PNG", esq + 8, y + 6, 58, 58)
+    }
+
+    const textoX = esq + 76
+    doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(16, 185, 129)
+    doc.text("PAGAMENTO FACILITADO VIA PIX", textoX, y + 14)
+
+    doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(70)
+    doc.text("Chave Pix (CNPJ):", textoX, y + 27)
+    doc.setFont("helvetica", "bold").setTextColor(20)
+    doc.text(chavePix, textoX + 80, y + 27)
+
+    doc.setFont("helvetica", "normal").setTextColor(70)
+    doc.text("Favorecido:", textoX, y + 39)
+    doc.setFont("helvetica", "bold").setTextColor(20)
+    doc.text("Toldos Print & Comunicação Visual", textoX + 50, y + 39)
+
+    doc.setFont("helvetica", "normal").setTextColor(70)
+    doc.text("Valor:", textoX, y + 51)
+    doc.setFont("helvetica", "bold").setTextColor(16, 185, 129)
+    doc.text(formatarMoeda(totalFinal), textoX + 30, y + 51)
+
+    doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(120)
+    doc.text("Aponte a câmera do aplicativo do seu banco para o QR Code ao lado para pagar.", textoX, y + 63)
+
+    y += boxHeight
+  }
+
+  // Verifica espaço na página antes das assinaturas (evita corte no rodapé)
+  if (y + 115 > 800) {
+    doc.addPage()
+    y = 50
+  } else {
+    y += 38
+  }
+
   // Assinaturas
-  y += 50
   const meioEsq = esq + (dir - esq) / 4
   const meioDir = esq + (3 * (dir - esq)) / 4
 
