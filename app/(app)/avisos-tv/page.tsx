@@ -53,6 +53,8 @@ interface TvConfig {
   tamanhoFonte?: "normal" | "grande"
   ocultarVazias?: boolean
   mostrarColunaAlertas?: boolean
+  velocidadeScroll?: number
+  recarregarEm?: number
 }
 
 const DEFAULT_TV_CONFIG: TvConfig = {
@@ -66,6 +68,7 @@ const DEFAULT_TV_CONFIG: TvConfig = {
   tamanhoFonte: "grande",
   ocultarVazias: true,
   mostrarColunaAlertas: true,
+  velocidadeScroll: 12,
 }
 
 const TIPOS = [
@@ -338,6 +341,20 @@ export default function CentralTvPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              await salvarConfiguracoes({ recarregarEm: Date.now() })
+              toast.success("Comando enviado! O monitor da TV vai recarregar sozinho em segundos.")
+            }}
+            className="flex-1 sm:flex-none h-8.5 gap-1.5 text-xs font-bold border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-500/10"
+            title="Força o monitor da TV na fábrica a recarregar sem ninguém precisar ir lá com teclado ou mouse"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>🔄 Recarregar Monitor TV</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -941,6 +958,44 @@ export default function CentralTvPage() {
                       salvarConfiguracoes({ tamanhoFonte: checked ? "grande" : "normal" })
                     }
                   />
+                </div>
+
+                <div className="flex flex-col gap-2 p-3 rounded-lg border border-border bg-background text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal className="h-4 w-4 text-primary shrink-0" />
+                      <div>
+                        <span className="font-medium text-foreground block">Velocidade de Rolagem das Colunas</span>
+                        <span className="text-[11px] text-muted-foreground block">
+                          Ajuste o ritmo do auto-scroll para leitura calma no telão
+                        </span>
+                      </div>
+                    </div>
+                    <span className="font-bold text-xs bg-muted px-2 py-0.5 rounded text-foreground">
+                      {config.velocidadeScroll ?? 12} px/s
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1">
+                    {[
+                      { label: "🐌 8 px/s (Muito Lenta)", val: 8 },
+                      { label: "🚶 12 px/s (Calma / Padrão)", val: 12 },
+                      { label: "🏃 18 px/s (Média)", val: 18 },
+                      { label: "⚡ 26 px/s (Rápida)", val: 26 },
+                    ].map((opt) => (
+                      <button
+                        key={opt.val}
+                        type="button"
+                        onClick={() => salvarConfiguracoes({ velocidadeScroll: opt.val })}
+                        className={`py-1.5 px-2 rounded-md font-bold text-[11px] border transition-all text-center ${
+                          (config.velocidadeScroll ?? 12) === opt.val
+                            ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                            : "bg-muted/40 hover:bg-muted text-foreground border-border/60"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-background text-xs">

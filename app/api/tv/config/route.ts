@@ -12,6 +12,9 @@ export interface TvConfig {
   densidade?: "normal" | "compacto"
   tamanhoFonte?: "normal" | "grande"
   ocultarVazias?: boolean
+  mostrarColunaAlertas?: boolean
+  velocidadeScroll?: number
+  recarregarEm?: number
 }
 
 export const DEFAULT_TV_CONFIG: TvConfig = {
@@ -24,6 +27,8 @@ export const DEFAULT_TV_CONFIG: TvConfig = {
   densidade: "normal",
   tamanhoFonte: "grande",
   ocultarVazias: true,
+  mostrarColunaAlertas: true,
+  velocidadeScroll: 12,
 }
 
 async function garantirTabela(sql: ReturnType<typeof getSql>) {
@@ -73,6 +78,9 @@ export async function POST(req: Request) {
       densidade: corpo.densidade === "compacto" ? "compacto" : "normal",
       tamanhoFonte: corpo.tamanhoFonte === "normal" ? "normal" : "grande",
       ocultarVazias: corpo.ocultarVazias ?? false,
+      mostrarColunaAlertas: corpo.mostrarColunaAlertas ?? true,
+      velocidadeScroll: typeof corpo.velocidadeScroll === "number" ? corpo.velocidadeScroll : 12,
+      recarregarEm: corpo.recarregarEm ? Number(corpo.recarregarEm) : undefined,
     }
 
     await sql`

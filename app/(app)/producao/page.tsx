@@ -439,9 +439,29 @@ export default function ProducaoPage() {
     if (modalQcItem.comissaoPercent && modalQcItem.comissaoPercent > 0) {
       const valorUnitario = ((modalQcItem.valorTotal || 0) * modalQcItem.comissaoPercent) / 100
       comemorarComissao()
+
+      const colabs = colaboradoresSelecionados.length > 0 ? colaboradoresSelecionados : ["Equipe de Produção"]
+
+      // Persistir no Banco de Comissões & RH da empresa
+      fetch("/api/comissoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          colaboradores: colabs,
+          origem_tipo: modalQcItem.tipo,
+          origem_id: modalQcItem.id,
+          numero: modalQcItem.numero,
+          cliente_nome: modalQcItem.clienteNome,
+          produto_nome: modalQcItem.tipo === "pedido" ? "Pedido Rápido" : "Orçamento Com. Visual",
+          valor_pedido: modalQcItem.valorTotal || 0,
+          comissao_percent: modalQcItem.comissaoPercent,
+          valor_comissao: valorUnitario,
+        }),
+      }).catch((err) => console.error("Erro ao registrar comissão no banco:", err))
+
       if (colaboradoresSelecionados.length > 0) {
         toast.success(
-          `🪙 BÔNUS CREDITADO! R$ ${valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} integral para cada (${colaboradoresSelecionados.join(", ")})!`,
+          `🪙 BÔNUS CREDITADO! R$ ${valorUnitario.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} salvo no RH para cada (${colaboradoresSelecionados.join(", ")})!`,
           { duration: 6000 }
         )
       } else {

@@ -47,6 +47,9 @@ export async function GET() {
     densidade: "normal",
     tamanhoFonte: "grande",
     ocultarVazias: true,
+    mostrarColunaAlertas: true,
+    velocidadeScroll: 12,
+    recarregarEm: undefined as number | undefined,
   }
 
   let ordemCards: string[] = []
@@ -207,7 +210,12 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    { pedidos: todos, avisos, config },
+    {
+      pedidos: todos,
+      avisos,
+      config,
+      versao: process.env.VERCEL_GIT_COMMIT_SHA || process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA || "2026-11-25-v4",
+    },
     { headers: { "Cache-Control": "no-store" } }
   )
 }

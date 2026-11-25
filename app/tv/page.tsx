@@ -5,16 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 import { useUser } from "@clerk/nextjs"
-import { Download } from "lucide-react"
 import { interpretarDataLocal } from "@/lib/date"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 
 type StatusPedido = "aguardando" | "aprovado" | "ag_confirmacao" | "impressao" | "acabamento" | "pronto"
@@ -360,6 +351,7 @@ function TvColuna({
   fundo,
   pedidos,
   tamanhoGrande = true,
+  velocidadeScroll = 12,
 }: {
   status: StatusPedido
   label: string
@@ -367,6 +359,7 @@ function TvColuna({
   fundo: string
   pedidos: PedidoTV[]
   tamanhoGrande?: boolean
+  velocidadeScroll?: number
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [temOverflow, setTemOverflow] = useState(false)
@@ -427,8 +420,8 @@ function TvColuna({
 
       if (!pausado) {
         if (direcao === 1) {
-          // Descendo suavemente: 18 pixels por segundo (ritmo calmo e legível à distância)
-          const pixelsPorSegundo = 18
+          // Descendo suavemente conforme velocidade configurada pelo dono
+          const pixelsPorSegundo = velocidadeScroll || 12
           scrollPos += (pixelsPorSegundo * deltaMs) / 1000
 
           if (scrollPos >= maxScroll) {
@@ -449,8 +442,8 @@ function TvColuna({
             setEstaNoFim(el.scrollTop >= maxScroll - 5)
           }
         } else {
-          // Subindo suavemente de volta ao topo: 28 pixels por segundo
-          const pixelsPorSegundo = 28
+          // Subindo suavemente de volta ao topo
+          const pixelsPorSegundo = (velocidadeScroll || 12) * 1.5
           scrollPos -= (pixelsPorSegundo * deltaMs) / 1000
 
           if (scrollPos <= 0) {
@@ -490,7 +483,7 @@ function TvColuna({
       cancelAnimationFrame(animId)
       el.removeEventListener("scroll", sincronizarScroll)
     }
-  }, [temOverflow])
+  }, [temOverflow, velocidadeScroll])
 
   return (
     <div
@@ -557,10 +550,12 @@ function TvColunaEmergencias({
   avisos,
   pedidos,
   tamanhoGrande = true,
+  velocidadeScroll = 12,
 }: {
   avisos: AvisoTV[]
   pedidos: PedidoTV[]
   tamanhoGrande?: boolean
+  velocidadeScroll?: number
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [temOverflow, setTemOverflow] = useState(false)
@@ -619,7 +614,7 @@ function TvColunaEmergencias({
 
       if (!pausado) {
         if (direcao === 1) {
-          const pixelsPorSegundo = 18
+          const pixelsPorSegundo = velocidadeScroll || 12
           scrollPos += (pixelsPorSegundo * deltaMs) / 1000
 
           if (scrollPos >= maxScroll) {
@@ -639,7 +634,7 @@ function TvColunaEmergencias({
             setEstaNoFim(el.scrollTop >= maxScroll - 5)
           }
         } else {
-          const pixelsPorSegundo = 28
+          const pixelsPorSegundo = (velocidadeScroll || 12) * 1.5
           scrollPos -= (pixelsPorSegundo * deltaMs) / 1000
 
           if (scrollPos <= 0) {
@@ -676,7 +671,7 @@ function TvColunaEmergencias({
       cancelAnimationFrame(animId)
       el.removeEventListener("scroll", sincronizarScroll)
     }
-  }, [temOverflow])
+  }, [temOverflow, velocidadeScroll])
 
   return (
     <div
@@ -872,51 +867,8 @@ export default function TvPage() {
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date | null>(null)
   const [alertaRecente, setAlertaRecente] = useState<{ id: string; titulo: string; sub: string } | null>(null)
   const [alertasAtivados, setAlertasAtivados] = useState<boolean>(false)
-  const [installPrompt, setInstallPrompt] = useState<any>(null)
-  const [modalInstalacaoAberto, setModalInstalacaoAberto] = useState(false)
-  const [jaInstalado, setJaInstalado] = useState(false)
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    if (
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (navigator as any).standalone === true
-    ) {
-      setJaInstalado(true)
-    }
-
-    const handler = (e: Event) => {
-      e.preventDefault()
-      setInstallPrompt(e)
-    }
-    window.addEventListener("beforeinstallprompt", handler)
-    const appInstalledHandler = () => {
-      setJaInstalado(true)
-      setInstallPrompt(null)
-    }
-    window.addEventListener("appinstalled", appInstalledHandler)
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler)
-      window.removeEventListener("appinstalled", appInstalledHandler)
-    }
-  }, [])
-
-  const acionarInstalacao = useCallback(async () => {
-    if (installPrompt) {
-      try {
-        await installPrompt.prompt()
-        const choice = await installPrompt.userChoice
-        if (choice?.outcome === "accepted") {
-          setJaInstalado(true)
-          setModalInstalacaoAberto(false)
-          return
-        }
-      } catch (e) {
-        console.error("Erro ao solicitar instalação PWA:", e)
-      }
-    }
-    setModalInstalacaoAberto(true)
-  }, [installPrompt])
+  const versaoInicialRef = useRef<string | null>(null)
+  const ultimoRecarregarRef = useRef<number>(Date.now())
   const pedidosConhecidosRef = useRef<Set<string> | null>(null)
   const [config, setConfig] = useState<{
     statusVisiveis?: string[]
@@ -928,6 +880,8 @@ export default function TvPage() {
     tamanhoFonte?: "normal" | "grande"
     ocultarVazias?: boolean
     mostrarColunaAlertas?: boolean
+    velocidadeScroll?: number
+    recarregarEm?: number
   } | null>(null)
 
   const carregar = useCallback(async () => {
@@ -935,6 +889,26 @@ export default function TvPage() {
       const res = await fetch("/api/tv/pedidos", { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
+
+        // 🔄 Atualização automática do Telão sem precisar de F5 físico:
+        // 1. Se uma nova versão for publicada em produção
+        if (data.versao) {
+          if (versaoInicialRef.current === null) {
+            versaoInicialRef.current = String(data.versao)
+          } else if (versaoInicialRef.current !== String(data.versao)) {
+            window.location.reload()
+            return
+          }
+        }
+        // 2. Se o dono clicou "Atualizar Monitor da TV Agora" na Central do Telão
+        if (data.config?.recarregarEm) {
+          const recarregarEm = Number(data.config.recarregarEm)
+          if (recarregarEm > ultimoRecarregarRef.current) {
+            window.location.reload()
+            return
+          }
+        }
+
         const novosPedidos: PedidoTV[] = data.pedidos ?? data
 
         const novosFiltrados = isColaboradorRef.current
@@ -1168,16 +1142,6 @@ export default function TvPage() {
           ⛶ Tela Cheia
         </button>
 
-        <button
-          type="button"
-          onClick={acionarInstalacao}
-          className="rounded-lg bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm border border-blue-500 backdrop-blur transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-          title="Instalar aplicativo na Smart TV"
-        >
-          <Download className="h-3.5 w-3.5" />
-          <span>{jaInstalado ? "✓ App Instalado" : "📲 Instalar na TV"}</span>
-        </button>
-
         <Link
           href={isColaborador ? "/producao" : "/dashboard"}
           className="rounded-lg bg-card/90 px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm border border-border/80 backdrop-blur hover:bg-muted"
@@ -1250,17 +1214,6 @@ export default function TvPage() {
             >
               <span>🔔</span>
               <span>{alertasAtivados ? "Vibração & Som Ativos" : "Ativar Vibração e Alerta"}</span>
-            </button>
-
-            {/* Botão de Instalar Atalho na TV / Computador */}
-            <button
-              type="button"
-              onClick={acionarInstalacao}
-              className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold transition-all shadow-2xs border border-blue-500/80 inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
-              title="Clique para baixar ou instalar o atalho do Painel TV na Smart TV ou computador"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span>{jaInstalado ? "✓ Atalho Instalado" : "📲 Instalar Atalho na TV"}</span>
             </button>
           </div>
         </div>
@@ -1436,6 +1389,7 @@ export default function TvPage() {
             avisos={avisosAtivos}
             pedidos={pedidosAlertas}
             tamanhoGrande={config?.tamanhoFonte !== "normal"}
+            velocidadeScroll={config?.velocidadeScroll || 12}
           />
         )}
 
@@ -1452,6 +1406,7 @@ export default function TvPage() {
               fundo={coluna.fundo}
               pedidos={colPedidos}
               tamanhoGrande={config?.tamanhoFonte !== "normal"}
+              velocidadeScroll={config?.velocidadeScroll || 12}
             />
           )
         })}
@@ -1500,107 +1455,6 @@ export default function TvPage() {
           animation: ticker-scroll linear infinite;
         }
       `}</style>
-
-      {/* Banner Flutuante de Instalação Automática (Igual ao Celular) */}
-      {!jaInstalado && installPrompt && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border-2 border-blue-500 bg-slate-900/95 p-4 text-white shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 max-w-md">
-          <Image
-            src="/icon-192-v2.png"
-            alt="Painel TV"
-            width={48}
-            height={48}
-            className="h-12 w-12 rounded-xl shadow shrink-0"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-white leading-tight">Instalar Painel na sua TV TCL</p>
-            <p className="text-xs text-slate-300 mt-0.5">Abra direto da tela inicial da TV como um app.</p>
-          </div>
-          <button
-            type="button"
-            onClick={acionarInstalacao}
-            className="shrink-0 flex items-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-3.5 py-2 text-xs font-bold text-white shadow-lg transition-transform active:scale-95 cursor-pointer"
-          >
-            <Download className="h-4 w-4" />
-            <span>Instalar</span>
-          </button>
-        </div>
-      )}
-
-      {/* Modal de Instalação e Criação de Atalho na TV / PC */}
-      <Dialog open={modalInstalacaoAberto} onOpenChange={setModalInstalacaoAberto}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <span className="rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 px-2.5 py-1 text-xs font-bold">
-                📺 Smart TV TCL
-              </span>
-            </div>
-            <DialogTitle className="text-lg font-bold text-foreground">
-              Instalar Aplicativo na TV
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Fixe o Painel TV na tela inicial para abrir sempre em tela cheia como um programa.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-3 py-2 text-xs">
-            {installPrompt ? (
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await installPrompt.prompt()
-                    const choice = await installPrompt.userChoice
-                    if (choice?.outcome === "accepted") {
-                      setJaInstalado(true)
-                      setModalInstalacaoAberto(false)
-                    }
-                  } catch (err) {
-                    console.error(err)
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] cursor-pointer"
-              >
-                <Download className="h-4 w-4" />
-                <span>Instalar Agora na TV (1 Clique)</span>
-              </button>
-            ) : (
-              <div className="rounded-xl border border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 flex flex-col gap-2">
-                <p className="font-bold text-emerald-900 dark:text-emerald-300 text-xs">
-                  📺 Na sua Smart TV TCL (Google TV / Android TV):
-                </p>
-                <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed">
-                  No controle remoto da TV, clique nos <strong>3 pontinhos (⋮)</strong> no canto do navegador e selecione <strong>&quot;Instalar App&quot;</strong> ou <strong>&quot;Adicionar à tela inicial&quot;</strong>.
-                </p>
-                <p className="text-slate-500 text-[11px] mt-1">
-                  O ícone do Painel TV fica salvo na tela de aplicativos da sua TCL.
-                </p>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => {
-                if (!document.fullscreenElement) {
-                  document.documentElement.requestFullscreen().catch(() => {})
-                } else {
-                  document.exitFullscreen().catch(() => {})
-                }
-                setModalInstalacaoAberto(false)
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs shadow transition-all cursor-pointer"
-            >
-              <span>⛶ Deixar em Tela Cheia (Sem barras)</span>
-            </button>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setModalInstalacaoAberto(false)}>
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
