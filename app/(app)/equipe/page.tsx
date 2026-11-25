@@ -18,6 +18,8 @@ import {
   Wallet,
   Calendar,
   CalendarRange,
+  CalendarCheck,
+  Receipt,
   CheckCircle2,
   Clock,
   History,
@@ -34,11 +36,15 @@ import {
   X,
   Printer,
   FileSpreadsheet,
+  Coins,
+  ShieldCheck,
+  FileText,
 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -134,10 +140,18 @@ function Avatar({ nome, imagemUrl }: { nome: string; imagemUrl: string }) {
 
 export default function EquipePage() {
   const router = useRouter()
-  const { verComo } = usePapelAtivo()
+  const { papel, papelReal, verComo } = usePapelAtivo()
+  const isOperador = papel === "operador" || papelReal === "operador"
 
-  // Aba ativa: "extrato" (Fechamento da Semana) | "historico" | "membros"
-  const [abaAtiva, setAbaAtiva] = useState<"extrato" | "historico" | "membros">("extrato")
+  // Aba ativa: "extrato" (Fechamento) | "meu-extrato" | "historico" | "membros"
+  const [abaAtiva, setAbaAtiva] = useState<"extrato" | "meu-extrato" | "historico" | "membros">(
+    isOperador ? "meu-extrato" : "extrato"
+  )
+
+  // Estado do extrato pessoal do usuário logado
+  const [meuExtrato, setMeuExtrato] = useState<any | null>(null)
+  const [carregandoMeuExtrato, setCarregandoMeuExtrato] = useState(false)
+  const [abaInternaMeuExtrato, setAbaInternaMeuExtrato] = useState<"semana" | "recibos" | "historico">("semana")
 
   // Estado dos membros do Clerk
   const [membros, setMembros] = useState<Membro[]>([])
@@ -197,22 +211,40 @@ export default function EquipePage() {
     }
   }, [])
 
+  const carregarMeuExtrato = useCallback(async () => {
+    setCarregandoMeuExtrato(true)
+    try {
+      const res = await fetch("/api/comissoes/meu-extrato", { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setMeuExtrato(data)
+      }
+    } catch {
+      // Ignora falha silenciosa para quem não tem dados
+    } finally {
+      setCarregandoMeuExtrato(false)
+    }
+  }, [])
+
   useEffect(() => {
-    fetch("/api/equipe")
-      .then((r) => r.json())
-      .then(setMembros)
-      .catch(() => toast.error("Erro ao carregar equipe."))
-      .finally(() => setCarregandoMembros(false))
+    if (!isOperador) {
+      fetch("/api/equipe")
+        .then((r) => r.json())
+        .then(setMembros)
+        .catch(() => toast.error("Erro ao carregar equipe."))
+        .finally(() => setCarregandoMembros(false))
 
-    fetch("/api/equipe/telefones-producao")
-      .then((r) => r.json())
-      .then((d) => {
-        if (Array.isArray(d?.telefones)) setTelefonesProducao(d.telefones)
-      })
-      .catch(() => {})
+      fetch("/api/equipe/telefones-producao")
+        .then((r) => r.json())
+        .then((d) => {
+          if (Array.isArray(d?.telefones)) setTelefonesProducao(d.telefones)
+        })
+        .catch(() => {})
 
-    carregarDadosComissoes()
-  }, [carregarDadosComissoes])
+      carregarDadosComissoes()
+    }
+    carregarMeuExtrato()
+  }, [carregarDadosComissoes, carregarMeuExtrato, isOperador])
 
   async function atualizarTelefonesProducao(novos: string[]) {
     setSalvandoTelefones(true)
@@ -584,57 +616,83 @@ export default function EquipePage() {
         </div>
       </div>
 
-      {/* Navegação entre as 3 Abas Principais (Oculta na Impressão) */}
+      {/* Navegação entre as Abas (Oculta na Impressão) */}
       <div className="flex border-b border-border gap-2 sm:gap-4 overflow-x-auto [scrollbar-width:none] print:hidden">
+        {/* Abas exclusivas de gestão (Apenas para Dono/Gestores) */}
+        {!isOperador && (
+          <button
+            type="button"
+            onClick={() => setAbaAtiva("extrato")}
+            className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
+              abaAtiva === "extrato"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Wallet className="h-4 w-4" />
+            <span>Extrato da Semana (Fechamento)</span>
+            {totalPendenteGeral > 0 && (
+              <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-black">
+                R$ {totalPendenteGeral.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </span>
+            )}
+          </button>
+        )}
+
+        {/* Aba Meu Extrato (Acessível para qualquer usuário logado) */}
         <button
           type="button"
-          onClick={() => setAbaAtiva("extrato")}
+          onClick={() => setAbaAtiva("meu-extrato")}
           className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
-            abaAtiva === "extrato"
+            abaAtiva === "meu-extrato"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Wallet className="h-4 w-4" />
-          <span>Extrato da Semana (Fechamento)</span>
-          {totalPendenteGeral > 0 && (
-            <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-black">
-              R$ {totalPendenteGeral.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          <Coins className="h-4 w-4" />
+          <span>Meu Extrato & Comissões</span>
+          {meuExtrato?.resumo?.totalPendente > 0 && (
+            <span className="rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-black">
+              R$ {meuExtrato.resumo.totalPendente.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </span>
           )}
         </button>
 
-        <button
-          type="button"
-          onClick={() => setAbaAtiva("historico")}
-          className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
-            abaAtiva === "historico"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <History className="h-4 w-4" />
-          <span>Histórico de Comissões</span>
-          <span className="rounded-full bg-muted text-muted-foreground px-1.5 py-0.2 text-[10px] font-black">
-            {comissoes.length}
-          </span>
-        </button>
+        {!isOperador && (
+          <>
+            <button
+              type="button"
+              onClick={() => setAbaAtiva("historico")}
+              className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
+                abaAtiva === "historico"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <History className="h-4 w-4" />
+              <span>Histórico de Comissões</span>
+              <span className="rounded-full bg-muted text-muted-foreground px-1.5 py-0.2 text-[10px] font-black">
+                {comissoes.length}
+              </span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => setAbaAtiva("membros")}
-          className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
-            abaAtiva === "membros"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Users2 className="h-4 w-4" />
-          <span>Membros & Acessos</span>
-          <span className="rounded-full bg-muted text-muted-foreground px-1.5 py-0.2 text-[10px] font-black">
-            {membros.length}
-          </span>
-        </button>
+            <button
+              type="button"
+              onClick={() => setAbaAtiva("membros")}
+              className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
+                abaAtiva === "membros"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Users2 className="h-4 w-4" />
+              <span>Membros & Acessos</span>
+              <span className="rounded-full bg-muted text-muted-foreground px-1.5 py-0.2 text-[10px] font-black">
+                {membros.length}
+              </span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* CONTEÚDO DA ABA 1: EXTRATO DA SEMANA / FECHAMENTO */}
@@ -846,6 +904,343 @@ export default function EquipePage() {
               })
             )}
           </div>
+        </div>
+      )}
+
+      {/* CONTEÚDO DA ABA: MEU EXTRATO PESSOAL */}
+      {abaAtiva === "meu-extrato" && (
+        <div className="flex flex-col gap-6">
+          {carregandoMeuExtrato && !meuExtrato ? (
+            <div className="flex min-h-[30vh] items-center justify-center">
+              <div className="flex flex-col items-center gap-2">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                <p className="text-sm font-bold text-muted-foreground">Carregando seu extrato...</p>
+              </div>
+            </div>
+          ) : !meuExtrato ? (
+            <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center">
+              <p className="text-sm font-bold text-muted-foreground">Nenhum dado encontrado para o seu login.</p>
+              <Button onClick={carregarMeuExtrato} variant="outline" size="sm" className="mt-3">
+                <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Atualizar
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Resumo do Colaborador Logado */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Card 1: A Receber Esta Semana */}
+                <Card className="border-amber-500/40 bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-transparent relative overflow-hidden shadow-xs">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="text-amber-700 dark:text-amber-400 font-bold uppercase text-[11px] tracking-wider flex items-center justify-between">
+                      <span>A Receber Esta Semana</span>
+                      <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
+                    </CardDescription>
+                    <CardTitle className="text-2xl sm:text-3xl font-black text-amber-950 dark:text-amber-100 mt-1">
+                      {formatarMoeda(meuExtrato.resumo?.totalPendente || 0)}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      <strong>{meuExtrato.resumo?.pecasPendentes || 0} peças</strong> prontas para repasse no fim de semana
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Card 2: Total Já Recebido */}
+                <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-transparent shadow-xs">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="text-emerald-700 dark:text-emerald-400 font-bold uppercase text-[11px] tracking-wider flex items-center justify-between">
+                      <span>Total Já Recebido</span>
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    </CardDescription>
+                    <CardTitle className="text-2xl sm:text-3xl font-black text-emerald-950 dark:text-emerald-100 mt-1">
+                      {formatarMoeda(meuExtrato.resumo?.totalPago || 0)}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      <strong>{meuExtrato.recibos?.length || 0} recibos</strong> de pagamento quitados
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Card 3: Peças Produzidas */}
+                <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-transparent shadow-xs">
+                  <CardHeader className="pb-2">
+                    <CardDescription className="text-blue-700 dark:text-blue-400 font-bold uppercase text-[11px] tracking-wider flex items-center justify-between">
+                      <span>Peças Produzidas</span>
+                      <CalendarCheck className="h-4 w-4 text-blue-500" />
+                    </CardDescription>
+                    <CardTitle className="text-2xl sm:text-3xl font-black text-blue-950 dark:text-blue-100 mt-1">
+                      {meuExtrato.resumo?.totalPecas || 0} un
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      Acumulado geral de peças concluídas por você
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Seletor de Sub-Abas do Meu Extrato */}
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60 border w-fit">
+                <button
+                  type="button"
+                  onClick={() => setAbaInternaMeuExtrato("semana")}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    abaInternaMeuExtrato === "semana"
+                      ? "bg-background text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Semana ({meuExtrato.itensPendentes?.length || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAbaInternaMeuExtrato("recibos")}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    abaInternaMeuExtrato === "recibos"
+                      ? "bg-background text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Recibos ({meuExtrato.recibos?.length || 0})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAbaInternaMeuExtrato("historico")}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    abaInternaMeuExtrato === "historico"
+                      ? "bg-background text-foreground shadow-2xs"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Histórico Geral
+                </button>
+              </div>
+
+              {/* Sub-Aba 1: Peças da Semana Pendentes */}
+              {abaInternaMeuExtrato === "semana" && (
+                <Card className="border shadow-xs">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base font-black flex items-center gap-2">
+                        <Coins className="h-4 w-4 text-amber-500" />
+                        Peças Desta Semana (A Receber)
+                      </CardTitle>
+                      <CardDescription className="text-xs mt-0.5">
+                        Valores apurados na produção prontos para o fechamento.
+                      </CardDescription>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase block">
+                        Total da Semana:
+                      </span>
+                      <span className="text-lg font-black text-amber-600 dark:text-amber-400">
+                        {formatarMoeda(meuExtrato.resumo?.totalPendente || 0)}
+                      </span>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent>
+                    {(!meuExtrato.itensPendentes || meuExtrato.itensPendentes.length === 0) ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                        <Coins className="h-10 w-10 stroke-[1.5] mb-2 opacity-30 text-amber-500" />
+                        <p className="text-sm font-bold">Nenhuma peça pendente para esta semana</p>
+                        <p className="text-xs opacity-75 mt-0.5">
+                          Assim que você concluir peças na Produção, seus bônus entram automaticamente aqui.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-xl border">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-muted/50 text-[10px] uppercase font-black text-muted-foreground border-b">
+                            <tr>
+                              <th className="py-2.5 px-3">Data</th>
+                              <th className="py-2.5 px-3">Demanda</th>
+                              <th className="py-2.5 px-3">Cliente</th>
+                              <th className="py-2.5 px-3">Produto / Serviço</th>
+                              <th className="py-2.5 px-3 text-right">Valor da OS</th>
+                              <th className="py-2.5 px-3 text-right">Seu Bônus</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/60">
+                            {meuExtrato.itensPendentes.map((item: any) => (
+                              <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                                <td className="py-2.5 px-3 text-muted-foreground font-medium">
+                                  {formatarData(item.criado_em)}
+                                </td>
+                                <td className="py-2.5 px-3 font-bold text-primary">
+                                  OS #{item.numero}
+                                </td>
+                                <td className="py-2.5 px-3 font-semibold text-foreground">
+                                  {item.cliente_nome}
+                                </td>
+                                <td className="py-2.5 px-3 text-muted-foreground">
+                                  {item.produto_nome}
+                                </td>
+                                <td className="py-2.5 px-3 text-right text-muted-foreground">
+                                  {formatarMoeda(Number(item.valor_pedido) || 0)}
+                                </td>
+                                <td className="py-2.5 px-3 text-right font-black text-amber-600 dark:text-amber-400 text-sm">
+                                  +{formatarMoeda(Number(item.valor_comissao) || 0)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Sub-Aba 2: Recibos Oficiais Anteriores */}
+              {abaInternaMeuExtrato === "recibos" && (
+                <Card className="border shadow-xs">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-black flex items-center gap-2">
+                      <Receipt className="h-4 w-4 text-emerald-500" />
+                      Meus Recibos de Pagamento
+                    </CardTitle>
+                    <CardDescription className="text-xs mt-0.5">
+                      Comprovantes oficiais emitidos pela administração.
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent>
+                    {(!meuExtrato.recibos || meuExtrato.recibos.length === 0) ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                        <Receipt className="h-10 w-10 stroke-[1.5] mb-2 opacity-30 text-emerald-500" />
+                        <p className="text-sm font-bold">Nenhum recibo emitido ainda</p>
+                        <p className="text-xs opacity-75 mt-0.5">
+                          Assim que a administração quitar seu fechamento, o recibo aparecerá aqui para visualização e assinatura.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {meuExtrato.recibos.map((rec: any) => {
+                          const rotuloForma =
+                            rec.forma_pagamento === "pix" ? "PIX" :
+                            rec.forma_pagamento === "dinheiro" ? "Dinheiro" :
+                            rec.forma_pagamento === "deposito" ? "Depósito" : "Outro"
+
+                          return (
+                            <div
+                              key={rec.id}
+                              className="rounded-xl border p-4 bg-card hover:border-primary/50 transition-all flex flex-col justify-between gap-3 shadow-2xs"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <span className="text-[10px] uppercase font-black tracking-wider text-muted-foreground block">
+                                    Recibo Oficial
+                                  </span>
+                                  <span className="font-black text-base text-foreground">
+                                    {rec.numero_recibo}
+                                  </span>
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    Pago em {formatarData(rec.criado_em)} • via {rotuloForma}
+                                  </p>
+                                </div>
+
+                                <div className="text-right">
+                                  <span className="text-base font-black text-emerald-600 dark:text-emerald-400 block">
+                                    {formatarMoeda(Number(rec.valor_total) || 0)}
+                                  </span>
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+                                    <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                                    {rec.assinado_em ? "Assinado" : "Aguardando Assinatura"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="pt-2 border-t flex items-center justify-between">
+                                <span className="text-[11px] text-muted-foreground">
+                                  Repassado por: <strong>{rec.pago_por || "Administração"}</strong>
+                                </span>
+
+                                <Link
+                                  href={`/equipe/recibo/${rec.id}`}
+                                  className={buttonVariants({ variant: "outline", size: "sm", className: "h-7 text-xs font-bold gap-1" })}
+                                >
+                                  <FileText className="h-3.5 w-3.5" />
+                                  Ver Recibo
+                                </Link>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Sub-Aba 3: Histórico Completo */}
+              {abaInternaMeuExtrato === "historico" && (
+                <Card className="border shadow-xs">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-black flex items-center gap-2">
+                      <CalendarCheck className="h-4 w-4 text-primary" />
+                      Histórico Recente de Produção
+                    </CardTitle>
+                    <CardDescription className="text-xs mt-0.5">
+                      Todas as peças creditadas a você na fábrica.
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent>
+                    {(!meuExtrato.historicoRecente || meuExtrato.historicoRecente.length === 0) ? (
+                      <div className="py-10 text-center text-muted-foreground text-sm">
+                        Nenhum registro histórico encontrado
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-xl border">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-muted/50 text-[10px] uppercase font-black text-muted-foreground border-b">
+                            <tr>
+                              <th className="py-2 px-3">Data</th>
+                              <th className="py-2 px-3">OS</th>
+                              <th className="py-2 px-3">Cliente</th>
+                              <th className="py-2 px-3">Produto</th>
+                              <th className="py-2 px-3">Status</th>
+                              <th className="py-2 px-3 text-right">Bônus</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/60">
+                            {meuExtrato.historicoRecente.map((h: any) => (
+                              <tr key={h.id} className="hover:bg-muted/20">
+                                <td className="py-2 px-3 text-muted-foreground">{formatarData(h.criado_em)}</td>
+                                <td className="py-2 px-3 font-bold">OS #{h.numero}</td>
+                                <td className="py-2 px-3 font-medium">{h.cliente_nome}</td>
+                                <td className="py-2 px-3 text-muted-foreground">{h.produto_nome}</td>
+                                <td className="py-2 px-3">
+                                  {h.status === "pago" ? (
+                                    <span className="rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[10px] font-black uppercase">
+                                      Pago
+                                    </span>
+                                  ) : (
+                                    <span className="rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-black uppercase">
+                                      Pendente
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-2 px-3 text-right font-bold text-foreground">
+                                  {formatarMoeda(Number(h.valor_comissao) || 0)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
         </div>
       )}
 

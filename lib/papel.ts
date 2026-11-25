@@ -9,8 +9,8 @@ export const ROTULO_PAPEL: Record<Papel, string> = {
   operador: "Colaborador",
 }
 
-// "operador" enxerga Produção, Painel TV e seu próprio Extrato / Recibos
-export const PAGINAS_OPERADOR = ["/producao", "/tv", "/meu-extrato", "/equipe/recibo"]
+// "operador" enxerga Produção, Painel TV e Equipe & RH (onde vê seu próprio Extrato)
+export const PAGINAS_OPERADOR = ["/producao", "/tv", "/equipe", "/equipe/recibo", "/meu-extrato"]
 
 export function operadorPodeAcessar(pathname: string) {
   return PAGINAS_OPERADOR.some((p) => pathname === p || pathname.startsWith(`${p}/`))
