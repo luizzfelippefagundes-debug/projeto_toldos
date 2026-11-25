@@ -51,7 +51,8 @@ import {
 } from "@/components/ui/dialog"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import type { Papel } from "@/lib/types"
-import { formatarMoeda, formatarDataHora } from "@/lib/format"
+import { formatarMoeda, formatarDataHora, formatarData } from "@/lib/format"
+import { EMPRESA_ORCAMENTO } from "@/lib/orcamento-pdf"
 
 interface Membro {
   id: string
@@ -452,22 +453,109 @@ export default function EquipePage() {
     setBuscaHistorico("")
   }
 
+  const rotuloPeriodoImpresso = useMemo(() => {
+    if (filtroPeriodo === "hoje") return "Hoje"
+    if (filtroPeriodo === "semana") return "Esta Semana"
+    if (filtroPeriodo === "semana_passada") return "Semana Passada"
+    if (filtroPeriodo === "mes") return "Este Mês"
+    if (filtroPeriodo === "mes_passado") return "Mês Passado"
+    if (filtroPeriodo === "custom") {
+      if (dataInicioCustom && dataFimCustom) return `De ${formatarData(dataInicioCustom)} até ${formatarData(dataFimCustom)}`
+      if (dataInicioCustom) return `A partir de ${formatarData(dataInicioCustom)}`
+      if (dataFimCustom) return `Até ${formatarData(dataFimCustom)}`
+      return "Período Personalizado"
+    }
+    return "Todo o Histórico"
+  }, [filtroPeriodo, dataInicioCustom, dataFimCustom])
+
   return (
     <div className="flex flex-col gap-5 sm:gap-6 pb-12">
-      {/* Cabeçalho Principal */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Users2 className="h-5 w-5" />
+      {/* ========================================================= */}
+      {/* CABEÇALHO OFICIAL PROFISSIONAL EXCLUSIVO PARA IMPRESSÃO / PDF */}
+      {/* ========================================================= */}
+      <div className="hidden print:flex flex-col gap-3 pb-4 mb-4 border-b-2 border-slate-900 text-slate-950">
+        <div className="flex items-center justify-between gap-4">
+          {/* Logo Oficial e Dados da Empresa */}
+          <div className="flex items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo-orcamento.png"
+              alt="Toldos Print"
+              className="h-14 w-auto object-contain shrink-0"
+            />
+            <div className="border-l-2 border-slate-300 pl-3.5">
+              <h1 className="text-base font-black text-slate-950 uppercase tracking-tight leading-tight">
+                TOLDOS PRINT & COMUNICAÇÃO VISUAL
+              </h1>
+              <p className="text-[10px] text-slate-600 font-bold leading-tight mt-0.5">
+                {EMPRESA_ORCAMENTO.cnpj}
+              </p>
+              <p className="text-[9.5px] text-slate-600 leading-tight">
+                {EMPRESA_ORCAMENTO.endereco.join(" — ")} • Tel: (27) 99748-9714
+              </p>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              Equipe & RH
-            </h1>
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Gestão de colaboradores, conta-corrente de comissões de produção e controle de acessos.
-          </p>
+
+          {/* Metadados do Relatório */}
+          <div className="text-right text-[10px] text-slate-600 shrink-0">
+            <span className="inline-block px-2.5 py-0.5 bg-slate-900 text-white font-black text-[9px] uppercase tracking-wider rounded">
+              Relatório de Produção & Comissões
+            </span>
+            <p className="font-black text-slate-900 text-xs mt-1.5">
+              {rotuloPeriodoImpresso}
+            </p>
+            <p className="text-[9.5px] text-slate-500 font-medium">
+              Emitido em {new Date().toLocaleDateString("pt-BR")} às {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </p>
+            <p className="text-[9.5px] font-bold text-slate-800">
+              Colaborador: {filtroColaborador === "todos" ? "Toda a Equipe" : filtroColaborador}
+            </p>
+          </div>
+        </div>
+
+        {/* Quadro Resumo Compacto de Impressão */}
+        <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-200 text-xs">
+          <div className="p-2 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[9px] uppercase font-bold text-slate-500 block">Peças Produzidas</span>
+            <span className="text-sm font-black text-slate-900">{kpisHistorico.quantidadePecas} peças</span>
+          </div>
+          <div className="p-2 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[9px] uppercase font-bold text-slate-500 block">Faturamento (Vendas)</span>
+            <span className="text-sm font-black text-slate-900">{formatarMoeda(kpisHistorico.valorPedidosTotal)}</span>
+          </div>
+          <div className="p-2 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[9px] uppercase font-bold text-slate-500 block">Total em Bônus</span>
+            <span className="text-sm font-black text-emerald-700">{formatarMoeda(kpisHistorico.valorComissoesTotal)}</span>
+          </div>
+          <div className="p-2 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[9px] uppercase font-bold text-slate-500 block">Pendentes / Pagos</span>
+            <span className="text-xs font-black text-slate-800">
+              <span className="text-amber-700">{formatarMoeda(kpisHistorico.valorPendenteTotal)}</span> / <span className="text-slate-600">{formatarMoeda(kpisHistorico.valorPagoTotal)}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Cabeçalho Principal (Oculto na Impressão) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-3.5">
+          {/* Logo da Empresa */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo.png"
+            alt="Toldos Print"
+            className="h-10 sm:h-11 w-auto object-contain rounded-xl bg-[#0060a7] p-1.5 shadow-xs shrink-0"
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+                Equipe & RH
+              </h1>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              Gestão de colaboradores, conta-corrente de comissões de produção e controle de acessos.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -496,8 +584,8 @@ export default function EquipePage() {
         </div>
       </div>
 
-      {/* Navegação entre as 3 Abas Principais */}
-      <div className="flex border-b border-border gap-2 sm:gap-4 overflow-x-auto [scrollbar-width:none]">
+      {/* Navegação entre as 3 Abas Principais (Oculta na Impressão) */}
+      <div className="flex border-b border-border gap-2 sm:gap-4 overflow-x-auto [scrollbar-width:none] print:hidden">
         <button
           type="button"
           onClick={() => setAbaAtiva("extrato")}
@@ -764,8 +852,8 @@ export default function EquipePage() {
       {/* CONTEÚDO DA ABA 2: HISTÓRICO DE COMISSÕES */}
       {abaAtiva === "historico" && (
         <div className="flex flex-col gap-4">
-          {/* Métricas Resumo do Filtro Atual */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+          {/* Métricas Resumo do Filtro Atual (Oculto na Impressão pois o Cabeçalho Oficial já tem) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 print:hidden">
             <div className="rounded-xl border border-border bg-card p-3 shadow-2xs">
               <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block">
                 Itens / Peças Filtradas
@@ -821,8 +909,8 @@ export default function EquipePage() {
             </div>
           </div>
 
-          {/* Barra de Filtros Completa e Profissional */}
-          <div className="rounded-2xl border border-border bg-card p-3.5 shadow-2xs flex flex-col gap-3">
+          {/* Barra de Filtros Completa e Profissional (Oculta na Impressão) */}
+          <div className="rounded-2xl border border-border bg-card p-3.5 shadow-2xs flex flex-col gap-3 print:hidden">
             <div className="flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between">
               {/* Campo de Busca */}
               <div className="relative flex-1 min-w-[200px]">
@@ -938,60 +1026,60 @@ export default function EquipePage() {
               Nenhum registro encontrado para estes filtros.
             </div>
           ) : (
-            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-muted/50 border-b border-border/80 font-black text-muted-foreground uppercase text-[10px]">
+            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs print:border-slate-300 print:shadow-none">
+              <div className="overflow-x-auto print:overflow-visible">
+                <table className="w-full text-left text-xs print:text-[10px]">
+                  <thead className="bg-muted/50 border-b border-border/80 font-black text-muted-foreground uppercase text-[10px] print:bg-slate-100 print:text-slate-900 print:border-slate-300">
                     <tr>
-                      <th className="p-3">Data</th>
-                      <th className="p-3">Colaborador</th>
-                      <th className="p-3">Demanda</th>
-                      <th className="p-3">Cliente</th>
-                      <th className="p-3">Produto / Serviço</th>
-                      <th className="p-3">Valor Pedido</th>
-                      <th className="p-3 text-right">Bônus Creditado</th>
-                      <th className="p-3 text-center">Status</th>
+                      <th className="p-3 print:py-1.5 print:px-2">Data</th>
+                      <th className="p-3 print:py-1.5 print:px-2">Colaborador</th>
+                      <th className="p-3 print:py-1.5 print:px-2">Demanda</th>
+                      <th className="p-3 print:py-1.5 print:px-2">Cliente</th>
+                      <th className="p-3 print:py-1.5 print:px-2">Produto / Serviço</th>
+                      <th className="p-3 print:py-1.5 print:px-2">Valor Pedido</th>
+                      <th className="p-3 text-right print:py-1.5 print:px-2">Bônus Creditado</th>
+                      <th className="p-3 text-center print:py-1.5 print:px-2">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/60">
+                  <tbody className="divide-y divide-border/60 print:divide-slate-200">
                     {historicoFiltrado.map((item) => (
-                      <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="p-3 text-muted-foreground whitespace-nowrap">
+                      <tr key={item.id} className="hover:bg-muted/30 transition-colors print:hover:bg-transparent">
+                        <td className="p-3 text-muted-foreground whitespace-nowrap print:py-1.5 print:px-2 print:text-slate-700">
                           {formatarDataHora(item.criado_em)}
                         </td>
-                        <td className="p-3 font-black text-foreground">
+                        <td className="p-3 font-black text-foreground print:py-1.5 print:px-2 print:text-slate-950">
                           {item.colaborador_nome}
                         </td>
-                        <td className="p-3 font-bold text-primary whitespace-nowrap">
+                        <td className="p-3 font-bold text-primary whitespace-nowrap print:py-1.5 print:px-2 print:text-slate-900">
                           {item.origem_tipo === "orcamento" ? `OS #${item.numero}` : `#${item.numero}`}
                         </td>
-                        <td className="p-3 font-medium text-foreground truncate max-w-[150px]">
+                        <td className="p-3 font-medium text-foreground truncate max-w-[150px] print:max-w-none print:py-1.5 print:px-2 print:text-slate-800">
                           {item.cliente_nome}
                         </td>
-                        <td className="p-3 text-foreground font-semibold truncate max-w-[200px]" title={item.produto_nome}>
+                        <td className="p-3 text-foreground font-semibold truncate max-w-[200px] print:max-w-none print:py-1.5 print:px-2 print:text-slate-800" title={item.produto_nome}>
                           {item.produto_nome || "Produção"}
                         </td>
-                        <td className="p-3 text-muted-foreground whitespace-nowrap">
+                        <td className="p-3 text-muted-foreground whitespace-nowrap print:py-1.5 print:px-2 print:text-slate-700">
                           {formatarMoeda(Number(item.valor_pedido) || 0)}
                         </td>
-                        <td className="p-3 text-right font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                        <td className="p-3 text-right font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap print:py-1.5 print:px-2 print:text-slate-950">
                           + {formatarMoeda(Number(item.valor_comissao) || 0)}
                           {item.comissao_percent > 0 && (
-                            <span className="text-[10px] font-normal text-muted-foreground ml-1">
+                            <span className="text-[10px] font-normal text-muted-foreground ml-1 print:text-slate-500">
                               ({item.comissao_percent}%)
                             </span>
                           )}
                         </td>
-                        <td className="p-3 text-center whitespace-nowrap">
+                        <td className="p-3 text-center whitespace-nowrap print:py-1.5 print:px-2">
                           {item.status === "pago" ? (
                             <div className="flex items-center justify-center gap-1.5">
-                              <span className="rounded-full bg-slate-500/20 text-muted-foreground px-2 py-0.5 font-bold text-[10px]">
+                              <span className="rounded-full bg-slate-500/20 text-muted-foreground px-2 py-0.5 font-bold text-[10px] print:bg-slate-200 print:text-slate-700 print:border print:border-slate-300">
                                 Pago ✓
                               </span>
                               {item.recibo_id && (
                                 <Link
                                   href={`/equipe/recibo/${item.recibo_id}`}
-                                  className="text-[10px] font-bold text-primary hover:underline inline-flex items-center gap-0.5"
+                                  className="text-[10px] font-bold text-primary hover:underline inline-flex items-center gap-0.5 print:hidden"
                                   title="Abrir Recibo Oficial"
                                 >
                                   Recibo ↗
@@ -999,7 +1087,7 @@ export default function EquipePage() {
                               )}
                             </div>
                           ) : (
-                            <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-black text-[10px]">
+                            <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-black text-[10px] print:bg-emerald-100 print:text-emerald-900 print:border print:border-emerald-300">
                               Pendente
                             </span>
                           )}
