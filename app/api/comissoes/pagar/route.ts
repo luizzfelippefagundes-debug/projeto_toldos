@@ -4,6 +4,7 @@ import { valorPorExtenso } from "@/lib/extenso"
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json().catch(() => ({}))
     const {
       comissao_ids,
       colaborador_id,
@@ -14,19 +15,29 @@ export async function POST(req: Request) {
       criar_lancamento_financeiro = true,
       observacao = "",
       pago_por = "Gestor / Dono",
-    } = await req.json()
-
-    if (!Array.isArray(comissao_ids) || comissao_ids.length === 0) {
-      return NextResponse.json({ error: "Nenhuma comissão selecionada para pagamento" }, { status: 400 })
-    }
+    } = body
 
     const sql = getSql()
+
+    // Identificar comissões a serem pagas: ou pelos IDs informados ou pelas comissões pendentes do colaborador
+    let idsParaBuscar: string[] = Array.isArray(comissao_ids) ? comissao_ids.filter(Boolean) : []
+    if (idsParaBuscar.length === 0 && colaborador_nome) {
+      const pendentes = await sql`
+        SELECT id FROM comissoes_producao
+        WHERE colaborador_nome = ${colaborador_nome} AND status = 'pendente'
+      `
+      idsParaBuscar = pendentes.map((p: any) => p.id)
+    }
+
+    if (idsParaBuscar.length === 0) {
+      return NextResponse.json({ error: "Nenhuma comissão pendente encontrada para pagamento" }, { status: 400 })
+    }
 
     // Buscar as comissões pendentes a serem pagas
     const itens = await sql`
       SELECT id, valor_comissao, numero, criado_em, produto_nome, cliente_nome
       FROM comissoes_producao
-      WHERE id = ANY(${comissao_ids}) AND status = 'pendente'
+      WHERE id = ANY(${idsParaBuscar}) AND status = 'pendente'
       ORDER BY criado_em ASC
     `
 
@@ -34,7 +45,7 @@ export async function POST(req: Request) {
       // Se já foram pagas anteriormente e têm recibo, retorna o recibo existente (idempotência)
       const jaPagas = await sql`
         SELECT recibo_id FROM comissoes_producao
-        WHERE id = ANY(${comissao_ids}) AND status = 'pago' AND recibo_id IS NOT NULL
+        WHERE id = ANY(${idsParaBuscar}) AND status = 'pago' AND recibo_id IS NOT NULL
         LIMIT 1
       `
       if (jaPagas.length > 0 && jaPagas[0].recibo_id) {
@@ -54,17 +65,31 @@ export async function POST(req: Request) {
     const totalPago = itens.reduce((acc: number, curr: any) => acc + (Number(curr.valor_comissao) || 0), 0)
 
     // Período de apuração do lote
-    const periodoInicio = itens[0]?.criado_em || new Date().toISOString()
-    const periodoFim = itens[itens.length - 1]?.criado_em || new Date().toISOString()
-
-    // Gerar identificador e número sequencial amigável do recibo
     const agora = new Date()
+    const periodoInicio = itens[0]?.criado_em ? new Date(itens[0].criado_em).toISOString() : agora.toISOString()
+    const periodoFim = itens[itens.length - 1]?.criado_em ? new Date(itens[itens.length - 1].criado_em).toISOString() : agora.toISOString()
+
+    // Gerar identificador e número sequencial amigável do recibo (à prova de colisões)
     const ano = agora.getFullYear()
     const reciboId = `rec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
-    
-    // Contagem de recibos para criar código sequencial do ano (ex: REC-2026-0001)
-    const countRows = await sql`SELECT COUNT(*)::int as total FROM recibos_comissao`
-    const sequencia = (Number(countRows[0]?.total) || 0) + 1
+
+    // Buscar maior numeração já existente do ano corrente
+    const prefixo = `REC-${ano}-`
+    const recibosDoAno = await sql`
+      SELECT numero_recibo FROM recibos_comissao
+      WHERE numero_recibo LIKE ${prefixo + '%'}
+      ORDER BY id DESC
+      LIMIT 100
+    `
+    let maxSeq = 0
+    for (const r of recibosDoAno) {
+      const match = (r.numero_recibo || "").match(/REC-\d{4}-(\d+)/)
+      if (match) {
+        const num = parseInt(match[1], 10)
+        if (!isNaN(num) && num > maxSeq) maxSeq = num
+      }
+    }
+    const sequencia = maxSeq + 1
     const numeroRecibo = `REC-${ano}-${String(sequencia).padStart(4, "0")}`
 
     const extenso = valorPorExtenso(totalPago)
@@ -116,49 +141,57 @@ export async function POST(req: Request) {
       WHERE id = ANY(${idsValidos})
     `
 
-    // Lançamento opcional no Financeiro da empresa
+    // Lançamento opcional no Financeiro da empresa (com try/catch isolado para não falhar a emissão do recibo)
     let lancamentoId: string | null = null
     if (criar_lancamento_financeiro && totalPago > 0) {
-      lancamentoId = `fin-com-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
-      const hoje = agora.toISOString().slice(0, 10)
-      const desc = `Comissão Produção ${numeroRecibo} — ${colaborador_nome || "Colaborador"} (${itens.length} peças)`
+      try {
+        lancamentoId = `fin-com-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+        const hoje = agora.toISOString().slice(0, 10)
+        const desc = `Comissão Produção ${numeroRecibo} — ${colaborador_nome || "Colaborador"} (${itens.length} peças)`
 
-      const rotuloFormaPagamento =
-        forma_pagamento === "pix" ? "Pix" :
-        forma_pagamento === "dinheiro" ? "Dinheiro" :
-        forma_pagamento === "deposito" ? "Boleto/Depósito" : "Outro"
+        const rotuloFormaPagamento =
+          forma_pagamento === "pix" ? "Pix" :
+          forma_pagamento === "dinheiro" ? "Dinheiro" :
+          forma_pagamento === "deposito" ? "Boleto/Depósito" : "Outro"
 
-      await sql`
-        INSERT INTO lancamentos_financeiros (
-          id,
-          tipo,
-          descricao,
-          valor,
-          categoria,
-          vencimento,
-          status,
-          pago_em,
-          origem,
-          origem_id,
-          forma_pagamento,
-          observacoes,
-          criado_em
-        ) VALUES (
-          ${lancamentoId},
-          'despesa',
-          ${desc},
-          ${totalPago},
-          'Comissão / RH',
-          ${hoje},
-          'pago',
-          ${hoje},
-          'manual',
-          ${reciboId},
-          ${rotuloFormaPagamento},
-          ${observacao || `Recibo ${numeroRecibo} para ${colaborador_nome}`},
-          ${agora.toISOString()}
-        )
-      `
+        await sql`
+          INSERT INTO lancamentos_financeiros (
+            id,
+            tipo,
+            descricao,
+            valor,
+            categoria,
+            vencimento,
+            status,
+            pago_em,
+            origem,
+            origem_id,
+            forma_pagamento,
+            pessoal,
+            despesa_fixa,
+            observacoes,
+            criado_em
+          ) VALUES (
+            ${lancamentoId},
+            'despesa',
+            ${desc},
+            ${totalPago},
+            'Comissão / RH',
+            ${hoje},
+            'pago',
+            ${hoje},
+            'manual',
+            ${reciboId},
+            ${rotuloFormaPagamento},
+            false,
+            false,
+            ${observacao || `Recibo ${numeroRecibo} para ${colaborador_nome}`},
+            ${agora.toISOString()}
+          )
+        `
+      } catch (finError) {
+        console.error("Aviso: falha ao espelhar despesa de comissão no financeiro:", finError)
+      }
     }
 
     return NextResponse.json({
@@ -169,8 +202,9 @@ export async function POST(req: Request) {
       quantidadePaga: idsValidos.length,
       lancamentoId,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao pagar comissões e gerar recibo:", error)
-    return NextResponse.json({ error: "Erro ao processar pagamento e gerar recibo" }, { status: 500 })
+    const mensagemErro = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: mensagemErro || "Erro ao processar pagamento e gerar recibo" }, { status: 500 })
   }
 }

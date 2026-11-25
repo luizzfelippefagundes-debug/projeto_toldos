@@ -629,7 +629,7 @@ export default function EquipePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          comissao_ids: modalPagamento.colaborador.comissoes_pendentes_ids,
+          comissao_ids: modalPagamento.colaborador.comissoes_pendentes_ids || [],
           colaborador_nome: modalPagamento.colaborador.colaborador_nome,
           forma_pagamento: modalPagamento.formaPagamento,
           tipo_assinatura: modalPagamento.tipoAssinatura,
@@ -640,7 +640,7 @@ export default function EquipePage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || "Erro ao registrar pagamento de comissões.")
+        throw new Error(errData.error || errData.message || "Erro ao registrar pagamento de comissões.")
       }
       const data = await res.json()
       toast.success(
