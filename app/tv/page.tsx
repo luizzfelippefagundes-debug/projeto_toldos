@@ -106,22 +106,22 @@ function AvisoCard({
   return (
     <div
       key={`aviso-card-${aviso.id}`}
-      className={`shrink-0 rounded-2xl border-2 p-3 sm:p-3.5 lg:p-4 shadow-md w-full min-w-0 max-w-full overflow-hidden transition-all ${
+      className={`shrink-0 rounded-xl border-2 p-2.5 sm:p-3 shadow-md w-full min-w-0 max-w-full overflow-hidden transition-all ${
         isVermelho
-          ? "border-red-600 bg-red-100/95 dark:border-red-500 dark:bg-red-950/85 ring-4 ring-red-500/30 animate-[pulse_3s_ease-in-out_infinite]"
+          ? "border-red-600 bg-red-950/90 text-red-100 ring-2 ring-red-500/40"
           : isAmarelo
-            ? "border-amber-500 bg-amber-50/95 dark:border-amber-500/80 dark:bg-amber-950/75 ring-2 ring-amber-500/25"
-            : "border-blue-500/80 bg-blue-50/95 dark:border-blue-500/70 dark:bg-blue-950/75"
+            ? "border-amber-500 bg-amber-950/80 text-amber-100 ring-1 ring-amber-500/30"
+            : "border-blue-500/80 bg-blue-950/80 text-blue-100"
       }`}
     >
-      {/* Topo do Card de Aviso */}
-      <div className="flex items-center justify-between gap-1.5 flex-wrap min-w-0">
-        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-          <span className="text-lg sm:text-xl lg:text-2xl shrink-0 leading-none">
+      {/* Topo do Card de Aviso: Sempre compacto em 1 linha */}
+      <div className="flex items-center justify-between gap-1 leading-none min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-base shrink-0 leading-none">
             {aviso.icone || (isVermelho ? "🚨" : isAmarelo ? "⚠️" : "📢")}
           </span>
           <span
-            className={`rounded-lg px-2 py-0.5 text-[11px] sm:text-xs lg:text-sm font-black uppercase tracking-wider shrink-0 ${
+            className={`rounded px-1.5 py-0.5 text-[10px] sm:text-[11px] font-black uppercase tracking-wider shrink-0 ${
               isVermelho
                 ? "bg-red-600 text-white"
                 : isAmarelo
@@ -129,37 +129,25 @@ function AvisoCard({
                   : "bg-blue-600 text-white"
             }`}
           >
-            {isVermelho ? "EMERGÊNCIA FÁBRICA" : isAmarelo ? "ATENÇÃO EQUIPE" : "COMUNICADO"}
+            {isVermelho ? "Emergência" : isAmarelo ? "Atenção" : "Aviso"}
           </span>
           {aviso.som && (
-            <span className="rounded-md bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-amber-700 dark:text-amber-300 shrink-0 flex items-center gap-1">
-              🔊 ALARME
+            <span className="text-[10px] shrink-0" title="Alerta sonoro ativo">
+              🔊
             </span>
           )}
         </div>
 
         {hora && (
-          <span className="shrink-0 rounded-lg bg-background/80 border border-border/60 px-2 py-0.5 text-[10px] sm:text-xs font-bold text-muted-foreground">
+          <span className="shrink-0 rounded bg-black/40 border border-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
             {hora}
           </span>
         )}
       </div>
 
-      {/* Conteúdo da Mensagem da Emergência - FONTE GIGANTE PARA VER DE LONGE */}
-      <div className="mt-2.5 min-w-0 max-w-full">
-        <p
-          className={`font-black tracking-tight leading-snug break-words whitespace-normal ${
-            isVermelho
-              ? "text-red-950 dark:text-red-100"
-              : isAmarelo
-                ? "text-amber-950 dark:text-amber-100"
-                : "text-foreground"
-          } ${
-            tamanhoGrande
-              ? "text-base sm:text-lg lg:text-xl xl:text-2xl"
-              : "text-sm sm:text-base lg:text-lg"
-          }`}
-        >
+      {/* Mensagem da Emergência */}
+      <div className="mt-2 min-w-0 max-w-full">
+        <p className="font-black text-xs sm:text-sm lg:text-base leading-snug break-words whitespace-normal tracking-tight text-white">
           {aviso.mensagem}
         </p>
       </div>
@@ -188,7 +176,7 @@ function PedidoCard({
   return (
     <div
       key={pedido.id}
-      className={`shrink-0 rounded-2xl border-2 transition-all p-3 sm:p-3.5 lg:p-4 shadow-sm w-full min-w-0 max-w-full overflow-hidden ${
+      className={`shrink-0 rounded-2xl border-2 transition-all p-2.5 sm:p-3 shadow-sm w-full min-w-0 max-w-full overflow-hidden ${
         temProblema
           ? "border-red-600 bg-red-100/95 dark:border-red-500 dark:bg-red-950/85 ring-4 ring-red-500/30 shadow-lg animate-[pulse_3s_ease-in-out_infinite]"
           : atrasado
@@ -197,24 +185,24 @@ function PedidoCard({
       }`}
     >
       {/* Linha superior: Tag OS / Pedido + Tipo + Prazo/Atrasado + Badge da Etapa */}
-      <div className="flex items-center justify-between gap-1.5 leading-none flex-wrap min-w-0">
-        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-          <span className="font-black text-xs sm:text-sm lg:text-base text-foreground tracking-tight shrink-0">
+      <div className="flex items-center justify-between gap-1 leading-none flex-wrap min-w-0">
+        <div className="flex items-center gap-1 min-w-0 flex-wrap">
+          <span className="font-black text-xs sm:text-sm text-foreground tracking-tight shrink-0">
             {pedido.tipo === "orcamento" ? `OS #${pedido.numero}` : `#${pedido.numero}`}
           </span>
           {pedido.tipo === "orcamento" ? (
-            <span className="rounded-md bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-blue-700 dark:text-blue-300 uppercase shrink-0">
+            <span className="rounded bg-blue-500/15 border border-blue-500/30 px-1 py-0.5 text-[9px] sm:text-[10px] font-black text-blue-700 dark:text-blue-300 uppercase shrink-0">
               Com. Visual
             </span>
           ) : (
-            <span className="rounded-md bg-violet-500/15 border border-violet-500/30 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-violet-700 dark:text-violet-300 uppercase shrink-0">
+            <span className="rounded bg-violet-500/15 border border-violet-500/30 px-1 py-0.5 text-[9px] sm:text-[10px] font-black text-violet-700 dark:text-violet-300 uppercase shrink-0">
               Rápida
             </span>
           )}
 
           {mostrarColunaBadge && colunaInfo && (
             <span
-              className={`rounded-md border px-1.5 py-0.5 text-[10px] sm:text-xs font-black shrink-0 ${colunaInfo.borda} ${colunaInfo.fundo} text-foreground`}
+              className={`rounded border px-1 py-0.5 text-[9px] sm:text-[10px] font-black shrink-0 ${colunaInfo.borda} ${colunaInfo.fundo} text-foreground`}
             >
               {colunaInfo.label}
             </span>
@@ -222,70 +210,62 @@ function PedidoCard({
         </div>
 
         {temProblema ? (
-          <span className="shrink-0 rounded-lg bg-red-600 px-2.5 py-1 text-[11px] sm:text-xs font-black text-white uppercase tracking-wider animate-bounce shadow-md flex items-center gap-1">
-            🚨 TRAVADO / PROBLEMA
+          <span className="shrink-0 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-black text-white uppercase tracking-wider animate-bounce shadow-xs flex items-center gap-1">
+            🚨 ALERTA
           </span>
         ) : atrasado ? (
-          <span className="shrink-0 rounded-lg bg-red-600 px-2 py-0.5 text-[10px] sm:text-xs font-black text-white uppercase tracking-wider animate-pulse shadow-xs">
+          <span className="shrink-0 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-black text-white uppercase tracking-wider animate-pulse shadow-xs">
             Atrasado
           </span>
         ) : pedido.prazo_entrega_em ? (
-          <span className="shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-2 py-0.5 text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300">
+          <span className="shrink-0 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300">
             até {formatarPrazo(pedido.prazo_entrega_em)}
           </span>
         ) : null}
       </div>
 
-      {/* Nome do Cliente em Destaque Grande para ver de longe */}
+      {/* Nome do Cliente em Destaque */}
       <p
-        className={`mt-1.5 font-black text-foreground tracking-tight leading-tight break-words whitespace-normal ${
-          tamanhoGrande
-            ? "text-base sm:text-lg lg:text-xl xl:text-2xl"
-            : "text-sm sm:text-base lg:text-lg"
-        }`}
+        className="mt-1 font-black text-foreground tracking-tight leading-tight break-words whitespace-normal text-xs sm:text-sm lg:text-base"
         title={pedido.cliente_nome}
       >
         {pedido.cliente_nome}
       </p>
 
       {/* Bloco: O QUE É PRA FAZER (Destaque total para a fábrica - NUNCA CORTA) */}
-      <div className="mt-2 flex flex-col gap-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-2.5 sm:p-3.5 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs min-w-0 max-w-full overflow-hidden">
-        {/* Medidas / Quantidade em destaque com layout 100% responsivo para bater o olho */}
+      <div className="mt-1.5 flex flex-col gap-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 p-2 sm:p-2.5 border border-slate-200/80 dark:border-slate-700/60 shadow-2xs min-w-0 max-w-full overflow-hidden">
+        {/* Medidas / Quantidade */}
         {pedido.variante_nome && (
-          <div className="w-full max-w-full rounded-lg bg-primary/15 border border-primary/30 px-2.5 py-1.5 text-primary box-border">
-            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase tracking-wider text-primary shrink-0">
-                <span className="text-xs sm:text-sm leading-none">📏</span>
+          <div className="w-full max-w-full rounded-lg bg-primary/15 border border-primary/30 px-2 py-1 text-primary box-border">
+            <div className="flex items-center gap-1 flex-wrap min-w-0">
+              <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-primary shrink-0">
+                <span>📏</span>
                 <span>DIMENSÕES:</span>
               </span>
-              <span
-                className={`font-black text-primary break-words whitespace-normal min-w-0 ${
-                  tamanhoGrande ? "text-xs sm:text-sm lg:text-base" : "text-xs sm:text-sm"
-                }`}
-              >
+              <span className="font-black text-primary text-xs sm:text-sm break-words whitespace-normal min-w-0">
                 {pedido.variante_nome}
               </span>
             </div>
           </div>
         )}
 
-        {/* Produto / Serviço com quebra de linha natural (NUNCA CORTA) */}
+        {/* Produto / Serviço com quebra de linha natural */}
         <div className="min-w-0 max-w-full">
-          <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
+          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block">
             Serviço / Produto:
           </span>
-          <p className="font-black text-foreground text-sm sm:text-base lg:text-lg leading-snug break-words whitespace-normal mt-0.5">
+          <p className="font-black text-foreground text-xs sm:text-sm lg:text-base leading-snug break-words whitespace-normal mt-0.5">
             {pedido.produto_nome ?? "Item de Produção"}
           </p>
         </div>
 
         {/* Acabamento completo com quebra de linha */}
         {pedido.acabamento && (
-          <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50 min-w-0 max-w-full">
-            <span className="text-[10px] sm:text-[11px] text-muted-foreground uppercase font-black tracking-wider block">
+          <div className="pt-1 border-t border-slate-200/60 dark:border-slate-700/50 min-w-0 max-w-full">
+            <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block">
               Acabamento:
             </span>
-            <p className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 break-words whitespace-normal mt-0.5">
+            <p className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200 break-words whitespace-normal mt-0.5">
               {pedido.acabamento}
             </p>
           </div>
@@ -293,22 +273,22 @@ function PedidoCard({
 
         {/* Observação / Instrução de Produção ou Alerta da Fábrica */}
         {pedido.observacao && (
-          <div className="pt-2 border-t border-slate-200/80 dark:border-slate-700/60 min-w-0 max-w-full">
+          <div className="pt-1.5 border-t border-slate-200/80 dark:border-slate-700/60 min-w-0 max-w-full">
             {temProblema ? (
-              <div className="rounded-xl border-2 border-red-600 bg-red-500/20 dark:bg-red-950/50 p-2.5 sm:p-3 text-red-950 dark:text-red-100 shadow-md">
-                <span className="text-xs sm:text-sm font-black uppercase tracking-wider block text-red-600 dark:text-red-400 flex items-center gap-1.5 animate-pulse">
+              <div className="rounded-lg border-2 border-red-600 bg-red-500/20 dark:bg-red-950/50 p-2 text-red-950 dark:text-red-100 shadow-sm">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block text-red-600 dark:text-red-400 flex items-center gap-1 animate-pulse">
                   🚨 ALERTA DA FÁBRICA / PROBLEMA TRAVADO:
                 </span>
-                <p className="text-xs sm:text-sm lg:text-base font-black break-words whitespace-normal mt-1 leading-snug text-red-700 dark:text-red-200">
+                <p className="text-[11px] sm:text-xs font-black break-words whitespace-normal mt-0.5 leading-snug text-red-700 dark:text-red-200">
                   {pedido.observacao}
                 </p>
               </div>
             ) : (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2 sm:p-2.5 text-amber-950 dark:text-amber-100 shadow-2xs">
-                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider block text-amber-700 dark:text-amber-400">
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-amber-950 dark:text-amber-100 shadow-2xs">
+                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider block text-amber-700 dark:text-amber-400">
                   ⚠️ Instrução de Produção:
                 </span>
-                <p className="text-xs sm:text-sm lg:text-base font-bold break-words whitespace-normal mt-0.5 leading-snug">
+                <p className="text-[11px] sm:text-xs font-bold break-words whitespace-normal mt-0.5 leading-snug">
                   {pedido.observacao}
                 </p>
               </div>
@@ -318,16 +298,19 @@ function PedidoCard({
 
         {/* Bônus / Comissão do Colaborador (Regra: integral para cada um) */}
         {pedido.comissao_percent != null && pedido.comissao_percent > 0 && pedido.total > 0 && (
-          <div className="pt-2 border-t border-amber-500/30 min-w-0 max-w-full">
-            <div className="rounded-xl border border-amber-500/60 bg-amber-500/15 px-2.5 py-1.5 shadow-2xs flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-sm shrink-0">🪙</span>
-                <span className="text-[11px] sm:text-xs font-black uppercase tracking-wide text-amber-700 dark:text-amber-300">
-                  BÔNUS:
+          <div className="pt-1.5 border-t border-amber-500/30 min-w-0 max-w-full">
+            <div className="rounded-xl border border-amber-500/60 bg-gradient-to-r from-amber-500/15 via-yellow-500/15 to-amber-500/15 p-2 shadow-2xs flex flex-col items-center justify-center gap-1 text-center">
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="text-xs sm:text-sm leading-none shrink-0">🪙</span>
+                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                  BÔNUS COLABORADOR
                 </span>
               </div>
-              <span className="shrink-0 rounded-md bg-amber-500 text-slate-950 font-black text-xs sm:text-sm px-2 py-0.5 shadow-2xs">
+              <span className="rounded-md bg-amber-500 text-slate-950 font-black text-xs sm:text-sm px-2.5 py-0.5 shadow-2xs">
                 R$ {((pedido.total * pedido.comissao_percent) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cada
+              </span>
+              <span className="text-[9px] font-semibold text-muted-foreground/80 leading-none">
+                (integral para cada um que produzir)
               </span>
             </div>
           </div>
@@ -481,7 +464,7 @@ function TvColuna({
   return (
     <div
       id={`tv-coluna-${status}`}
-      className="flex h-full min-h-0 flex-1 flex-col gap-2 min-w-0"
+      className="flex h-full min-h-0 flex-1 min-w-[210px] sm:min-w-[230px] 2xl:min-w-0 flex-col gap-2"
     >
       {/* Cabeçalho da coluna */}
       <div
@@ -669,7 +652,7 @@ function TvColunaEmergencias({
   return (
     <div
       id="tv-coluna-emergencias"
-      className="flex h-full min-h-0 flex-1 flex-col gap-2 min-w-0"
+      className="flex h-full min-h-0 flex-1 min-w-[210px] sm:min-w-[230px] 2xl:min-w-0 flex-col gap-2"
     >
       {/* Cabeçalho da Coluna de Emergências */}
       <div className="flex shrink-0 items-center justify-between rounded-xl border-2 border-red-600 bg-gradient-to-r from-red-600/20 via-red-500/15 to-red-600/20 dark:bg-red-950/70 px-2.5 sm:px-3 py-2 shadow-lg ring-2 ring-red-500/50">
@@ -1374,7 +1357,7 @@ export default function TvPage() {
       </div>
 
       {/* Visualização DESKTOP / TV: Kanban lado a lado com auto-scroll infinito */}
-      <div className="flex-1 min-h-0 hidden md:flex flex-row gap-2 sm:gap-3 w-full overflow-hidden">
+      <div className="flex-1 min-h-0 hidden md:flex flex-row gap-2 sm:gap-2.5 w-full overflow-x-auto overflow-y-hidden [scrollbar-width:thin] pb-1">
         {/* Coluna Dedicada de Avisos & Emergências da Fábrica */}
         {config?.mostrarColunaAlertas !== false && (avisosAtivos.length > 0 || pedidosAlertas.length > 0) && (
           <TvColunaEmergencias
