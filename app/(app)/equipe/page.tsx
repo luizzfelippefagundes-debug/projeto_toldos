@@ -501,68 +501,68 @@ export default function EquipePage() {
   }, [filtroPeriodo, dataInicioCustom, dataFimCustom])
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-6 pb-12">
+    <div className="flex flex-col gap-5 sm:gap-6 pb-12 print:p-0 print:m-0 print:pb-0">
       {/* ========================================================= */}
       {/* CABEÇALHO OFICIAL PROFISSIONAL EXCLUSIVO PARA IMPRESSÃO / PDF */}
       {/* ========================================================= */}
-      <div className="hidden print:flex flex-col gap-3 pb-4 mb-4 border-b-2 border-slate-900 text-slate-950">
+      <div className="hidden print:flex flex-col gap-3 pb-3 mb-4 border-b-2 border-slate-900 text-slate-950 w-full">
         <div className="flex items-center justify-between gap-4">
           {/* Logo Oficial e Dados da Empresa */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/brand/logo-orcamento.png"
               alt="Toldos Print"
-              className="h-14 w-auto object-contain shrink-0"
+              className="h-12 w-auto object-contain shrink-0"
             />
-            <div className="border-l-2 border-slate-300 pl-3.5">
-              <h1 className="text-base font-black text-slate-950 uppercase tracking-tight leading-tight">
+            <div className="border-l-2 border-slate-400 pl-3">
+              <h1 className="text-sm font-black text-slate-950 uppercase tracking-tight leading-tight">
                 TOLDOS PRINT & COMUNICAÇÃO VISUAL
               </h1>
-              <p className="text-[10px] text-slate-600 font-bold leading-tight mt-0.5">
+              <p className="text-[9px] text-slate-700 font-bold leading-tight mt-0.5">
                 {EMPRESA_ORCAMENTO.cnpj}
               </p>
-              <p className="text-[9.5px] text-slate-600 leading-tight">
+              <p className="text-[8.5px] text-slate-600 leading-tight">
                 {EMPRESA_ORCAMENTO.endereco.join(" — ")} • Tel: (27) 99748-9714
               </p>
             </div>
           </div>
 
           {/* Metadados do Relatório */}
-          <div className="text-right text-[10px] text-slate-600 shrink-0">
-            <span className="inline-block px-2.5 py-0.5 bg-slate-900 text-white font-black text-[9px] uppercase tracking-wider rounded">
-              Relatório de Produção & Comissões
+          <div className="text-right text-[9px] text-slate-700 shrink-0">
+            <span className="inline-block px-2 py-0.5 bg-slate-900 text-white font-black text-[8.5px] uppercase tracking-wider rounded">
+              Demonstrativo de Produção & Comissões
             </span>
-            <p className="font-black text-slate-900 text-xs mt-1.5">
+            <p className="font-black text-slate-950 text-[11px] mt-1">
               {rotuloPeriodoImpresso}
             </p>
-            <p className="text-[9.5px] text-slate-500 font-medium">
+            <p className="text-[8.5px] text-slate-500 font-medium">
               Emitido em {new Date().toLocaleDateString("pt-BR")} às {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
             </p>
-            <p className="text-[9.5px] font-bold text-slate-800">
+            <p className="text-[8.5px] font-bold text-slate-800">
               Colaborador: {filtroColaborador === "todos" ? "Toda a Equipe" : filtroColaborador}
             </p>
           </div>
         </div>
 
         {/* Quadro Resumo Compacto de Impressão */}
-        <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-200 text-xs">
-          <div className="p-2 bg-slate-50 rounded border border-slate-200">
-            <span className="text-[9px] uppercase font-bold text-slate-500 block">Peças Produzidas</span>
-            <span className="text-sm font-black text-slate-900">{kpisHistorico.quantidadePecas} peças</span>
+        <div className="grid grid-cols-4 gap-2 pt-2 border-t border-slate-300 text-xs">
+          <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[8.5px] uppercase font-bold text-slate-500 block">Peças Produzidas</span>
+            <span className="text-xs font-black text-slate-900">{kpisHistorico.quantidadePecas} peças</span>
           </div>
-          <div className="p-2 bg-slate-50 rounded border border-slate-200">
-            <span className="text-[9px] uppercase font-bold text-slate-500 block">Faturamento (Vendas)</span>
-            <span className="text-sm font-black text-slate-900">{formatarMoeda(kpisHistorico.valorPedidosTotal)}</span>
+          <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[8.5px] uppercase font-bold text-slate-500 block">Faturamento (Vendas)</span>
+            <span className="text-xs font-black text-slate-900">{formatarMoeda(kpisHistorico.valorPedidosTotal)}</span>
           </div>
-          <div className="p-2 bg-slate-50 rounded border border-slate-200">
-            <span className="text-[9px] uppercase font-bold text-slate-500 block">Total em Bônus</span>
-            <span className="text-sm font-black text-emerald-700">{formatarMoeda(kpisHistorico.valorComissoesTotal)}</span>
+          <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[8.5px] uppercase font-bold text-slate-500 block">Total em Bônus</span>
+            <span className="text-xs font-black text-emerald-800">{formatarMoeda(kpisHistorico.valorComissoesTotal)}</span>
           </div>
-          <div className="p-2 bg-slate-50 rounded border border-slate-200">
-            <span className="text-[9px] uppercase font-bold text-slate-500 block">Pendentes / Pagos</span>
-            <span className="text-xs font-black text-slate-800">
-              <span className="text-amber-700">{formatarMoeda(kpisHistorico.valorPendenteTotal)}</span> / <span className="text-slate-600">{formatarMoeda(kpisHistorico.valorPagoTotal)}</span>
+          <div className="p-1.5 bg-slate-50 rounded border border-slate-200">
+            <span className="text-[8.5px] uppercase font-bold text-slate-500 block">Pendentes / Pagos</span>
+            <span className="text-[11px] font-black text-slate-800">
+              <span className="text-amber-800">{formatarMoeda(kpisHistorico.valorPendenteTotal)}</span> / <span className="text-slate-600">{formatarMoeda(kpisHistorico.valorPagoTotal)}</span>
             </span>
           </div>
         </div>
@@ -1413,75 +1413,46 @@ export default function EquipePage() {
 
           {/* Lista de Registros */}
           {historicoFiltrado.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center text-muted-foreground text-xs font-medium">
+            <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center text-muted-foreground text-xs font-medium print:border-slate-300">
               Nenhum registro encontrado para estes filtros.
             </div>
           ) : (
-            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs print:border-slate-300 print:shadow-none">
+            <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-xs print:border-none print:shadow-none print:rounded-none">
               <div className="overflow-x-auto print:overflow-visible">
-                <table className="w-full text-left text-xs print:text-[10px]">
-                  <thead className="bg-muted/50 border-b border-border/80 font-black text-muted-foreground uppercase text-[10px] print:bg-slate-100 print:text-slate-900 print:border-slate-300">
+                <table className="w-full text-left text-xs print:text-[9.5pt] print:table-fixed">
+                  <thead className="bg-muted/50 border-b border-border/80 font-black text-muted-foreground uppercase text-[10px] print:bg-slate-100 print:text-slate-900 print:border-b-2 print:border-slate-400">
                     <tr>
-                      <th className="p-3 print:py-1.5 print:px-2">Data</th>
-                      <th className="p-3 print:py-1.5 print:px-2">Colaborador</th>
-                      <th className="p-3 print:py-1.5 print:px-2">Demanda</th>
-                      <th className="p-3 print:py-1.5 print:px-2">Cliente</th>
-                      <th className="p-3 print:py-1.5 print:px-2">Produto / Serviço</th>
-                      <th className="p-3 print:py-1.5 print:px-2">Valor Pedido</th>
-                      <th className="p-3 text-right print:py-1.5 print:px-2">Bônus Creditado</th>
-                      <th className="p-3 text-center print:py-1.5 print:px-2">Status</th>
+                      <th className="p-3 print:p-1.5 print:w-[15%]">Data</th>
+                      <th className="p-3 print:p-1.5 print:w-[18%]">Colaborador</th>
+                      <th className="p-3 print:p-1.5 print:w-[12%]">Demanda</th>
+                      <th className="p-3 print:p-1.5 print:w-[18%]">Cliente</th>
+                      <th className="p-3 print:p-1.5 print:w-[20%]">Produto / Serviço</th>
+                      <th className="p-3 print:p-1.5 print:w-[17%] text-right">Bônus</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60 print:divide-slate-200">
                     {historicoFiltrado.map((item) => (
                       <tr key={item.id} className="hover:bg-muted/30 transition-colors print:hover:bg-transparent">
-                        <td className="p-3 text-muted-foreground whitespace-nowrap print:py-1.5 print:px-2 print:text-slate-700">
+                        <td className="p-3 text-muted-foreground whitespace-nowrap print:p-1.5 print:text-slate-700 print:text-[8.5pt]">
                           {formatarDataHora(item.criado_em)}
                         </td>
-                        <td className="p-3 font-black text-foreground print:py-1.5 print:px-2 print:text-slate-950">
+                        <td className="p-3 font-black text-foreground print:p-1.5 print:text-slate-950">
                           {item.colaborador_nome}
                         </td>
-                        <td className="p-3 font-bold text-primary whitespace-nowrap print:py-1.5 print:px-2 print:text-slate-900">
+                        <td className="p-3 font-bold text-primary whitespace-nowrap print:p-1.5 print:text-slate-900">
                           {item.origem_tipo === "orcamento" ? `OS #${item.numero}` : `#${item.numero}`}
                         </td>
-                        <td className="p-3 font-medium text-foreground truncate max-w-[150px] print:max-w-none print:py-1.5 print:px-2 print:text-slate-800">
+                        <td className="p-3 font-medium text-foreground truncate max-w-[150px] print:p-1.5 print:text-slate-800 print:truncate">
                           {item.cliente_nome}
                         </td>
-                        <td className="p-3 text-foreground font-semibold truncate max-w-[200px] print:max-w-none print:py-1.5 print:px-2 print:text-slate-800" title={item.produto_nome}>
+                        <td className="p-3 text-foreground font-semibold truncate max-w-[200px] print:p-1.5 print:text-slate-800 print:truncate" title={item.produto_nome}>
                           {item.produto_nome || "Produção"}
                         </td>
-                        <td className="p-3 text-muted-foreground whitespace-nowrap print:py-1.5 print:px-2 print:text-slate-700">
-                          {formatarMoeda(Number(item.valor_pedido) || 0)}
-                        </td>
-                        <td className="p-3 text-right font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap print:py-1.5 print:px-2 print:text-slate-950">
+                        <td className="p-3 text-right font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap print:p-1.5 print:text-slate-950">
                           + {formatarMoeda(Number(item.valor_comissao) || 0)}
-                          {item.comissao_percent > 0 && (
-                            <span className="text-[10px] font-normal text-muted-foreground ml-1 print:text-slate-500">
-                              ({item.comissao_percent}%)
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3 text-center whitespace-nowrap print:py-1.5 print:px-2">
-                          {item.status === "pago" ? (
-                            <div className="flex items-center justify-center gap-1.5">
-                              <span className="rounded-full bg-slate-500/20 text-muted-foreground px-2 py-0.5 font-bold text-[10px] print:bg-slate-200 print:text-slate-700 print:border print:border-slate-300">
-                                Pago ✓
-                              </span>
-                              {item.recibo_id && (
-                                <Link
-                                  href={`/equipe/recibo/${item.recibo_id}`}
-                                  className="text-[10px] font-bold text-primary hover:underline inline-flex items-center gap-0.5 print:hidden"
-                                  title="Abrir Recibo Oficial"
-                                >
-                                  Recibo ↗
-                                </Link>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 font-black text-[10px] print:bg-emerald-100 print:text-emerald-900 print:border print:border-emerald-300">
-                              Pendente
-                            </span>
-                          )}
+                          <span className="block text-[8pt] font-normal text-muted-foreground print:text-slate-500">
+                            (OS: {formatarMoeda(Number(item.valor_pedido) || 0)})
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -1779,6 +1750,51 @@ export default function EquipePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Regras de Estilo de Documento Oficial A4 para Impressão */}
+      <style jsx global>{`
+        @page {
+          size: A4 portrait;
+          margin: 12mm 10mm 12mm 10mm;
+        }
+        @media print {
+          html, body {
+            background: white !important;
+            color: #0f172a !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+          }
+          aside, header, nav, .print\\:hidden {
+            display: none !important;
+          }
+          main {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+          }
+          table {
+            width: 100% !important;
+            page-break-inside: auto;
+          }
+          tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+          thead {
+            display: table-header-group;
+          }
+          tfoot {
+            display: table-footer-group;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }
