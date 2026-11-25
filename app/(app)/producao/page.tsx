@@ -396,6 +396,21 @@ export default function ProducaoPage() {
   const [enviandoOsWhatsapp, setEnviandoOsWhatsapp] = useState(false)
   const [enviandoAssinaturaWhatsapp, setEnviandoAssinaturaWhatsapp] = useState(false)
 
+  // Atualização em tempo real: se o cliente já assinou, o sistema reconhece imediatamente e bloqueia reenviar assinatura
+  useEffect(() => {
+    if (!modalDetalhesItem || modalDetalhesItem.tipo !== "orcamento") return
+    fetch(`/api/assinar/por-orcamento/${modalDetalhesItem.id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.assinado) {
+          setModalDetalhesItem((prev) =>
+            prev && prev.id === modalDetalhesItem.id ? { ...prev, contratoAssinado: true } : prev
+          )
+        }
+      })
+      .catch(() => {})
+  }, [modalDetalhesItem?.id])
+
   const handleAbrirOsPdf = (item: typeof modalDetalhesItem) => {
     if (!item) return
     const url = `/api/orcamentos/${item.id}/os/pdf`
@@ -505,19 +520,7 @@ export default function ProducaoPage() {
     try {
       if (item.tipo === "orcamento") {
         if (item.contratoAssinado) {
-          const res = await fetch("/api/whatsapp/reenviar-contrato", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              orcamentoId: item.id,
-              telefone: normalizarTelefone(item.clienteTelefone),
-            }),
-          })
-          if (!res.ok) {
-            const d = await res.json().catch(() => ({}))
-            throw new Error(d.erro || "Falha ao reenviar contrato pelo robô")
-          }
-          toast.success("✅ Contrato assinado reenviado automaticamente pelo robô!")
+          toast.info("Este contrato já foi assinado digitalmente pelo cliente! Não é necessário reenviar.")
           return
         }
 
@@ -3545,22 +3548,26 @@ export default function ProducaoPage() {
                           : "Abrir p/ Assinar na Tela"}
                       </span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleEnviarAssinaturaWhatsapp(modalDetalhesItem)}
-                      disabled={enviandoAssinaturaWhatsapp}
-                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer"
-                      title="Enviar link de assinatura digital ou contrato assinado para o WhatsApp do cliente"
-                    >
-                      <MessageCircle className="h-4 w-4 shrink-0" />
-                      <span>
-                        {enviandoAssinaturaWhatsapp
-                          ? "Enviando..."
-                          : modalDetalhesItem?.contratoAssinado
-                          ? "Reenviar Contrato (Zap)"
-                          : "Enviar Link no WhatsApp"}
-                      </span>
-                    </button>
+                    {modalDetalhesItem?.contratoAssinado ? (
+                      <div
+                        className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-500/30"
+                        title="O cliente já assinou este contrato digitalmente. Não é permitido nem necessário reenviar."
+                      >
+                        <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <span>✓ Já Assinado pelo Cliente</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleEnviarAssinaturaWhatsapp(modalDetalhesItem)}
+                        disabled={enviandoAssinaturaWhatsapp}
+                        className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all active:scale-[0.98] cursor-pointer"
+                        title="Enviar link de assinatura digital para o WhatsApp do cliente"
+                      >
+                        <MessageCircle className="h-4 w-4 shrink-0" />
+                        <span>{enviandoAssinaturaWhatsapp ? "Enviando..." : "Enviar Link no WhatsApp"}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 

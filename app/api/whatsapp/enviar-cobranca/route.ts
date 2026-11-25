@@ -66,21 +66,34 @@ export async function POST(req: Request) {
           nomeClienteFinal = (clienteRows[0].nome as string) || nomeClienteFinal
         }
 
-        // 1. Token de Assinatura Digital
-        const assinRows = await sql`SELECT id FROM assinaturas_os WHERE orcamento_id = ${orcamento.id} ORDER BY criado_em DESC LIMIT 1`
-        let tokenAssinatura = assinRows[0]?.id as string | undefined
-        if (!tokenAssinatura) {
-          tokenAssinatura = randomUUID()
-          const agora = new Date()
-          const expira = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000)
-          await sql`
-            INSERT INTO assinaturas_os (id, orcamento_id, criado_em, expira_em)
-            VALUES (${tokenAssinatura}, ${orcamento.id}, ${agora.toISOString()}, ${expira.toISOString()})
-          `
+        // 1. Verificação se o cliente JÁ ASSINOU a Ordem de Serviço
+        const assinRows = await sql`
+          SELECT id, assinado_em 
+          FROM assinaturas_os 
+          WHERE orcamento_id = ${orcamento.id} 
+          ORDER BY criado_em DESC 
+          LIMIT 1
+        `
+        const jaAssinado = !!assinRows[0]?.assinado_em
+
+        if (jaAssinado) {
+          // Cliente já assinou! O sistema reconhece e não envia link de assinatura novamente
+          linkAssinatura = ""
+        } else {
+          let tokenAssinatura = assinRows[0]?.id as string | undefined
+          if (!tokenAssinatura) {
+            tokenAssinatura = randomUUID()
+            const agora = new Date()
+            const expira = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000)
+            await sql`
+              INSERT INTO assinaturas_os (id, orcamento_id, criado_em, expira_em)
+              VALUES (${tokenAssinatura}, ${orcamento.id}, ${agora.toISOString()}, ${expira.toISOString()})
+            `
+          }
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+            ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://sistema.toldosprint.com.br")
+          linkAssinatura = `${baseUrl}/assinar/${tokenAssinatura}`
         }
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-          ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://sistema.toldosprint.com.br")
-        linkAssinatura = `${baseUrl}/assinar/${tokenAssinatura}`
 
         // 2. Link de Cartão de Crédito Mercado Pago
         linkPagamento = (r.link_pagamento as string | null) ?? ""
@@ -130,6 +143,10 @@ export async function POST(req: Request) {
       ? `\n📋 *Pix Copia e Cola:*\n\`\`\`${pixCopiaCola}\`\`\`\n`
       : ""
 
+    const avisoAssinatura = linkAssinatura
+      ? "Assim que realizar o pagamento ou assinar, favor enviar o comprovante por aqui para darmos andamento imediato na produção! 🤝✨"
+      : "Assim que realizar o pagamento, favor enviar o comprovante por aqui para darmos andamento imediato na produção! 🤝✨"
+
     const mensagem =
       `Olá, ${primeiroNome}! Seguem as opções de pagamento da sua *Ordem de Serviço nº ${numeroOS || ""}* da Toldos Print. 📄✨\n\n` +
       `💰 *Valor Total:* ${totalFormatado}\n\n` +
@@ -141,7 +158,7 @@ export async function POST(req: Request) {
       pixCopiaColaBloco +
       linkCartaoBloco +
       linkAssinaturaBloco +
-      `Assim que realizar o pagamento ou assinar, favor enviar o comprovante por aqui para darmos andamento imediato na produção! 🤝✨`
+      avisoAssinatura
 
     // 4. Envio automático pelo bot
     const envio = await enviarMensagemWhatsapp(telefone, mensagem)

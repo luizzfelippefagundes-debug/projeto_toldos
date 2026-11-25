@@ -62,21 +62,26 @@ export async function POST(req: Request) {
   const pdf = await gerarPdfOsServidor(orcamento, clienteNome, clienteTelefone)
   const nomeArquivo = `OS-${numeroOS}.pdf`
 
-  // 2. Busca ou gera Token de Assinatura Digital
-  const assinRows = await sql`SELECT id FROM assinaturas_os WHERE orcamento_id = ${orcamento.id} ORDER BY criado_em DESC LIMIT 1`
-  let tokenAssinatura = assinRows[0]?.id as string | undefined
-  if (!tokenAssinatura) {
-    tokenAssinatura = randomUUID()
-    const agora = new Date()
-    const expira = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000)
-    await sql`
-      INSERT INTO assinaturas_os (id, orcamento_id, criado_em, expira_em)
-      VALUES (${tokenAssinatura}, ${orcamento.id}, ${agora.toISOString()}, ${expira.toISOString()})
-    `
+  // 2. Verificação se o cliente JÁ ASSINOU a Ordem de Serviço
+  const assinRows = await sql`SELECT id, assinado_em FROM assinaturas_os WHERE orcamento_id = ${orcamento.id} ORDER BY criado_em DESC LIMIT 1`
+  const jaAssinado = !!assinRows[0]?.assinado_em
+  let linkAssinatura = ""
+
+  if (!jaAssinado) {
+    let tokenAssinatura = assinRows[0]?.id as string | undefined
+    if (!tokenAssinatura) {
+      tokenAssinatura = randomUUID()
+      const agora = new Date()
+      const expira = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000)
+      await sql`
+        INSERT INTO assinaturas_os (id, orcamento_id, criado_em, expira_em)
+        VALUES (${tokenAssinatura}, ${orcamento.id}, ${agora.toISOString()}, ${expira.toISOString()})
+      `
+    }
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+      ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://sistema.toldosprint.com.br")
+    linkAssinatura = `${baseUrl}/assinar/${tokenAssinatura}`
   }
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-    ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://sistema.toldosprint.com.br")
-  const linkAssinatura = `${baseUrl}/assinar/${tokenAssinatura}`
 
   // 3. Busca ou gera Link de Pagamento com Cartão no Mercado Pago
   let linkPagamento = (r.link_pagamento as string | null) ?? null
@@ -136,8 +141,8 @@ export async function POST(req: Request) {
     `👤 Favorecido: Toldos Print & Comunicação Visual\n` +
     (pixCopiaCola ? `\n📋 *Pix Copia e Cola:*\n\`\`\`${pixCopiaCola}\`\`\`\n` : "") +
     (linkPagamento ? `\n2️⃣ *Cartão de Crédito (em até 12x):*\n👉 ${linkPagamento}\n` : "") +
-    `\n✍️ *Assinatura Digital da OS:*\n👉 ${linkAssinatura}\n\n` +
-    `Assim que realizar o pagamento ou assinar, envie por aqui mesmo que já daremos andamento imediato na produção! 🤝✨`
+    (linkAssinatura ? `\n✍️ *Assinatura Digital da OS:*\n👉 ${linkAssinatura}\n\n` : jaAssinado ? `\n✍️ *Assinatura da OS:* Documento já assinado digitalmente ✓\n\n` : "\n") +
+    (linkAssinatura ? `Assim que realizar o pagamento ou assinar, envie por aqui mesmo que já daremos andamento imediato na produção! 🤝✨` : `Assim que realizar o pagamento, envie o comprovante por aqui mesmo que já daremos andamento imediato na produção! 🤝✨`)
 
   await enviarMensagemWhatsapp(telefone, textoOpcoes).catch((err) =>
     console.warn("[enviar-os] Falha ao enviar texto de opções de pagamento:", err)

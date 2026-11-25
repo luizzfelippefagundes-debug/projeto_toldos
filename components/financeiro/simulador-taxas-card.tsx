@@ -33,7 +33,7 @@ interface SimuladorTaxasCardProps {
 
 export function SimuladorTaxasCard({ valorInicial = 560 }: SimuladorTaxasCardProps) {
   const [valorInput, setValorInput] = useState<string>(String(valorInicial || 560))
-  const [modo, setModo] = useState<ModoSimulacaoTaxa>("absorver")
+  const [modo, setModo] = useState<ModoSimulacaoTaxa>("repassar")
   const [parcelaSelecionada, setParcelaSelecionada] = useState<number>(3) // Padrão 3x como Kaio mencionou
   const [copiado, setCopiado] = useState(false)
   const [telefoneWhatsapp, setTelefoneWhatsapp] = useState("")
@@ -55,6 +55,14 @@ export function SimuladorTaxasCard({ valorInicial = 560 }: SimuladorTaxasCardPro
   const parcelaFoco = useMemo(() => {
     return simulacoes.find((s) => s.parcelas === parcelaSelecionada) || simulacoes[2] || simulacoes[0]
   }, [simulacoes, parcelaSelecionada])
+
+  const simulacaoRepassando = useMemo(() => {
+    return simularParcelasMercadoPago(valorNumerico, "repassar").find((s) => s.parcelas === parcelaSelecionada)
+  }, [valorNumerico, parcelaSelecionada])
+
+  const simulacaoAbsorvendo = useMemo(() => {
+    return simularParcelasMercadoPago(valorNumerico, "absorver").find((s) => s.parcelas === parcelaSelecionada)
+  }, [valorNumerico, parcelaSelecionada])
 
   const handleCopiarSimulacao = () => {
     if (valorNumerico <= 0) {
@@ -221,7 +229,32 @@ export function SimuladorTaxasCard({ valorInicial = 560 }: SimuladorTaxasCardPro
             </Label>
 
             <div className="grid grid-cols-1 gap-2">
-              {/* Opção 1: Valor já inclui juros (Absorver) */}
+              {/* Opção 1 (Padrão): Repassar juros / Somar taxa do Mercado Pago */}
+              <button
+                type="button"
+                onClick={() => setModo("repassar")}
+                className={cn(
+                  "p-3 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2.5",
+                  modo === "repassar"
+                    ? "border-blue-500 bg-blue-500/10 text-foreground ring-1 ring-blue-500"
+                    : "border-border/80 bg-muted/20 hover:bg-muted/40 text-muted-foreground"
+                )}
+              >
+                <div className="mt-0.5 p-1 rounded-md bg-blue-500/20 text-blue-600 dark:text-blue-400 shrink-0">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <span>Repassar Taxa do Mercado Pago para o Cliente (Com Juros)</span>
+                    <span className="text-[10px] bg-blue-600 text-white font-black px-1.5 py-0.2 rounded">Recomendado</span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                    {formatarMoeda(valorNumerico)} é o preço à vista. O sistema <strong>adiciona as taxas de parcelamento do Mercado Pago</strong> no valor que o cliente paga, para a gráfica receber o valor integral.
+                  </div>
+                </div>
+              </button>
+
+              {/* Opção 2: Valor já inclui juros (Absorver) */}
               <button
                 type="button"
                 onClick={() => setModo("absorver")}
@@ -237,34 +270,10 @@ export function SimuladorTaxasCard({ valorInicial = 560 }: SimuladorTaxasCardPro
                 </div>
                 <div>
                   <div className="text-xs font-bold text-foreground">
-                    Preço Já Fechado no Cartão (Sem juros a mais pro cliente)
+                    Preço Já Fechado no Cartão (Gráfica Absorve a Taxa / Sem Juros pro Cliente)
                   </div>
                   <div className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    Você já passou <strong>{formatarMoeda(valorNumerico)}</strong> cheio para o cliente. Ele paga esse valor exato no cartão (sem o Mercado Pago subir a taxa por cima) e a gráfica absorve o desconto.
-                  </div>
-                </div>
-              </button>
-
-              {/* Opção 2: Repassar juros */}
-              <button
-                type="button"
-                onClick={() => setModo("repassar")}
-                className={cn(
-                  "p-3 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2.5",
-                  modo === "repassar"
-                    ? "border-blue-500 bg-blue-500/10 text-foreground ring-1 ring-blue-500"
-                    : "border-border/80 bg-muted/20 hover:bg-muted/40 text-muted-foreground"
-                )}
-              >
-                <div className="mt-0.5 p-1 rounded-md bg-blue-500/20 text-blue-600 dark:text-blue-400 shrink-0">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-foreground">
-                    Repassar Taxa do Mercado Pago para o Cliente
-                  </div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                    {formatarMoeda(valorNumerico)} é o preço à vista. O Mercado Pago adiciona o juros nas parcelas e o comprador paga o acréscimo.
+                    Você já passou <strong>{formatarMoeda(valorNumerico)}</strong> fechado. O cliente paga esse valor exato dividido em parcelas e a gráfica assume o desconto cobrado pelo Mercado Pago.
                   </div>
                 </div>
               </button>
@@ -347,26 +356,26 @@ export function SimuladorTaxasCard({ valorInicial = 560 }: SimuladorTaxasCardPro
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3 rounded-xl bg-card border border-border/80">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                    Taxa Mercado Pago
+                    {modo === "repassar" ? "Taxa do Parcelamento" : "Taxa Mercado Pago"}
                   </span>
                   <div className="text-base font-black text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
-                    <TrendingDown className="h-4 w-4 shrink-0" />
-                    <span>{parcelaFoco.taxaPercentual.toFixed(2)}%</span>
+                    <TrendingUp className="h-4 w-4 shrink-0" />
+                    <span>{parcelaFoco.taxaPercentual > 0 ? `+${parcelaFoco.taxaPercentual.toFixed(2)}%` : "0.00%"}</span>
                   </div>
                   <span className="text-[11px] text-muted-foreground mt-0.5 block">
-                    {parcelaFoco.taxaPercentual > 0 ? "Parcelamento" : "À vista"}
+                    {modo === "repassar" ? "Juros pago pelo cliente" : modo === "absorver" ? "Descontado da gráfica" : "Taxa embutida"}
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-card border border-border/80">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                    Desconto em R$
+                    {modo === "repassar" ? "Acréscimo de Juros" : "Desconto em R$"}
                   </span>
-                  <div className="text-base font-black text-destructive mt-0.5">
-                    − {formatarMoeda(parcelaFoco.valorTaxaDescontada)}
+                  <div className={cn("text-base font-black mt-0.5", modo === "repassar" ? "text-blue-600 dark:text-blue-400" : "text-destructive")}>
+                    {modo === "repassar" ? `+ ${formatarMoeda(parcelaFoco.valorTaxaDescontada)}` : `− ${formatarMoeda(parcelaFoco.valorTaxaDescontada)}`}
                   </div>
                   <span className="text-[11px] text-muted-foreground mt-0.5 block">
-                    Retido pelo MP
+                    {modo === "repassar" ? "Adicionado no total" : "Retido pelo MP"}
                   </span>
                 </div>
 
@@ -378,8 +387,43 @@ export function SimuladorTaxasCard({ valorInicial = 560 }: SimuladorTaxasCardPro
                     {formatarMoeda(parcelaFoco.valorLiquidoReceber)}
                   </div>
                   <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5 block font-medium">
-                    Dinheiro limpo
+                    {modo === "repassar" ? "Valor integral à vista" : "Dinheiro limpo"}
                   </span>
+                </div>
+              </div>
+
+              {/* Comparativo Imediato: Repassando vs Absorvendo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 rounded-xl bg-card border border-border/80 shadow-2xs">
+                <div
+                  onClick={() => setModo("repassar")}
+                  className={cn("p-2.5 rounded-lg border transition-all cursor-pointer", modo === "repassar" ? "border-blue-500/60 bg-blue-500/10 ring-1 ring-blue-500/30" : "border-border/60 bg-muted/20 hover:bg-muted/40")}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400">Opção 1: Cliente paga os juros</span>
+                    {modo === "repassar" && <span className="text-[9px] bg-blue-600 text-white font-black px-1.5 py-0.5 rounded">Ativo</span>}
+                  </div>
+                  <div className="text-sm font-black text-foreground mt-0.5">
+                    {parcelaSelecionada}x de {formatarMoeda(simulacaoRepassando?.valorParcela || 0)}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Total: <strong>{formatarMoeda(simulacaoRepassando?.valorTotalCliente || 0)}</strong> • Gráfica recebe {formatarMoeda(valorNumerico)} limpo
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setModo("absorver")}
+                  className={cn("p-2.5 rounded-lg border transition-all cursor-pointer", modo === "absorver" ? "border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/30" : "border-border/60 bg-muted/20 hover:bg-muted/40")}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Opção 2: Gráfica absorve a taxa</span>
+                    {modo === "absorver" && <span className="text-[9px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded">Ativo</span>}
+                  </div>
+                  <div className="text-sm font-black text-foreground mt-0.5">
+                    {parcelaSelecionada}x de {formatarMoeda(simulacaoAbsorvendo?.valorParcela || 0)}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    Total: <strong>{formatarMoeda(simulacaoAbsorvendo?.valorTotalCliente || 0)}</strong> • Gráfica recebe {formatarMoeda(simulacaoAbsorvendo?.valorLiquidoReceber || 0)}
+                  </div>
                 </div>
               </div>
 
