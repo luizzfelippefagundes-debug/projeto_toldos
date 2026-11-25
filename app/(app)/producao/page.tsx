@@ -517,20 +517,15 @@ export default function ProducaoPage() {
     }
   }
 
-  const handleImprimirFicha = (item: typeof modalDetalhesItem) => {
+  const handleImprimirFicha = (item: any) => {
     if (!item) return
-    const printWindow = window.open("", "_blank")
-    if (!printWindow) {
-      toast.error("Permita pop-ups no navegador para imprimir a ficha.")
-      return
-    }
 
     const dataHoje = new Date().toLocaleDateString("pt-BR")
     const horaHoje = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
     const fotoLocal = item.fotosLocal?.[0]
     const arteUrl = item.arteUrl
 
-    printWindow.document.write(`
+    const html = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -672,16 +667,64 @@ export default function ProducaoPage() {
         </div>
 
         <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 300);
-          }
+          setTimeout(function() {
+            window.focus();
+            window.print();
+          }, 350);
         </script>
       </body>
       </html>
-    `)
-    printWindow.document.close()
+    `
+
+    // Método 1: Imprimir via iframe invisível (evita bloqueio de popup em celulares e navegadores)
+    try {
+      let iframe = document.getElementById("iframe-impressao-ficha") as HTMLIFrameElement
+      if (!iframe) {
+        iframe = document.createElement("iframe")
+        iframe.id = "iframe-impressao-ficha"
+        iframe.style.position = "fixed"
+        iframe.style.right = "0"
+        iframe.style.bottom = "0"
+        iframe.style.width = "0"
+        iframe.style.height = "0"
+        iframe.style.border = "0"
+        document.body.appendChild(iframe)
+      }
+
+      const doc = iframe.contentWindow?.document || iframe.contentDocument
+      if (doc) {
+        doc.open()
+        doc.write(html)
+        doc.close()
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus()
+            iframe.contentWindow?.print()
+          } catch (e) {
+            console.warn("Iframe print error:", e)
+          }
+        }, 350)
+        return
+      }
+    } catch (e) {
+      console.warn("Iframe não suportado, usando fallback:", e)
+    }
+
+    // Método 2 (Fallback): Abrir em nova aba com disparo direto do print
+    const printWindow = window.open("", "_blank")
+    if (printWindow) {
+      printWindow.document.open()
+      printWindow.document.write(html)
+      printWindow.document.close()
+      setTimeout(() => {
+        try {
+          printWindow.focus()
+          printWindow.print()
+        } catch {}
+      }, 400)
+    } else {
+      toast.error("Permita pop-ups no navegador para imprimir a ficha.")
+    }
   }
 
   const handleRegistrarProblema = async () => {
@@ -1450,7 +1493,18 @@ export default function ProducaoPage() {
                 {/* Botões de Ação */}
                 <div className="flex flex-col gap-2 pt-1 border-t border-border/60">
                   <div className="flex items-center gap-2">
-                    {/* Botão Ficha / Instruções e Imprimir */}
+                    {/* Botão Imprimir Ficha Direto */}
+                    <button
+                      type="button"
+                      onClick={() => handleImprimirFicha(item)}
+                      className="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                      title="Imprimir Ficha de Bancada imediatamente"
+                    >
+                      <Printer className="h-4 w-4" />
+                      <span>Imprimir Ficha</span>
+                    </button>
+
+                    {/* Botão Ver Ficha / Detalhes */}
                     <button
                       type="button"
                       onClick={() => {
@@ -1474,10 +1528,11 @@ export default function ProducaoPage() {
                           comissaoPercent: item.comissaoPercent,
                         })
                       }}
-                      className="flex-1 py-2 px-3 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      className="py-2 px-3 rounded-xl bg-muted/80 hover:bg-muted border border-border/80 text-foreground text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      title="Ver ficha técnica completa na tela"
                     >
-                      <Printer className="h-4 w-4" />
-                      <span>Ficha / Imprimir</span>
+                      <Info className="h-4 w-4 text-primary" />
+                      <span>Ver Ficha</span>
                     </button>
 
                     {/* Botão Ver Arte (se houver) */}
@@ -2844,7 +2899,7 @@ export default function ProducaoPage() {
 
       {/* Modal Mais Detalhes (Ficha Completa, OS, Contrato, Problema) */}
       <Dialog open={!!modalDetalhesItem} onOpenChange={(open) => { if (!open) setModalDetalhesItem(null) }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="rounded-md bg-primary/10 text-primary px-2 py-0.5 text-xs font-bold">
