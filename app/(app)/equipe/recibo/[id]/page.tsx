@@ -6,6 +6,7 @@ import { Printer, ArrowLeft, CheckCircle2, MessageSquare, PenTool, Eraser, Downl
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { formatarMoeda, formatarData } from "@/lib/format"
+import { LOGO_PRINT_BASE64 } from "@/lib/logo-data"
 
 interface ReciboData {
   id: string
@@ -254,19 +255,27 @@ export default function ReciboPage({
       <div className="recibo-sheet mx-auto max-w-4xl bg-white text-slate-950 p-6 sm:p-10 rounded-2xl border border-slate-300 shadow-md">
         {/* Cabeçalho da Empresa */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b-2 border-slate-900 pb-5">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 uppercase leading-none">
-              {empresa?.nome || "TOLDOSPRINT"}
-            </h1>
-            <p className="text-xs sm:text-sm font-bold text-slate-700 tracking-wide mt-1">
-              INDÚSTRIA DE TOLDOS & COMUNICAÇÃO VISUAL
-            </p>
-            <p className="text-[11px] text-slate-600 mt-1 font-medium">
-              {empresa?.cnpj || "CNPJ: 09.141.206/0001-06 / 63.177.134/0001-00"}
-            </p>
-            <p className="text-[11px] text-slate-600 font-medium">
-              {empresa?.endereco?.[0] || "Avenida João Quiuqui"} • {empresa?.endereco?.[1] || "Águia Branca/ES"}
-            </p>
+          <div className="flex items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={LOGO_PRINT_BASE64}
+              alt="Toldos Print"
+              className="h-14 w-auto object-contain shrink-0"
+            />
+            <div className="border-l-2 border-slate-400 pl-3.5">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 uppercase leading-none">
+                {empresa?.nome || "TOLDOS PRINT"}
+              </h1>
+              <p className="text-xs sm:text-sm font-bold text-slate-700 tracking-wide mt-1">
+                INDÚSTRIA DE TOLDOS & COMUNICAÇÃO VISUAL
+              </p>
+              <p className="text-[11px] text-slate-600 mt-1 font-medium">
+                {empresa?.cnpj || "CNPJ: 09.141.206/0001-06 / 63.177.134/0001-00"}
+              </p>
+              <p className="text-[11px] text-slate-600 font-medium">
+                {empresa?.endereco?.[0] || "Avenida João Quiuqui"} • {empresa?.endereco?.[1] || "Águia Branca/ES"} • Tel: (27) 99748-9714
+              </p>
+            </div>
           </div>
 
           <div className="text-left sm:text-right flex flex-col items-start sm:items-end">

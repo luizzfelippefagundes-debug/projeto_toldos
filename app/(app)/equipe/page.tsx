@@ -44,6 +44,11 @@ import {
   LayoutList,
   UserCheck,
   Settings2,
+  BarChart3,
+  Trophy,
+  TrendingUp,
+  TrendingDown,
+  Award,
 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -153,15 +158,35 @@ function Avatar({ nome, imagemUrl }: { nome: string; imagemUrl: string }) {
   )
 }
 
+
+// Helpers de Período (Semana e Mês)
+function obterInicioEFimSemana(dataRef = new Date()) {
+  const d = new Date(dataRef)
+  const diaSemana = d.getDay()
+  const diffSegunda = d.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1)
+  const inicio = new Date(d.setDate(diffSegunda))
+  inicio.setHours(0, 0, 0, 0)
+  const fim = new Date(inicio)
+  fim.setDate(fim.getDate() + 6)
+  fim.setHours(23, 59, 59, 999)
+  return { inicio, fim }
+}
+
+function obterInicioEFimMes(dataRef = new Date()) {
+  const inicio = new Date(dataRef.getFullYear(), dataRef.getMonth(), 1, 0, 0, 0, 0)
+  const fim = new Date(dataRef.getFullYear(), dataRef.getMonth() + 1, 0, 23, 59, 59, 999)
+  return { inicio, fim }
+}
+
 export default function EquipePage() {
   const router = useRouter()
   const { papel, papelReal, verComo } = usePapelAtivo()
   const isOperador = papel === "operador" || papelReal === "operador"
 
   // Aba ativa: "extrato" (Fechamento) | "meu-extrato" | "historico" | "membros"
-  const [abaAtiva, setAbaAtiva] = useState<"extrato" | "meu-extrato" | "historico" | "membros">(
-    isOperador ? "meu-extrato" : "extrato"
-  )
+  const [abaAtiva, setAbaAtiva] = useState<
+    "extrato" | "graficos" | "recibos" | "historico" | "membros" | "meu-extrato"
+  >(isOperador ? "meu-extrato" : "extrato")
 
   // Estado do extrato pessoal do usuário logado
   const [meuExtrato, setMeuExtrato] = useState<any | null>(null)
@@ -182,6 +207,28 @@ export default function EquipePage() {
   const [totalPendenteGeral, setTotalPendenteGeral] = useState(0)
   const [totalPagoGeral, setTotalPagoGeral] = useState(0)
   const [carregandoComissoes, setCarregandoComissoes] = useState(true)
+
+  // Recibos Emitidos e Dashboard de Desempenho
+  const [todosRecibos, setTodosRecibos] = useState<any[]>([])
+  const [carregandoRecibos, setCarregandoRecibos] = useState(false)
+  const [buscaRecibo, setBuscaRecibo] = useState("")
+  const [filtroColabDashboard, setFiltroColabDashboard] = useState<string>("todos")
+
+  const carregarTodosRecibos = useCallback(async () => {
+    setCarregandoRecibos(true)
+    try {
+      const res = await fetch("/api/comissoes/recibo", { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setTodosRecibos(data.recibos || [])
+      }
+    } catch {
+      // silencioso
+    } finally {
+      setCarregandoRecibos(false)
+    }
+  }, [])
+
 
   // Filtros do Histórico
   const [modoVisualizacao, setModoVisualizacao] = useState<"demandas" | "detalhada">("demandas")
@@ -248,6 +295,196 @@ export default function EquipePage() {
     }
   }
 
+  
+  const { inicio: inicioSemanaAtual, fim: fimSemanaAtual } = useMemo(() => obterInicioEFimSemana(), [])
+  const { inicio: inicioMesAtual, fim: fimMesAtual } = useMemo(() => obterInicioEFimMes(), [])
+
+  // Detalhamento enriquecido por colaborador com dados de Semana, Mês e Vendas
+  const colaboradoresDetalhados = useMemo(() => {
+    return resumoColaboradores.map((colab) => {
+      const itensDoColab = comissoes.filter((c) => c.colaborador_nome === colab.colaborador_nome)
+
+      // Semana atual
+      const itensSemana = itensDoColab.filter((c) => {
+        const data = new Date(c.criado_em)
+        return data >= inicioSemanaAtual && data <= fimSemanaAtual
+      })
+      const totalSemana = itensSemana.reduce((acc, c) => acc + (Number(c.valor_comissao) || 0), 0)
+      const pecasSemana = itensSemana.length
+
+      // Mês atual
+      const itensMes = itensDoColab.filter((c) => {
+        const data = new Date(c.criado_em)
+        return data >= inicioMesAtual && data <= fimMesAtual
+      })
+      const totalMes = itensMes.reduce((acc, c) => acc + (Number(c.valor_comissao) || 0), 0)
+      const pecasMes = itensMes.length
+      const vendasMes = itensMes.reduce((acc, c) => acc + (Number(c.valor_pedido) || 0), 0)
+
+      // Total pendente da semana / a pagar
+      const totalPendente = colab.total_pendente
+      const pecasPendentes = colab.quantidade_pendente
+
+      // Total histórico
+      const totalHistorico = colab.total_pendente + colab.total_pago
+      const pecasHistorico = colab.quantidade_pecas
+
+      // Último recibo emitido para ele
+      const ultimoRecibo = todosRecibos.find((r) => r.colaborador_nome === colab.colaborador_nome)
+
+      return {
+        ...colab,
+        totalSemana,
+        pecasSemana,
+        totalMes,
+        pecasMes,
+        vendasMes,
+        totalPendente,
+        pecasPendentes,
+        totalHistorico,
+        pecasHistorico,
+        ultimoRecibo,
+      }
+    })
+  }, [resumoColaboradores, comissoes, inicioSemanaAtual, fimSemanaAtual, inicioMesAtual, fimMesAtual, todosRecibos])
+
+  // Total acumulado no mês atual da fábrica inteira
+  const totalMesFabrica = useMemo(() => {
+    return comissoes
+      .filter((c) => {
+        const data = new Date(c.criado_em)
+        return data >= inicioMesAtual && data <= fimMesAtual
+      })
+      .reduce((acc, c) => acc + (Number(c.valor_comissao) || 0), 0)
+  }, [comissoes, inicioMesAtual, fimMesAtual])
+
+  // Dados do Dashboard de Produção & Gráficos
+  const dadosDashboard = useMemo(() => {
+    const itens = filtroColabDashboard === "todos"
+      ? comissoes
+      : comissoes.filter((c) => c.colaborador_nome === filtroColabDashboard)
+
+    const mesesMap: Record<string, {
+      chave: string
+      ano: number
+      mesNum: number
+      nomeMes: string
+      bonusTotal: number
+      pecasTotal: number
+      vendasTotal: number
+    }> = {}
+
+    itens.forEach((c) => {
+      const data = new Date(c.criado_em)
+      if (isNaN(data.getTime())) return
+      const chave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`
+      if (!mesesMap[chave]) {
+        const nomeMes = data.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+        const nomeCapitalizado = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)
+        mesesMap[chave] = {
+          chave,
+          ano: data.getFullYear(),
+          mesNum: data.getMonth() + 1,
+          nomeMes: nomeCapitalizado,
+          bonusTotal: 0,
+          pecasTotal: 0,
+          vendasTotal: 0,
+        }
+      }
+      mesesMap[chave].bonusTotal += Number(c.valor_comissao) || 0
+      mesesMap[chave].pecasTotal += 1
+      mesesMap[chave].vendasTotal += Number(c.valor_pedido) || 0
+    })
+
+    const hoje = new Date()
+    const chaveHoje = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`
+    if (!mesesMap[chaveHoje]) {
+      const nomeMes = hoje.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+      mesesMap[chaveHoje] = {
+        chave: chaveHoje,
+        ano: hoje.getFullYear(),
+        mesNum: hoje.getMonth() + 1,
+        nomeMes: nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
+        bonusTotal: 0,
+        pecasTotal: 0,
+        vendasTotal: 0,
+      }
+    }
+
+    const listaMesesCrescente = Object.values(mesesMap).sort((a, b) => a.chave.localeCompare(b.chave))
+
+    const listaComVariacao = listaMesesCrescente.map((mes, idx, arr) => {
+      const mesAnterior = idx > 0 ? arr[idx - 1] : null
+      let variacaoPercent = 0
+      let statusVariacao: "subiu" | "desceu" | "igual" | "primeiro" = "primeiro"
+
+      if (mesAnterior && mesAnterior.bonusTotal > 0) {
+        variacaoPercent = ((mes.bonusTotal - mesAnterior.bonusTotal) / mesAnterior.bonusTotal) * 100
+        statusVariacao = variacaoPercent > 0 ? "subiu" : variacaoPercent < 0 ? "desceu" : "igual"
+      } else if (mesAnterior && mesAnterior.bonusTotal === 0 && mes.bonusTotal > 0) {
+        variacaoPercent = 100
+        statusVariacao = "subiu"
+      }
+
+      return {
+        ...mes,
+        mesAnterior,
+        variacaoPercent,
+        statusVariacao,
+      }
+    })
+
+    let mesRecorde = listaComVariacao[0]
+    listaComVariacao.forEach((m) => {
+      if (m.bonusTotal > (mesRecorde?.bonusTotal || 0)) {
+        mesRecorde = m
+      }
+    })
+
+    const mesAtualDados = listaComVariacao.find((m) => m.chave === chaveHoje) || listaComVariacao[listaComVariacao.length - 1]
+    const somaBonus = listaComVariacao.reduce((acc, m) => acc + m.bonusTotal, 0)
+    const mediaMensal = listaComVariacao.length > 0 ? somaBonus / listaComVariacao.length : 0
+    const maxBonusGrafico = Math.max(...listaComVariacao.map((m) => m.bonusTotal), 10)
+
+    const rankingMap: Record<string, { nome: string; bonusTotal: number; pecasTotal: number; vendasTotal: number }> = {}
+    comissoes.forEach((c) => {
+      const nome = c.colaborador_nome || "Colaborador"
+      if (!rankingMap[nome]) {
+        rankingMap[nome] = { nome, bonusTotal: 0, pecasTotal: 0, vendasTotal: 0 }
+      }
+      rankingMap[nome].bonusTotal += Number(c.valor_comissao) || 0
+      rankingMap[nome].pecasTotal += 1
+      rankingMap[nome].vendasTotal += Number(c.valor_pedido) || 0
+    })
+
+    const rankingOrdenado = Object.values(rankingMap).sort((a, b) => b.bonusTotal - a.bonusTotal)
+    const totalGeralBonus = rankingOrdenado.reduce((acc, r) => acc + r.bonusTotal, 0) || 1
+
+    return {
+      listaMesesCrescente: listaComVariacao,
+      listaMesesDecrescente: [...listaComVariacao].reverse(),
+      mesRecorde,
+      mesAtualDados,
+      mediaMensal,
+      maxBonusGrafico,
+      rankingOrdenado,
+      totalGeralBonus,
+    }
+  }, [comissoes, filtroColabDashboard])
+
+  // Recibos Filtrados por Busca
+  const recibosFiltrados = useMemo(() => {
+    return todosRecibos.filter((r) => {
+      if (!buscaRecibo.trim()) return true
+      const termo = buscaRecibo.toLowerCase()
+      return (
+        r.numero_recibo?.toLowerCase().includes(termo) ||
+        r.colaborador_nome?.toLowerCase().includes(termo) ||
+        r.forma_pagamento?.toLowerCase().includes(termo)
+      )
+    })
+  }, [todosRecibos, buscaRecibo])
+
   // Expandir detalhes no card de fechamento
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>({})
 
@@ -309,9 +546,10 @@ export default function EquipePage() {
         .catch(() => {})
 
       carregarDadosComissoes()
+      carregarTodosRecibos()
     }
     carregarMeuExtrato()
-  }, [carregarDadosComissoes, carregarMeuExtrato, isOperador])
+  }, [carregarDadosComissoes, carregarMeuExtrato, carregarTodosRecibos, isOperador])
 
   async function atualizarTelefonesProducao(novos: string[]) {
     setSalvandoTelefones(true)
@@ -408,6 +646,7 @@ export default function EquipePage() {
       const reciboId = data.reciboId
       setModalPagamento(null)
       carregarDadosComissoes()
+      carregarTodosRecibos()
 
       if (reciboId) {
         router.push(`/equipe/recibo/${reciboId}`)
@@ -749,12 +988,44 @@ export default function EquipePage() {
               }`}
             >
               <Wallet className="h-4 w-4" />
-              <span>Extrato da Semana (Fechamento)</span>
+              <span>⚡ Fechamento (Semana & Mês)</span>
               {totalPendenteGeral > 0 && (
                 <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-black">
                   R$ {totalPendenteGeral.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAbaAtiva("graficos")}
+              className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
+                abaAtiva === "graficos"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>📊 Desempenho & Gráficos</span>
+              <span className="rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 text-[10px] font-black">
+                Evolução
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAbaAtiva("recibos")}
+              className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
+                abaAtiva === "recibos"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Receipt className="h-4 w-4" />
+              <span>🧾 Recibos Emitidos</span>
+              <span className="rounded-full bg-purple-500/20 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 text-[10px] font-black">
+                {todosRecibos.length}
+              </span>
             </button>
 
             <button
@@ -767,7 +1038,7 @@ export default function EquipePage() {
               }`}
             >
               <History className="h-4 w-4" />
-              <span>Histórico de Comissões</span>
+              <span>📜 Histórico de Peças</span>
               <span className="rounded-full bg-muted text-muted-foreground px-1.5 py-0.2 text-[10px] font-black">
                 {comissoes.length}
               </span>
@@ -783,7 +1054,7 @@ export default function EquipePage() {
               }`}
             >
               <Users2 className="h-4 w-4" />
-              <span>Membros & Acessos</span>
+              <span>👥 Membros & Acessos</span>
               <span className="rounded-full bg-muted text-muted-foreground px-1.5 py-0.2 text-[10px] font-black">
                 {membros.length}
               </span>
@@ -813,14 +1084,18 @@ export default function EquipePage() {
       {abaAtiva === "extrato" && (
         <div className="flex flex-col gap-5">
           {/* Métricas do Fechamento */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Card 1: A Pagar na Semana */}
             <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-500/10 p-4 shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block">
-                  A Pagar Neste Fim de Semana
+                  ⚡ A Pagar Esta Semana
                 </span>
                 <span className="text-2xl sm:text-3xl font-black text-emerald-950 dark:text-emerald-100 mt-1 block">
                   R$ {totalPendenteGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-bold mt-0.5 block">
+                  Pronto para repasse no sábado
                 </span>
               </div>
               <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center text-2xl shrink-0">
@@ -828,20 +1103,50 @@ export default function EquipePage() {
               </div>
             </div>
 
+            {/* Card 2: Total Produzido no Mês Atual */}
             <div className="rounded-2xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
               <div>
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
-                  Total Já Pago (Quitado)
+                  📆 Total no Mês Atual
                 </span>
                 <span className="text-2xl sm:text-3xl font-black text-foreground mt-1 block">
-                  R$ {totalPagoGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  R$ {totalMesFabrica.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium mt-0.5 block">
+                  Acumulado de bônus em {new Date().toLocaleDateString("pt-BR", { month: "long" })}
                 </span>
               </div>
               <div className="h-12 w-12 rounded-2xl bg-blue-500/15 text-blue-600 flex items-center justify-center text-xl shrink-0">
-                ✓
+                📅
               </div>
             </div>
 
+            {/* Card 3: Recibos Emitidos / Quitado */}
+            <div
+              onClick={() => setAbaAtiva("recibos")}
+              className="rounded-2xl border border-border bg-card p-4 shadow-xs flex items-center justify-between cursor-pointer hover:border-primary/50 transition-all group"
+              title="Clique para ver todos os recibos emitidos"
+            >
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                    🧾 Recibos Emitidos
+                  </span>
+                  <ArrowUpRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <span className="text-2xl sm:text-3xl font-black text-foreground mt-1 block">
+                  {todosRecibos.length} recibos
+                </span>
+                <span className="text-[10px] text-primary font-bold group-hover:underline block">
+                  R$ {totalPagoGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} quitados &rarr;
+                </span>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-purple-500/15 text-purple-600 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
+                🧾
+              </div>
+            </div>
+
+            {/* Card 4: Elegibilidade de Bônus */}
             <div
               onClick={() => {
                 carregarElegibilidade()
@@ -853,7 +1158,7 @@ export default function EquipePage() {
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
-                    Colaboradores com Bônus
+                    👥 Quem Recebe Bônus
                   </span>
                   <Settings2 className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
@@ -875,28 +1180,40 @@ export default function EquipePage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h2 className="text-sm font-black text-foreground uppercase tracking-wider">
-                  Fechamento por Colaborador
+                  Fechamento Semanal por Colaborador
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  Extrato de produção semanal acumulado para conferência e repasse.
+                  Valores semanais prontos para pagamento com emissão de recibo oficial assinado.
                 </p>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  carregarElegibilidade()
-                  setDialogElegibilidadeAberto(true)
-                }}
-                className="gap-2 text-xs font-bold border-primary/40 text-primary hover:bg-primary/10 hover:text-primary self-start sm:self-auto shadow-xs"
-              >
-                <Settings2 className="h-3.5 w-3.5" />
-                <span>Quem Recebe Bônus</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAbaAtiva("graficos")}
+                  className="gap-2 text-xs font-bold border-blue-500/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10 shadow-xs"
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  <span>Ver Gráficos & Desempenho</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    carregarElegibilidade()
+                    setDialogElegibilidadeAberto(true)
+                  }}
+                  className="gap-2 text-xs font-bold border-primary/40 text-primary hover:bg-primary/10 hover:text-primary shadow-xs"
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                  <span>Quem Recebe Bônus</span>
+                </Button>
+              </div>
             </div>
 
-            {resumoColaboradores.length === 0 ? (
+            {colaboradoresDetalhados.length === 0 ? (
               <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center">
                 <span className="text-3xl block">🪙</span>
                 <p className="font-bold text-foreground text-sm mt-2">Nenhum bônus creditado ainda</p>
@@ -905,7 +1222,7 @@ export default function EquipePage() {
                 </p>
               </div>
             ) : (
-              resumoColaboradores.map((colab) => {
+              colaboradoresDetalhados.map((colab) => {
                 const itensPendentes = comissoes.filter(
                   (c) => c.colaborador_nome === colab.colaborador_nome && c.status === "pendente"
                 )
@@ -917,13 +1234,14 @@ export default function EquipePage() {
                     className={`rounded-2xl border-2 transition-all overflow-hidden ${
                       colab.total_pendente > 0
                         ? "border-emerald-500/50 bg-card shadow-md"
-                        : "border-border/80 bg-muted/20 opacity-80"
+                        : "border-border/80 bg-muted/20 opacity-85"
                     }`}
                   >
-                    {/* Cabeçalho do Card */}
-                    <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    {/* Cabeçalho do Card com as 3 métricas explícitas */}
+                    <div className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      {/* Identificação do Colaborador */}
                       <div className="flex items-center gap-3">
-                        <div className="h-11 w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-lg font-black shrink-0">
+                        <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-lg font-black shrink-0">
                           {colab.colaborador_nome.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
@@ -942,69 +1260,121 @@ export default function EquipePage() {
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Total acumulado histórico: R$ {(colab.total_pendente + colab.total_pago).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} ({colab.quantidade_pecas} peças)
+                            Histórico total: R$ {colab.totalHistorico.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} ({colab.pecasHistorico} peças acumuladas)
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 sm:gap-3 justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0">
-                        <div className="text-left sm:text-right">
-                          <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider block">
-                            A Pagar
+                      {/* As 3 Métricas Explícitas: Semana (A Pagar) | Mês | Vendas Produzidas */}
+                      <div className="grid grid-cols-3 gap-2 sm:gap-3 bg-muted/40 p-2.5 rounded-xl border border-border/60">
+                        {/* 1. Esta Semana (A Pagar) */}
+                        <div className="text-left px-2 border-r border-border/60">
+                          <span className="text-[9px] sm:text-[10px] text-emerald-800 dark:text-emerald-300 uppercase font-black tracking-wider block">
+                            ⚡ Esta Semana (A Pagar)
                           </span>
-                          <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                          <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">
                             R$ {colab.total_pendente.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
+                          <span className="text-[10px] text-muted-foreground block font-medium">
+                            {colab.pecasPendentes} peça{colab.pecasPendentes !== 1 ? "s" : ""} pendente{colab.pecasPendentes !== 1 ? "s" : ""}
+                          </span>
                         </div>
 
-                        <div className="flex items-center gap-1.5">
-                          {colab.total_pendente > 0 && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  setModalPagamento({
-                                    colaborador: colab,
-                                    lancarFinanceiro: true,
-                                    formaPagamento: "pix",
-                                    tipoAssinatura: "fisica",
-                                    observacao: `Pagamento semanal de bônus de produção (${colab.quantidade_pendente} peças)`,
-                                  })
-                                }
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shadow-xs"
-                              >
-                                <DollarSign className="h-3.5 w-3.5" />
-                                <span>Pagar Agora</span>
-                              </Button>
+                        {/* 2. Total no Mês */}
+                        <div className="text-left px-2 border-r border-border/60">
+                          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block">
+                            📆 Total no Mês
+                          </span>
+                          <span className="text-base sm:text-lg font-black text-foreground block mt-0.5">
+                            R$ {colab.totalMes.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground block font-medium">
+                            {colab.pecasMes} peça{colab.pecasMes !== 1 ? "s" : ""} no mês
+                          </span>
+                        </div>
 
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                nativeButton={false}
-                                render={<a href={gerarLinkWhatsApp(colab)} target="_blank" rel="noopener noreferrer" />}
-                                className="gap-1.5 text-xs font-bold border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
-                                title="Enviar extrato detalhado pronto no WhatsApp do colaborador"
-                              >
-                                <Share2 className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">WhatsApp</span>
-                              </Button>
-                            </>
-                          )}
+                        {/* 3. Vendas Produzidas */}
+                        <div className="text-left px-2">
+                          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block">
+                            📦 Vendas Feitas
+                          </span>
+                          <span className="text-base sm:text-lg font-black text-foreground block mt-0.5">
+                            R$ {colab.vendasMes.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground block font-medium">
+                            Volume de pedidos
+                          </span>
+                        </div>
+                      </div>
 
-                          <button
-                            type="button"
+                      {/* Ações: Pagar & Emitir Recibo / Último Recibo / WhatsApp / Expandir */}
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                        {colab.total_pendente > 0 && (
+                          <Button
+                            size="sm"
                             onClick={() =>
-                              setExpandidos((prev) => ({
-                                ...prev,
-                                [colab.colaborador_nome]: !isExpandido,
-                              }))
+                              setModalPagamento({
+                                colaborador: colab,
+                                lancarFinanceiro: true,
+                                formaPagamento: "pix",
+                                tipoAssinatura: "fisica",
+                                observacao: `Pagamento semanal de bônus de produção (${colab.quantidade_pendente} peças)`,
+                              })
                             }
-                            className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
-                            title="Ver peças que compõem este valor"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shadow-xs"
                           >
-                            {isExpandido ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                          </button>
-                        </div>
+                            <Receipt className="h-3.5 w-3.5" />
+                            <span>🧾 Pagar & Emitir Recibo</span>
+                          </Button>
+                        )}
+
+                        {colab.ultimoRecibo && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            nativeButton={false}
+                            render={
+                              <a
+                                href={`/equipe/recibo/${colab.ultimoRecibo.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              />
+                            }
+                            className="gap-1.5 text-xs font-bold border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10 shadow-xs"
+                            title="Ver ou imprimir o último recibo gerado para este colaborador"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>🖨️ Último Recibo</span>
+                          </Button>
+                        )}
+
+                        {colab.total_pendente > 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            nativeButton={false}
+                            render={<a href={gerarLinkWhatsApp(colab)} target="_blank" rel="noopener noreferrer" />}
+                            className="gap-1.5 text-xs font-bold border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
+                            title="Enviar extrato detalhado pronto no WhatsApp do colaborador"
+                          >
+                            <Share2 className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">WhatsApp</span>
+                          </Button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandidos((prev) => ({
+                              ...prev,
+                              [colab.colaborador_nome]: !isExpandido,
+                            }))
+                          }
+                          className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+                          title="Ver peças que compõem este valor"
+                        >
+                          {isExpandido ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
                       </div>
                     </div>
 
@@ -1051,6 +1421,475 @@ export default function EquipePage() {
               })
             )}
           </div>
+        </div>
+      )}
+
+      {/* CONTEÚDO DA ABA 2: DESEMPENHO & GRÁFICOS */}
+      {abaAtiva === "graficos" && (
+        <div className="flex flex-col gap-6">
+          {/* Header e Filtro por Colaborador */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-4 rounded-2xl border border-border shadow-xs">
+            <div>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <h2 className="text-base sm:text-lg font-black text-foreground">
+                  Dashboard de Produção & Comparativo Mês a Mês
+                </h2>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Veja o histórico se o colaborador fez mais ou menos em cada mês, picos de produção e ranking da fábrica.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">Filtrar por:</span>
+              <Select
+                value={filtroColabDashboard}
+                onValueChange={(v) => {
+                  if (v) setFiltroColabDashboard(v)
+                }}
+              >
+                <SelectTrigger className="w-[200px] text-xs font-black bg-background">
+                  <SelectValue placeholder="Toda a Equipe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">🏭 Toda a Fábrica (Geral)</SelectItem>
+                  {resumoColaboradores.map((c) => (
+                    <SelectItem key={c.colaborador_nome} value={c.colaborador_nome}>
+                      👤 {c.colaborador_nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Cards de KPIs de Destaque */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* KPI 1: Mês Recorde */}
+            <div className="rounded-2xl border-2 border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-transparent p-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block">
+                  🏆 Mês Recorde
+                </span>
+                <Trophy className="h-4 w-4 text-amber-600" />
+              </div>
+              <span className="text-xl sm:text-2xl font-black text-foreground mt-1 block">
+                {dadosDashboard.mesRecorde?.nomeMes || "—"}
+              </span>
+              <span className="text-xs text-amber-900 dark:text-amber-200 font-black mt-1 block">
+                R$ {(dadosDashboard.mesRecorde?.bonusTotal || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} em bônus ({dadosDashboard.mesRecorde?.pecasTotal || 0} peças)
+              </span>
+            </div>
+
+            {/* KPI 2: Mês Atual vs Mês Anterior (Evolução) */}
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                  📈 Mês Atual vs Anterior
+                </span>
+                {dadosDashboard.mesAtualDados?.statusVariacao === "subiu" ? (
+                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                ) : dadosDashboard.mesAtualDados?.statusVariacao === "desceu" ? (
+                  <TrendingDown className="h-4 w-4 text-rose-500" />
+                ) : (
+                  <span className="text-xs text-muted-foreground">●</span>
+                )}
+              </div>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-xl sm:text-2xl font-black text-foreground">
+                  {dadosDashboard.mesAtualDados?.statusVariacao === "subiu" ? (
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      +{dadosDashboard.mesAtualDados.variacaoPercent.toFixed(0)}%
+                    </span>
+                  ) : dadosDashboard.mesAtualDados?.statusVariacao === "desceu" ? (
+                    <span className="text-rose-600 dark:text-rose-400">
+                      {dadosDashboard.mesAtualDados.variacaoPercent.toFixed(0)}%
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Estável</span>
+                  )}
+                </span>
+              </div>
+              <span className="text-[11px] text-muted-foreground mt-1 block">
+                {dadosDashboard.mesAtualDados?.statusVariacao === "subiu"
+                  ? "🟢 Fez mais que o mês anterior!"
+                  : dadosDashboard.mesAtualDados?.statusVariacao === "desceu"
+                  ? "🔴 Fez menos que o mês anterior"
+                  : "Manteve o mesmo ritmo"}
+              </span>
+            </div>
+
+            {/* KPI 3: Líder Geral */}
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                  🥇 Líder de Produção
+                </span>
+                <Award className="h-4 w-4 text-primary" />
+              </div>
+              <span className="text-lg sm:text-xl font-black text-foreground mt-1 block truncate">
+                {dadosDashboard.rankingOrdenado[0]?.nome || "—"}
+              </span>
+              <span className="text-xs text-primary font-bold mt-1 block">
+                R$ {(dadosDashboard.rankingOrdenado[0]?.bonusTotal || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} ({dadosDashboard.rankingOrdenado[0]?.pecasTotal || 0} peças)
+              </span>
+            </div>
+
+            {/* KPI 4: Média Mensal */}
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                  💰 Média Mensal
+                </span>
+                <DollarSign className="h-4 w-4 text-emerald-600" />
+              </div>
+              <span className="text-xl sm:text-2xl font-black text-foreground mt-1 block">
+                R$ {dadosDashboard.mediaMensal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-[11px] text-muted-foreground mt-1 block">
+                Média de bônus por mês registrado
+              </span>
+            </div>
+          </div>
+
+          {/* Gráfico Visual de Barras Mês a Mês */}
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-sm font-black text-foreground uppercase tracking-wider">
+                  Evolução do Bônus Mês a Mês
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Comparativo de cada mês registrado para conferência visual de crescimento.
+                </p>
+              </div>
+              <span className="rounded-full bg-primary/10 text-primary text-xs font-black px-2.5 py-1">
+                {filtroColabDashboard === "todos" ? "Toda a Fábrica" : filtroColabDashboard}
+              </span>
+            </div>
+
+            {dadosDashboard.listaMesesCrescente.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground text-xs">
+                Nenhum dado mensal para o período selecionado.
+              </div>
+            ) : (
+              <div className="w-full overflow-x-auto pt-6 pb-2">
+                <div className="min-w-[400px] flex items-end justify-between gap-4 h-56 px-4 border-b border-border">
+                  {dadosDashboard.listaMesesCrescente.map((mes) => {
+                    const alturaPct = Math.max(
+                      14,
+                      Math.round((mes.bonusTotal / dadosDashboard.maxBonusGrafico) * 100)
+                    )
+                    const isRecorde = mes.chave === dadosDashboard.mesRecorde?.chave && mes.bonusTotal > 0
+
+                    return (
+                      <div key={mes.chave} className="flex-1 flex flex-col items-center justify-end h-full group">
+                        {/* Valor acima da barra */}
+                        <div className="mb-2 text-center transition-transform group-hover:scale-105">
+                          {isRecorde && (
+                            <span className="text-[10px] block font-black text-amber-500 animate-bounce">
+                              🏆 Recorde
+                            </span>
+                          )}
+                          <span className="text-xs font-black text-foreground block">
+                            R$ {mes.bonusTotal.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground block font-bold">
+                            {mes.pecasTotal} un
+                          </span>
+                        </div>
+
+                        {/* Barra */}
+                        <div
+                          style={{ height: `${alturaPct}%` }}
+                          className={`w-full max-w-[48px] rounded-t-xl transition-all duration-300 group-hover:brightness-110 shadow-sm ${
+                            isRecorde
+                              ? "bg-gradient-to-t from-amber-500 to-amber-400"
+                              : "bg-gradient-to-t from-emerald-600 to-emerald-400"
+                          }`}
+                        />
+
+                        {/* Rótulo do Mês */}
+                        <div className="pt-2 text-center">
+                          <span className="text-[11px] font-black text-muted-foreground block whitespace-nowrap">
+                            {mes.nomeMes.split(" de ")[0]}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground/70 block">
+                            {mes.ano}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Duas Colunas: Comparativo Mês a Mês (Tabela) + Ranking Geral da Fábrica */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Tabela de Comparativo Mês a Mês */}
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-black text-foreground uppercase tracking-wider mb-1">
+                  Comparativo Detalhado (Mês Fez Mais ou Menos?)
+                </h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Histórico comparativo direto com o mês anterior.
+                </p>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border text-muted-foreground font-black text-[10px] uppercase">
+                        <th className="text-left py-2">Mês / Ano</th>
+                        <th className="text-right py-2">Bônus</th>
+                        <th className="text-right py-2">Peças</th>
+                        <th className="text-right py-2">Desempenho</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {dadosDashboard.listaMesesDecrescente.map((mes) => {
+                        const isRecorde = mes.chave === dadosDashboard.mesRecorde?.chave && mes.bonusTotal > 0
+
+                        return (
+                          <tr key={mes.chave} className="hover:bg-muted/40 transition-colors">
+                            <td className="py-2.5 font-bold text-foreground">
+                              {mes.nomeMes}
+                              {isRecorde && (
+                                <span className="ml-1.5 text-[9px] bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded font-black">
+                                  Recorde
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400">
+                              R$ {mes.bonusTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-2.5 text-right font-bold text-muted-foreground">
+                              {mes.pecasTotal} pcs
+                            </td>
+                            <td className="py-2.5 text-right font-bold">
+                              {mes.statusVariacao === "subiu" ? (
+                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-black">
+                                  <TrendingUp className="h-3 w-3" />
+                                  +{mes.variacaoPercent.toFixed(0)}% (Fez Mais)
+                                </span>
+                              ) : mes.statusVariacao === "desceu" ? (
+                                <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-black">
+                                  <TrendingDown className="h-3 w-3" />
+                                  {mes.variacaoPercent.toFixed(0)}% (Fez Menos)
+                                </span>
+                              ) : mes.statusVariacao === "igual" ? (
+                                <span className="text-muted-foreground">Mesmo ritmo</span>
+                              ) : (
+                                <span className="text-muted-foreground italic">Primeiro mês</span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Ranking Geral da Fábrica (Pódio) */}
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-black text-foreground uppercase tracking-wider mb-1">
+                  Ranking Geral da Fábrica (Pódio)
+                </h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Colaboradores mais produtivos ranqueados por valor acumulado.
+                </p>
+
+                <div className="flex flex-col gap-3">
+                  {dadosDashboard.rankingOrdenado.map((item, idx) => {
+                    const medalha = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`
+                    const pctDoTotal = Math.round((item.bonusTotal / dadosDashboard.totalGeralBonus) * 100)
+
+                    return (
+                      <div
+                        key={item.nome}
+                        className="p-3 rounded-xl border border-border/70 bg-background flex flex-col gap-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-black w-6 text-center">{medalha}</span>
+                            <span className="font-black text-sm text-foreground">{item.nome}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                              R$ {item.bonusTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground block font-bold">
+                              {item.pecasTotal} peça{item.pecasTotal !== 1 ? "s" : ""} ({pctDoTotal}% da fábrica)
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Barra de Progresso */}
+                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-primary h-2 rounded-full transition-all duration-500"
+                            style={{ width: `${pctDoTotal}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONTEÚDO DA ABA 3: RECIBOS EMITIDOS */}
+      {abaAtiva === "recibos" && (
+        <div className="flex flex-col gap-5">
+          {/* Header e Busca de Recibos */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-4 rounded-2xl border border-border shadow-xs">
+            <div>
+              <div className="flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-purple-600" />
+                <h2 className="text-base sm:text-lg font-black text-foreground">
+                  Recibos Oficiais de Bônus de Produção
+                </h2>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Recibos emitidos para conferência, impressão e assinatura física ou digital dos colaboradores.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar colaborador ou nº recibo..."
+                  value={buscaRecibo}
+                  onChange={(e) => setBuscaRecibo(e.target.value)}
+                  className="pl-8 text-xs w-[240px]"
+                />
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={carregarTodosRecibos}
+                disabled={carregandoRecibos}
+                className="gap-1.5 text-xs font-bold"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${carregandoRecibos ? "animate-spin" : ""}`} />
+                <span>Atualizar</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Cards de Resumo */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                  Total de Recibos Emitidos
+                </span>
+                <span className="text-2xl sm:text-3xl font-black text-foreground mt-1 block">
+                  {todosRecibos.length} recibos
+                </span>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-purple-500/15 text-purple-600 flex items-center justify-center text-xl shrink-0">
+                🧾
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block">
+                  Total Pago em Recibos
+                </span>
+                <span className="text-2xl sm:text-3xl font-black text-emerald-950 dark:text-emerald-100 mt-1 block">
+                  R$ {todosRecibos.reduce((acc, r) => acc + (Number(r.valor_total) || 0), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center text-xl shrink-0">
+                ✓
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de Recibos */}
+          {carregandoRecibos ? (
+            <div className="p-12 text-center">
+              <RefreshCw className="h-6 w-6 animate-spin mx-auto text-primary mb-2" />
+              <p className="text-xs font-bold text-muted-foreground">Carregando recibos emitidos...</p>
+            </div>
+          ) : recibosFiltrados.length === 0 ? (
+            <div className="rounded-2xl border-2 border-dashed border-border p-12 text-center">
+              <Receipt className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="font-bold text-foreground text-sm">Nenhum recibo emitido ainda</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+                Quando você clicar em <strong>"Pagar & Emitir Recibo"</strong> na aba de Fechamento, o recibo oficial será gerado e listado aqui para impressão e assinatura a qualquer momento.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {recibosFiltrados.map((recibo) => (
+                <div
+                  key={recibo.id}
+                  className="rounded-2xl border border-border bg-card p-4 shadow-xs flex flex-col justify-between gap-3 hover:border-primary/50 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
+                        Recibo #{recibo.numero_recibo}
+                      </span>
+                      <h4 className="font-black text-base text-foreground mt-0.5">
+                        {recibo.colaborador_nome}
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Emitido em {new Date(recibo.criado_em).toLocaleDateString("pt-BR")} às {new Date(recibo.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+
+                    <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-xs px-2.5 py-1 shrink-0">
+                      R$ {Number(recibo.valor_total).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="uppercase text-[10px] font-bold">
+                        {recibo.forma_pagamento?.toUpperCase() || "PIX"}
+                      </span>
+                      <span>•</span>
+                      <span className="text-[10px]">
+                        {recibo.tipo_assinatura === "digital" ? "✍️ Digital" : "📄 No papel"}
+                      </span>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      nativeButton={false}
+                      render={
+                        <a
+                          href={`/equipe/recibo/${recibo.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        />
+                      }
+                      className="gap-1.5 text-xs font-bold border-purple-500/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      <span>🖨️ Abrir Recibo</span>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1923,11 +2762,12 @@ export default function EquipePage() {
       <Dialog open={!!modalPagamento} onOpenChange={(open) => !open && setModalPagamento(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base font-black text-foreground">
-              Confirmar Pagamento de Comissões
+            <DialogTitle className="text-base font-black text-foreground flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-emerald-600" />
+              <span>Pagar & Emitir Recibo Oficial</span>
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Dar baixa nas comissões pendentes acumuladas pelo colaborador neste fechamento.
+              Dar baixa nas comissões semanais e gerar o Recibo Oficial com assinatura e logo da Toldos Print.
             </DialogDescription>
           </DialogHeader>
 
@@ -2038,9 +2878,10 @@ export default function EquipePage() {
               size="sm"
               onClick={confirmarPagamento}
               disabled={salvandoPagamento}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5"
             >
-              {salvandoPagamento ? "Gravando..." : "Confirmar e Dar Baixa"}
+              <Receipt className="h-4 w-4" />
+              <span>{salvandoPagamento ? "Gravando e Gerando Recibo..." : "Confirmar e Emitir Recibo"}</span>
             </Button>
           </DialogFooter>
         </DialogContent>
