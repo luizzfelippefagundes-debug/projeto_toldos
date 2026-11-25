@@ -44,11 +44,14 @@ export async function POST(req: Request) {
   const pdf = await gerarPdfOsServidor(orcamento, clienteNome, clienteTelefone)
   const nomeArquivo = `OS-${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)}.pdf`
 
+  const numeroOS = formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)
+  const legenda = `📋 Segue a Ordem de Serviço nº ${numeroOS} da Toldos Print!\n\n💳 *Chave Pix (CNPJ):* 09.141.206/0001-06\nFavorecido: Toldos Print & Comunicação Visual`
+
   const envio = await enviarDocumentoWhatsapp(
     telefone,
     pdf.toString("base64"),
     nomeArquivo,
-    `📋 Segue a Ordem de Serviço nº ${formatarNumeroOrcamento(orcamento.numero, orcamento.criadoEm)} da Toldos Print!`
+    legenda
   )
 
   if (!envio.ok) {

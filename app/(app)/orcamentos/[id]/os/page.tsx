@@ -144,8 +144,20 @@ export default function OrdemDeServicoPage() {
         console.warn("Falha gerando token de assinatura:", e)
       }
 
-      const pixTexto = pixCopiaCola ? `\n\n💰 *Pague via Pix (Mercado Pago):*\n${pixCopiaCola}` : ""
-      const mensagem = `Olá, ${cliente.nome.split(" ")[0]}! Segue a Ordem de Serviço nº ${numeroFormatado} da Toldos Print.\n\nValor: ${formatarMoeda(totalFinal)}${pixTexto}${linkAssinatura ? `\n\n✍️ Você pode assinar digitalmente pelo link abaixo:\n${linkAssinatura}` : ""}`
+      const pixCopiaColaBloco = pixCopiaCola
+        ? `\n\n📋 *Código Pix Copia e Cola:*\n\`\`\`${pixCopiaCola}\`\`\``
+        : ""
+
+      const dadosPix = `\n\n💳 *DADOS PARA PAGAMENTO VIA PIX:*
+👉 *Chave Pix (CNPJ):* 09.141.206/0001-06
+👉 *Chave para copiar (só números):* 09141206000106
+👤 *Favorecido:* Toldos Print & Comunicação Visual${pixCopiaColaBloco}`
+
+      const linkAssinaturaBloco = linkAssinatura
+        ? `\n\n✍️ *Assinar Ordem de Serviço digitalmente:*\n${linkAssinatura}`
+        : ""
+
+      const mensagem = `Olá, ${cliente.nome.split(" ")[0]}! Segue a Ordem de Serviço nº ${numeroFormatado} da Toldos Print.\n\n💰 *Valor:* ${formatarMoeda(totalFinal)}${dadosPix}${linkAssinaturaBloco}\n\nAssim que realizar o pagamento, favor enviar o comprovante por aqui! 🤝`
 
       // Envia PDF pelo bot
       await fetch("/api/whatsapp/enviar-os", {
@@ -405,8 +417,8 @@ export default function OrdemDeServicoPage() {
               </p>
               <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                 <div>
-                  <span className="text-gray-500">Chave Pix: </span>
-                  <span className="font-bold text-gray-900 select-all">toldosprint@outlook.com</span>
+                  <span className="text-gray-500">Chave Pix (CNPJ): </span>
+                  <span className="font-bold text-gray-900 select-all">09.141.206/0001-06</span>
                 </div>
                 <div>
                   <span className="text-gray-500">Beneficiário: </span>

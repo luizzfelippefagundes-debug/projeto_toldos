@@ -175,11 +175,27 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
           <div className="max-w-md w-full text-center bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-sm">
             <div className="text-6xl mb-4">✅</div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Contrato e OS Assinados!</h1>
-            <p className="text-gray-600 text-sm mb-6">
+            <p className="text-gray-600 text-sm mb-4">
               {dados.assinado
                 ? "Este documento já foi assinado digitalmente."
                 : "Sua assinatura foi registrada com sucesso! A Toldos Print já foi notificada e seu pedido entrou em produção."}
             </p>
+
+            {/* Bloco de Pagamento Pix */}
+            <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-left">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 block">
+                💳 Dados para Pagamento via Pix:
+              </span>
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1 text-xs font-bold text-gray-900">
+                <span>Chave Pix (CNPJ):</span>
+                <span className="font-mono bg-white px-2 py-0.5 rounded border border-emerald-200 select-all text-emerald-900">
+                  09.141.206/0001-06
+                </span>
+              </div>
+              <div className="mt-1 text-[11px] text-gray-600">
+                Favorecido: <strong>Toldos Print & Comunicação Visual</strong>
+              </div>
+            </div>
             <div className="flex flex-col gap-2.5">
               {dados.orcamentoId && (
                 <a

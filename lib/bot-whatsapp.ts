@@ -350,11 +350,12 @@ export function resolverFluxoAtendimento(
 
   // 1. Dúvida sobre pagamento / Pix
   if (pedePix) {
-    const chavePix = process.env.PIX_CHAVE_EMPRESA || "(27) 99748-9714"
+    const chavePix = process.env.PIX_CHAVE_EMPRESA || "09.141.206/0001-06"
     return {
       resposta:
-        "💳 *PAGAMENTO VIA PIX (Mercado Pago / Banco):*\n\n" +
-        `Nossa chave PIX oficial é o telefone celular:\n👉 *${chavePix}*\n` +
+        "💳 *PAGAMENTO VIA PIX:*\n\n" +
+        `Nossa chave PIX oficial é o CNPJ:\n👉 *${chavePix}*\n` +
+        "Chave sem pontuação (para copiar): *09141206000106*\n" +
         "Favorecido: *Toldos Print (Comunicação Visual e Toldos)*\n\n" +
         "Assim que realizar o pagamento, pode mandar o comprovante por aqui mesmo que confirmamos o seu pedido na hora! 🤝✨",
     }
