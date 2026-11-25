@@ -14,6 +14,7 @@ interface DadosOs {
   clienteNome: string
   clienteCpf?: string | null
   totalFechado: number | null
+  linkPagamento?: string | null
 }
 
 export default function AssinarPage({ params }: { params: Promise<{ token: string }> }) {
@@ -26,6 +27,8 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
   const [desenhando, setDesenhando] = useState(false)
   const [temAssinatura, setTemAssinatura] = useState(false)
   const [cpfCnpj, setCpfCnpj] = useState("")
+  const [linkPagamento, setLinkPagamento] = useState<string | null>(null)
+  const [gerandoLink, setGerandoLink] = useState(false)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const ultimoPonto = useRef<{ x: number; y: number } | null>(null)
@@ -57,10 +60,38 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
           if (d.clienteCpf) {
             setCpfCnpj(d.clienteCpf)
           }
+          if (d.linkPagamento) {
+            setLinkPagamento(d.linkPagamento)
+          }
         }
       })
       .catch(() => setErro("Erro ao carregar documento"))
   }, [token])
+
+  async function abrirPagamentoCartao() {
+    if (linkPagamento) {
+      window.open(linkPagamento, "_blank")
+      return
+    }
+    if (!dados?.orcamentoId) return
+    setGerandoLink(true)
+    try {
+      const res = await fetch("/api/mercadopago/criar-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orcamentoId: dados.orcamentoId }),
+      })
+      const j = await res.json()
+      if (j.ok && j.linkPagamento) {
+        setLinkPagamento(j.linkPagamento)
+        window.open(j.linkPagamento, "_blank")
+      }
+    } catch {
+      // fallback
+    } finally {
+      setGerandoLink(false)
+    }
+  }
 
   function getPos(e: React.TouchEvent | React.MouseEvent, canvas: HTMLCanvasElement) {
     const rect = canvas.getBoundingClientRect()
@@ -182,9 +213,9 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
             </p>
 
             {/* Bloco de Pagamento Pix */}
-            <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-left">
+            <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-left">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 block">
-                💳 Dados para Pagamento via Pix:
+                ⚡ Pagamento via Pix:
               </span>
               <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1 text-xs font-bold text-gray-900">
                 <span>Chave Pix (CNPJ):</span>
@@ -195,6 +226,29 @@ export default function AssinarPage({ params }: { params: Promise<{ token: strin
               <div className="mt-1 text-[11px] text-gray-600">
                 Favorecido: <strong>Toldos Print & Comunicação Visual</strong>
               </div>
+            </div>
+
+            {/* Bloco de Pagamento no Cartão (Mercado Pago) */}
+            <div className="mb-5 rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-left">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                  💳 Pagamento com Cartão:
+                </span>
+                <span className="text-[10px] font-bold bg-blue-200/80 text-blue-800 px-2 py-0.5 rounded-full">
+                  Até 12x
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-gray-600">
+                Pague no Cartão de Crédito ou Débito com parcelamento oficial do Mercado Pago.
+              </p>
+              <button
+                type="button"
+                onClick={abrirPagamentoCartao}
+                disabled={gerandoLink}
+                className="mt-2.5 w-full py-2.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              >
+                {gerandoLink ? "Carregando Mercado Pago..." : "Pagar com Cartão no Mercado Pago ↗"}
+              </button>
             </div>
             <div className="flex flex-col gap-2.5">
               {dados.orcamentoId && (

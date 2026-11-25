@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     if (pagamento.status === "approved") {
       const sql = getSql()
       const agora = pagamento.pagoEm || new Date().toISOString()
+      const orcamentoIdRef = (pagamento.externalReference || "").replace(/^orc-/, "")
 
       // Busca orçamentos que tenham esse mp_payment_id ou consulta por externalReference
       const orcamentos = await sql`
@@ -50,17 +51,24 @@ export async function POST(request: Request) {
         FROM orcamentos o
         LEFT JOIN clientes c ON c.id = o.cliente_id
         WHERE o.mp_payment_id = ${paymentId}
+           OR o.id = ${orcamentoIdRef}
         LIMIT 1
       `
 
       if (orcamentos.length > 0) {
         const o = orcamentos[0]
+        const formaTexto = pagamento.metodoPagamento === "credit_card"
+          ? `Cartão de Crédito${pagamento.parcelas ? ` (${pagamento.parcelas}x)` : ""}`
+          : pagamento.metodoPagamento === "debit_card"
+            ? "Cartão de Débito"
+            : "Pix"
 
         // Atualiza orçamento para fechado e pago
         await sql`
           UPDATE orcamentos SET
             status = 'fechado',
             pago_em = ${agora},
+            mp_payment_id = ${paymentId},
             status_producao = CASE WHEN status_producao = 'aguardando' THEN 'arte' ELSE status_producao END
           WHERE id = ${o.id}
         `
@@ -69,7 +77,8 @@ export async function POST(request: Request) {
         await sql`
           UPDATE lancamentos_financeiros SET
             status = 'pago',
-            pago_em = ${agora}
+            pago_em = ${agora},
+            forma = ${formaTexto}
           WHERE origem = 'orcamento' AND origem_id = ${o.id}
         `
 
@@ -81,7 +90,7 @@ export async function POST(request: Request) {
         if (clienteTelefone) {
           const msgCliente =
             `Olá, ${clienteNome.split(" ")[0]}! 🎉\n\n` +
-            `Confirmamos o recebimento do seu pagamento via Pix no valor de *${valorFormatado}* referente ao pedido *#${o.numero}* da Toldos Print!\n\n` +
+            `Confirmamos o recebimento do seu pagamento via ${formaTexto} no valor de *${valorFormatado}* referente ao pedido *#${o.numero}* da Toldos Print!\n\n` +
             `Seu pedido já está confirmado e em andamento. Qualquer dúvida é só chamar por aqui! 😊`
 
           await enviarMensagemWhatsapp(clienteTelefone, msgCliente).catch(() => {})
@@ -98,11 +107,16 @@ export async function POST(request: Request) {
         // 2. Notifica a empresa no WhatsApp
         const telEmpresa = process.env.WHATSAPP_EMPRESA_NUMERO
         if (telEmpresa) {
+          const tituloEmpresa = pagamento.metodoPagamento?.includes("card")
+            ? `💳 *PAGAMENTO RECEBIDO - CARTÃO (${pagamento.parcelas || 1}x)!*`
+            : `💰 *PAGAMENTO RECEBIDO - PIX!*`
+
           const msgEmpresa =
-            `💰 *PIX RECEBIDO - MERCADO PAGO!*\n\n` +
+            `${tituloEmpresa}\n\n` +
             `👤 *Cliente:* ${clienteNome}\n` +
             `📋 *Pedido:* #${o.numero}\n` +
             `💵 *Valor:* ${valorFormatado}\n` +
+            `💳 *Forma:* ${formaTexto}\n` +
             `📱 *WhatsApp:* ${formatarTelefoneBrasil(clienteTelefone)}\n\n` +
             `✅ Status do pedido e financeiro atualizados automaticamente!`
 

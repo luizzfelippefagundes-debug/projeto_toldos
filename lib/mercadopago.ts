@@ -141,7 +141,15 @@ export async function criarPixMercadoPago(dados: DadosCriarPix): Promise<Respost
  */
 export async function consultarPagamentoMercadoPago(
   pagamentoId: string
-): Promise<{ status: string; statusDetail?: string; valor?: number; pagoEm?: string } | null> {
+): Promise<{
+  status: string
+  statusDetail?: string
+  valor?: number
+  pagoEm?: string
+  externalReference?: string
+  metodoPagamento?: string
+  parcelas?: number
+} | null> {
   const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
   if (!token || pagamentoId.startsWith("pix-") || pagamentoId.startsWith("demo-")) {
     return null
@@ -158,9 +166,106 @@ export async function consultarPagamentoMercadoPago(
       statusDetail: data.status_detail,
       valor: data.transaction_amount,
       pagoEm: data.date_approved,
+      externalReference: data.external_reference,
+      metodoPagamento: data.payment_type_id || data.payment_method_id,
+      parcelas: data.installments,
     }
   } catch {
     return null
+  }
+}
+
+export interface DadosCriarLinkPagamento {
+  valor: number
+  descricao: string
+  clienteNome?: string
+  clienteEmail?: string
+  clienteTelefone?: string
+  clienteCpf?: string
+  externalReference?: string
+  parcelasMaximas?: number
+}
+
+export interface RespostaLinkPagamento {
+  sucesso: boolean
+  preferenciaId?: string
+  linkPagamento?: string
+  sandboxLink?: string
+  aviso?: string
+}
+
+/**
+ * Cria um Link de Pagamento Oficial (Checkout Pro) do Mercado Pago.
+ * Permite ao cliente pagar no Cartão de Crédito (em até 12x), Débito ou Pix.
+ */
+export async function criarLinkPagamentoMercadoPago(
+  dados: DadosCriarLinkPagamento
+): Promise<RespostaLinkPagamento> {
+  const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
+  const appUrl = getAppUrl()
+
+  if (token) {
+    try {
+      const notificationUrl = `${appUrl}/api/mercadopago/webhook`
+
+      const payload: Record<string, unknown> = {
+        items: [
+          {
+            id: dados.externalReference || `item-${Date.now()}`,
+            title: dados.descricao.slice(0, 150),
+            quantity: 1,
+            unit_price: Number(dados.valor.toFixed(2)),
+            currency_id: "BRL",
+          },
+        ],
+        payer: {
+          name: dados.clienteNome?.split(" ")[0] || "Cliente",
+          surname: dados.clienteNome?.split(" ").slice(1).join(" ") || "Toldos Print",
+          email: dados.clienteEmail || "financeiro@toldosprint.com.br",
+        },
+        payment_methods: {
+          installments: dados.parcelasMaximas ?? 12,
+        },
+        back_urls: {
+          success: `${appUrl}/assinar/confirmado?status=success`,
+          failure: `${appUrl}/assinar/confirmado?status=failure`,
+          pending: `${appUrl}/assinar/confirmado?status=pending`,
+        },
+        auto_return: "approved",
+        notification_url: notificationUrl,
+        external_reference: dados.externalReference,
+        statement_descriptor: "TOLDOS PRINT",
+      }
+
+      const res = await fetch("https://api.mercadopago.com/checkout/preferences", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const mpData = await res.json()
+
+      if (res.ok && mpData.init_point) {
+        return {
+          sucesso: true,
+          preferenciaId: String(mpData.id),
+          linkPagamento: mpData.init_point,
+          sandboxLink: mpData.sandbox_init_point,
+        }
+      }
+
+      console.warn("[mercadopago] Erro ao criar preferencia MP:", mpData)
+    } catch (err: any) {
+      console.error("[mercadopago] Falha ao criar link de pagamento:", err?.message)
+    }
+  }
+
+  return {
+    sucesso: false,
+    aviso: "Mercado Pago necessita de MERCADO_PAGO_ACCESS_TOKEN configurado",
   }
 }
 
@@ -225,4 +330,124 @@ function calcularCrc16(str: string): string {
     }
   }
   return crc.toString(16).toUpperCase().padStart(4, "0")
+}
+
+export interface MaquininhaPoint {
+  id: string
+  pos_id: number
+  store_id: string
+  external_pos_id: string
+  operating_mode: string
+  nomeAmigavel?: string
+}
+
+export async function listarMaquininhasPoint(): Promise<MaquininhaPoint[]> {
+  const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
+  if (!token) return []
+
+  try {
+    const res = await fetch("https://api.mercadopago.com/point/integration-api/devices", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return []
+    const data = await res.json()
+    const devices = (data.devices || []) as MaquininhaPoint[]
+    return devices.map((d) => ({
+      ...d,
+      nomeAmigavel: d.id.includes("PAX") ? "Point Smart (Pax Q92)" : `Maquininha ${d.id.slice(0, 10)}`,
+    }))
+  } catch (err) {
+    console.error("[point] Erro ao listar maquininhas:", err)
+    return []
+  }
+}
+
+export async function enviarCobrancaPoint({
+  deviceId,
+  valor,
+  descricao,
+  externalReference,
+}: {
+  deviceId: string
+  valor: number
+  descricao: string
+  externalReference?: string
+}): Promise<{ sucesso: boolean; intentId?: string; erro?: string }> {
+  const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
+  if (!token) return { sucesso: false, erro: "Token do Mercado Pago não configurado" }
+
+  try {
+    const res = await fetch(`https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount: Math.round(valor * 100), // Em centavos (ex: R$ 150,00 = 15000)
+        description: descricao.slice(0, 100),
+        additional_info: {
+          external_reference: externalReference,
+          print_on_terminal: true,
+        },
+      }),
+    })
+
+    const data = await res.json()
+    if (res.ok && data.id) {
+      return { sucesso: true, intentId: String(data.id) }
+    }
+    return { sucesso: false, erro: data.message || "Erro ao enviar cobrança para a maquininha" }
+  } catch (err: any) {
+    return { sucesso: false, erro: err?.message || "Falha de conexão com a maquininha" }
+  }
+}
+
+export async function cancelarCobrancaPoint({
+  deviceId,
+  intentId,
+}: {
+  deviceId: string
+  intentId: string
+}): Promise<{ sucesso: boolean; erro?: string }> {
+  const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
+  if (!token) return { sucesso: false, erro: "Token não configurado" }
+
+  try {
+    const res = await fetch(
+      `https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents/${intentId}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    )
+    if (res.ok) {
+      return { sucesso: true }
+    }
+    const data = await res.json().catch(() => ({}))
+    return { sucesso: false, erro: data.message || "Não foi possível cancelar a cobrança na maquininha" }
+  } catch (err: any) {
+    return { sucesso: false, erro: err?.message }
+  }
+}
+
+export async function consultarCobrancaPoint(
+  intentId: string
+): Promise<{ status: string; paymentId?: string; erro?: string } | null> {
+  const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
+  if (!token) return null
+
+  try {
+    const res = await fetch(`https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return {
+      status: data.status, // "OPEN", "PROCESSED", "ABANDONED", "CANCELED"
+      paymentId: data.payment?.id ? String(data.payment.id) : undefined,
+    }
+  } catch {
+    return null
+  }
 }

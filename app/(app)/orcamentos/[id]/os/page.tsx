@@ -10,7 +10,8 @@ import { formatarData, formatarMoeda } from "@/lib/format"
 import { formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 import { calcularOrcamentoSalvo } from "@/lib/orcamento-itens"
 import { linkWhatsapp } from "@/lib/whatsapp"
-import { ArrowLeft, MessageCircle, Printer, FileCheck, QrCode, Copy, Check, RefreshCw } from "lucide-react"
+import { ArrowLeft, MessageCircle, Printer, FileCheck, QrCode, Copy, Check, RefreshCw, CreditCard } from "lucide-react"
+import { CobrancaCartaoDialog } from "@/components/orcamentos/cobranca-cartao-dialog"
 
 export default function OrdemDeServicoPage() {
   const { id } = useParams<{ id: string }>()
@@ -51,6 +52,7 @@ export default function OrdemDeServicoPage() {
   const [enviando, setEnviando] = useState(false)
   const [pixQrBase64, setPixQrBase64] = useState<string | null>(orcamento.pixQrCodeBase64 ?? null)
   const [pixCopiaCola, setPixCopiaCola] = useState<string | null>(orcamento.pixCopiaECola ?? null)
+  const [linkCartao, setLinkCartao] = useState<string | null>((orcamento as any).link_pagamento ?? null)
   const [gerandoPix, setGerandoPix] = useState(false)
   const [copiadoPix, setCopiadoPix] = useState(false)
   const [opcaoValor, setOpcaoValor] = useState<"total" | "entrada">("total")
@@ -153,11 +155,34 @@ export default function OrdemDeServicoPage() {
 👉 *Chave para copiar (só números):* 09141206000106
 👤 *Favorecido:* Toldos Print & Comunicação Visual${pixCopiaColaBloco}`
 
+      // Busca ou gera link de pagamento com cartão se não tiver
+      let linkCartaoParaEnvio = linkCartao
+      if (!linkCartaoParaEnvio && orcamento?.id) {
+        try {
+          const resLink = await fetch("/api/mercadopago/criar-link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orcamentoId: orcamento.id }),
+          })
+          if (resLink.ok) {
+            const dLink = await resLink.json()
+            if (dLink.linkPagamento) {
+              linkCartaoParaEnvio = dLink.linkPagamento
+              setLinkCartao(dLink.linkPagamento)
+            }
+          }
+        } catch {}
+      }
+
+      const linkCartaoBloco = linkCartaoParaEnvio
+        ? `\n\n💳 *PAGAR COM CARTÃO (em até 12x):*\n${linkCartaoParaEnvio}`
+        : ""
+
       const linkAssinaturaBloco = linkAssinatura
         ? `\n\n✍️ *Assinar Ordem de Serviço digitalmente:*\n${linkAssinatura}`
         : ""
 
-      const mensagem = `Olá, ${cliente.nome.split(" ")[0]}! Segue a Ordem de Serviço nº ${numeroFormatado} da Toldos Print.\n\n💰 *Valor:* ${formatarMoeda(totalFinal)}${dadosPix}${linkAssinaturaBloco}\n\nAssim que realizar o pagamento, favor enviar o comprovante por aqui! 🤝`
+      const mensagem = `Olá, ${cliente.nome.split(" ")[0]}! Segue a Ordem de Serviço nº ${numeroFormatado} da Toldos Print.\n\n💰 *Valor:* ${formatarMoeda(totalFinal)}${dadosPix}${linkCartaoBloco}${linkAssinaturaBloco}\n\nAssim que realizar o pagamento, favor enviar o comprovante por aqui! 🤝`
 
       // Envia PDF pelo bot
       await fetch("/api/whatsapp/enviar-os", {
@@ -230,6 +255,14 @@ export default function OrdemDeServicoPage() {
             <FileCheck className="mr-2 h-4 w-4" />
             Ver contrato
           </Button>
+          <CobrancaCartaoDialog
+            orcamentoId={orcamento.id}
+            numeroOrcamento={orcamento.numero}
+            valorTotal={totalFinal}
+            nomeCliente={cliente?.nome}
+            telefoneCliente={cliente?.telefone}
+            linkInicial={linkCartao}
+          />
           <Button onClick={() => window.print()}>
             <Printer className="mr-2 h-4 w-4" />
             Imprimir OS
@@ -499,6 +532,26 @@ export default function OrdemDeServicoPage() {
                   <RefreshCw className={`h-3 w-3 mr-1 ${gerandoPix ? "animate-spin" : ""}`} />
                   {gerandoPix ? "Gerando..." : "Recarregar Pix"}
                 </Button>
+
+                <CobrancaCartaoDialog
+                  orcamentoId={orcamento.id}
+                  numeroOrcamento={orcamento.numero}
+                  valorTotal={opcaoValor === "entrada" ? saldoEntrega : totalFinal}
+                  nomeCliente={cliente?.nome}
+                  telefoneCliente={cliente?.telefone}
+                  linkInicial={linkCartao}
+                  trigger={
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 border-blue-400 text-blue-700 bg-blue-50/70 hover:bg-blue-100 text-xs font-bold gap-1.5"
+                    >
+                      <CreditCard className="h-3.5 w-3.5 text-blue-600" />
+                      Cobrar no Cartão (Link / Maquininha)
+                    </Button>
+                  }
+                />
               </div>
             </div>
           </div>

@@ -11,6 +11,7 @@ import { textoCondicoesPagamento } from "@/lib/parcelas"
 import { OrcamentoOficial } from "@/components/orcamentos/orcamento-oficial"
 import { ArrowLeft, MessageCircle, Printer, FileCheck } from "lucide-react"
 import { SimuladorMercadoPagoDialog } from "@/components/orcamentos/simulador-mercadopago-dialog"
+import { CobrancaCartaoDialog } from "@/components/orcamentos/cobranca-cartao-dialog"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { linkWhatsapp, mensagemOrcamentoWhatsapp } from "@/lib/whatsapp"
 import { gerarPdfOrcamento } from "@/lib/pdf-orcamento"
@@ -125,6 +126,14 @@ export default function OrcamentoOficialPage() {
           <SimuladorMercadoPagoDialog
             valorInicial={orcamento.totalFechado || resultado?.total || 0}
             nomeCliente={cliente?.nome}
+          />
+          <CobrancaCartaoDialog
+            orcamentoId={orcamento.id}
+            numeroOrcamento={orcamento.numero}
+            valorTotal={orcamento.totalFechado || resultado?.total || 0}
+            nomeCliente={cliente?.nome}
+            telefoneCliente={cliente?.telefone}
+            linkInicial={(orcamento as any).link_pagamento}
           />
           <Button
             variant="outline"

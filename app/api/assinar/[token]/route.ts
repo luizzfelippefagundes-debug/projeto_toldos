@@ -45,6 +45,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
     clienteNome,
     clienteCpf,
     totalFechado: r.total_fechado ? Number(r.total_fechado) : null,
+    linkPagamento: (r.link_pagamento as string) ?? null,
   })
 }
 
