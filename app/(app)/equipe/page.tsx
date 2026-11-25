@@ -215,10 +215,15 @@ export default function EquipePage() {
     }
   }, [])
 
-  const carregarMeuExtrato = useCallback(async () => {
+  const [colaboradorSimulado, setColaboradorSimulado] = useState<string>("todos")
+
+  const carregarMeuExtrato = useCallback(async (nomeAlvo?: string) => {
     setCarregandoMeuExtrato(true)
     try {
-      const res = await fetch("/api/comissoes/meu-extrato", { cache: "no-store" })
+      const url = nomeAlvo && nomeAlvo !== "todos"
+        ? `/api/comissoes/meu-extrato?colaborador=${encodeURIComponent(nomeAlvo)}`
+        : "/api/comissoes/meu-extrato"
+      const res = await fetch(url, { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
         setMeuExtrato(data)
@@ -961,6 +966,44 @@ export default function EquipePage() {
       {/* CONTEÚDO DA ABA: MEU EXTRATO PESSOAL */}
       {abaAtiva === "meu-extrato" && (
         <div className="flex flex-col gap-6">
+          {/* Se o Dono estiver usando "Ver como Colaborador", permitir alternar qual colaborador está inspecionando */}
+          {papelReal === "dono" && (
+            <div className="rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200 block">
+                  Simulação de Visão de Colaborador (Modo Administrador)
+                </span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Selecione qual funcionário você quer inspecionar para ver o extrato exatamente como aparece no celular/computador dele:
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Select
+                  value={colaboradorSimulado}
+                  onValueChange={(v) => {
+                    if (v) {
+                      setColaboradorSimulado(v)
+                      carregarMeuExtrato(v)
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[200px] text-xs font-black bg-card">
+                    <SelectValue placeholder="Selecione o Colaborador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Meu Usuário ({meuExtrato?.colaborador?.nome || "Você"})</SelectItem>
+                    {resumoColaboradores.map((c) => (
+                      <SelectItem key={c.colaborador_nome} value={c.colaborador_nome}>
+                        {c.colaborador_nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
           {carregandoMeuExtrato && !meuExtrato ? (
             <div className="flex min-h-[30vh] items-center justify-center">
               <div className="flex flex-col items-center gap-2">
@@ -971,7 +1014,7 @@ export default function EquipePage() {
           ) : !meuExtrato ? (
             <div className="rounded-2xl border-2 border-dashed border-border p-10 text-center">
               <p className="text-sm font-bold text-muted-foreground">Nenhum dado encontrado para o seu login.</p>
-              <Button onClick={carregarMeuExtrato} variant="outline" size="sm" className="mt-3">
+              <Button onClick={() => carregarMeuExtrato()} variant="outline" size="sm" className="mt-3">
                 <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Atualizar
               </Button>
             </div>
