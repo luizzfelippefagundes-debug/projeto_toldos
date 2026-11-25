@@ -638,7 +638,10 @@ export default function EquipePage() {
         }),
       })
 
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || "Erro ao registrar pagamento de comissões.")
+      }
       const data = await res.json()
       toast.success(
         `✓ Pagamento registrado! Recibo ${data.numeroRecibo || ""} gerado com sucesso.`,
@@ -652,8 +655,9 @@ export default function EquipePage() {
       if (reciboId) {
         router.push(`/equipe/recibo/${reciboId}`)
       }
-    } catch {
-      toast.error("Erro ao registrar pagamento de comissões.")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao registrar pagamento de comissões."
+      toast.error(msg)
     } finally {
       setSalvandoPagamento(false)
     }

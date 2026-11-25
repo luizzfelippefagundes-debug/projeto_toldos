@@ -31,6 +31,22 @@ export async function POST(req: Request) {
     `
 
     if (itens.length === 0) {
+      // Se já foram pagas anteriormente e têm recibo, retorna o recibo existente (idempotência)
+      const jaPagas = await sql`
+        SELECT recibo_id FROM comissoes_producao
+        WHERE id = ANY(${comissao_ids}) AND status = 'pago' AND recibo_id IS NOT NULL
+        LIMIT 1
+      `
+      if (jaPagas.length > 0 && jaPagas[0].recibo_id) {
+        const rec = await sql`SELECT numero_recibo, valor_total FROM recibos_comissao WHERE id = ${jaPagas[0].recibo_id}`
+        return NextResponse.json({
+          ok: true,
+          reciboId: jaPagas[0].recibo_id,
+          numeroRecibo: rec[0]?.numero_recibo || "",
+          totalPago: Number(rec[0]?.valor_total) || 0,
+          jaEstavaPago: true,
+        })
+      }
       return NextResponse.json({ error: "Nenhuma comissão pendente encontrada" }, { status: 400 })
     }
 
@@ -122,6 +138,8 @@ export async function POST(req: Request) {
           vencimento,
           status,
           pago_em,
+          origem,
+          origem_id,
           forma_pagamento,
           observacoes,
           criado_em
@@ -134,6 +152,8 @@ export async function POST(req: Request) {
           ${hoje},
           'pago',
           ${hoje},
+          'manual',
+          ${reciboId},
           ${rotuloFormaPagamento},
           ${observacao || `Recibo ${numeroRecibo} para ${colaborador_nome}`},
           ${agora.toISOString()}
