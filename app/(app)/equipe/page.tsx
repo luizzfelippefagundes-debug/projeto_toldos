@@ -991,7 +991,7 @@ export default function EquipePage() {
               <span>⚡ Fechamento (Semana & Mês)</span>
               {totalPendenteGeral > 0 && (
                 <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-black">
-                  R$ {totalPendenteGeral.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  R$ {totalPendenteGeral.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               )}
             </button>
@@ -1073,7 +1073,7 @@ export default function EquipePage() {
             <span>Meu Extrato & Comissões</span>
             {meuExtrato?.resumo?.totalPendente > 0 && (
               <span className="rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-black">
-                R$ {meuExtrato.resumo.totalPendente.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                R$ {meuExtrato.resumo.totalPendente.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             )}
           </button>
@@ -1593,7 +1593,7 @@ export default function EquipePage() {
                             </span>
                           )}
                           <span className="text-xs font-black text-foreground block">
-                            R$ {mes.bonusTotal.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            R$ {mes.bonusTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span className="text-[10px] text-muted-foreground block font-bold">
                             {mes.pecasTotal} un

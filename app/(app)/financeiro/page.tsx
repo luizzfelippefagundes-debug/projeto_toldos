@@ -660,17 +660,17 @@ export default function FinanceiroPage() {
       </div>
 
       {/* TABELA DESKTOP (hidden md:block) */}
-      <div className="hidden rounded-2xl border border-border/80 bg-card shadow-2xs md:block overflow-x-auto [scrollbar-width:thin]">
+      <div className="hidden rounded-2xl border border-border/80 bg-card shadow-2xs md:block overflow-x-auto w-full max-w-full">
         <Table className="w-full text-xs sm:text-sm">
           <TableHeader className="bg-muted/40">
             <TableRow>
-              <TableHead className="font-bold text-foreground min-w-[170px] max-w-[260px]">Descrição</TableHead>
-              <TableHead className="font-bold text-foreground min-w-[110px] max-w-[160px]">Cliente</TableHead>
-              <TableHead className="font-bold text-foreground whitespace-nowrap min-w-[100px]">Categoria</TableHead>
-              <TableHead className="font-bold text-foreground whitespace-nowrap min-w-[110px] max-w-[160px]">Forma</TableHead>
-              <TableHead className="font-bold text-foreground whitespace-nowrap min-w-[95px]">Vencimento</TableHead>
-              <TableHead className="font-bold text-foreground whitespace-nowrap text-right min-w-[110px]">Valor</TableHead>
-              <TableHead className="font-bold text-foreground whitespace-nowrap text-right min-w-[95px]">Status</TableHead>
+              <TableHead className="font-bold text-foreground min-w-[130px] max-w-[220px] pl-4">Descrição</TableHead>
+              <TableHead className="font-bold text-foreground min-w-[90px] max-w-[140px]">Cliente</TableHead>
+              <TableHead className="font-bold text-foreground whitespace-nowrap min-w-[85px]">Categoria</TableHead>
+              <TableHead className="font-bold text-foreground whitespace-nowrap min-w-[80px]">Forma</TableHead>
+              <TableHead className="font-bold text-foreground whitespace-nowrap min-w-[85px]">Vencimento</TableHead>
+              <TableHead className="font-bold text-foreground whitespace-nowrap text-right min-w-[95px]">Valor</TableHead>
+              <TableHead className="font-bold text-foreground whitespace-nowrap text-right min-w-[125px] pr-5">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -682,7 +682,7 @@ export default function FinanceiroPage() {
                     onClick={() => abrirSerie(item.chave)}
                     className="cursor-pointer bg-muted/30 hover:bg-muted/50"
                   >
-                    <TableCell colSpan={5} className="text-muted-foreground">
+                    <TableCell colSpan={5} className="text-muted-foreground pl-4">
                       <span className="flex items-center gap-2">
                         <ChevronRight className="h-4 w-4 shrink-0" />
                         <span className="font-medium text-foreground">{item.nome}</span>
@@ -692,7 +692,7 @@ export default function FinanceiroPage() {
                     <TableCell className="text-muted-foreground font-semibold text-right whitespace-nowrap">
                       {formatarMoeda(item.total)}
                     </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
+                    <TableCell className="text-right whitespace-nowrap pr-5">
                       <Badge variant="secondary">Pagas</Badge>
                     </TableCell>
                   </TableRow>
@@ -706,7 +706,7 @@ export default function FinanceiroPage() {
                   onClick={() => setSelecionado(lancamento)}
                   className="cursor-pointer hover:bg-muted/30 transition-colors"
                 >
-                  <TableCell className="font-medium min-w-[170px] max-w-[260px]">
+                  <TableCell className="font-medium min-w-[130px] max-w-[220px] pl-4">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="truncate block" title={lancamento.descricao}>
                         {lancamento.descricao}
@@ -718,17 +718,17 @@ export default function FinanceiroPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground min-w-[110px] max-w-[160px]">
+                  <TableCell className="text-muted-foreground min-w-[90px] max-w-[140px]">
                     <span className="truncate block" title={nomeCliente(lancamento.clienteId)}>
                       {nomeCliente(lancamento.clienteId)}
                     </span>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap min-w-[100px]">
+                  <TableCell className="whitespace-nowrap min-w-[85px]">
                     <span className="truncate block max-w-[130px]" title={lancamento.categoria}>
                       {lancamento.categoria}
                     </span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground whitespace-nowrap min-w-[110px] max-w-[160px]">
+                  <TableCell className="text-muted-foreground whitespace-nowrap min-w-[80px]">
                     <span className="block truncate">
                       {lancamento.formaPagamento
                         ? rotuloFormaPagamento[lancamento.formaPagamento]
@@ -736,14 +736,14 @@ export default function FinanceiroPage() {
                     </span>
                     {lancamento.numeroBoleto && (
                       <span
-                        className="block text-[11px] font-mono text-muted-foreground/80 truncate max-w-[150px]"
+                        className="block text-[11px] font-mono text-muted-foreground/80 truncate max-w-[130px]"
                         title={`Boleto Nº ${lancamento.numeroBoleto}`}
                       >
                         Nº {lancamento.numeroBoleto}
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap min-w-[95px]">
+                  <TableCell className="whitespace-nowrap min-w-[85px]">
                     <span>{formatarData(lancamento.vencimento)}</span>
                     {vencido && lancamento.status !== "pago" && (
                       <Badge variant="destructive" className="mt-0.5 block w-fit text-[10px] px-1.5 py-0">
@@ -753,20 +753,20 @@ export default function FinanceiroPage() {
                   </TableCell>
                   <TableCell
                     className={cn(
-                      "whitespace-nowrap text-right font-bold min-w-[110px]",
+                      "whitespace-nowrap text-right font-bold min-w-[95px]",
                       lancamento.tipo === "receita" ? "text-primary" : "text-destructive"
                     )}
                   >
                     {lancamento.tipo === "receita" ? "+ " : "− "}
                     {formatarMoeda(lancamento.valor)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-right min-w-[95px]">
+                  <TableCell className="whitespace-nowrap text-right min-w-[125px] pr-5">
                     <div className="flex flex-col items-end gap-0.5">
                       <Badge variant={lancamento.status === "pago" ? "secondary" : "default"} className="text-[11px]">
                         {lancamento.status === "pago" ? "Pago" : "Pendente"}
                       </Badge>
                       {lancamento.status === "pago" && (
-                        <span className="block text-[10px] text-muted-foreground">
+                        <span className="block text-[10px] text-muted-foreground whitespace-nowrap">
                           {lancamento.pagoEm
                             ? `Baixado em ${formatarData(lancamento.pagoEm)}`
                             : "Baixa antiga sem data"}
