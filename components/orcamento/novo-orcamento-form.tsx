@@ -46,6 +46,7 @@ import {
 } from "@/lib/item-adicional-form"
 import { ehImagem, formatarNumeroOrcamento, gerarLinhasOrcamento } from "@/lib/orcamento-pdf"
 import { SimuladorMercadoPagoDialog } from "@/components/orcamentos/simulador-mercadopago-dialog"
+import { comprimirImagemParaUpload } from "@/lib/comprimir-imagem"
 
 // Id que o orçamento feito sem internet terá no servidor (mesmo formato do data-context).
 function gerarIdOrcamentoOffline() {
@@ -822,8 +823,9 @@ export function NovoOrcamentoForm() {
       let novoAnexoUrl: string | undefined
       let novoAnexoNome: string | null = orcamentoEditando.anexoNome
       if (arquivo) {
+        const arqProcessado = await comprimirImagemParaUpload(arquivo)
         const form = new FormData()
-        form.append("file", arquivo)
+        form.append("file", arqProcessado)
         const res = await fetch("/api/upload", { method: "POST", body: form })
         if (!res.ok) {
           toast.error("Falha no upload do arquivo")
@@ -905,8 +907,9 @@ export function NovoOrcamentoForm() {
       let anexoNome: string | null = null
       let anexoUrl: string | undefined
       if (arquivo) {
+        const arqProcessado = await comprimirImagemParaUpload(arquivo)
         const form = new FormData()
-        form.append("file", arquivo)
+        form.append("file", arqProcessado)
         const res = await fetch("/api/upload", { method: "POST", body: form })
         if (!res.ok) {
           const err = await res.json().catch(() => ({}))
@@ -978,8 +981,9 @@ export function NovoOrcamentoForm() {
     try {
       const novas: FotoOrcamento[] = []
       for (const imagem of imagens) {
+        const arqProcessado = await comprimirImagemParaUpload(imagem)
         const form = new FormData()
-        form.append("file", imagem)
+        form.append("file", arqProcessado)
         const res = await fetch("/api/upload", { method: "POST", body: form })
         if (!res.ok) {
           toast.error(`Falha ao enviar ${imagem.name}`)

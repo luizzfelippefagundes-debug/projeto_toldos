@@ -85,6 +85,7 @@ import {
 import { CobrancaCartaoDialog } from "@/components/orcamentos/cobranca-cartao-dialog"
 import { comemorarComissao } from "@/lib/som-comissao"
 import { linkWhatsapp } from "@/lib/whatsapp"
+import { comprimirImagemParaUpload } from "@/lib/comprimir-imagem"
 import { toast } from "sonner"
 
 const STATUS_COM_NOTIFICACAO = new Set<StatusPedidoRapido>(["ag_confirmacao", "pronto", "entregue"])
@@ -631,22 +632,27 @@ export default function ProducaoPage() {
   )
 
   const handleUploadQcFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const rawFile = e.target.files?.[0]
+    if (!rawFile) return
     setQcUploading(true)
+    const toastId = toast.loading("Otimizando foto de alta resolução...")
     try {
+      // Otimiza e comprime fotos gigantes (10MB, 20MB, 50MB) mantendo nitidez HD para inspeção
+      const file = await comprimirImagemParaUpload(rawFile)
+      toast.loading("Enviando foto da peça...", { id: toastId })
       const form = new FormData()
       form.append("file", file)
       const res = await fetch("/api/upload", { method: "POST", body: form })
       const data = await res.json()
       if (data.url) {
         setQcFotomUrl(data.url)
-        toast.success("Foto da peça carregada com sucesso!")
+        toast.success("Foto da peça carregada com sucesso!", { id: toastId })
       } else {
-        toast.error("Erro ao enviar foto")
+        toast.error(data.error || "Erro ao enviar foto", { id: toastId })
       }
-    } catch {
-      toast.error("Erro de conexão no upload da foto")
+    } catch (err: any) {
+      console.error("Erro no upload da foto QC:", err)
+      toast.error("Erro de conexão no upload da foto", { id: toastId })
     } finally {
       setQcUploading(false)
       if (qcFileInputRef.current) qcFileInputRef.current.value = ""
@@ -3742,10 +3748,11 @@ function ArteCardWidget({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const rawFile = e.target.files?.[0]
+    if (!rawFile) return
     setEnviando(true)
     try {
+      const file = await comprimirImagemParaUpload(rawFile)
       const form = new FormData()
       form.append("file", file)
       const res = await fetch("/api/upload", { method: "POST", body: form })

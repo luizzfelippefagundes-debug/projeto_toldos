@@ -38,6 +38,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { linkWhatsapp } from "@/lib/whatsapp"
+import { comprimirImagemParaUpload } from "@/lib/comprimir-imagem"
 
 function obterNomeExibicao(nome?: string, telefone?: string): string {
   const limpo = nome?.trim()
@@ -117,15 +118,11 @@ export default function TransmissaoPage() {
   }
 
   async function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error("A foto deve ter no máximo 20 MB.")
-      return
-    }
+    const rawFile = e.target.files?.[0]
+    if (!rawFile) return
 
     setUploadingFoto(true)
+    const file = await comprimirImagemParaUpload(rawFile)
     const reader = new FileReader()
     reader.onload = async () => {
       const localDataUrl = reader.result as string

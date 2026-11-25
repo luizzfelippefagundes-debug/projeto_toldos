@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select"
 import { ExternalLink, ImagePlus, Trash2, ImageOff } from "lucide-react"
 import { toast } from "sonner"
+import { comprimirImagemParaUpload } from "@/lib/comprimir-imagem"
 import type { CategoriaProdutoRapido } from "@/lib/types"
 
 interface FotoPortfolio {
@@ -56,8 +57,9 @@ export default function PortfolioFotosPage() {
   async function enviarFoto(arquivo: File) {
     setEnviando(true)
     try {
+      const otimizado = await comprimirImagemParaUpload(arquivo)
       const form = new FormData()
-      form.append("file", arquivo)
+      form.append("file", otimizado)
       const res = await fetch("/api/upload", { method: "POST", body: form })
       if (!res.ok) throw new Error("Falha no upload")
       const { url } = await res.json()
