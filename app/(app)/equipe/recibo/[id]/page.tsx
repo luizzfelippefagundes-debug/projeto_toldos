@@ -442,8 +442,7 @@ export default function ReciboPage({
         </div>
 
         {/* Rodapé do Recibo */}
-        <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-          <span>Autenticador ID: {recibo.id}</span>
+        <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-center text-[10px] text-slate-400">
           <span>Sistema Integrado Toldos Print • Via Única</span>
         </div>
       </div>
