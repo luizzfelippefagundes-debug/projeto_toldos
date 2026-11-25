@@ -317,25 +317,18 @@ function PedidoCard({
         )}
 
         {/* Bônus / Comissão do Colaborador (Regra: integral para cada um) */}
-        {pedido.comissao_percent != null && pedido.comissao_percent > 0 && (
+        {pedido.comissao_percent != null && pedido.comissao_percent > 0 && pedido.total > 0 && (
           <div className="pt-2 border-t border-amber-500/30 min-w-0 max-w-full">
-            <div className="rounded-xl border-2 border-amber-500/70 bg-gradient-to-r from-amber-500/20 via-yellow-500/15 to-amber-500/20 p-2 sm:p-2.5 shadow-sm flex items-center justify-between gap-2">
+            <div className="rounded-xl border border-amber-500/60 bg-amber-500/15 px-2.5 py-1.5 shadow-2xs flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-base sm:text-xl shrink-0 animate-bounce">🪙</span>
-                <div className="flex flex-col min-w-0 leading-tight">
-                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
-                    BÔNUS COLABORADOR
-                  </span>
-                  <span className="text-[9px] sm:text-[10px] font-bold text-muted-foreground truncate">
-                    Para cada um que produzir (integral)
-                  </span>
-                </div>
-              </div>
-              {pedido.total > 0 && (
-                <span className="shrink-0 rounded-lg bg-amber-500 text-slate-950 font-black text-xs sm:text-sm px-2.5 py-1 shadow-xs">
-                  R$ {((pedido.total * pedido.comissao_percent) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cada
+                <span className="text-sm shrink-0">🪙</span>
+                <span className="text-[11px] sm:text-xs font-black uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                  BÔNUS:
                 </span>
-              )}
+              </div>
+              <span className="shrink-0 rounded-md bg-amber-500 text-slate-950 font-black text-xs sm:text-sm px-2 py-0.5 shadow-2xs">
+                R$ {((pedido.total * pedido.comissao_percent) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cada
+              </span>
             </div>
           </div>
         )}

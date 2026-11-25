@@ -664,7 +664,7 @@ export default function EquipePage() {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+              <Select value={filtroStatus} onValueChange={(v) => { if (v) setFiltroStatus(v) }}>
                 <SelectTrigger className="w-[130px] text-xs font-bold">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
@@ -675,7 +675,7 @@ export default function EquipePage() {
                 </SelectContent>
               </Select>
 
-              <Select value={filtroColaborador} onValueChange={setFiltroColaborador}>
+              <Select value={filtroColaborador} onValueChange={(v) => { if (v) setFiltroColaborador(v) }}>
                 <SelectTrigger className="w-[150px] text-xs font-bold">
                   <SelectValue placeholder="Colaborador" />
                 </SelectTrigger>
