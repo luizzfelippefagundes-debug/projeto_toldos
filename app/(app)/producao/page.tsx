@@ -316,6 +316,7 @@ export default function ProducaoPage() {
     fotoAtual?: string
     comissaoPercent?: number
     valorTotal?: number
+    produtoNome?: string
   } | null>(null)
   const [qcChecks, setQcChecks] = useState({ medidas: true, acabamento: true, visual: true })
   const [qcUploading, setQcUploading] = useState(false)
@@ -388,6 +389,7 @@ export default function ProducaoPage() {
       fotoAtual?: string
       comissaoPercent?: number
       valorTotal?: number
+      produtoNome?: string
     }) => {
       setModalQcItem(item)
       setQcChecks({ medidas: true, acabamento: true, visual: true })
@@ -437,7 +439,8 @@ export default function ProducaoPage() {
 
     // Se houve comissão configurada (Regra do Kaio: integral para cada um, NÃO dividido!)
     if (modalQcItem.comissaoPercent && modalQcItem.comissaoPercent > 0) {
-      const valorUnitario = ((modalQcItem.valorTotal || 0) * modalQcItem.comissaoPercent) / 100
+      const valorPedidoArredondado = Math.round((modalQcItem.valorTotal || 0) * 100) / 100
+      const valorUnitario = Math.round(((valorPedidoArredondado * modalQcItem.comissaoPercent) / 100) * 100) / 100
       comemorarComissao()
 
       const colabs = colaboradoresSelecionados.length > 0 ? colaboradoresSelecionados : ["Equipe de Produção"]
@@ -452,8 +455,8 @@ export default function ProducaoPage() {
           origem_id: modalQcItem.id,
           numero: modalQcItem.numero,
           cliente_nome: modalQcItem.clienteNome,
-          produto_nome: modalQcItem.tipo === "pedido" ? "Pedido Rápido" : "Orçamento Com. Visual",
-          valor_pedido: modalQcItem.valorTotal || 0,
+          produto_nome: modalQcItem.produtoNome || (modalQcItem.tipo === "pedido" ? "Pedido Rápido" : "Comunicação Visual"),
+          valor_pedido: valorPedidoArredondado,
           comissao_percent: modalQcItem.comissaoPercent,
           valor_comissao: valorUnitario,
         }),
@@ -1512,6 +1515,7 @@ export default function ProducaoPage() {
                           fotoAtual: item.fotoProntoUrl,
                           comissaoPercent: item.comissaoPercent,
                           valorTotal: item.valorTotal,
+                          produtoNome: item.produtoNome,
                         })
                       }}
                       className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-sm font-bold shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
@@ -2097,6 +2101,7 @@ export default function ProducaoPage() {
                             fotoAtual: pedido.fotoProntoUrl,
                             comissaoPercent: pedido.comissaoPercent,
                             valorTotal: pedido.total,
+                            produtoNome: pedido.produtoNome ?? produtoDoPedido(pedido)?.nome,
                           })
                         }
                         onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -2163,6 +2168,7 @@ export default function ProducaoPage() {
                           fotoAtual: orc.fotoProntoUrl,
                           comissaoPercent: orc.item.comissaoPercent,
                           valorTotal: orc.totalFechado || 0,
+                          produtoNome: orc.materialFechado?.nome || orc.servicoFechado?.nome || "Comunicação Visual",
                         })
                       }
                       onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -2436,6 +2442,7 @@ export default function ProducaoPage() {
                                       fotoAtual: pedido.fotoProntoUrl,
                                       comissaoPercent: pedido.comissaoPercent,
                                       valorTotal: pedido.total,
+                                      produtoNome: pedido.produtoNome ?? produtoDoPedido(pedido)?.nome,
                                     })
                                   }
                                   onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}
@@ -2503,6 +2510,7 @@ export default function ProducaoPage() {
                                     fotoAtual: orc.fotoProntoUrl,
                                     comissaoPercent: orc.item.comissaoPercent,
                                     valorTotal: orc.totalFechado || 0,
+                                    produtoNome: orc.materialFechado?.nome || orc.servicoFechado?.nome || "Comunicação Visual",
                                   })
                                 }
                                 onAbrirArte={(url, titulo) => setModalArtePreview({ url, titulo })}

@@ -17,6 +17,7 @@ import {
   Smartphone,
   Wallet,
   Calendar,
+  CalendarRange,
   CheckCircle2,
   Clock,
   History,
@@ -29,6 +30,10 @@ import {
   RefreshCw,
   Sparkles,
   Search,
+  Filter,
+  X,
+  Printer,
+  FileSpreadsheet,
 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -46,6 +51,7 @@ import {
 } from "@/components/ui/dialog"
 import { usePapelAtivo } from "@/context/papel-ativo-context"
 import type { Papel } from "@/lib/types"
+import { formatarMoeda, formatarDataHora } from "@/lib/format"
 
 interface Membro {
   id: string
@@ -148,6 +154,9 @@ export default function EquipePage() {
   const [carregandoComissoes, setCarregandoComissoes] = useState(true)
 
   // Filtros do Histórico
+  const [filtroPeriodo, setFiltroPeriodo] = useState<string>("todos")
+  const [dataInicioCustom, setDataInicioCustom] = useState("")
+  const [dataFimCustom, setDataFimCustom] = useState("")
   const [filtroStatus, setFiltroStatus] = useState<string>("todos")
   const [filtroColaborador, setFiltroColaborador] = useState<string>("todos")
   const [buscaHistorico, setBuscaHistorico] = useState("")
@@ -338,9 +347,55 @@ export default function EquipePage() {
 
   // Filtragem da aba Histórico
   const historicoFiltrado = useMemo(() => {
+    const agora = new Date()
+
     return comissoes.filter((c) => {
       if (filtroStatus !== "todos" && c.status !== filtroStatus) return false
       if (filtroColaborador !== "todos" && c.colaborador_nome !== filtroColaborador) return false
+
+      // Filtro por Período
+      if (filtroPeriodo !== "todos") {
+        const dataItem = new Date(c.criado_em)
+
+        if (filtroPeriodo === "hoje") {
+          const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate())
+          const fimHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 23, 59, 59, 999)
+          if (dataItem < inicioHoje || dataItem > fimHoje) return false
+        } else if (filtroPeriodo === "semana") {
+          // Início da semana atual (segunda-feira)
+          const diaSemana = agora.getDay()
+          const distSegunda = (diaSemana + 6) % 7
+          const inicioSemana = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - distSegunda)
+          inicioSemana.setHours(0, 0, 0, 0)
+          if (dataItem < inicioSemana) return false
+        } else if (filtroPeriodo === "semana_passada") {
+          const diaSemana = agora.getDay()
+          const distSegunda = (diaSemana + 6) % 7
+          const fimSemanaPassada = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - distSegunda - 1, 23, 59, 59, 999)
+          const inicioSemanaPassada = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - distSegunda - 7, 0, 0, 0, 0)
+          if (dataItem < inicioSemanaPassada || dataItem > fimSemanaPassada) return false
+        } else if (filtroPeriodo === "mes") {
+          const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
+          if (dataItem < inicioMes) return false
+        } else if (filtroPeriodo === "mes_passado") {
+          const inicioMesPassado = new Date(agora.getFullYear(), agora.getMonth() - 1, 1)
+          const fimMesPassado = new Date(agora.getFullYear(), agora.getMonth(), 0, 23, 59, 59, 999)
+          if (dataItem < inicioMesPassado || dataItem > fimMesPassado) return false
+        } else if (filtroPeriodo === "custom") {
+          if (dataInicioCustom) {
+            const [ano, mes, dia] = dataInicioCustom.split("-").map(Number)
+            const dtIni = new Date(ano, mes - 1, dia, 0, 0, 0, 0)
+            if (dataItem < dtIni) return false
+          }
+          if (dataFimCustom) {
+            const [ano, mes, dia] = dataFimCustom.split("-").map(Number)
+            const dtFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999)
+            if (dataItem > dtFim) return false
+          }
+        }
+      }
+
+      // Busca textual
       if (buscaHistorico.trim()) {
         const termo = buscaHistorico.toLowerCase()
         const matchCliente = c.cliente_nome?.toLowerCase().includes(termo)
@@ -350,7 +405,52 @@ export default function EquipePage() {
       }
       return true
     })
-  }, [comissoes, filtroStatus, filtroColaborador, buscaHistorico])
+  }, [comissoes, filtroStatus, filtroColaborador, filtroPeriodo, dataInicioCustom, dataFimCustom, buscaHistorico])
+
+  // KPIs dos itens filtrados do Histórico
+  const kpisHistorico = useMemo(() => {
+    let valorPedidosTotal = 0
+    let valorComissoesTotal = 0
+    let valorPendenteTotal = 0
+    let valorPagoTotal = 0
+
+    historicoFiltrado.forEach((item) => {
+      const vPed = Number(item.valor_pedido) || 0
+      const vCom = Number(item.valor_comissao) || 0
+      valorPedidosTotal += vPed
+      valorComissoesTotal += vCom
+      if (item.status === "pendente") {
+        valorPendenteTotal += vCom
+      } else {
+        valorPagoTotal += vCom
+      }
+    })
+
+    return {
+      quantidadePecas: historicoFiltrado.length,
+      valorPedidosTotal,
+      valorComissoesTotal,
+      valorPendenteTotal,
+      valorPagoTotal,
+    }
+  }, [historicoFiltrado])
+
+  const temFiltrosAtivos =
+    filtroPeriodo !== "todos" ||
+    filtroStatus !== "todos" ||
+    filtroColaborador !== "todos" ||
+    buscaHistorico.trim() !== "" ||
+    dataInicioCustom !== "" ||
+    dataFimCustom !== ""
+
+  function limparFiltros() {
+    setFiltroPeriodo("todos")
+    setDataInicioCustom("")
+    setDataFimCustom("")
+    setFiltroStatus("todos")
+    setFiltroColaborador("todos")
+    setBuscaHistorico("")
+  }
 
   return (
     <div className="flex flex-col gap-5 sm:gap-6 pb-12">
@@ -645,7 +745,7 @@ export default function EquipePage() {
                                   </p>
                                 </div>
                                 <span className="shrink-0 rounded-lg bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-black text-xs px-2 py-0.5">
-                                  + R$ {Number(item.valor_comissao).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                  + {formatarMoeda(Number(item.valor_comissao) || 0)}
                                 </span>
                               </div>
                             ))}
@@ -664,44 +764,172 @@ export default function EquipePage() {
       {/* CONTEÚDO DA ABA 2: HISTÓRICO DE COMISSÕES */}
       {abaAtiva === "historico" && (
         <div className="flex flex-col gap-4">
-          {/* Barra de Filtros */}
-          <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por OS, cliente ou produto..."
-                value={buscaHistorico}
-                onChange={(e) => setBuscaHistorico(e.target.value)}
-                className="pl-9 text-xs"
-              />
+          {/* Métricas Resumo do Filtro Atual */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+            <div className="rounded-xl border border-border bg-card p-3 shadow-2xs">
+              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block">
+                Itens / Peças Filtradas
+              </span>
+              <span className="text-xl sm:text-2xl font-black text-foreground mt-0.5 block">
+                {kpisHistorico.quantidadePecas}
+              </span>
+              <span className="text-[10px] text-muted-foreground truncate block">
+                Volume produzido
+              </span>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <Select value={filtroStatus} onValueChange={(v) => { if (v) setFiltroStatus(v) }}>
-                <SelectTrigger className="w-[130px] text-xs font-bold">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos Status</SelectItem>
-                  <SelectItem value="pendente">Pendentes</SelectItem>
-                  <SelectItem value="pago">Pagos</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={filtroColaborador} onValueChange={(v) => { if (v) setFiltroColaborador(v) }}>
-                <SelectTrigger className="w-[150px] text-xs font-bold">
-                  <SelectValue placeholder="Colaborador" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos da Equipe</SelectItem>
-                  {resumoColaboradores.map((c) => (
-                    <SelectItem key={c.colaborador_nome} value={c.colaborador_nome}>
-                      {c.colaborador_nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="rounded-xl border border-border bg-card p-3 shadow-2xs">
+              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block">
+                Valor das Vendas (Pedidos)
+              </span>
+              <span className="text-xl sm:text-2xl font-black text-foreground mt-0.5 block">
+                {formatarMoeda(kpisHistorico.valorPedidosTotal)}
+              </span>
+              <span className="text-[10px] text-muted-foreground truncate block">
+                Faturamento das peças
+              </span>
             </div>
+
+            <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 shadow-2xs">
+              <span className="text-[10px] font-black uppercase text-emerald-800 dark:text-emerald-300 tracking-wider block">
+                Comissões no Período
+              </span>
+              <span className="text-xl sm:text-2xl font-black text-emerald-950 dark:text-emerald-100 mt-0.5 block">
+                {formatarMoeda(kpisHistorico.valorComissoesTotal)}
+              </span>
+              <span className="text-[10px] text-emerald-700/80 dark:text-emerald-300/80 truncate block">
+                Total de bônus gerado
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-3 shadow-2xs">
+              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block">
+                Pendentes vs Pagos
+              </span>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-sm sm:text-base font-black text-amber-500">
+                  {formatarMoeda(kpisHistorico.valorPendenteTotal)}
+                </span>
+                <span className="text-xs text-muted-foreground">/</span>
+                <span className="text-xs sm:text-sm font-bold text-muted-foreground">
+                  {formatarMoeda(kpisHistorico.valorPagoTotal)}
+                </span>
+              </div>
+              <span className="text-[10px] text-muted-foreground truncate block">
+                A pagar / Já quitado
+              </span>
+            </div>
+          </div>
+
+          {/* Barra de Filtros Completa e Profissional */}
+          <div className="rounded-2xl border border-border bg-card p-3.5 shadow-2xs flex flex-col gap-3">
+            <div className="flex flex-col lg:flex-row gap-2.5 items-stretch lg:items-center justify-between">
+              {/* Campo de Busca */}
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por OS (#10043), cliente ou produto..."
+                  value={buscaHistorico}
+                  onChange={(e) => setBuscaHistorico(e.target.value)}
+                  className="pl-9 text-xs h-9"
+                />
+              </div>
+
+              {/* Filtros em Dropdown */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Período */}
+                <div className="flex items-center gap-1.5">
+                  <Select value={filtroPeriodo} onValueChange={(v) => { if (v) setFiltroPeriodo(v) }}>
+                    <SelectTrigger className="w-[145px] text-xs font-bold h-9">
+                      <CalendarRange className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                      <SelectValue placeholder="Período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todo o Histórico</SelectItem>
+                      <SelectItem value="hoje">Hoje</SelectItem>
+                      <SelectItem value="semana">Esta Semana</SelectItem>
+                      <SelectItem value="semana_passada">Semana Passada</SelectItem>
+                      <SelectItem value="mes">Este Mês</SelectItem>
+                      <SelectItem value="mes_passado">Mês Passado</SelectItem>
+                      <SelectItem value="custom">Personalizado...</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Colaborador */}
+                <Select value={filtroColaborador} onValueChange={(v) => { if (v) setFiltroColaborador(v) }}>
+                  <SelectTrigger className="w-[155px] text-xs font-bold h-9">
+                    <SelectValue placeholder="Colaborador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Toda a Equipe</SelectItem>
+                    {resumoColaboradores.map((c) => (
+                      <SelectItem key={c.colaborador_nome} value={c.colaborador_nome}>
+                        {c.colaborador_nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Status */}
+                <Select value={filtroStatus} onValueChange={(v) => { if (v) setFiltroStatus(v) }}>
+                  <SelectTrigger className="w-[130px] text-xs font-bold h-9">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos Status</SelectItem>
+                    <SelectItem value="pendente">Apenas Pendentes</SelectItem>
+                    <SelectItem value="pago">Apenas Pagos</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Limpar Filtros */}
+                {temFiltrosAtivos && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={limparFiltros}
+                    className="h-9 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1 font-bold"
+                    title="Limpar todos os filtros"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span>Limpar</span>
+                  </Button>
+                )}
+
+                {/* Botão Imprimir / Exportar Relatório */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.print()}
+                  className="h-9 px-3 text-xs font-bold gap-1.5"
+                  title="Imprimir relatório dos itens filtrados"
+                >
+                  <Printer className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Imprimir</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Inputs de Data Customizada */}
+            {filtroPeriodo === "custom" && (
+              <div className="flex items-center gap-2 pt-2 border-t border-border/60 text-xs">
+                <span className="text-muted-foreground font-bold">De:</span>
+                <Input
+                  type="date"
+                  value={dataInicioCustom}
+                  onChange={(e) => setDataInicioCustom(e.target.value)}
+                  className="w-36 h-8 text-xs"
+                />
+                <span className="text-muted-foreground font-bold">Até:</span>
+                <Input
+                  type="date"
+                  value={dataFimCustom}
+                  onChange={(e) => setDataFimCustom(e.target.value)}
+                  className="w-36 h-8 text-xs"
+                />
+              </div>
+            )}
           </div>
 
           {/* Lista de Registros */}
@@ -720,7 +948,7 @@ export default function EquipePage() {
                       <th className="p-3">Demanda</th>
                       <th className="p-3">Cliente</th>
                       <th className="p-3">Produto / Serviço</th>
-                      <th className="p-3">Valor Total</th>
+                      <th className="p-3">Valor Pedido</th>
                       <th className="p-3 text-right">Bônus Creditado</th>
                       <th className="p-3 text-center">Status</th>
                     </tr>
@@ -729,12 +957,7 @@ export default function EquipePage() {
                     {historicoFiltrado.map((item) => (
                       <tr key={item.id} className="hover:bg-muted/30 transition-colors">
                         <td className="p-3 text-muted-foreground whitespace-nowrap">
-                          {new Date(item.criado_em).toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {formatarDataHora(item.criado_em)}
                         </td>
                         <td className="p-3 font-black text-foreground">
                           {item.colaborador_nome}
@@ -745,14 +968,19 @@ export default function EquipePage() {
                         <td className="p-3 font-medium text-foreground truncate max-w-[150px]">
                           {item.cliente_nome}
                         </td>
-                        <td className="p-3 text-muted-foreground truncate max-w-[180px]">
+                        <td className="p-3 text-foreground font-semibold truncate max-w-[200px]" title={item.produto_nome}>
                           {item.produto_nome || "Produção"}
                         </td>
                         <td className="p-3 text-muted-foreground whitespace-nowrap">
-                          R$ {Number(item.valor_pedido).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          {formatarMoeda(Number(item.valor_pedido) || 0)}
                         </td>
                         <td className="p-3 text-right font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                          + R$ {Number(item.valor_comissao).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          + {formatarMoeda(Number(item.valor_comissao) || 0)}
+                          {item.comissao_percent > 0 && (
+                            <span className="text-[10px] font-normal text-muted-foreground ml-1">
+                              ({item.comissao_percent}%)
+                            </span>
+                          )}
                         </td>
                         <td className="p-3 text-center whitespace-nowrap">
                           {item.status === "pago" ? (
