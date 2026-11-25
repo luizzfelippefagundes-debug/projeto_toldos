@@ -18,6 +18,7 @@ import { Combobox } from "@/components/ui/combobox"
 import { LancamentoFormDialog } from "@/components/financeiro/lancamento-form-dialog"
 import { LeitorBoletoDialog } from "@/components/financeiro/leitor-boleto-dialog"
 import { LancamentoDetalheDialog } from "@/components/financeiro/lancamento-detalhe-dialog"
+import { SimuladorTaxasCard } from "@/components/financeiro/simulador-taxas-card"
 import { formatarData, formatarMoeda } from "@/lib/format"
 import { agruparPagasDaSerie } from "@/lib/series"
 import {
@@ -40,6 +41,7 @@ import {
   User,
   Tag,
   CreditCard,
+  Calculator,
   ChevronDown,
   ChevronUp,
   X,
@@ -55,6 +57,7 @@ const rotuloFormaPagamento: Record<string, string> = {
 
 export default function FinanceiroPage() {
   const { lancamentos, clientes, orcamentos } = useData()
+  const [abaAtiva, setAbaAtiva] = useState<"fluxo" | "taxas">("fluxo")
   const [filtroTipo, setFiltroTipo] = useState<TipoLancamento | "todos" | "boleto" | "fixas">("todos")
   const [filtroCliente, setFiltroCliente] = useState("todos")
   const [busca, setBusca] = useState("")
@@ -151,6 +154,15 @@ export default function FinanceiroPage() {
           </p>
         </div>
         <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+          <Button
+            type="button"
+            variant={abaAtiva === "taxas" ? "default" : "outline"}
+            onClick={() => setAbaAtiva((prev) => (prev === "taxas" ? "fluxo" : "taxas"))}
+            className="w-full sm:w-auto font-bold gap-1.5 text-xs sm:text-sm h-10 px-2 sm:px-4 shadow-2xs cursor-pointer"
+          >
+            <Calculator className="h-4 w-4 shrink-0 text-amber-500" />
+            <span className="whitespace-nowrap">Simulador Cartão (MP)</span>
+          </Button>
           <LeitorBoletoDialog />
           <LancamentoFormDialog
             trigger={
@@ -163,6 +175,45 @@ export default function FinanceiroPage() {
         </div>
       </div>
 
+      {/* Abas de Navegação do Financeiro */}
+      <div className="flex items-center gap-2 border-b border-border/70 pb-2">
+        <button
+          type="button"
+          onClick={() => setAbaAtiva("fluxo")}
+          className={cn(
+            "flex items-center gap-2 py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer",
+            abaAtiva === "fluxo"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Wallet className="h-4 w-4 shrink-0" />
+          <span>Fluxo de Caixa & Lançamentos</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAbaAtiva("taxas")}
+          className={cn(
+            "flex items-center gap-2 py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer relative",
+            abaAtiva === "taxas"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Calculator className="h-4 w-4 shrink-0 text-amber-400" />
+          <span>Simulador de Taxas (Mercado Pago)</span>
+          <span className="hidden sm:inline-block text-[10px] font-black uppercase px-1.5 py-0.5 rounded-md bg-amber-500 text-black">
+            3x a 12x
+          </span>
+        </button>
+      </div>
+
+      {/* CONTEÚDO DA ABA SELECIONADA */}
+      {abaAtiva === "taxas" ? (
+        <SimuladorTaxasCard valorInicial={560} />
+      ) : (
+        <>
       {/* DASHBOARD DE MÉTRICAS (Ultra responsivo e intuitivo no celular) */}
       <div className="flex flex-col gap-2.5">
         {/* Card Principal: Saldo Atual e Totais */}
@@ -787,6 +838,8 @@ export default function FinanceiroPage() {
           </TableBody>
         </Table>
       </div>
+      </>
+      )}
 
       <LancamentoDetalheDialog
         lancamento={selecionado}
