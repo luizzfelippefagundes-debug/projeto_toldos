@@ -110,7 +110,7 @@ export async function GET() {
         ` as unknown as Promise<OrcamentoRaw[]>)
       : Promise.resolve([]),
     sql`
-      SELECT id, mensagem, cor, icone, som, COALESCE(ativo, true) as ativo 
+      SELECT id, mensagem, cor, icone, som, COALESCE(ativo, true) as ativo, criado_em 
       FROM avisos_tv 
       WHERE COALESCE(ativo, true) = true 
       ORDER BY criado_em DESC

@@ -41,6 +41,8 @@ interface AvisoTV {
   cor: string
   icone: string
   som: boolean
+  criado_em?: string
+  ativo?: boolean
 }
 
 const COR_CLASSE: Record<string, string> = {
@@ -86,6 +88,92 @@ function formatarPrazo(prazo: string | null) {
 function temProblemaReportado(obs?: string | null): boolean {
   if (!obs) return false
   return obs.includes("ALERTA DA FÁBRICA") || obs.includes("PROBLEMA REPORTADO")
+}
+
+function formatarHoraAviso(dataIso?: string | null) {
+  if (!dataIso) return null
+  try {
+    const data = new Date(dataIso)
+    if (!Number.isFinite(data.getTime())) return null
+    return data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+  } catch {
+    return null
+  }
+}
+
+function AvisoCard({
+  aviso,
+  tamanhoGrande = true,
+}: {
+  aviso: AvisoTV
+  tamanhoGrande?: boolean
+}) {
+  const hora = formatarHoraAviso(aviso.criado_em)
+  const isVermelho = aviso.cor === "vermelho" || aviso.icone === "🚨" || aviso.icone === "🛑"
+  const isAmarelo = aviso.cor === "amarelo" || aviso.cor === "laranja" || aviso.icone === "⚠️"
+
+  return (
+    <div
+      key={`aviso-card-${aviso.id}`}
+      className={`shrink-0 rounded-2xl border-2 p-3 sm:p-3.5 lg:p-4 shadow-md w-full min-w-0 max-w-full overflow-hidden transition-all ${
+        isVermelho
+          ? "border-red-600 bg-red-100/95 dark:border-red-500 dark:bg-red-950/85 ring-4 ring-red-500/30 animate-[pulse_3s_ease-in-out_infinite]"
+          : isAmarelo
+            ? "border-amber-500 bg-amber-50/95 dark:border-amber-500/80 dark:bg-amber-950/75 ring-2 ring-amber-500/25"
+            : "border-blue-500/80 bg-blue-50/95 dark:border-blue-500/70 dark:bg-blue-950/75"
+      }`}
+    >
+      {/* Topo do Card de Aviso */}
+      <div className="flex items-center justify-between gap-1.5 flex-wrap min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+          <span className="text-lg sm:text-xl lg:text-2xl shrink-0 leading-none">
+            {aviso.icone || (isVermelho ? "🚨" : isAmarelo ? "⚠️" : "📢")}
+          </span>
+          <span
+            className={`rounded-lg px-2 py-0.5 text-[11px] sm:text-xs lg:text-sm font-black uppercase tracking-wider shrink-0 ${
+              isVermelho
+                ? "bg-red-600 text-white"
+                : isAmarelo
+                  ? "bg-amber-500 text-slate-950"
+                  : "bg-blue-600 text-white"
+            }`}
+          >
+            {isVermelho ? "EMERGÊNCIA FÁBRICA" : isAmarelo ? "ATENÇÃO EQUIPE" : "COMUNICADO"}
+          </span>
+          {aviso.som && (
+            <span className="rounded-md bg-amber-500/20 border border-amber-500/40 px-1.5 py-0.5 text-[10px] sm:text-xs font-black text-amber-700 dark:text-amber-300 shrink-0 flex items-center gap-1">
+              🔊 ALARME
+            </span>
+          )}
+        </div>
+
+        {hora && (
+          <span className="shrink-0 rounded-lg bg-background/80 border border-border/60 px-2 py-0.5 text-[10px] sm:text-xs font-bold text-muted-foreground">
+            {hora}
+          </span>
+        )}
+      </div>
+
+      {/* Conteúdo da Mensagem da Emergência - FONTE GIGANTE PARA VER DE LONGE */}
+      <div className="mt-2.5 min-w-0 max-w-full">
+        <p
+          className={`font-black tracking-tight leading-snug break-words whitespace-normal ${
+            isVermelho
+              ? "text-red-950 dark:text-red-100"
+              : isAmarelo
+                ? "text-amber-950 dark:text-amber-100"
+                : "text-foreground"
+          } ${
+            tamanhoGrande
+              ? "text-base sm:text-lg lg:text-xl xl:text-2xl"
+              : "text-sm sm:text-base lg:text-lg"
+          }`}
+        >
+          {aviso.mensagem}
+        </p>
+      </div>
+    </div>
+  )
 }
 
 function PedidoCard({
@@ -465,6 +553,207 @@ function TvColuna({
   )
 }
 
+function TvColunaEmergencias({
+  avisos,
+  pedidos,
+  tamanhoGrande = true,
+}: {
+  avisos: AvisoTV[]
+  pedidos: PedidoTV[]
+  tamanhoGrande?: boolean
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [temOverflow, setTemOverflow] = useState(false)
+  const [estaNoFim, setEstaNoFim] = useState(false)
+  const [estaNoTopo, setEstaNoTopo] = useState(true)
+
+  const totalItens = avisos.length + pedidos.length
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const verificar = () => {
+      const transborda = el.scrollHeight > el.clientHeight + 4
+      setTemOverflow(transborda)
+      setEstaNoTopo(el.scrollTop <= 5)
+      setEstaNoFim(el.scrollTop + el.clientHeight >= el.scrollHeight - 5)
+    }
+    verificar()
+    const obs = new ResizeObserver(verificar)
+    obs.observe(el)
+    window.addEventListener("resize", verificar)
+    const t = setTimeout(verificar, 300)
+    return () => {
+      clearTimeout(t)
+      obs.disconnect()
+      window.removeEventListener("resize", verificar)
+    }
+  }, [totalItens, tamanhoGrande])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || !temOverflow) return
+
+    let animId: number
+    let timeoutId: NodeJS.Timeout | null = null
+    let direcao = 1
+    let pausado = true
+    let scrollPos = el.scrollTop
+    let ultimoTempo = performance.now()
+
+    timeoutId = setTimeout(() => {
+      pausado = false
+      ultimoTempo = performance.now()
+    }, 6000)
+
+    const rolar = (tempoAtual: number) => {
+      if (!el) return
+      const maxScroll = el.scrollHeight - el.clientHeight
+      if (maxScroll <= 2) {
+        animId = requestAnimationFrame(rolar)
+        return
+      }
+
+      const deltaMs = Math.min(tempoAtual - ultimoTempo, 100)
+      ultimoTempo = tempoAtual
+
+      if (!pausado) {
+        if (direcao === 1) {
+          const pixelsPorSegundo = 18
+          scrollPos += (pixelsPorSegundo * deltaMs) / 1000
+
+          if (scrollPos >= maxScroll) {
+            scrollPos = maxScroll
+            el.scrollTop = maxScroll
+            setEstaNoTopo(false)
+            setEstaNoFim(true)
+            pausado = true
+            timeoutId = setTimeout(() => {
+              direcao = -1
+              pausado = false
+              ultimoTempo = performance.now()
+            }, 6000)
+          } else {
+            el.scrollTop = Math.round(scrollPos)
+            setEstaNoTopo(el.scrollTop <= 5)
+            setEstaNoFim(el.scrollTop >= maxScroll - 5)
+          }
+        } else {
+          const pixelsPorSegundo = 28
+          scrollPos -= (pixelsPorSegundo * deltaMs) / 1000
+
+          if (scrollPos <= 0) {
+            scrollPos = 0
+            el.scrollTop = 0
+            setEstaNoTopo(true)
+            setEstaNoFim(false)
+            pausado = true
+            timeoutId = setTimeout(() => {
+              direcao = 1
+              pausado = false
+              ultimoTempo = performance.now()
+            }, 6000)
+          } else {
+            el.scrollTop = Math.round(scrollPos)
+            setEstaNoTopo(el.scrollTop <= 5)
+            setEstaNoFim(el.scrollTop >= maxScroll - 5)
+          }
+        }
+      }
+
+      animId = requestAnimationFrame(rolar)
+    }
+
+    animId = requestAnimationFrame(rolar)
+
+    const sincronizarScroll = () => {
+      if (pausado) scrollPos = el.scrollTop
+    }
+    el.addEventListener("scroll", sincronizarScroll, { passive: true })
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      cancelAnimationFrame(animId)
+      el.removeEventListener("scroll", sincronizarScroll)
+    }
+  }, [temOverflow])
+
+  return (
+    <div
+      id="tv-coluna-emergencias"
+      className="flex h-full min-h-0 flex-1 flex-col gap-2 min-w-0"
+    >
+      {/* Cabeçalho da Coluna de Emergências */}
+      <div className="flex shrink-0 items-center justify-between rounded-xl border-2 border-red-600 bg-gradient-to-r from-red-600/20 via-red-500/15 to-red-600/20 dark:bg-red-950/70 px-3 py-2 shadow-lg ring-2 ring-red-500/50">
+        <div className="flex items-center gap-2 truncate">
+          <span className="text-base sm:text-lg animate-bounce leading-none shrink-0">🚨</span>
+          <span className="text-sm sm:text-base lg:text-lg font-black tracking-tight truncate text-red-700 dark:text-red-300 uppercase">
+            Avisos & Emergências
+          </span>
+        </div>
+        <span className="shrink-0 rounded-full bg-red-600 text-white px-2.5 py-0.5 text-xs sm:text-sm font-black shadow-xs">
+          {totalItens}
+        </span>
+      </div>
+
+      {/* Container com scroll suave */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl">
+        <div
+          ref={containerRef}
+          className="flex h-full min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pr-0.5"
+        >
+          {/* Seção 1: Avisos / Emergências da Fábrica */}
+          {avisos.map((aviso) => (
+            <AvisoCard
+              key={`aviso-col-${aviso.id}`}
+              aviso={aviso}
+              tamanhoGrande={tamanhoGrande}
+            />
+          ))}
+
+          {/* Divisor caso haja avisos E pedidos com problema */}
+          {avisos.length > 0 && pedidos.length > 0 && (
+            <div className="flex items-center gap-2 pt-1 pb-0.5">
+              <div className="h-px bg-red-500/30 flex-1" />
+              <span className="text-[10px] font-black uppercase text-red-600 dark:text-red-400 tracking-wider">
+                Pedidos com Alerta ({pedidos.length})
+              </span>
+              <div className="h-px bg-red-500/30 flex-1" />
+            </div>
+          )}
+
+          {/* Seção 2: Pedidos com Alerta / Travados */}
+          {pedidos.map((pedido) => (
+            <PedidoCard
+              key={`pedido-alerta-${pedido.id}`}
+              pedido={pedido}
+              tamanhoGrande={tamanhoGrande}
+              mostrarColunaBadge={true}
+            />
+          ))}
+
+          {totalItens === 0 && (
+            <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-red-500/30 py-8 text-sm text-red-500/50 italic font-semibold">
+              Sem emergências no momento
+            </div>
+          )}
+        </div>
+
+        {temOverflow && !estaNoFim && (
+          <div className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-background via-background/80 to-transparent flex items-end justify-center pb-1">
+            <span className="text-[10px] font-black text-red-600 dark:text-red-400 animate-bounce">
+              ↓ rolando ({totalItens} itens)
+            </span>
+          </div>
+        )}
+        {temOverflow && !estaNoTopo && (
+          <div className="pointer-events-none absolute top-0 inset-x-0 h-5 bg-gradient-to-b from-background to-transparent" />
+        )}
+      </div>
+    </div>
+  )
+}
+
 function Relogio() {
   const [agora, setAgora] = useState<Date | null>(null)
   useEffect(() => {
@@ -790,6 +1079,10 @@ export default function TvPage() {
     )
   }, [pedidosEfetivos])
 
+  const avisosAtivos = useMemo(() => {
+    return avisos.filter((a) => (a as { ativo?: boolean }).ativo !== false)
+  }, [avisos])
+
   const pedidosMobile = useMemo(() => {
     if (filtroStatusMobile === "urgencias") return pedidosAlertas
     if (filtroStatusMobile === "todos") return pedidosEfetivos
@@ -819,9 +1112,9 @@ export default function TvPage() {
               ? "bg-red-600 text-white border-red-600"
               : "bg-card/90 text-foreground border-border/80 hover:bg-muted"
           }`}
-          title="Exibir ou ocultar coluna de alertas e urgências no Telão"
+          title="Exibir ou ocultar coluna de avisos e emergências no Telão"
         >
-          {config?.mostrarColunaAlertas !== false ? "🚨 Coluna Alertas: ON" : "🚨 Coluna Alertas: OFF"}
+          {config?.mostrarColunaAlertas !== false ? "🚨 Coluna Emergências: ON" : "🚨 Coluna Emergências: OFF"}
         </button>
 
         <button
@@ -1022,7 +1315,7 @@ export default function TvPage() {
             </span>
           </button>
 
-          {config?.mostrarColunaAlertas !== false && pedidosAlertas.length > 0 && (
+          {config?.mostrarColunaAlertas !== false && (avisosAtivos.length > 0 || pedidosAlertas.length > 0) && (
             <button
               type="button"
               onClick={() => setFiltroStatusMobile("urgencias")}
@@ -1032,9 +1325,9 @@ export default function TvPage() {
                   : "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/20"
               }`}
             >
-              <span>🚨 Urgências</span>
+              <span>🚨 Emergências & Avisos</span>
               <span className="rounded-full px-1.5 py-0.2 text-[10px] font-black bg-red-600 text-white">
-                {pedidosAlertas.length}
+                {avisosAtivos.length + pedidosAlertas.length}
               </span>
             </button>
           )}
@@ -1072,33 +1365,75 @@ export default function TvPage() {
 
         {/* Lista Vertical de Pedidos no Celular */}
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-0.5 pb-2">
-          {pedidosMobile.length > 0 ? (
-            pedidosMobile.map((pedido) => (
-              <PedidoCard
-                key={`mobile-card-${pedido.id}`}
-                pedido={pedido}
-                tamanhoGrande={config?.tamanhoFonte !== "normal"}
-                mostrarColunaBadge={filtroStatusMobile === "todos"}
-              />
-            ))
+          {filtroStatusMobile === "urgencias" ? (
+            <>
+              {avisosAtivos.map((aviso) => (
+                <AvisoCard
+                  key={`mobile-aviso-${aviso.id}`}
+                  aviso={aviso}
+                  tamanhoGrande={config?.tamanhoFonte !== "normal"}
+                />
+              ))}
+              {pedidosAlertas.map((pedido) => (
+                <PedidoCard
+                  key={`mobile-card-${pedido.id}`}
+                  pedido={pedido}
+                  tamanhoGrande={config?.tamanhoFonte !== "normal"}
+                  mostrarColunaBadge={true}
+                />
+              ))}
+              {avisosAtivos.length === 0 && pedidosAlertas.length === 0 && (
+                <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 py-12 text-sm text-muted-foreground font-semibold">
+                  Nenhuma emergência ativa
+                </div>
+              )}
+            </>
           ) : (
-            <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 py-12 text-sm text-muted-foreground font-semibold">
-              Nenhum pedido nesta etapa
-            </div>
+            <>
+              {filtroStatusMobile === "todos" && avisosAtivos.length > 0 && (
+                <div className="flex flex-col gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 px-1">
+                    <span className="text-sm leading-none animate-bounce">🚨</span>
+                    <span className="text-xs font-black uppercase text-red-600 dark:text-red-400 tracking-wider">
+                      Emergências da Fábrica ({avisosAtivos.length}):
+                    </span>
+                  </div>
+                  {avisosAtivos.map((aviso) => (
+                    <AvisoCard
+                      key={`mobile-top-aviso-${aviso.id}`}
+                      aviso={aviso}
+                      tamanhoGrande={config?.tamanhoFonte !== "normal"}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {pedidosMobile.length > 0 ? (
+                pedidosMobile.map((pedido) => (
+                  <PedidoCard
+                    key={`mobile-card-${pedido.id}`}
+                    pedido={pedido}
+                    tamanhoGrande={config?.tamanhoFonte !== "normal"}
+                    mostrarColunaBadge={filtroStatusMobile === "todos"}
+                  />
+                ))
+              ) : (
+                <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-border/40 py-12 text-sm text-muted-foreground font-semibold">
+                  Nenhum pedido nesta etapa
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
       {/* Visualização DESKTOP / TV: Kanban lado a lado com auto-scroll infinito */}
       <div className="flex-1 min-h-0 hidden md:flex flex-row gap-2 sm:gap-3 w-full overflow-hidden">
-        {/* Coluna Opcional de Alertas & Urgências (Configurável para TV) */}
-        {config?.mostrarColunaAlertas !== false && pedidosAlertas.length > 0 && (
-          <TvColuna
-            key="coluna-urgencias-destaque"
-            status={"aprovado" as any}
-            label={`🚨 Urgências (${pedidosAlertas.length})`}
-            borda="border-red-600 ring-2 ring-red-500/60 shadow-lg"
-            fundo="bg-red-500/10 dark:bg-red-950/40"
+        {/* Coluna Dedicada de Avisos & Emergências da Fábrica */}
+        {config?.mostrarColunaAlertas !== false && (avisosAtivos.length > 0 || pedidosAlertas.length > 0) && (
+          <TvColunaEmergencias
+            key="coluna-emergencias-destaque"
+            avisos={avisosAtivos}
             pedidos={pedidosAlertas}
             tamanhoGrande={config?.tamanhoFonte !== "normal"}
           />
@@ -1128,22 +1463,23 @@ export default function TvPage() {
         </div>
       )}
 
-      {/* Ticker de avisos rodapé */}
-      {avisos.filter((a) => (a as { ativo?: boolean }).ativo !== false).length > 0 && (
-        <div className="shrink-0 overflow-hidden rounded-xl border border-border/80 bg-card py-2 shadow-xs">
+      {/* Ticker de avisos rodapé com velocidade suave e pausa ao passar mouse/interagir */}
+      {avisosAtivos.length > 0 && (
+        <div className="shrink-0 overflow-hidden rounded-xl border border-border/80 bg-card py-2 shadow-xs group/ticker">
           <div
-            className="ticker-track"
-            style={{ animationDuration: `${Math.max(avisos.length * 22, 40)}s` }}
+            className="ticker-track hover:[animation-play-state:paused]"
+            style={{ animationDuration: `${Math.max(avisosAtivos.length * 40, 80)}s` }}
           >
             {[
-              ...avisos.filter((a) => (a as { ativo?: boolean }).ativo !== false),
-              ...avisos.filter((a) => (a as { ativo?: boolean }).ativo !== false),
+              ...avisosAtivos,
+              ...avisosAtivos,
             ].map((aviso, i) => (
               <span
                 key={`${aviso.id}-${i}`}
-                className={`text-sm font-bold sm:text-base ${COR_CLASSE[aviso.cor ?? "azul"] ?? COR_CLASSE.azul}`}
+                className={`text-sm font-black sm:text-base flex items-center gap-2 ${COR_CLASSE[aviso.cor ?? "azul"] ?? COR_CLASSE.azul}`}
               >
-                {aviso.icone ?? "📢"} {aviso.mensagem}
+                <span className="text-base sm:text-lg">{aviso.icone ?? "📢"}</span>
+                <span>{aviso.mensagem}</span>
               </span>
             ))}
           </div>
