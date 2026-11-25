@@ -618,48 +618,27 @@ export default function EquipePage() {
 
       {/* Navegação entre as Abas (Oculta na Impressão) */}
       <div className="flex border-b border-border gap-2 sm:gap-4 overflow-x-auto [scrollbar-width:none] print:hidden">
-        {/* Abas exclusivas de gestão (Apenas para Dono/Gestores) */}
-        {!isOperador && (
-          <button
-            type="button"
-            onClick={() => setAbaAtiva("extrato")}
-            className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
-              abaAtiva === "extrato"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Wallet className="h-4 w-4" />
-            <span>Extrato da Semana (Fechamento)</span>
-            {totalPendenteGeral > 0 && (
-              <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-black">
-                R$ {totalPendenteGeral.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </span>
-            )}
-          </button>
-        )}
-
-        {/* Aba Meu Extrato (Acessível para qualquer usuário logado) */}
-        <button
-          type="button"
-          onClick={() => setAbaAtiva("meu-extrato")}
-          className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
-            abaAtiva === "meu-extrato"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Coins className="h-4 w-4" />
-          <span>Meu Extrato & Comissões</span>
-          {meuExtrato?.resumo?.totalPendente > 0 && (
-            <span className="rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-black">
-              R$ {meuExtrato.resumo.totalPendente.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-            </span>
-          )}
-        </button>
-
+        {/* Visão do Dono/Gestor */}
         {!isOperador && (
           <>
+            <button
+              type="button"
+              onClick={() => setAbaAtiva("extrato")}
+              className={`pb-2.5 pt-1 px-1 border-b-2 text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap ${
+                abaAtiva === "extrato"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Wallet className="h-4 w-4" />
+              <span>Extrato da Semana (Fechamento)</span>
+              {totalPendenteGeral > 0 && (
+                <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-black">
+                  R$ {totalPendenteGeral.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </span>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={() => setAbaAtiva("historico")}
@@ -692,6 +671,23 @@ export default function EquipePage() {
               </span>
             </button>
           </>
+        )}
+
+        {/* Visão do Colaborador: Apenas o Extrato dele */}
+        {isOperador && (
+          <button
+            type="button"
+            onClick={() => setAbaAtiva("meu-extrato")}
+            className="pb-2.5 pt-1 px-1 border-b-2 border-primary text-primary text-xs sm:text-sm font-black transition-all flex items-center gap-2 whitespace-nowrap"
+          >
+            <Coins className="h-4 w-4" />
+            <span>Meu Extrato & Comissões</span>
+            {meuExtrato?.resumo?.totalPendente > 0 && (
+              <span className="rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] font-black">
+                R$ {meuExtrato.resumo.totalPendente.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </span>
+            )}
+          </button>
         )}
       </div>
 
