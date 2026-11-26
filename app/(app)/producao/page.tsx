@@ -326,6 +326,7 @@ export default function ProducaoPage() {
     clienteNome: string
     clienteTelefone: string | null
     fotoAtual?: string
+    arteUrl?: string
     comissaoPercent?: number
     valorTotal?: number
     produtoNome?: string
@@ -625,6 +626,7 @@ export default function ProducaoPage() {
       clienteNome: string
       clienteTelefone: string | null
       fotoAtual?: string
+      arteUrl?: string
       comissaoPercent?: number
       valorTotal?: number
       produtoNome?: string
@@ -693,27 +695,31 @@ export default function ProducaoPage() {
       return
     }
 
+    const nomesColabs = Object.keys(colaboradoresPecas)
+    const totalPecas = Object.values(colaboradoresPecas).reduce((a, b) => a + b, 0) || 1
+    const valorPedidoArredondado = Math.round((modalQcItem.valorTotal || 0) * 100) / 100
+    const totalBonusCalculado = modalQcItem.comissaoPercent && modalQcItem.comissaoPercent > 0
+      ? Math.round(((valorPedidoArredondado * modalQcItem.comissaoPercent) / 100) * 100) / 100
+      : 0
+
+    // Mapear cada colaborador com suas respectivas peças e valores proporcionais
+    const colabsPayload = nomesColabs.length > 0
+      ? nomesColabs.map((nome) => {
+          const pecas = colaboradoresPecas[nome] || 1
+          const valor = totalBonusCalculado > 0
+            ? Math.round(((totalBonusCalculado * pecas) / totalPecas) * 100) / 100
+            : 0
+          return {
+            nome,
+            pecas,
+            valor,
+          }
+        })
+      : [{ nome: meuNome || "josue batista alves", pecas: modalQcItem.quantidadeTotal || 1, valor: totalBonusCalculado }]
+
     // Se houve comissão configurada (Calculado conforme a quantidade de peças que cada um produziu)
     if (modalQcItem.comissaoPercent && modalQcItem.comissaoPercent > 0) {
-      const valorPedidoArredondado = Math.round((modalQcItem.valorTotal || 0) * 100) / 100
-      const totalBonusCalculado = Math.round(((valorPedidoArredondado * modalQcItem.comissaoPercent) / 100) * 100) / 100
       comemorarComissao()
-
-      const nomesColabs = Object.keys(colaboradoresPecas)
-      const totalPecas = Object.values(colaboradoresPecas).reduce((a, b) => a + b, 0) || 1
-
-      // Mapear cada colaborador com suas respectivas peças e valores proporcionais
-      const colabsPayload = nomesColabs.length > 0
-        ? nomesColabs.map((nome) => {
-            const pecas = colaboradoresPecas[nome] || 1
-            const valor = Math.round(((totalBonusCalculado * pecas) / totalPecas) * 100) / 100
-            return {
-              nome,
-              pecas,
-              valor,
-            }
-          })
-        : [{ nome: meuNome || "josue batista alves", pecas: modalQcItem.quantidadeTotal || 1, valor: totalBonusCalculado }]
 
       // Persistir no Banco de Comissões & RH da empresa
       fetch("/api/comissoes", {
@@ -748,6 +754,30 @@ export default function ProducaoPage() {
     // separadas as duas corriam entre si e a última apagava o campo da
     // outra, deixando a peça presa no status anterior.
     concluirPecaPronta(item.tipo, item.id, fotoConcluida)
+
+    // Notificar o Kaio no WhatsApp com foto Antes (arte aprovada) e foto Depois (peça pronta)
+    fetch("/api/producao/notificar-conclusao", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        origemTipo: item.tipo,
+        origemId: item.id,
+        numero: item.numero,
+        clienteNome: item.clienteNome,
+        produtoNome: item.produtoNome || (item.tipo === "pedido" ? "Pedido Rápido" : "Comunicação Visual"),
+        fotoAntesUrl: item.arteUrl,
+        fotoDepoisUrl: fotoConcluida,
+        colaboradores: colabsPayload,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok) {
+          toast.success("📲 Fotos (Antes & Depois) enviadas ao WhatsApp do Kaio!")
+        }
+      })
+      .catch((err) => console.error("Erro ao enviar fotos da conclusão ao Kaio:", err))
+
     toast.success(`✅ Peça #${item.numero} concluída e foto enviada ao Kaio!`)
 
     // Opcionalmente abrir confirmação de WhatsApp se for dono/atendimento com telefone
@@ -1897,6 +1927,7 @@ export default function ProducaoPage() {
                           clienteNome: item.clienteNome,
                           clienteTelefone: item.clienteTelefone || null,
                           fotoAtual: item.fotoProntoUrl,
+                          arteUrl: item.arteUrl,
                           comissaoPercent: item.comissaoPercent,
                           valorTotal: item.valorTotal,
                           produtoNome: item.produtoNome,
@@ -2426,6 +2457,7 @@ export default function ProducaoPage() {
                             clienteNome: pedido.clienteNome,
                             clienteTelefone: pedido.clienteTelefone,
                             fotoAtual: pedido.fotoProntoUrl,
+                            arteUrl: pedido.arteUrl,
                             comissaoPercent: pedido.comissaoPercent,
                             valorTotal: pedido.total,
                             produtoNome: pedido.produtoNome ?? produtoDoPedido(pedido)?.nome,
@@ -2495,6 +2527,7 @@ export default function ProducaoPage() {
                           clienteNome: cli?.nome || "Cliente",
                           clienteTelefone: cli?.telefone || null,
                           fotoAtual: orc.fotoProntoUrl,
+                          arteUrl: orc.arteUrl || orc.anexoUrl,
                           comissaoPercent: orc.item.comissaoPercent,
                           valorTotal: orc.totalFechado || 0,
                           produtoNome: orc.materialFechado?.nome || orc.servicoFechado?.nome || "Comunicação Visual",
@@ -2751,6 +2784,7 @@ export default function ProducaoPage() {
                                       clienteNome: pedido.clienteNome,
                                       clienteTelefone: pedido.clienteTelefone,
                                       fotoAtual: pedido.fotoProntoUrl,
+                                      arteUrl: pedido.arteUrl,
                                       comissaoPercent: pedido.comissaoPercent,
                                       valorTotal: pedido.total,
                                       produtoNome: pedido.produtoNome ?? produtoDoPedido(pedido)?.nome,
@@ -2821,6 +2855,7 @@ export default function ProducaoPage() {
                                     clienteNome: cli?.nome || "Cliente",
                                     clienteTelefone: cli?.telefone || null,
                                     fotoAtual: orc.fotoProntoUrl,
+                                    arteUrl: orc.arteUrl || orc.anexoUrl,
                                     comissaoPercent: orc.item.comissaoPercent,
                                     valorTotal: orc.totalFechado || 0,
                                     produtoNome: orc.materialFechado?.nome || orc.servicoFechado?.nome || "Comunicação Visual",
@@ -3045,6 +3080,42 @@ export default function ProducaoPage() {
           </DialogHeader>
 
           <div className="flex flex-col gap-4 py-2">
+            {/* Foto ANTES: Arte Aprovada / Layout (Referência) */}
+            {modalQcItem?.arteUrl && (
+              <div className="flex flex-col gap-1.5 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5 uppercase tracking-wide">
+                    <Eye className="h-4 w-4" />
+                    <span>[Antes] Arte Aprovada / Layout</span>
+                  </span>
+                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded-full border border-indigo-500/25">
+                    Enviada ao Kaio
+                  </span>
+                </div>
+                <div
+                  onClick={() =>
+                    modalQcItem.arteUrl &&
+                    setModalArtePreview({
+                      url: modalQcItem.arteUrl,
+                      titulo: `Arte Aprovada #${modalQcItem.numero} - ${modalQcItem.clienteNome}`,
+                    })
+                  }
+                  className="relative group rounded-xl overflow-hidden border border-indigo-500/20 h-28 bg-black/5 dark:bg-black/30 flex items-center justify-center cursor-pointer hover:border-indigo-500/50 transition-all shadow-inner"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={modalQcItem.arteUrl}
+                    alt="Arte Aprovada"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold gap-1">
+                    <Eye className="h-4 w-4" />
+                    <span>Ampliar Arte</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Foto da Peça Pronta (OBRIGATÓRIA PARA O KAIO) - EM DESTAQUE NO TOPO */}
             <div className="flex flex-col gap-2 rounded-2xl border-2 border-dashed border-emerald-500/40 bg-emerald-500/5 p-3.5">
               <span className="text-xs font-bold text-foreground flex items-center justify-between gap-1.5">

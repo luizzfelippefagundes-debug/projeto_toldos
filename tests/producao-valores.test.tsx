@@ -1,5 +1,9 @@
 import { render, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+vi.mock("@clerk/nextjs", () => ({
+  useUser: () => ({ user: { firstName: "Kaio", lastName: "Loterio", id: "user_test" } }),
+}))
 import { DataProvider } from "@/context/data-context"
 import { PapelAtivoProvider } from "@/context/papel-ativo-context"
 import ProducaoPage from "@/app/(app)/producao/page"

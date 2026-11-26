@@ -116,6 +116,20 @@ export async function enviarImagemWhatsapp(
       mime = match[1] || mime
       mediaPayload = match[2]
     }
+  } else if (imagemBase64OuUrl.startsWith("http://") || imagemBase64OuUrl.startsWith("https://")) {
+    try {
+      const abortCtrl = new AbortController()
+      const t = setTimeout(() => abortCtrl.abort(), 6000)
+      const resp = await fetch(imagemBase64OuUrl, { signal: abortCtrl.signal })
+      clearTimeout(t)
+      if (resp.ok) {
+        const arr = await resp.arrayBuffer()
+        mediaPayload = Buffer.from(arr).toString("base64")
+        mime = resp.headers.get("content-type") || mime
+      }
+    } catch (err) {
+      console.warn("[whatsapp] fallback para URL direta no envio de imagem:", err)
+    }
   }
 
   const resposta = await fetch(`${cfg.baseUrl}/message/sendMedia/${cfg.instancia}`, {
