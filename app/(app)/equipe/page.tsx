@@ -1244,78 +1244,78 @@ export default function EquipePage() {
                         : "border-border/80 bg-muted/20 opacity-85"
                     }`}
                   >
-                    {/* Cabeçalho do Card com as 3 métricas explícitas */}
+                    {/* Cabeçalho do Card com as 3 métricas explícitas perfeitamente alinhadas */}
                     <div className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      {/* Identificação do Colaborador */}
-                      <div className="flex items-center gap-3">
+                      {/* Identificação do Colaborador (largura padronizada para manter alinhamento vertical dos blocos) */}
+                      <div className="flex items-center gap-3 w-full lg:w-[280px] xl:w-[310px] shrink-0 min-w-0">
                         <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-lg font-black shrink-0">
                           {colab.colaborador_nome.slice(0, 2).toUpperCase()}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-black text-base sm:text-lg text-foreground">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-black text-base sm:text-lg text-foreground truncate" title={colab.colaborador_nome}>
                               {colab.colaborador_nome}
                             </h3>
                             {colab.total_pendente > 0 ? (
-                              <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] sm:text-xs font-black px-2 py-0.5">
+                              <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] sm:text-xs font-black px-2 py-0.5 whitespace-nowrap">
                                 {colab.quantidade_pendente} peça{colab.quantidade_pendente !== 1 ? "s" : ""} a pagar
                               </span>
                             ) : (
-                              <span className="rounded-full bg-slate-500/20 text-muted-foreground text-[10px] font-bold px-2 py-0.5">
+                              <span className="rounded-full bg-slate-500/20 text-muted-foreground text-[10px] font-bold px-2 py-0.5 whitespace-nowrap">
                                 Quitado ✓
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
                             Histórico total: R$ {colab.totalHistorico.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} ({colab.pecasHistorico} peças acumuladas)
                           </p>
                         </div>
                       </div>
 
-                      {/* As 3 Métricas Explícitas: Semana (A Pagar) | Mês | Vendas Produzidas */}
-                      <div className="grid grid-cols-3 gap-2 sm:gap-3 bg-muted/40 p-2.5 rounded-xl border border-border/60">
+                      {/* As 3 Métricas Explícitas: Semana (A Pagar) | Mês | Vendas Produzidas (largura e colunas fixas para alinhamento 100% reto) */}
+                      <div className="grid grid-cols-3 bg-muted/40 p-2.5 rounded-xl border border-border/60 w-full lg:w-[480px] xl:w-[500px] shrink-0">
                         {/* 1. Esta Semana (A Pagar) */}
-                        <div className="text-left px-2 border-r border-border/60">
-                          <span className="text-[9px] sm:text-[10px] text-emerald-800 dark:text-emerald-300 uppercase font-black tracking-wider block">
+                        <div className="text-left px-2 sm:px-3 border-r border-border/60 flex flex-col justify-center min-w-0">
+                          <span className="text-[9px] sm:text-[10px] text-emerald-800 dark:text-emerald-300 uppercase font-black tracking-wider block whitespace-nowrap">
                             ⚡ Esta Semana (A Pagar)
                           </span>
-                          <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                          <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 block mt-0.5 truncate">
                             R$ {colab.total_pendente.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                          <span className="text-[10px] text-muted-foreground block font-medium">
+                          <span className="text-[10px] text-muted-foreground block font-medium truncate">
                             {colab.pecasPendentes} peça{colab.pecasPendentes !== 1 ? "s" : ""} pendente{colab.pecasPendentes !== 1 ? "s" : ""}
                           </span>
                         </div>
 
                         {/* 2. Total no Mês */}
-                        <div className="text-left px-2 border-r border-border/60">
-                          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block">
+                        <div className="text-left px-2 sm:px-3 border-r border-border/60 flex flex-col justify-center min-w-0">
+                          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block whitespace-nowrap">
                             📆 Total no Mês
                           </span>
-                          <span className="text-base sm:text-lg font-black text-foreground block mt-0.5">
+                          <span className="text-base sm:text-lg font-black text-foreground block mt-0.5 truncate">
                             R$ {colab.totalMes.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                          <span className="text-[10px] text-muted-foreground block font-medium">
+                          <span className="text-[10px] text-muted-foreground block font-medium truncate">
                             {colab.pecasMes} peça{colab.pecasMes !== 1 ? "s" : ""} no mês
                           </span>
                         </div>
 
                         {/* 3. Vendas Produzidas */}
-                        <div className="text-left px-2">
-                          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block">
+                        <div className="text-left px-2 sm:px-3 flex flex-col justify-center min-w-0">
+                          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block whitespace-nowrap">
                             📦 Vendas Feitas
                           </span>
-                          <span className="text-base sm:text-lg font-black text-foreground block mt-0.5">
+                          <span className="text-base sm:text-lg font-black text-foreground block mt-0.5 truncate">
                             R$ {colab.vendasMes.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
-                          <span className="text-[10px] text-muted-foreground block font-medium">
+                          <span className="text-[10px] text-muted-foreground block font-medium truncate">
                             Volume de pedidos
                           </span>
                         </div>
                       </div>
 
                       {/* Ações: Pagar & Emitir Recibo / Último Recibo / WhatsApp / Expandir */}
-                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      <div className="flex items-center gap-1.5 flex-wrap justify-start lg:justify-end shrink-0 lg:ml-auto">
                         {colab.total_pendente > 0 && (
                           <Button
                             size="sm"
