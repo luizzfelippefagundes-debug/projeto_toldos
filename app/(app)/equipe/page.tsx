@@ -1244,10 +1244,10 @@ export default function EquipePage() {
                         : "border-border/80 bg-muted/20 opacity-85"
                     }`}
                   >
-                    {/* Cabeçalho do Card com as 3 colunas em Grid estrito para alinhamento 100% reto */}
-                    <div className="p-3.5 sm:p-4 grid grid-cols-1 md:grid-cols-[240px_350px_1fr] lg:grid-cols-[250px_360px_1fr] xl:grid-cols-[280px_420px_1fr] items-center gap-3 sm:gap-4">
-                      {/* 1. Identificação do Colaborador (Coluna 1 fixa do Grid) */}
-                      <div className="flex items-center gap-2.5 min-w-0">
+                    {/* Cabeçalho do Card com as 3 colunas em Grid [1fr_auto_1fr] para centralização matemática perfeita */}
+                    <div className="p-3.5 sm:p-4 grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4">
+                      {/* 1. Identificação do Colaborador (Coluna 1 à esquerda) */}
+                      <div className="flex items-center gap-2.5 min-w-0 justify-self-start">
                         <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-sm sm:text-base font-black shrink-0">
                           {colab.colaborador_nome.slice(0, 2).toUpperCase()}
                         </div>
@@ -1272,10 +1272,10 @@ export default function EquipePage() {
                         </div>
                       </div>
 
-                      {/* 2. As 3 Métricas Explícitas (Coluna 2 fixa do Grid com 3 colunas rigorosamente iguais) */}
-                      <div className="grid grid-cols-3 bg-muted/40 p-2 sm:p-2.5 rounded-xl border border-border/60 w-full">
+                      {/* 2. As 3 Métricas Explícitas (Coluna 2 centralizada no meio do card, com textos centralizados) */}
+                      <div className="grid grid-cols-3 bg-muted/40 p-2 sm:p-2.5 rounded-xl border border-border/60 w-full sm:w-[360px] lg:w-[420px] xl:w-[460px] justify-self-center">
                         {/* 1. Esta Semana (A Pagar) */}
-                        <div className="text-left px-1.5 sm:px-2.5 border-r border-border/60 flex flex-col justify-center min-w-0">
+                        <div className="text-center px-1.5 sm:px-2.5 border-r border-border/60 flex flex-col items-center justify-center min-w-0">
                           <span className="text-[9px] sm:text-[10px] text-emerald-800 dark:text-emerald-300 uppercase font-black tracking-wider block whitespace-nowrap truncate">
                             ⚡ Esta Semana (A Pagar)
                           </span>
@@ -1288,7 +1288,7 @@ export default function EquipePage() {
                         </div>
 
                         {/* 2. Total no Mês */}
-                        <div className="text-left px-1.5 sm:px-2.5 border-r border-border/60 flex flex-col justify-center min-w-0">
+                        <div className="text-center px-1.5 sm:px-2.5 border-r border-border/60 flex flex-col items-center justify-center min-w-0">
                           <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block whitespace-nowrap truncate">
                             📆 Total no Mês
                           </span>
@@ -1301,7 +1301,7 @@ export default function EquipePage() {
                         </div>
 
                         {/* 3. Vendas Produzidas */}
-                        <div className="text-left px-1.5 sm:px-2.5 flex flex-col justify-center min-w-0">
+                        <div className="text-center px-1.5 sm:px-2.5 flex flex-col items-center justify-center min-w-0">
                           <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block whitespace-nowrap truncate">
                             📦 Vendas Feitas
                           </span>
@@ -1314,7 +1314,7 @@ export default function EquipePage() {
                         </div>
                       </div>
 
-                      {/* 3. Ações (Coluna 3 do Grid - alinhadas à direita) */}
+                      {/* 3. Ações (Coluna 3 à direita) */}
                       <div className="flex items-center gap-1.5 flex-wrap justify-end justify-self-end w-full md:w-auto">
                         {colab.total_pendente > 0 && (
                           <Button
