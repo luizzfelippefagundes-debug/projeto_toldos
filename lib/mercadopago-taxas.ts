@@ -46,7 +46,7 @@ export const TARIFA_PROCESSAMENTO_BASE = 4.98
  */
 export function simularParcelasMercadoPago(
   valor: number,
-  modo: ModoSimulacaoTaxa = "absorver"
+  modo: ModoSimulacaoTaxa = "repassar"
 ): SimularParcela[] {
   if (valor <= 0) return []
 
@@ -121,7 +121,7 @@ export function formatarSimulacaoParaWhatsapp(
   modoOuNome?: ModoSimulacaoTaxa | string,
   nomeClienteParam?: string
 ): string {
-  let modo: ModoSimulacaoTaxa = "absorver"
+  let modo: ModoSimulacaoTaxa = parcelas.some((p) => p.temJuros) ? "repassar" : "absorver"
   let nomeCliente = nomeClienteParam
   if (modoOuNome === "absorver" || modoOuNome === "repassar" || modoOuNome === "reverso") {
     modo = modoOuNome

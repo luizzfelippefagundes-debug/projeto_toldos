@@ -14,11 +14,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CreditCard, Copy, Check, Calculator, Sparkles } from "lucide-react"
+import { CreditCard, Copy, Check, Calculator, Sparkles, TrendingUp } from "lucide-react"
 import { formatarMoeda } from "@/lib/format"
 import {
   simularParcelasMercadoPago,
   formatarSimulacaoParaWhatsapp,
+  type ModoSimulacaoTaxa,
 } from "@/lib/mercadopago-taxas"
 import { toast } from "sonner"
 
@@ -37,14 +38,15 @@ export function SimuladorMercadoPagoDialog({
   const [valorCustomizado, setValorCustomizado] = useState(
     valorInicial > 0 ? String(valorInicial) : ""
   )
+  const [modo, setModo] = useState<ModoSimulacaoTaxa>("repassar")
   const [copiado, setCopiado] = useState(false)
 
   const valor = Number(valorCustomizado) || valorInicial || 0
-  const parcelas = useMemo(() => simularParcelasMercadoPago(valor), [valor])
+  const parcelas = useMemo(() => simularParcelasMercadoPago(valor, modo), [valor, modo])
 
   const copiarMensagemWhatsapp = async () => {
     if (parcelas.length === 0) return
-    const texto = formatarSimulacaoParaWhatsapp(valor, parcelas, nomeCliente)
+    const texto = formatarSimulacaoParaWhatsapp(valor, parcelas, modo, nomeCliente)
     try {
       await navigator.clipboard.writeText(texto)
       setCopiado(true)
@@ -133,6 +135,34 @@ export function SimuladorMercadoPagoDialog({
             </div>
           </div>
 
+          {/* Seletor do Modo de Cálculo */}
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-muted/50 rounded-xl border border-border/60">
+            <button
+              type="button"
+              onClick={() => setModo("repassar")}
+              className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                modo === "repassar"
+                  ? "bg-background text-blue-600 dark:text-blue-400 shadow-xs border border-border/80 font-black"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
+              <span>Com Juros (Cliente assume)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setModo("absorver")}
+              className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                modo === "absorver"
+                  ? "bg-background text-emerald-600 dark:text-emerald-400 shadow-xs border border-border/80 font-black"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+              <span>Sem Juros (Gráfica assume)</span>
+            </button>
+          </div>
+
           {/* Grid de parcelas de 1x a 12x */}
           {valor > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -152,15 +182,25 @@ export function SimuladorMercadoPagoDialog({
                         <span className="font-black text-sm text-foreground">
                           {p.parcelas}x de {formatarMoeda(p.valorParcela)}
                         </span>
-                        {!p.temJuros && (
-                          <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-black px-1.5 py-0.2">
+                        {p.parcelas === 1 ? (
+                          <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-black px-1.5 py-0.5">
                             À vista
+                          </span>
+                        ) : p.temJuros ? (
+                          <span className="rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 text-[10px] font-black px-1.5 py-0.5">
+                            +{p.taxaPercentual}%
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-black px-1.5 py-0.5">
+                            Sem juros
                           </span>
                         )}
                       </div>
                       <span className="text-[11px] text-muted-foreground block">
                         Total: {formatarMoeda(p.valorTotal)}
-                        {p.temJuros ? ` (+${p.taxaPercentual}%)` : ""}
+                        {p.temJuros && p.valorTaxaDescontada > 0
+                          ? ` (+${formatarMoeda(p.valorTaxaDescontada)})`
+                          : ""}
                       </span>
                     </div>
 
