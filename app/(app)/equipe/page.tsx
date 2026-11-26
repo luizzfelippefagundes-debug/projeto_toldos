@@ -1244,42 +1244,42 @@ export default function EquipePage() {
                         : "border-border/80 bg-muted/20 opacity-85"
                     }`}
                   >
-                    {/* Cabeçalho do Card com as 3 métricas explícitas perfeitamente alinhadas */}
-                    <div className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      {/* Identificação do Colaborador (largura padronizada para manter alinhamento vertical dos blocos) */}
-                      <div className="flex items-center gap-3 w-full lg:w-[280px] xl:w-[310px] shrink-0 min-w-0">
-                        <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-lg font-black shrink-0">
+                    {/* Cabeçalho do Card com as 3 colunas em Grid estrito para alinhamento 100% reto */}
+                    <div className="p-3.5 sm:p-4 grid grid-cols-1 md:grid-cols-[240px_350px_1fr] lg:grid-cols-[250px_360px_1fr] xl:grid-cols-[280px_420px_1fr] items-center gap-3 sm:gap-4">
+                      {/* 1. Identificação do Colaborador (Coluna 1 fixa do Grid) */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-sm sm:text-base font-black shrink-0">
                           {colab.colaborador_nome.slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-black text-base sm:text-lg text-foreground truncate" title={colab.colaborador_nome}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="font-black text-sm sm:text-base text-foreground truncate" title={colab.colaborador_nome}>
                               {colab.colaborador_nome}
                             </h3>
                             {colab.total_pendente > 0 ? (
-                              <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] sm:text-xs font-black px-2 py-0.5 whitespace-nowrap">
+                              <span className="rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-black px-1.5 py-0.5 whitespace-nowrap">
                                 {colab.quantidade_pendente} peça{colab.quantidade_pendente !== 1 ? "s" : ""} a pagar
                               </span>
                             ) : (
-                              <span className="rounded-full bg-slate-500/20 text-muted-foreground text-[10px] font-bold px-2 py-0.5 whitespace-nowrap">
+                              <span className="rounded-full bg-slate-500/20 text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 whitespace-nowrap">
                                 Quitado ✓
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                            Histórico total: R$ {colab.totalHistorico.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} ({colab.pecasHistorico} peças acumuladas)
+                          <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                            Histórico: R$ {colab.totalHistorico.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                           </p>
                         </div>
                       </div>
 
-                      {/* As 3 Métricas Explícitas: Semana (A Pagar) | Mês | Vendas Produzidas (largura e colunas fixas para alinhamento 100% reto) */}
-                      <div className="grid grid-cols-3 bg-muted/40 p-2.5 rounded-xl border border-border/60 w-full lg:w-[480px] xl:w-[500px] shrink-0">
+                      {/* 2. As 3 Métricas Explícitas (Coluna 2 fixa do Grid com 3 colunas rigorosamente iguais) */}
+                      <div className="grid grid-cols-3 bg-muted/40 p-2 sm:p-2.5 rounded-xl border border-border/60 w-full">
                         {/* 1. Esta Semana (A Pagar) */}
-                        <div className="text-left px-2 sm:px-3 border-r border-border/60 flex flex-col justify-center min-w-0">
-                          <span className="text-[9px] sm:text-[10px] text-emerald-800 dark:text-emerald-300 uppercase font-black tracking-wider block whitespace-nowrap">
+                        <div className="text-left px-1.5 sm:px-2.5 border-r border-border/60 flex flex-col justify-center min-w-0">
+                          <span className="text-[9px] sm:text-[10px] text-emerald-800 dark:text-emerald-300 uppercase font-black tracking-wider block whitespace-nowrap truncate">
                             ⚡ Esta Semana (A Pagar)
                           </span>
-                          <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 block mt-0.5 truncate">
+                          <span className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 block mt-0.5 truncate">
                             R$ {colab.total_pendente.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span className="text-[10px] text-muted-foreground block font-medium truncate">
@@ -1288,11 +1288,11 @@ export default function EquipePage() {
                         </div>
 
                         {/* 2. Total no Mês */}
-                        <div className="text-left px-2 sm:px-3 border-r border-border/60 flex flex-col justify-center min-w-0">
-                          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block whitespace-nowrap">
+                        <div className="text-left px-1.5 sm:px-2.5 border-r border-border/60 flex flex-col justify-center min-w-0">
+                          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block whitespace-nowrap truncate">
                             📆 Total no Mês
                           </span>
-                          <span className="text-base sm:text-lg font-black text-foreground block mt-0.5 truncate">
+                          <span className="text-sm sm:text-base font-black text-foreground block mt-0.5 truncate">
                             R$ {colab.totalMes.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span className="text-[10px] text-muted-foreground block font-medium truncate">
@@ -1301,11 +1301,11 @@ export default function EquipePage() {
                         </div>
 
                         {/* 3. Vendas Produzidas */}
-                        <div className="text-left px-2 sm:px-3 flex flex-col justify-center min-w-0">
-                          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block whitespace-nowrap">
+                        <div className="text-left px-1.5 sm:px-2.5 flex flex-col justify-center min-w-0">
+                          <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block whitespace-nowrap truncate">
                             📦 Vendas Feitas
                           </span>
-                          <span className="text-base sm:text-lg font-black text-foreground block mt-0.5 truncate">
+                          <span className="text-sm sm:text-base font-black text-foreground block mt-0.5 truncate">
                             R$ {colab.vendasMes.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           <span className="text-[10px] text-muted-foreground block font-medium truncate">
@@ -1314,8 +1314,8 @@ export default function EquipePage() {
                         </div>
                       </div>
 
-                      {/* Ações: Pagar & Emitir Recibo / Último Recibo / WhatsApp / Expandir */}
-                      <div className="flex items-center gap-1.5 flex-wrap justify-start lg:justify-end shrink-0 lg:ml-auto">
+                      {/* 3. Ações (Coluna 3 do Grid - alinhadas à direita) */}
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end justify-self-end w-full md:w-auto">
                         {colab.total_pendente > 0 && (
                           <Button
                             size="sm"
