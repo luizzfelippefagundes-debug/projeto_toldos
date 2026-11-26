@@ -338,15 +338,18 @@ export default function ProducaoPage() {
   const qcCameraInputRef = useRef<HTMLInputElement>(null)
   const qcGaleriaInputRef = useRef<HTMLInputElement>(null)
   const [equipeDisponivel, setEquipeDisponivel] = useState<string[]>([
-    "Marcos",
-    "Lucas",
+    "josue batista alves",
+    "Alessandro Da Cruz Lima",
     "Kaio",
-    "Serralheria",
-    "Impressão / Acabamento",
+    "Lucas",
+    "Marcos",
   ])
   const [colaboradoresPecas, setColaboradoresPecas] = useState<Record<string, number>>({})
 
   useEffect(() => {
+    if (meuNome) {
+      setEquipeDisponivel((prev) => Array.from(new Set([meuNome, ...prev])))
+    }
     fetch("/api/equipe")
       .then((r) => r.json())
       .then((dados) => {
@@ -634,13 +637,7 @@ export default function ProducaoPage() {
       const membrosPadrao = ["josue batista alves", "Alessandro Da Cruz Lima"]
       const iniciaisSel: Record<string, number> = {}
 
-      membrosPadrao.forEach((nomePadrao) => {
-        const achou = equipeDisponivel.find(
-          (e) => e.toLowerCase().includes("josue") || e.toLowerCase().includes("alessandro")
-        )
-      })
-
-      // Adiciona Josué e Alessandro que existirem na lista de equipe
+      // Adiciona Josué e Alessandro que existirem na lista de equipe por padrão
       equipeDisponivel.forEach((e) => {
         const eLower = e.toLowerCase()
         if (eLower.includes("josue") || eLower.includes("alessandro")) {
@@ -648,11 +645,10 @@ export default function ProducaoPage() {
         }
       })
 
-      // Se nenhum dos dois estiver na lista, seleciona o usuário atual
+      // Se nenhum dos dois estiver na lista, seleciona o usuário atual ou Josué
       if (Object.keys(iniciaisSel).length === 0) {
-        if (meuNome && equipeDisponivel.includes(meuNome)) {
-          iniciaisSel[meuNome] = item.quantidadeTotal || 1
-        }
+        const padrao = meuNome || "josue batista alves"
+        iniciaisSel[padrao] = item.quantidadeTotal || 1
       }
 
       setColaboradoresPecas(iniciaisSel)
@@ -717,7 +713,7 @@ export default function ProducaoPage() {
               valor,
             }
           })
-        : [{ nome: "Equipe de Produção", pecas: 1, valor: totalBonusCalculado }]
+        : [{ nome: meuNome || "josue batista alves", pecas: modalQcItem.quantidadeTotal || 1, valor: totalBonusCalculado }]
 
       // Persistir no Banco de Comissões & RH da empresa
       fetch("/api/comissoes", {

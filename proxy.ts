@@ -87,7 +87,12 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   if (apiSoDono(req) && papel !== "dono") {
-    return NextResponse.json({ error: "Apenas o dono" }, { status: 403 })
+    // Permitir leitura da lista de membros da equipe (GET /api/equipe) para operadores e produção
+    // para que possam selecionar e atribuir colaboradores na conclusão de peças na tela de produção
+    const isLeituraEquipe = req.nextUrl.pathname === "/api/equipe" && req.method === "GET"
+    if (!isLeituraEquipe) {
+      return NextResponse.json({ error: "Apenas o dono" }, { status: 403 })
+    }
   }
 })
 
