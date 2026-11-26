@@ -4003,10 +4003,10 @@ export default function ProducaoPage() {
                         <button
                           type="button"
                           className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
-                          title="Cobrar na Maquininha Point Smart ou copiar link Mercado Pago"
+                          title="Gerar ou copiar link de pagamento do Mercado Pago (Cartão até 12x)"
                         >
                           <CreditCard className="h-4 w-4 shrink-0" />
-                          <span>Cobrar Cartão / Maquininha</span>
+                          <span>Link do Cartão (12x)</span>
                         </button>
                       }
                     />
