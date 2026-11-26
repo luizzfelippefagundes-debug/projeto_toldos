@@ -1272,10 +1272,14 @@ export default function EquipePage() {
                         </div>
                       </div>
 
-                      {/* 2. As 3 Métricas Explícitas (Coluna 2 centralizada no meio do card, com textos centralizados) */}
-                      <div className="grid grid-cols-3 bg-muted/40 p-2 sm:p-2.5 rounded-xl border border-border/60 w-full sm:w-[360px] lg:w-[420px] xl:w-[460px] justify-self-center">
-                        {/* 1. Esta Semana (A Pagar) */}
-                        <div className="text-center px-1.5 sm:px-2.5 border-r border-border/60 flex flex-col items-center justify-center min-w-0">
+                      {/* 2. As 3 Métricas Explícitas em 3 Mini-Cards Independentes e Elegantes (sem divisória feia) */}
+                      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full sm:w-[380px] lg:w-[430px] xl:w-[470px] justify-self-center">
+                        {/* 1. Esta Semana (A Pagar) - Destaque em Verde Suave */}
+                        <div className={`p-2 sm:p-2.5 rounded-xl text-center flex flex-col items-center justify-center min-w-0 transition-all ${
+                          colab.total_pendente > 0
+                            ? "bg-emerald-500/10 border border-emerald-500/30 dark:bg-emerald-500/15"
+                            : "bg-muted/40 border border-border/60"
+                        }`}>
                           <span className="text-[9px] sm:text-[10px] text-emerald-800 dark:text-emerald-300 uppercase font-black tracking-wider block whitespace-nowrap truncate">
                             ⚡ Esta Semana (A Pagar)
                           </span>
@@ -1288,7 +1292,7 @@ export default function EquipePage() {
                         </div>
 
                         {/* 2. Total no Mês */}
-                        <div className="text-center px-1.5 sm:px-2.5 border-r border-border/60 flex flex-col items-center justify-center min-w-0">
+                        <div className="bg-muted/40 border border-border/60 p-2 sm:p-2.5 rounded-xl text-center flex flex-col items-center justify-center min-w-0">
                           <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block whitespace-nowrap truncate">
                             📆 Total no Mês
                           </span>
@@ -1301,7 +1305,7 @@ export default function EquipePage() {
                         </div>
 
                         {/* 3. Vendas Produzidas */}
-                        <div className="text-center px-1.5 sm:px-2.5 flex flex-col items-center justify-center min-w-0">
+                        <div className="bg-muted/40 border border-border/60 p-2 sm:p-2.5 rounded-xl text-center flex flex-col items-center justify-center min-w-0">
                           <span className="text-[9px] sm:text-[10px] text-muted-foreground uppercase font-black tracking-wider block whitespace-nowrap truncate">
                             📦 Vendas Feitas
                           </span>
