@@ -82,6 +82,7 @@ import {
   Coins,
   CreditCard,
   History,
+  Layers,
 } from "lucide-react"
 import { HistoricoEntreguesDialog } from "@/components/producao/historico-entregues-dialog"
 import { CobrancaCartaoDialog } from "@/components/orcamentos/cobranca-cartao-dialog"
@@ -387,6 +388,8 @@ export default function ProducaoPage() {
     varianteNome?: string
     acabamento?: string | null
     observacao?: string
+    itemObservacao?: string | null
+    itensAdicionais?: any[]
     arteUrl?: string | null
     fotosLocal?: string[]
     status: string
@@ -800,6 +803,29 @@ export default function ProducaoPage() {
     const fotoLocal = item.fotosLocal?.[0]
     const arteUrl = item.arteUrl
 
+    // Resgate robusto do orçamento ou pedido original
+    const orcOrig = item.tipo === "orcamento"
+      ? orcamentos.find((o) => o.id === item.id || o.numero === item.numero)
+      : null
+    const pedOrig = item.tipo === "pedido"
+      ? pedidosRapidos.find((p) => p.id === item.id || p.numero === item.numero)
+      : null
+
+    // Observação geral da OS ou do Card de Produção (Recados do Kaio / Fábrica)
+    const obsFabrica = (item.observacao || orcOrig?.observacao || pedOrig?.observacao || "").trim()
+
+    // Observação técnica específica da peça principal (ex: "Parte de trás do balcão")
+    const obsItemPrincipal = (item.itemObservacao || orcOrig?.item?.observacao || "").trim()
+
+    // Itens adicionais da OS (com medidas e destinos de cada peça)
+    const itensAdicionais = (item.itensAdicionais || orcOrig?.item?.itensAdicionais || []) as any[]
+
+    const larguraPrincipal = item.largura ?? orcOrig?.item?.largura ?? null
+    const alturaPrincipal = item.altura ?? orcOrig?.item?.altura ?? null
+    const qtdPrincipal = item.quantidade ?? orcOrig?.item?.quantidadeUnidades ?? 1
+    const materialPrincipal = [item.varianteNome || orcOrig?.materialFechado?.nome, item.acabamento].filter(Boolean).join(" · ") || "Conforme especificação"
+    const produtoNomePrincipal = item.produtoNome || orcOrig?.servicoFechado?.nome || (orcOrig?.item?.servicoId && orcOrig.item.servicoId !== "nenhum" ? "Serviço + Material" : "Comunicação Visual")
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -808,31 +834,34 @@ export default function ProducaoPage() {
         <title>Ficha de Produção - #${item.numero} ${item.clienteNome}</title>
         <base href="${typeof window !== 'undefined' ? window.location.origin : ''}/">
         <style>
-          @page { size: A4; margin: 12mm; }
+          @page { size: A4; margin: 10mm; }
           * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 13px; line-height: 1.4; }
-          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111; margin: 0; padding: 0; font-size: 13px; line-height: 1.35; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
           .logo { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
           .logo span { color: #f59e0b; }
           .badge-os { background: #000; color: #fff; font-size: 15px; font-weight: 800; padding: 4px 10px; border-radius: 6px; }
-          .grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-          .box { border: 1px solid #ccc; border-radius: 6px; padding: 8px 10px; background: #fafafa; }
-          .box-title { font-size: 10px; text-transform: uppercase; font-weight: bold; color: #666; margin-bottom: 3px; }
-          .box-val { font-size: 14px; font-weight: 700; color: #000; }
-          .box-destaque { border: 2px solid #000; background: #fffbe6; padding: 10px 12px; margin-bottom: 12px; border-radius: 6px; }
+          .grid-info { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+          .box { border: 1px solid #ccc; border-radius: 6px; padding: 7px 10px; background: #fafafa; }
+          .box-title { font-size: 10px; text-transform: uppercase; font-weight: bold; color: #666; margin-bottom: 2px; }
+          .box-val { font-size: 13.5px; font-weight: 700; color: #000; }
+          .box-destaque { border: 2px solid #000; background: #fffbe6; padding: 9px 12px; margin-bottom: 10px; border-radius: 6px; }
           .dimensoes-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #b45309; }
-          .dimensoes-val { font-size: 20px; font-weight: 900; color: #000; margin-top: 2px; }
-          .instrucoes { border: 1.5px solid #d97706; background: #fffbeb; padding: 10px 12px; border-radius: 6px; margin-bottom: 14px; }
-          .instrucoes-title { font-size: 11px; font-weight: 800; color: #b45309; text-transform: uppercase; margin-bottom: 4px; }
-          .instrucoes-text { font-size: 13px; font-weight: 600; white-space: pre-wrap; }
-          .fotos-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+          .dimensoes-val { font-size: 18px; font-weight: 900; color: #000; margin-top: 2px; }
+          .instrucoes { border: 1.5px solid #d97706; background: #fffbeb; padding: 9px 12px; border-radius: 6px; margin-bottom: 10px; }
+          .instrucoes-title { font-size: 11px; font-weight: 800; color: #b45309; text-transform: uppercase; margin-bottom: 3px; }
+          .instrucoes-text { font-size: 12.5px; font-weight: 600; white-space: pre-wrap; line-height: 1.35; }
+          .tabela-pecas { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+          .tabela-pecas th { background: #111; color: #fff; padding: 5px 8px; text-align: left; font-size: 10.5px; font-weight: 800; text-transform: uppercase; }
+          .tabela-pecas td { border-bottom: 1px solid #d1d5db; padding: 6px 8px; font-size: 12px; vertical-align: middle; color: #111; }
+          .fotos-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
           .foto-box { border: 1px solid #ccc; border-radius: 6px; padding: 6px; text-align: center; }
-          .foto-box img { max-width: 100%; max-height: 220px; object-fit: contain; border-radius: 4px; }
-          .foto-label { font-size: 11px; font-weight: 700; color: #444; margin-top: 4px; }
-          .checklist { border: 1px solid #000; border-radius: 6px; padding: 10px 12px; margin-top: 14px; }
-          .check-item { display: inline-block; width: 32%; font-size: 12px; font-weight: 600; }
-          .assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 30px; }
-          .campo-ass { border-top: 1px solid #000; text-align: center; font-size: 11px; font-weight: bold; padding-top: 4px; }
+          .foto-box img { max-width: 100%; max-height: 190px; object-fit: contain; border-radius: 4px; }
+          .foto-label { font-size: 10.5px; font-weight: 700; color: #444; margin-top: 4px; }
+          .checklist { border: 1px solid #000; border-radius: 6px; padding: 8px 12px; margin-top: 10px; }
+          .check-item { display: inline-block; width: 32%; font-size: 11.5px; font-weight: 600; }
+          .assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 22px; }
+          .campo-ass { border-top: 1px solid #000; text-align: center; font-size: 10.5px; font-weight: bold; padding-top: 3px; }
           @media print {
             body { padding: 0; }
             .no-print { display: none; }
@@ -842,7 +871,7 @@ export default function ProducaoPage() {
       <body>
         <div class="header">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <img src="${LOGO_PRINT_BASE64}" alt="Toldos Print" style="height: 46px; width: auto; object-fit: contain; display: block;" />
+            <img src="${LOGO_PRINT_BASE64}" alt="Toldos Print" style="height: 42px; width: auto; object-fit: contain; display: block;" />
             <div style="border-left: 1.5px solid #ccc; padding-left: 10px;">
               <div style="font-size: 14px; font-weight: 900; color: #111; letter-spacing: -0.3px;">TOLDOS PRINT</div>
               <div style="font-size: 10.5px; color: #555;">toldosprint@outlook.com · Ficha de Instrução para Bancada</div>
@@ -867,33 +896,96 @@ export default function ProducaoPage() {
         </div>
 
         ${
-          item.largura != null && item.altura != null
+          itensAdicionais.length > 0
             ? `
           <div class="box-destaque">
-            <div class="dimensoes-title">📏 Medidas Exatas para Produção (Trena)</div>
-            <div class="dimensoes-val">${item.largura} m (Largura) × ${item.altura} m (Altura) ${item.quantidade && item.quantidade > 1 ? `· ${item.quantidade} unidades` : ""}</div>
+            <div class="dimensoes-title">📦 Relação Completa de Peças para Produção (Bancada & Corte)</div>
+            <table class="tabela-pecas">
+              <thead>
+                <tr>
+                  <th style="width: 28px;">#</th>
+                  <th>Peça / Destino de Aplicação</th>
+                  <th style="text-align: center;">Medidas (L × A)</th>
+                  <th style="text-align: center; width: 45px;">Qtd</th>
+                  <th>Material / Acabamento</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background: #fff;">
+                  <td style="font-weight: 800;">1</td>
+                  <td>
+                    <strong style="color: #000; font-size: 12.5px;">${produtoNomePrincipal}</strong>
+                    ${obsItemPrincipal ? `<div style="font-size: 11.5px; color: #b45309; font-weight: 700; margin-top: 1px;">📍 ${obsItemPrincipal}</div>` : ""}
+                  </td>
+                  <td style="text-align: center; font-weight: 900; font-size: 13.5px; color: #000;">
+                    ${larguraPrincipal != null && alturaPrincipal != null ? `${larguraPrincipal}m × ${alturaPrincipal}m` : "-"}
+                  </td>
+                  <td style="text-align: center; font-weight: 800;">${qtdPrincipal} un</td>
+                  <td style="font-size: 11.5px; font-weight: 600; color: #333;">${materialPrincipal}</td>
+                </tr>
+                ${itensAdicionais
+                  .map(
+                    (ad, idx) => `
+                  <tr style="background: ${idx % 2 === 0 ? "#f9fafb" : "#fff"};">
+                    <td style="font-weight: 800;">${idx + 2}</td>
+                    <td>
+                      <strong style="color: #000; font-size: 12px;">Item Adicional #${idx + 2}</strong>
+                      ${ad.observacao ? `<div style="font-size: 11.5px; color: #b45309; font-weight: 700; margin-top: 1px;">📍 ${ad.observacao}</div>` : ""}
+                    </td>
+                    <td style="text-align: center; font-weight: 900; font-size: 13.5px; color: #000;">
+                      ${ad.largura != null && ad.altura != null ? `${ad.largura}m × ${ad.altura}m` : "-"}
+                    </td>
+                    <td style="text-align: center; font-weight: 800;">${ad.quantidadeUnidades || 1} un</td>
+                    <td style="font-size: 11.5px; font-weight: 600; color: #333;">
+                      ${ad.materialFechado?.nome || materialPrincipal}
+                    </td>
+                  </tr>
+                `
+                  )
+                  .join("")}
+              </tbody>
+            </table>
           </div>
         `
-            : ""
+            : `
+          ${
+            larguraPrincipal != null && alturaPrincipal != null
+              ? `
+            <div class="box-destaque">
+              <div class="dimensoes-title">📏 Medidas Exatas para Produção (Trena)</div>
+              <div class="dimensoes-val">${larguraPrincipal} m (Largura) × ${alturaPrincipal} m (Altura) ${qtdPrincipal > 1 ? `· ${qtdPrincipal} unidades` : ""}</div>
+              ${obsItemPrincipal ? `<div style="margin-top: 4px; font-size: 12.5px; font-weight: 700; color: #b45309;">📍 Local / Aplicação: ${obsItemPrincipal}</div>` : ""}
+            </div>
+          `
+              : ""
+          }
+
+          <div class="grid-info">
+            <div class="box">
+              <div class="box-title">Produto / Serviço</div>
+              <div class="box-val">${produtoNomePrincipal}</div>
+            </div>
+            <div class="box">
+              <div class="box-title">Material / Acabamento</div>
+              <div class="box-val">${materialPrincipal}</div>
+            </div>
+          </div>
+        `
         }
 
-        <div class="grid-info">
-          <div class="box">
-            <div class="box-title">Produto / Serviço</div>
-            <div class="box-val">${item.produtoNome || "Comunicação Visual"}</div>
-          </div>
-          <div class="box">
-            <div class="box-title">Material / Acabamento</div>
-            <div class="box-val">${[item.varianteNome, item.acabamento].filter(Boolean).join(" · ") || "Conforme especificação"}</div>
-          </div>
-        </div>
-
         ${
-          item.observacao
+          obsFabrica
             ? `
           <div class="instrucoes">
             <div class="instrucoes-title">⚠️ Instruções Técnicas da Fábrica / Kaio</div>
-            <div class="instrucoes-text">${item.observacao}</div>
+            <div class="instrucoes-text">${obsFabrica}</div>
+          </div>
+        `
+            : obsItemPrincipal && itensAdicionais.length === 0
+            ? `
+          <div class="instrucoes">
+            <div class="instrucoes-title">⚠️ Instrução Técnica / Local de Aplicação</div>
+            <div class="instrucoes-text">${obsItemPrincipal}</div>
           </div>
         `
             : ""
@@ -929,7 +1021,7 @@ export default function ProducaoPage() {
         }
 
         <div class="checklist">
-          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 6px;">
+          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">
             Conferência de Qualidade de Bancada (QC):
           </div>
           <div class="check-item">[ &nbsp; ] Medidas no Esquadro</div>
@@ -1387,6 +1479,8 @@ export default function ProducaoPage() {
           altura: o.item.altura,
           quantidade: o.item.quantidadeUnidades || 1,
           observacao: o.observacao,
+          itemObservacao: o.item?.observacao,
+          itensAdicionais: o.item?.itensAdicionais,
           arteUrl: o.arteUrl || o.anexoUrl || (o.item?.fotos && o.item.fotos.length > 0 ? o.item.fotos[0].url : undefined),
           fotoProntoUrl: o.fotoProntoUrl,
           fotosLocal: o.item.fotos?.map((f) => f.url) || (o.anexoUrl ? [o.anexoUrl] : []),
@@ -2553,6 +2647,8 @@ export default function ProducaoPage() {
                               : "Comunicação Visual"),
                           varianteNome: orc.materialFechado?.nome,
                           observacao: orc.observacao,
+                          itemObservacao: orc.item?.observacao,
+                          itensAdicionais: orc.item?.itensAdicionais,
                           arteUrl: orc.arteUrl,
                           fotoProntoUrl: orc.fotoProntoUrl,
                           fotosLocal: orc.item.fotos?.map((f) => f.url) || (orc.anexoUrl ? [orc.anexoUrl] : []),
@@ -2881,6 +2977,8 @@ export default function ProducaoPage() {
                                         : "Comunicação Visual"),
                                     varianteNome: orc.materialFechado?.nome,
                                     observacao: orc.observacao,
+                                    itemObservacao: orc.item?.observacao,
+                                    itensAdicionais: orc.item?.itensAdicionais,
                                     arteUrl: orc.arteUrl,
                                     fotoProntoUrl: orc.fotoProntoUrl,
                                     fotosLocal: orc.item.fotos?.map((f) => f.url) || (orc.anexoUrl ? [orc.anexoUrl] : []),
@@ -3736,15 +3834,47 @@ export default function ProducaoPage() {
             )}
 
             {/* Observações / Instruções da Fábrica */}
-            {modalDetalhesItem?.observacao && (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20 p-3 flex flex-col gap-1">
+            {(modalDetalhesItem?.observacao || modalDetalhesItem?.itemObservacao) && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20 p-3 flex flex-col gap-1.5">
                 <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
                   <FileText className="h-3.5 w-3.5" />
                   Instruções e Observações da Fábrica
                 </span>
-                <p className="font-medium text-foreground whitespace-pre-wrap leading-relaxed">
-                  {modalDetalhesItem.observacao}
-                </p>
+                {modalDetalhesItem.observacao && (
+                  <p className="font-medium text-foreground whitespace-pre-wrap leading-relaxed text-xs">
+                    {modalDetalhesItem.observacao}
+                  </p>
+                )}
+                {modalDetalhesItem.itemObservacao && modalDetalhesItem.itemObservacao !== modalDetalhesItem.observacao && (
+                  <p className="font-semibold text-amber-800 dark:text-amber-300 text-xs">
+                    📍 Local / Aplicação: {modalDetalhesItem.itemObservacao}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Peças Adicionais da Demanda */}
+            {modalDetalhesItem?.itensAdicionais && modalDetalhesItem.itensAdicionais.length > 0 && (
+              <div className="rounded-xl border border-border/80 bg-muted/20 p-3 flex flex-col gap-2">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5 text-amber-600" />
+                  Peças Adicionais da Demanda ({modalDetalhesItem.itensAdicionais.length})
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {modalDetalhesItem.itensAdicionais.map((ad: any, idx: number) => (
+                    <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-card border border-border/60 text-xs">
+                      <div>
+                        <span className="font-bold text-foreground">Item #{idx + 2}</span>
+                        {ad.observacao && <span className="text-amber-700 dark:text-amber-400 font-semibold ml-1.5">📍 {ad.observacao}</span>}
+                        <div className="text-[11px] text-muted-foreground">{ad.materialFechado?.nome || modalDetalhesItem.varianteNome || "Material"}</div>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-mono font-bold text-foreground">{ad.largura}m × {ad.altura}m</span>
+                        <div className="text-[10px] text-muted-foreground">{ad.quantidadeUnidades || 1} un</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
