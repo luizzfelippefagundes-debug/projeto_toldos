@@ -22,15 +22,22 @@ import {
   Radio,
   SlidersHorizontal,
   Coins,
+  ShoppingBag,
   type LucideIcon,
 } from "lucide-react"
 import type { Papel } from "@/lib/types"
 import { operadorPodeAcessar } from "@/lib/papel"
+import { PAPEIS_ORCAMENTOS_LOJA } from "@/lib/orcamentos-loja"
+
+/** Contadores que podem aparecer como bolinha ao lado de um item do menu. */
+export type ContadorNav = "orcamentosLojaAbertos"
 
 export interface NavItem {
   label: string
   href: string
   icon: LucideIcon
+  /** Mostra a contagem (ver useContadoresNav) ao lado do item quando > 0. */
+  contador?: ContadorNav
   // Quem vê esse item além do "dono" (que sempre vê tudo). Sem essa lista,
   // o item é visível pra qualquer papel.
   papeis?: Papel[]
@@ -63,6 +70,13 @@ export const gruposNavegacao: NavGroup[] = [
         href: "/orcamentos",
         icon: History,
         papeis: ["financeiro"],
+      },
+      {
+        label: "Orçamentos da loja",
+        href: "/orcamentos-loja",
+        icon: ShoppingBag,
+        papeis: PAPEIS_ORCAMENTOS_LOJA,
+        contador: "orcamentosLojaAbertos",
       },
       {
         label: "Produção",

@@ -10,6 +10,7 @@ import { ThemeToggle } from "./theme-toggle"
 import { Logo } from "@/components/brand/logo"
 import { UserButton, useUser } from "@clerk/nextjs"
 import { NotificacoesBell } from "./notificacoes-bell"
+import { BolinhaContador, useContadoresNav } from "./contadores-nav"
 import { ROTULO_PAPEL } from "@/lib/papel"
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
 
@@ -20,6 +21,7 @@ export function Sidebar() {
   const { papel } = usePapelAtivo()
   const { user } = useUser()
   const grupos = filtrarGruposPorPapel(gruposNavegacao, papel)
+  const contadores = useContadoresNav()
 
   const [collapsed, setCollapsed] = useState(false)
   const [montado, setMontado] = useState(false)
@@ -120,8 +122,12 @@ export function Sidebar() {
                         : "text-muted-foreground hover:bg-accent hover:text-foreground"
                     )}
                   >
-                    <Icon className={cn("shrink-0", collapsed ? "h-[18px] w-[18px]" : "h-4 w-4")} />
+                    <span className={cn("relative flex shrink-0", collapsed && "p-0.5")}>
+                      <Icon className={cn("shrink-0", collapsed ? "h-[18px] w-[18px]" : "h-4 w-4")} />
+                      {collapsed && item.contador && <BolinhaContador valor={contadores[item.contador]} compacto />}
+                    </span>
                     {!collapsed && <span className="font-medium">{item.label}</span>}
+                    {!collapsed && item.contador && <BolinhaContador valor={contadores[item.contador]} />}
                   </Link>
                 )
               })}

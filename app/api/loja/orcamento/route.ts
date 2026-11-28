@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
-import { NextResponse } from "next/server"
+import { after, NextResponse } from "next/server"
 import { getSql } from "@/lib/db"
+import { avisarKaioNovoOrcamentoLoja } from "@/lib/aviso-loja-kaio"
 import { garantirColunasOrcamentos } from "@/lib/migracoes"
 import { formatarNumeroOrcamento } from "@/lib/orcamento-pdf"
 import { segredoDaLojaValido } from "@/lib/loja-segredo"
@@ -87,12 +88,23 @@ export async function POST(req: Request) {
     RETURNING numero, criado_em
   `
   const numero = Number(gravado[0].numero)
+  const numeroFormatado = formatarNumeroOrcamento(numero, String(gravado[0].criado_em))
+
+  // Aviso no WhatsApp do Kaio depois de responder ao site (não atrasa nem
+  // derruba o pedido do cliente se a Evolution falhar).
+  const aviso = () => avisarKaioNovoOrcamentoLoja(pedido, { id: orc.id, numeroFormatado })
+  try {
+    after(aviso)
+  } catch {
+    await aviso()
+  }
+
   return NextResponse.json(
     {
       ok: true,
       id: orc.id,
       numero,
-      numeroFormatado: formatarNumeroOrcamento(numero, String(gravado[0].criado_em)),
+      numeroFormatado,
       clienteNovo,
     },
     { status: 201 }

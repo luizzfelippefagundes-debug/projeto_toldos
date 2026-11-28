@@ -16,8 +16,12 @@ export interface PedidoLojaItem {
 
 export interface PedidoLoja {
   codigo: string
-  /** Conta (login) do cliente no site, ex.: user_2abc... Liga o pedido ao "Meus pedidos". */
-  conta?: string
+  /**
+   * Conta (login) do cliente no site, ex.: user_2abc... Liga o pedido ao "Meus pedidos".
+   * Opcional: o visitante pode pedir orçamento sem entrar (pode chegar null).
+   */
+  conta?: string | null
+  /** cidade: opcional, até 80 caracteres; vai para a observação do orçamento. */
   cliente: { nome: string; telefone: string; cidade?: string }
   recebimento?: string
   observacao?: string
@@ -232,4 +236,43 @@ export function estimarTotalMaterial(item: OrcamentoItem, materiais: Map<string,
     total += m.unidade === "m2" ? parte.largura * parte.altura * qtd * m.preco : qtd * m.preco
   }
   return algum ? Math.round(total * 100) / 100 : null
+}
+
+const encurtar = (s: string, max: number) => (s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s)
+const medida = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 })
+
+/**
+ * Texto do aviso no WhatsApp do Kaio quando chega um orçamento novo pelo site.
+ * Função pura (sem rede) para poder testar o formato.
+ */
+export function mensagemNovoOrcamentoLoja(
+  p: PedidoLoja,
+  extra: { numeroFormatado: string; link?: string | null }
+): string {
+  const linhas = [
+    "🛒 *Novo orçamento pelo site*",
+    "",
+    `*Nº:* ${extra.numeroFormatado}`,
+    `*Cliente:* ${p.cliente.nome}`,
+    `*WhatsApp:* ${formatarTelefoneLoja(p.cliente.telefone)}`,
+  ]
+  if (p.cliente.cidade) linhas.push(`*Cidade:* ${p.cliente.cidade}`)
+  if (p.recebimento) linhas.push(`*Recebimento:* ${p.recebimento}`)
+  linhas.push("", "*Itens:*")
+  for (const i of p.itens.slice(0, 10)) {
+    const dim = i.largura && i.altura ? ` — ${medida(i.largura)} × ${medida(i.altura)} m` : ""
+    const det = i.detalhes?.length ? `\n   _${encurtar(i.detalhes.join("; "), 160)}_` : ""
+    linhas.push(`• ${i.quantidade}× ${i.nome}${dim}${det}`)
+  }
+  if (p.itens.length > 10) linhas.push(`• … e mais ${p.itens.length - 10} item(ns)`)
+  if (p.observacao) linhas.push("", `*Obs. do cliente:* ${encurtar(p.observacao, 300)}`)
+  if (extra.link) linhas.push("", `Abrir no sistema: ${extra.link}`)
+  return linhas.join("\n")
+}
+
+/** Link da aba "Orçamentos da loja" já abrindo o orçamento, se houver URL pública configurada. */
+export function linkOrcamentoLoja(baseUrl: string | undefined | null, orcamentoId: string): string | null {
+  const base = (baseUrl ?? "").trim().replace(/\/+$/, "")
+  if (!/^https?:\/\//.test(base)) return null
+  return `${base}/orcamentos-loja?abrir=${encodeURIComponent(orcamentoId)}`
 }

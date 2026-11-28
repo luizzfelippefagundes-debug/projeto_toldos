@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import type { NavGroup } from "./nav-groups"
+import { BolinhaContador, useContadoresNav } from "./contadores-nav"
 import {
   Sheet,
   SheetContent,
@@ -35,6 +36,7 @@ export function NavSheet({
   extra,
 }: NavSheetProps) {
   const pathname = usePathname()
+  const contadores = useContadoresNav()
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -72,6 +74,7 @@ export function NavSheet({
                     >
                       <Icon className="h-4 w-4" />
                       {item.label}
+                      {item.contador && <BolinhaContador valor={contadores[item.contador]} />}
                     </Link>
                   )
                 })}
